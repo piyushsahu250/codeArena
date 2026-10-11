@@ -1,0 +1,1532 @@
+{
+    "schema_version":  "codearena-interview-import/1",
+    "research":  {
+                     "company":  "Intel",
+                     "role":  "Graduate Technical Intern",
+                     "experience_level":  "FRESHER",
+                     "hiring_region":  "India",
+                     "target_year":  2026,
+                     "researched_on":  "2026-10-09",
+                     "researcher":  "Claude (research run 2026-10-09)",
+                     "job_description_url":  "https://jobs.intel.com/en/search-jobs/India",
+                     "job_description_summary":  "Intel hires students and freshers in India as Graduate Technical Interns and, per a May 2026 FACE Prep guide, as Software Development, Hardware Validation and Embedded Software Engineers. The guide describes an online aptitude test, an online technical test (C/C++, DSA, OS, networks, DBMS; digital logic and architecture for ECE/EEE), an optional group discussion and an HR interview. Three 2026 Glassdoor reviews of Graduate Technical Intern interviews describe resume shortlisting by teams and a 45 to 60 minute technical interview on projects, C++, OOP, OS, networks and cryptography. The official careers page was not fetched.",
+                     "required_skills":  [
+                                             "C and C++",
+                                             "Data structures and algorithms",
+                                             "OS and networking fundamentals",
+                                             "Digital logic and computer architecture (ECE/EEE)",
+                                             "Embedded C basics",
+                                             "Project explanation",
+                                             "Communication"
+                                         ],
+                     "limitations":  [
+                                         "Intel\u0027s official careers page was not fetched, so no round is marked DOCUMENTED.",
+                                         "The FACE Prep guide (2026-05-07) cites no candidate sources and gives no actual questions; it is used as topic context (class D).",
+                                         "Candidate-attributed material is three Glassdoor reviews (January, February and March 2025 interviews, posted February to April 2026) for Graduate Technical Intern; they give project and fundamentals topics. Items based on them carry one report each and are unverified. One review does not state a country.",
+                                         "A 2023 Graduate Engineer Trainee account (electronics basics) is older than the 2025 cutoff and was used only as context.",
+                                         "The Embedded and Software Engineer (Fresher) track is inferred from the guide and has no direct candidate reports; its content is original practice.",
+                                         "Group discussion is described as optional and not held in every drive.",
+                                         "Evidence handling: practice questions cite no sources; where a source only supplied topic context it is named in the question notes. Practice and job-description-inferred questions are UNVERIFIED and capped at LOW confidence on import.",
+                                         "Review status: answers, samples and cited counts come from the researcher and were not independently re-run; spot checks only. Source titles and some dates are blank because the sources did not show them.",
+                                         "Source pages on LeetCode Discuss and Glassdoor returned HTTP 403 to the CodeArena audit tool (2026-10-11), so the cited questions were not re-confirmed against those pages."
+                                     ]
+                 },
+    "sources":  [
+                    {
+                        "source_id":  "S1",
+                        "kind":  "OTHER",
+                        "url":  "https://faceprep.in/article/intel-recruitment-process-a-comprehensive-guide-for-freshers-2025/",
+                        "title":  "",
+                        "publisher":  "faceprep.in",
+                        "published_on":  "2026-05-07",
+                        "accessed_on":  "2026-10-09",
+                        "reliability_note":  ""
+                    },
+                    {
+                        "source_id":  "S2",
+                        "kind":  "OTHER",
+                        "url":  "https://static.glassdoor.it/Interview/Intel-Corporation-Graduate-Technical-Intern-Interview-Questions-EI_IE1519.0,17_KO18,43.htm",
+                        "title":  "",
+                        "publisher":  "static.glassdoor.it",
+                        "published_on":  "2026-04-24",
+                        "accessed_on":  "2026-10-09",
+                        "reliability_note":  ""
+                    }
+                ],
+    "rounds":  [
+                   {
+                       "round_id":  "R1",
+                       "name":  "Online Aptitude and Technical Test",
+                       "category":  "APTITUDE",
+                       "order":  1,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S1",
+                                          "S2"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R2",
+                       "name":  "Technical Interview",
+                       "category":  "CORE_TECHNICAL",
+                       "order":  2,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S1",
+                                          "S2"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R3",
+                       "name":  "HR Interview",
+                       "category":  "HR",
+                       "order":  3,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S2",
+                                          "S1"
+                                      ]
+                   }
+               ],
+    "questions":  [
+                      {
+                          "question_id":  "INT-GTI-R1-001",
+                          "round_id":  "R1",
+                          "topic":  "Quantitative Aptitude",
+                          "subtopic":  "Time and work",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "A can finish a job in 10 days and B in 15 days. How long will they take together?",
+                          "relevance_to_role":  "A 2026 FACE Prep guide describes an online aptitude test and an online technical test (C/C++, DSA, OS, networks, DBMS; digital logic and computer architecture for ECE/EEE) before interviews.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "6 days",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Work rates"
+                                           ],
+                          "follow_ups":  [
+                                             "If A leaves after 2 days?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Averaging"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "quantitative-aptitude"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://faceprep.in/article/intel-recruitment-process-a-comprehensive-guide-for-freshers-2025/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "5 days",
+                                                      "6 days",
+                                                      "7.5 days",
+                                                      "12.5 days"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "Rate = 1/10 + 1/15 = 1/6, so 6 days.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INT-GTI-R1-002",
+                          "round_id":  "R1",
+                          "topic":  "Logical Reasoning",
+                          "subtopic":  "Series",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "Find the next term: 3, 6, 12, 24, ?",
+                          "relevance_to_role":  "A 2026 FACE Prep guide describes an online aptitude test and an online technical test (C/C++, DSA, OS, networks, DBMS; digital logic and computer architecture for ECE/EEE) before interviews.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "48",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Series"
+                                           ],
+                          "follow_ups":  [
+                                             "What is the 8th term?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Adding 12"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "logical-reasoning"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://faceprep.in/article/intel-recruitment-process-a-comprehensive-guide-for-freshers-2025/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "30",
+                                                      "36",
+                                                      "48",
+                                                      "60"
+                                                  ],
+                                      "correct_options":  [
+                                                              2
+                                                          ],
+                                      "explanation":  "Each term doubles.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INT-GTI-R1-003",
+                          "round_id":  "R1",
+                          "topic":  "Verbal Ability",
+                          "subtopic":  "Sentence correction",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "Choose the correct sentence.",
+                          "relevance_to_role":  "A 2026 FACE Prep guide describes an online aptitude test and an online technical test (C/C++, DSA, OS, networks, DBMS; digital logic and computer architecture for ECE/EEE) before interviews.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "The team has completed its work.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Agreement"
+                                           ],
+                          "follow_ups":  [
+                                             "Correct \u0027Neither of them are ready\u0027."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Plural verb"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "verbal-ability"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://faceprep.in/article/intel-recruitment-process-a-comprehensive-guide-for-freshers-2025/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "The team have completed their work.",
+                                                      "The team has completed its work.",
+                                                      "The team are completing it\u0027s work.",
+                                                      "The teams has completed its work."
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "A collective noun takes a singular verb here and the possessive \u0027its\u0027.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INT-GTI-R1-004",
+                          "round_id":  "R1",
+                          "topic":  "C Programming",
+                          "subtopic":  "Pointers and arrays",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What is printed?\n\nint a[] = {10, 20, 30};\nint *p = a;\nprintf(\"%d\", *(p + 2));",
+                          "relevance_to_role":  "2026 Glassdoor reviews describe a 45 to 60 minute technical interview with the hiring team after resume shortlisting, centred on projects and fundamentals.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "30",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Pointer arithmetic"
+                                           ],
+                          "follow_ups":  [
+                                             "What does *p++ do?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Treating it as bytes"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "c-programming"
+                                   ],
+                          "notes":  "The topic is reported in candidate accounts; this item is an original practice question. Topic context only (no candidate attribution): https://static.glassdoor.it/Interview/Intel-Corporation-Graduate-Technical-Intern-Interview-Questions-EI_IE1519.0,17_KO18,43.htm.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "10",
+                                                      "20",
+                                                      "30",
+                                                      "Garbage"
+                                                  ],
+                                      "correct_options":  [
+                                                              2
+                                                          ],
+                                      "explanation":  "p + 2 points to a[2] = 30.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INT-GTI-R1-005",
+                          "round_id":  "R1",
+                          "topic":  "Operating Systems",
+                          "subtopic":  "Race condition",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Two threads increment a shared counter 1000 times each without synchronisation. What is the likely final value?",
+                          "relevance_to_role":  "2026 Glassdoor reviews describe a 45 to 60 minute technical interview with the hiring team after resume shortlisting, centred on projects and fundamentals.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Possibly less than 2000",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Race conditions"
+                                           ],
+                          "follow_ups":  [
+                                             "How do you fix it?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Assuming ++ is atomic"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "operating-systems"
+                                   ],
+                          "notes":  "The topic is reported in candidate accounts; this item is an original practice question. Topic context only (no candidate attribution): https://static.glassdoor.it/Interview/Intel-Corporation-Graduate-Technical-Intern-Interview-Questions-EI_IE1519.0,17_KO18,43.htm.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "Exactly 2000",
+                                                      "Possibly less than 2000",
+                                                      "Always 1000",
+                                                      "Always more than 2000"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "Increments are read-modify-write; interleaving can lose updates.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INT-GTI-R1-006",
+                          "round_id":  "R1",
+                          "topic":  "Computer Networks",
+                          "subtopic":  "TCP versus UDP",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "Which protocol provides reliable, ordered delivery?",
+                          "relevance_to_role":  "2026 Glassdoor reviews describe a 45 to 60 minute technical interview with the hiring team after resume shortlisting, centred on projects and fundamentals.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "TCP",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Transport"
+                                           ],
+                          "follow_ups":  [
+                                             "Which suits DNS queries?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Choosing UDP"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "computer-networks"
+                                   ],
+                          "notes":  "The topic is reported in candidate accounts; this item is an original practice question. Topic context only (no candidate attribution): https://static.glassdoor.it/Interview/Intel-Corporation-Graduate-Technical-Intern-Interview-Questions-EI_IE1519.0,17_KO18,43.htm.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "UDP",
+                                                      "TCP",
+                                                      "ICMP",
+                                                      "ARP"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "TCP provides reliability and ordering.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INT-GTI-R1-007",
+                          "round_id":  "R1",
+                          "topic":  "Cryptography",
+                          "subtopic":  "Symmetric versus asymmetric",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Which statement is true of asymmetric encryption?",
+                          "relevance_to_role":  "2026 Glassdoor reviews describe a 45 to 60 minute technical interview with the hiring team after resume shortlisting, centred on projects and fundamentals.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "A public key encrypts and a private key decrypts",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Public key cryptography"
+                                           ],
+                          "follow_ups":  [
+                                             "Why use hybrid encryption?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Confusing it with symmetric"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "cryptography"
+                                   ],
+                          "notes":  "The topic is reported in candidate accounts; this item is an original practice question. Topic context only (no candidate attribution): https://static.glassdoor.it/Interview/Intel-Corporation-Graduate-Technical-Intern-Interview-Questions-EI_IE1519.0,17_KO18,43.htm.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "One shared key is used by both parties",
+                                                      "A public key encrypts and a private key decrypts",
+                                                      "It is always faster than symmetric encryption",
+                                                      "It cannot provide signatures"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "Asymmetric schemes use a key pair; the private key signs and decrypts.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INT-GTI-R1-008",
+                          "round_id":  "R1",
+                          "topic":  "Digital Logic",
+                          "subtopic":  "Logic gates",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "Which gate outputs 1 only when its two inputs differ?",
+                          "relevance_to_role":  "A 2026 FACE Prep guide describes an online aptitude test and an online technical test (C/C++, DSA, OS, networks, DBMS; digital logic and computer architecture for ECE/EEE) before interviews.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "XOR",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Gates"
+                                           ],
+                          "follow_ups":  [
+                                             "Build XOR from NAND gates."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Choosing OR"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "digital-logic"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://faceprep.in/article/intel-recruitment-process-a-comprehensive-guide-for-freshers-2025/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "AND",
+                                                      "OR",
+                                                      "XOR",
+                                                      "NAND"
+                                                  ],
+                                      "correct_options":  [
+                                                              2
+                                                          ],
+                                      "explanation":  "XOR is true when exactly one input is 1.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INT-GTI-R1-009",
+                          "round_id":  "R1",
+                          "topic":  "Strings",
+                          "subtopic":  "Reverse a string",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Reverse a string without built-in reverse functions.",
+                          "relevance_to_role":  "2026 Glassdoor reviews describe a 45 to 60 minute technical interview with the hiring team after resume shortlisting, centred on projects and fundamentals.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Two-pointer swap or reverse iteration.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Strings",
+                                               "Reverse a string"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "strings"
+                                   ],
+                          "notes":  "Reversing a string without built-ins is reported in a Jan 2026 interview; the statement here is original.",
+                          "coding":  {
+                                         "problem_statement":  "Reverse a string without built-in reverse functions.",
+                                         "input_format":  "One line: the string.",
+                                         "output_format":  "The reversed string.",
+                                         "constraints":  "1 \u003c= length \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "hello",
+                                                             "output":  "olleh",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "Intel 2026",
+                                                             "output":  "6202 letnI",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Single character",
+                                                            "Palindrome",
+                                                            "Spaces"
+                                                        ],
+                                         "expected_algorithm":  "Two-pointer swap or reverse iteration.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(n)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INT-GTI-R2-001",
+                          "round_id":  "R2",
+                          "topic":  "Bit Manipulation",
+                          "subtopic":  "Flip a bit",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Flip the kth bit (counting from 1 at the least significant bit) of a number.",
+                          "relevance_to_role":  "A 2026 FACE Prep guide describes an online aptitude test and an online technical test (C/C++, DSA, OS, networks, DBMS; digital logic and computer architecture for ECE/EEE) before interviews.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "XOR with 1 \u003c\u003c (k-1).",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Bit Manipulation",
+                                               "Flip a bit"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "bits"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://faceprep.in/article/intel-recruitment-process-a-comprehensive-guide-for-freshers-2025/.",
+                          "coding":  {
+                                         "problem_statement":  "Flip the kth bit (counting from 1 at the least significant bit) of a number.",
+                                         "input_format":  "One line: n k.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "0 \u003c= n \u003c 2^31; 1 \u003c= k \u003c= 31",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "10 3",
+                                                             "output":  "14",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "7 1",
+                                                             "output":  "6",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "k = 1",
+                                                            "Bit above the top",
+                                                            "Zero"
+                                                        ],
+                                         "expected_algorithm":  "XOR with 1 \u003c\u003c (k-1).",
+                                         "time_complexity":  "O(1)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INT-GTI-R2-002",
+                          "round_id":  "R2",
+                          "topic":  "Bit Manipulation",
+                          "subtopic":  "Count set bits",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Count the number of 1 bits in the binary form of n.",
+                          "relevance_to_role":  "A 2026 FACE Prep guide describes an online aptitude test and an online technical test (C/C++, DSA, OS, networks, DBMS; digital logic and computer architecture for ECE/EEE) before interviews.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Brian Kernighan\u0027s loop: n \u0026= n - 1.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Bit Manipulation",
+                                               "Count set bits"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "bits"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://faceprep.in/article/intel-recruitment-process-a-comprehensive-guide-for-freshers-2025/.",
+                          "coding":  {
+                                         "problem_statement":  "Count the number of 1 bits in the binary form of n.",
+                                         "input_format":  "One line: n.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "0 \u003c= n \u003c 2^31",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "13",
+                                                             "output":  "3",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "0",
+                                                             "output":  "0",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Zero",
+                                                            "All ones",
+                                                            "Power of two"
+                                                        ],
+                                         "expected_algorithm":  "Brian Kernighan\u0027s loop: n \u0026= n - 1.",
+                                         "time_complexity":  "O(bits)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INT-GTI-R2-003",
+                          "round_id":  "R2",
+                          "topic":  "Projects",
+                          "subtopic":  "Machine learning project",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Walk me through your regression (ML) project: why that model, how you preprocessed the data, and where the dataset came from.",
+                          "relevance_to_role":  "2026 Glassdoor reviews describe a 45 to 60 minute technical interview with the hiring team after resume shortlisting, centred on projects and fundamentals.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Problem, dataset source and licence, cleaning and feature scaling, model choice with alternatives, metrics and validation, and limits.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Modelling",
+                                               "Data"
+                                           ],
+                          "follow_ups":  [
+                                             "How did you avoid overfitting?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Cannot justify the model"
+                                              ],
+                          "suggested_time_min":  8,
+                          "tags":  [
+                                       "ml"
+                                   ],
+                          "notes":  "Reported in a Jan 2026 review; the prompt is paraphrased.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INT-GTI-R2-004",
+                          "round_id":  "R2",
+                          "topic":  "Projects",
+                          "subtopic":  "Database choice",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Your web app used MongoDB. Why not MySQL?",
+                          "relevance_to_role":  "2026 Glassdoor reviews describe a 45 to 60 minute technical interview with the hiring team after resume shortlisting, centred on projects and fundamentals.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Document model fits flexible schemas and nested data; MySQL offers joins, strict schemas and transactions. Choose by access patterns, consistency needs and team skill.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "NoSQL",
+                                               "SQL"
+                                           ],
+                          "follow_ups":  [
+                                             "When would you switch?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "No trade-offs"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "database"
+                                   ],
+                          "notes":  "Reported in a Jan 2026 review; the prompt is paraphrased.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INT-GTI-R2-005",
+                          "round_id":  "R2",
+                          "topic":  "Projects",
+                          "subtopic":  "Libraries and alternatives",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Which libraries did your Python project use, and could you do it without them?",
+                          "relevance_to_role":  "2026 Glassdoor reviews describe a 45 to 60 minute technical interview with the hiring team after resume shortlisting, centred on projects and fundamentals.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Name the libraries and what each solved; describe a manual or standard-library alternative and its cost in time and correctness.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Trade-offs"
+                                           ],
+                          "follow_ups":  [
+                                             "What risks come with a dependency?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Cannot explain the library\u0027s role"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "python"
+                                   ],
+                          "notes":  "Reported in a Feb 2026 review; the prompt is paraphrased.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INT-GTI-R2-006",
+                          "round_id":  "R2",
+                          "topic":  "C++",
+                          "subtopic":  "Polymorphism and virtual functions",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Explain polymorphism in C++ with a short example. What does virtual do?",
+                          "relevance_to_role":  "2026 Glassdoor reviews describe a 45 to 60 minute technical interview with the hiring team after resume shortlisting, centred on projects and fundamentals.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "A base-class pointer calls a derived override at runtime when the function is virtual, via a vtable; without virtual the base version is chosen at compile time. Use a virtual destructor for base classes.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Virtual functions",
+                                               "vtable"
+                                           ],
+                          "follow_ups":  [
+                                             "What is a pure virtual function?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Forgetting virtual destructors"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "cpp"
+                                   ],
+                          "notes":  "Reported in a Jan 2026 review; the prompt is paraphrased.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INT-GTI-R2-007",
+                          "round_id":  "R2",
+                          "topic":  "C++",
+                          "subtopic":  "Pointers and arrays",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Explain how arrays and pointers relate in C++. What is the difference between int *p and int a[10]?",
+                          "relevance_to_role":  "2026 Glassdoor reviews describe a 45 to 60 minute technical interview with the hiring team after resume shortlisting, centred on projects and fundamentals.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "An array name decays to a pointer to its first element in most expressions, but arrays have fixed size and cannot be reassigned; sizeof differs.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Pointers",
+                                               "Arrays"
+                                           ],
+                          "follow_ups":  [
+                                             "What is pointer arithmetic?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Saying they are identical"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "cpp"
+                                   ],
+                          "notes":  "Reported in a Jan 2026 review; the prompt is paraphrased.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INT-GTI-R2-008",
+                          "round_id":  "R2",
+                          "topic":  "Operating Systems",
+                          "subtopic":  "Operating system concepts",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Explain process versus thread, deadlock and virtual memory.",
+                          "relevance_to_role":  "2026 Glassdoor reviews describe a 45 to 60 minute technical interview with the hiring team after resume shortlisting, centred on projects and fundamentals.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Processes isolate memory, threads share; deadlock needs four conditions; virtual memory maps addresses via page tables with demand paging.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "OS"
+                                           ],
+                          "follow_ups":  [
+                                             "What is thrashing?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Mixing processes and threads"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "os"
+                                   ],
+                          "notes":  "The topic is reported in candidate accounts; this item is an original practice question. Topic context only (no candidate attribution): https://static.glassdoor.it/Interview/Intel-Corporation-Graduate-Technical-Intern-Interview-Questions-EI_IE1519.0,17_KO18,43.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INT-GTI-R2-009",
+                          "round_id":  "R2",
+                          "topic":  "Computer Networks",
+                          "subtopic":  "Network fundamentals",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Explain the OSI layers, DNS and what happens when you open a URL.",
+                          "relevance_to_role":  "2026 Glassdoor reviews describe a 45 to 60 minute technical interview with the hiring team after resume shortlisting, centred on projects and fundamentals.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Seven layers; DNS resolves names; TCP handshake, TLS, HTTP, response.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "OSI",
+                                               "DNS"
+                                           ],
+                          "follow_ups":  [
+                                             "What is NAT?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Skipping DNS"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "networks"
+                                   ],
+                          "notes":  "The topic is reported in candidate accounts; this item is an original practice question. Topic context only (no candidate attribution): https://static.glassdoor.it/Interview/Intel-Corporation-Graduate-Technical-Intern-Interview-Questions-EI_IE1519.0,17_KO18,43.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INT-GTI-R2-010",
+                          "round_id":  "R2",
+                          "topic":  "Cryptography",
+                          "subtopic":  "Hashing, encryption and signatures",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "HARD",
+                          "prompt":  "Differentiate hashing, encryption and digital signatures with a use case for each.",
+                          "relevance_to_role":  "2026 Glassdoor reviews describe a 45 to 60 minute technical interview with the hiring team after resume shortlisting, centred on projects and fundamentals.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Hash: one-way fingerprint (password storage with salt); encryption: reversible with a key (TLS); signature: private key signs a hash so others verify with the public key (code signing).",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Cryptography"
+                                           ],
+                          "follow_ups":  [
+                                             "Why salt passwords?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Calling hashing encryption"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "security"
+                                   ],
+                          "notes":  "The topic is reported in candidate accounts; this item is an original practice question. Topic context only (no candidate attribution): https://static.glassdoor.it/Interview/Intel-Corporation-Graduate-Technical-Intern-Interview-Questions-EI_IE1519.0,17_KO18,43.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INT-GTI-R2-011",
+                          "round_id":  "R2",
+                          "topic":  "Cryptography",
+                          "subtopic":  "TLS handshake",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "HARD",
+                          "prompt":  "Outline the TLS handshake and what it achieves.",
+                          "relevance_to_role":  "2026 Glassdoor reviews describe a 45 to 60 minute technical interview with the hiring team after resume shortlisting, centred on projects and fundamentals.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Client hello, server certificate, key exchange, session keys; achieves authentication, confidentiality and integrity.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "TLS"
+                                           ],
+                          "follow_ups":  [
+                                             "What is a certificate authority?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Skipping authentication"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "security"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://static.glassdoor.it/Interview/Intel-Corporation-Graduate-Technical-Intern-Interview-Questions-EI_IE1519.0,17_KO18,43.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INT-GTI-R3-001",
+                          "round_id":  "R3",
+                          "topic":  "HR",
+                          "subtopic":  "Introduction and projects",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Tell me about the projects you have done.",
+                          "relevance_to_role":  "A 2026 FACE Prep guide describes a 30 to 45 minute HR interview on goals, Why Intel, relocation and situational questions.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Pick two projects; describe problem, your role, tools, results.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "Which one taught you the most?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Listing without detail"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "Reported as the opening prompt in a Feb 2026 interview.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INT-GTI-R3-002",
+                          "round_id":  "R3",
+                          "topic":  "HR",
+                          "subtopic":  "Timeline and availability",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "When can you join and when do your final exams end?",
+                          "relevance_to_role":  "A 2026 FACE Prep guide describes a 30 to 45 minute HR interview on goals, Why Intel, relocation and situational questions.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Give accurate dates and flexibility.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you start early?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Vague"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "Reported in a Jan 2026 review.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INT-GTI-R3-003",
+                          "round_id":  "R3",
+                          "topic":  "HR",
+                          "subtopic":  "Why Intel",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Why do you want to join Intel?",
+                          "relevance_to_role":  "A 2026 FACE Prep guide describes a 30 to 45 minute HR interview on goals, Why Intel, relocation and situational questions.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Link semiconductors, platforms and learning to your interests.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "Which Intel product excites you?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Generic praise"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://faceprep.in/article/intel-recruitment-process-a-comprehensive-guide-for-freshers-2025/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INT-GTI-R3-004",
+                          "round_id":  "R3",
+                          "topic":  "Teamwork",
+                          "subtopic":  "Team deadline",
+                          "question_type":  "BEHAVIORAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Tell me about a time your team had a tight deadline.",
+                          "relevance_to_role":  "A 2026 FACE Prep guide describes a 30 to 45 minute HR interview on goals, Why Intel, relocation and situational questions.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "A deadline met through clear roles.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Specific, real example",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Own actions and reasoning are clear",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Outcome and learning stated",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Teamwork"
+                                           ],
+                          "follow_ups":  [
+                                             "What did you learn?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Vague story",
+                                                  "No outcome"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "behavioral"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://faceprep.in/article/intel-recruitment-process-a-comprehensive-guide-for-freshers-2025/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  {
+                                             "competency":  "Teamwork",
+                                             "star_guidance":  "Situation, your actions, result.",
+                                             "positive_signals":  [
+                                                                      "Prioritises",
+                                                                      "Communicates"
+                                                                  ],
+                                             "negative_signals":  [
+                                                                      "Blames"
+                                                                  ]
+                                         }
+                      },
+                      {
+                          "question_id":  "INT-GTI-R3-005",
+                          "round_id":  "R3",
+                          "topic":  "HR",
+                          "subtopic":  "Relocation",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Are you comfortable relocating to Bengaluru or Hyderabad?",
+                          "relevance_to_role":  "A 2026 FACE Prep guide describes a 30 to 45 minute HR interview on goals, Why Intel, relocation and situational questions.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Be flexible and honest.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "Preference?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Rigid"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://faceprep.in/article/intel-recruitment-process-a-comprehensive-guide-for-freshers-2025/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      }
+                  ]
+}

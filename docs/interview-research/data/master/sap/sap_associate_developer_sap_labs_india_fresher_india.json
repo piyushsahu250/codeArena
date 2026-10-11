@@ -1,0 +1,3058 @@
+{
+    "schema_version":  "codearena-interview-import/1",
+    "research":  {
+                     "company":  "SAP",
+                     "role":  "Associate Developer (SAP Labs India)",
+                     "experience_level":  "FRESHER",
+                     "hiring_region":  "India",
+                     "target_year":  2026,
+                     "researched_on":  "2026-10-09",
+                     "researcher":  "Claude (research run 2026-10-09)",
+                     "job_description_url":  "https://jobs.sap.com/search/?q=associate+developer\u0026locationsearch=India",
+                     "job_description_summary":  "SAP Labs India hires freshers as Associate Developers / Software Developers. A FACE Prep guide (undated) describes an online test (about 25 aptitude MCQs, 2 to 3 coding problems, technical MCQs on OOP, DBMS and OS), two technical interviews, a managerial interview and an HR interview. A June 2026 Glassdoor review lists sorting, normalization, C, data structures, paging, segmentation, puzzles and OS topics; the managerial and HR rounds were described as a formality. The official SAP careers pages were not fetched.",
+                     "required_skills":  [
+                                             "Aptitude",
+                                             "Programming (Java or C)",
+                                             "DSA basics",
+                                             "OOP, DBMS and OS fundamentals",
+                                             "SQL",
+                                             "Basic design",
+                                             "Project explanation",
+                                             "Behavioral competencies"
+                                         ],
+                     "limitations":  [
+                                         "SAP\u0027s official careers pages were not fetched, so no round is marked DOCUMENTED.",
+                                         "The FACE Prep guide has no date and presents its questions as typical patterns, not candidate reports; it is used as topic context (class D).",
+                                         "Candidate-attributed material: one June 2026 Glassdoor review (Associate Developer; topics only) and one undated LeetCode account of a Developer Associate (Java full stack) that mentions \u0027current work\u0027 and so appears to be an experienced hire. Its coding problems, Java-service questions and six managerial questions are class B, one report each, unverified, and may be harder than new-graduate interviews.",
+                                         "A February 2026 review for Potsdam, Germany was excluded as out of region.",
+                                         "Managerial questions beyond the LeetCode account are original practice.",
+                                         "Evidence handling: practice questions cite no sources; where a source only supplied topic context it is named in the question notes. Practice and job-description-inferred questions are UNVERIFIED and capped at LOW confidence on import.",
+                                         "Review status: answers, samples and cited counts come from the researcher and were not independently re-run; spot checks only. Source titles and some dates are blank because the sources did not show them.",
+                                         "Source pages on LeetCode Discuss and Glassdoor returned HTTP 403 to the CodeArena audit tool (2026-10-11), so the cited questions were not re-confirmed against those pages."
+                                     ]
+                 },
+    "sources":  [
+                    {
+                        "source_id":  "S1",
+                        "kind":  "OTHER",
+                        "url":  "https://www.faceprep.in/article/sap-recruitment-process-for-freshers-sap-selection-process/",
+                        "title":  "",
+                        "publisher":  "www.faceprep.in",
+                        "published_on":  "",
+                        "accessed_on":  "2026-10-09",
+                        "reliability_note":  ""
+                    },
+                    {
+                        "source_id":  "S2",
+                        "kind":  "CANDIDATE_REPORT",
+                        "url":  "https://leetcode.com/discuss/interview-experience/7151712",
+                        "title":  "",
+                        "publisher":  "leetcode.com",
+                        "published_on":  "",
+                        "accessed_on":  "2026-10-09",
+                        "reliability_note":  ""
+                    },
+                    {
+                        "source_id":  "S3",
+                        "kind":  "OTHER",
+                        "url":  "https://www.glassdoor.co.in/Interview/SAP-Interview-E10471-RVW9163733.htm",
+                        "title":  "",
+                        "publisher":  "www.glassdoor.co.in",
+                        "published_on":  "2026-06-16",
+                        "accessed_on":  "2026-10-09",
+                        "reliability_note":  ""
+                    }
+                ],
+    "rounds":  [
+                   {
+                       "round_id":  "R1",
+                       "name":  "Online Assessment",
+                       "category":  "ONLINE_ASSESSMENT",
+                       "order":  1,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S1"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R3",
+                       "name":  "Technical Interview 2",
+                       "category":  "CORE_TECHNICAL",
+                       "order":  2,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S2",
+                                          "S1"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R2",
+                       "name":  "Technical Interview 1",
+                       "category":  "CORE_TECHNICAL",
+                       "order":  3,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S3",
+                                          "S1",
+                                          "S2"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R4",
+                       "name":  "Managerial Interview",
+                       "category":  "BEHAVIORAL",
+                       "order":  4,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S2",
+                                          "S1"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R5",
+                       "name":  "HR Interview",
+                       "category":  "HR",
+                       "order":  5,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S1",
+                                          "S3",
+                                          "S2"
+                                      ]
+                   }
+               ],
+    "questions":  [
+                      {
+                          "question_id":  "SAP-AD-R1-001",
+                          "round_id":  "R1",
+                          "topic":  "Quantitative Aptitude",
+                          "subtopic":  "Averages",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "The average of 5 numbers is 18. If one number is removed, the average becomes 16. What number was removed?",
+                          "relevance_to_role":  "A FACE Prep guide describes an online test with about 25 aptitude MCQs, 2 to 3 coding problems and technical MCQs on OOP, DBMS and OS.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "26",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Averages"
+                                           ],
+                          "follow_ups":  [
+                                             "What if two were removed?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Dividing by 5"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "quantitative-aptitude"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.faceprep.in/article/sap-recruitment-process-for-freshers-sap-selection-process/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "22",
+                                                      "24",
+                                                      "26",
+                                                      "28"
+                                                  ],
+                                      "correct_options":  [
+                                                              2
+                                                          ],
+                                      "explanation":  "Total = 90; remaining total = 64; removed = 26.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "SAP-AD-R1-002",
+                          "round_id":  "R1",
+                          "topic":  "Quantitative Aptitude",
+                          "subtopic":  "Profit and loss",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "An item bought for Rs. 400 is sold at a 15% profit. What is the selling price?",
+                          "relevance_to_role":  "A FACE Prep guide describes an online test with about 25 aptitude MCQs, 2 to 3 coding problems and technical MCQs on OOP, DBMS and OS.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Rs. 460",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Profit"
+                                           ],
+                          "follow_ups":  [
+                                             "What if sold at 15% loss?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Using 400 + 15"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "quantitative-aptitude"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.faceprep.in/article/sap-recruitment-process-for-freshers-sap-selection-process/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "Rs. 440",
+                                                      "Rs. 450",
+                                                      "Rs. 460",
+                                                      "Rs. 475"
+                                                  ],
+                                      "correct_options":  [
+                                                              2
+                                                          ],
+                                      "explanation":  "400 x 1.15 = 460.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "SAP-AD-R1-003",
+                          "round_id":  "R1",
+                          "topic":  "Logical Reasoning",
+                          "subtopic":  "Coding-decoding",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "If SAP is coded as TBQ, how is LAB coded?",
+                          "relevance_to_role":  "A FACE Prep guide describes an online test with about 25 aptitude MCQs, 2 to 3 coding problems and technical MCQs on OOP, DBMS and OS.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "MBC",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Letter shifting"
+                                           ],
+                          "follow_ups":  [
+                                             "Code DEV."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Shifting backwards"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "logical-reasoning"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.faceprep.in/article/sap-recruitment-process-for-freshers-sap-selection-process/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "MBC",
+                                                      "MCB",
+                                                      "KZA",
+                                                      "LBC"
+                                                  ],
+                                      "correct_options":  [
+                                                              0
+                                                          ],
+                                      "explanation":  "Each letter shifts forward by one: L-M, A-B, B-C.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "SAP-AD-R1-004",
+                          "round_id":  "R1",
+                          "topic":  "Logical Reasoning",
+                          "subtopic":  "Syllogism",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "All developers are testers. No tester is a manager. Conclusion: No developer is a manager.",
+                          "relevance_to_role":  "A FACE Prep guide describes an online test with about 25 aptitude MCQs, 2 to 3 coding problems and technical MCQs on OOP, DBMS and OS.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "True",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Syllogism"
+                                           ],
+                          "follow_ups":  [
+                                             "What if \u0027some testers are managers\u0027?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Cannot say"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "logical-reasoning"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.faceprep.in/article/sap-recruitment-process-for-freshers-sap-selection-process/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "True",
+                                                      "False",
+                                                      "Cannot say",
+                                                      "Partly true"
+                                                  ],
+                                      "correct_options":  [
+                                                              0
+                                                          ],
+                                      "explanation":  "Developers are a subset of testers, and testers exclude managers, so developers exclude managers.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "SAP-AD-R1-005",
+                          "round_id":  "R1",
+                          "topic":  "OOP",
+                          "subtopic":  "Polymorphism",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "Which feature lets one method name behave differently based on the object\u0027s runtime type?",
+                          "relevance_to_role":  "A FACE Prep guide describes an online test with about 25 aptitude MCQs, 2 to 3 coding problems and technical MCQs on OOP, DBMS and OS.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Overriding",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Polymorphism"
+                                           ],
+                          "follow_ups":  [
+                                             "What is compile-time polymorphism?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Choosing overloading"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "oop"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.faceprep.in/article/sap-recruitment-process-for-freshers-sap-selection-process/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "Overloading",
+                                                      "Overriding",
+                                                      "Encapsulation",
+                                                      "Static binding"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "Overriding with dynamic dispatch selects the implementation at runtime.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "SAP-AD-R1-006",
+                          "round_id":  "R1",
+                          "topic":  "DBMS",
+                          "subtopic":  "Normal forms",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "A relation has a non-key attribute that depends on another non-key attribute. Which normal form does it violate?",
+                          "relevance_to_role":  "A FACE Prep guide describes an online test with about 25 aptitude MCQs, 2 to 3 coding problems and technical MCQs on OOP, DBMS and OS.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "3NF",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Normalization"
+                                           ],
+                          "follow_ups":  [
+                                             "How do you fix it?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Choosing 2NF"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "dbms"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.faceprep.in/article/sap-recruitment-process-for-freshers-sap-selection-process/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "1NF",
+                                                      "2NF",
+                                                      "3NF",
+                                                      "BCNF only"
+                                                  ],
+                                      "correct_options":  [
+                                                              2
+                                                          ],
+                                      "explanation":  "A transitive dependency of a non-key attribute violates 3NF.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "SAP-AD-R1-007",
+                          "round_id":  "R1",
+                          "topic":  "Operating Systems",
+                          "subtopic":  "Scheduling",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Which scheduling algorithm is preemptive and gives each process a fixed time slice?",
+                          "relevance_to_role":  "A FACE Prep guide describes an online test with about 25 aptitude MCQs, 2 to 3 coding problems and technical MCQs on OOP, DBMS and OS.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Round Robin",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Scheduling"
+                                           ],
+                          "follow_ups":  [
+                                             "What happens if the quantum is too large?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Choosing SJF"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "operating-systems"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.faceprep.in/article/sap-recruitment-process-for-freshers-sap-selection-process/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "FCFS",
+                                                      "SJF",
+                                                      "Round Robin",
+                                                      "Priority non-preemptive"
+                                                  ],
+                                      "correct_options":  [
+                                                              2
+                                                          ],
+                                      "explanation":  "Round Robin rotates processes using a time quantum.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "SAP-AD-R3-001",
+                          "round_id":  "R3",
+                          "topic":  "Arrays",
+                          "subtopic":  "Second largest element",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Print the second largest distinct value, or -1.",
+                          "relevance_to_role":  "A FACE Prep guide describes a second technical round on problem-solving depth, basic design and a project walkthrough; an undated LeetCode account describes coding problems and Java service questions.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Single pass with two maxima.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Arrays",
+                                               "Second largest element"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "arrays"
+                                   ],
+                          "notes":  "Reported in one undated LeetCode account by what appears to be an experienced Java full-stack hire; applicability to new graduates is uncertain. The statement here is original.",
+                          "coding":  {
+                                         "problem_statement":  "Print the second largest distinct value, or -1.",
+                                         "input_format":  "Line 1: n. Line 2: n integers.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "1 \u003c= n \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "5\n10 20 20 5 15",
+                                                             "output":  "15",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "3\n7 7 7",
+                                                             "output":  "-1",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "All equal",
+                                                            "Negatives",
+                                                            "n = 1"
+                                                        ],
+                                         "expected_algorithm":  "Single pass with two maxima.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "SAP-AD-R3-002",
+                          "round_id":  "R3",
+                          "topic":  "Strings",
+                          "subtopic":  "12-hour to 24-hour time",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Convert a time in hh:mm:ssAM or hh:mm:ssPM format to 24-hour format.",
+                          "relevance_to_role":  "A FACE Prep guide describes a second technical round on problem-solving depth, basic design and a project walkthrough; an undated LeetCode account describes coding problems and Java service questions.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Handle 12 specially, add 12 for PM.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Strings",
+                                               "12-hour to 24-hour time"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "strings"
+                                   ],
+                          "notes":  "Reported in one undated LeetCode account by what appears to be an experienced Java full-stack hire; applicability to new graduates is uncertain. The statement here is original.",
+                          "coding":  {
+                                         "problem_statement":  "Convert a time in hh:mm:ssAM or hh:mm:ssPM format to 24-hour format.",
+                                         "input_format":  "One line: the time.",
+                                         "output_format":  "The time in hh:mm:ss.",
+                                         "constraints":  "Valid time",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "07:05:45PM",
+                                                             "output":  "19:05:45",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "12:01:00AM",
+                                                             "output":  "00:01:00",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "12 AM",
+                                                            "12 PM",
+                                                            "Single digit hour"
+                                                        ],
+                                         "expected_algorithm":  "Handle 12 specially, add 12 for PM.",
+                                         "time_complexity":  "O(1)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "SAP-AD-R1-008",
+                          "round_id":  "R1",
+                          "topic":  "Linked Lists",
+                          "subtopic":  "Reverse a list (values)",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Reverse a linked list given as values and print it.",
+                          "relevance_to_role":  "A FACE Prep guide describes an online test with about 25 aptitude MCQs, 2 to 3 coding problems and technical MCQs on OOP, DBMS and OS.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Pointer reversal.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Linked Lists",
+                                               "Reverse a list (values)"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "linked-lists"
+                                   ],
+                          "notes":  "The guide presents this as a typical pattern, not a reported question. The statement here is original. Topic context only (no candidate attribution): https://www.faceprep.in/article/sap-recruitment-process-for-freshers-sap-selection-process/.",
+                          "coding":  {
+                                         "problem_statement":  "Reverse a linked list given as values and print it.",
+                                         "input_format":  "Line 1: n. Line 2: n values.",
+                                         "output_format":  "Reversed values.",
+                                         "constraints":  "1 \u003c= n \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "5\n1 2 3 4 5",
+                                                             "output":  "5 4 3 2 1",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "1\n7",
+                                                             "output":  "7",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Single",
+                                                            "Two",
+                                                            "Long"
+                                                        ],
+                                         "expected_algorithm":  "Pointer reversal.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "SAP-AD-R2-001",
+                          "round_id":  "R2",
+                          "topic":  "Core Concepts",
+                          "subtopic":  "Sorting algorithms",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Compare bubble, merge and quick sort. Which would you use for large data and why?",
+                          "relevance_to_role":  "A FACE Prep guide describes a first technical round on DSA, OOP, DBMS, OS and SQL; a June 2026 Glassdoor review lists sorting, normalization, C, data structures, paging and segmentation.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Bubble O(n^2); merge O(n log n) stable with O(n) space; quick O(n log n) average, in-place, O(n^2) worst. Merge for stability, quick for speed with good pivots.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Sorting",
+                                               "Complexity"
+                                           ],
+                          "follow_ups":  [
+                                             "What is the worst case of quick sort?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Calling bubble sort efficient"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "sorting"
+                                   ],
+                          "notes":  "The topic is reported in candidate accounts or guides; this item is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/SAP-Interview-E10471-RVW9163733.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "SAP-AD-R2-002",
+                          "round_id":  "R2",
+                          "topic":  "Core Concepts",
+                          "subtopic":  "Normalization",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Explain 1NF, 2NF and 3NF with an example.",
+                          "relevance_to_role":  "A FACE Prep guide describes a first technical round on DSA, OOP, DBMS, OS and SQL; a June 2026 Glassdoor review lists sorting, normalization, C, data structures, paging and segmentation.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "1NF atomic values; 2NF no partial dependency on part of a composite key; 3NF no transitive dependency.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Normal forms"
+                                           ],
+                          "follow_ups":  [
+                                             "What is BCNF?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Mixing 2NF and 3NF"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "dbms"
+                                   ],
+                          "notes":  "The topic is reported in candidate accounts or guides; this item is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/SAP-Interview-E10471-RVW9163733.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "SAP-AD-R2-003",
+                          "round_id":  "R2",
+                          "topic":  "Core Concepts",
+                          "subtopic":  "Paging and segmentation",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Differentiate paging from segmentation.",
+                          "relevance_to_role":  "A FACE Prep guide describes a first technical round on DSA, OOP, DBMS, OS and SQL; a June 2026 Glassdoor review lists sorting, normalization, C, data structures, paging and segmentation.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Paging uses fixed-size pages (no external fragmentation, internal fragmentation possible); segmentation uses variable logical segments (external fragmentation possible) and matches the program\u0027s structure.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Memory management"
+                                           ],
+                          "follow_ups":  [
+                                             "What is a page table?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Mixing the fragmentation types"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "os"
+                                   ],
+                          "notes":  "The topic is reported in candidate accounts or guides; this item is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/SAP-Interview-E10471-RVW9163733.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "SAP-AD-R2-004",
+                          "round_id":  "R2",
+                          "topic":  "Core Concepts",
+                          "subtopic":  "C language basics",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "What is a pointer in C? What is the difference between malloc and calloc?",
+                          "relevance_to_role":  "A FACE Prep guide describes a first technical round on DSA, OOP, DBMS, OS and SQL; a June 2026 Glassdoor review lists sorting, normalization, C, data structures, paging and segmentation.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "A pointer stores an address. malloc allocates uninitialised memory; calloc allocates zero-initialised memory for an array.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Pointers",
+                                               "Memory"
+                                           ],
+                          "follow_ups":  [
+                                             "What is a dangling pointer?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Forgetting to free"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "c"
+                                   ],
+                          "notes":  "The topic is reported in candidate accounts or guides; this item is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/SAP-Interview-E10471-RVW9163733.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "SAP-AD-R2-005",
+                          "round_id":  "R2",
+                          "topic":  "Core Concepts",
+                          "subtopic":  "Puzzle: crossing a bridge",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Four people take 1, 2, 5 and 10 minutes to cross a bridge with one torch; at most two cross together at the slower pace. What is the minimum total time?",
+                          "relevance_to_role":  "A FACE Prep guide describes a first technical round on DSA, OOP, DBMS, OS and SQL; a June 2026 Glassdoor review lists sorting, normalization, C, data structures, paging and segmentation.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "17 minutes: 1 and 2 cross (2), 1 returns (1), 5 and 10 cross (10), 2 returns (2), 1 and 2 cross (2).",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Optimisation"
+                                           ],
+                          "follow_ups":  [
+                                             "What if there were five people?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Sending the fastest each time"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "puzzle"
+                                   ],
+                          "notes":  "The topic is reported in candidate accounts or guides; this item is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/SAP-Interview-E10471-RVW9163733.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "SAP-AD-R2-006",
+                          "round_id":  "R2",
+                          "topic":  "Core Concepts",
+                          "subtopic":  "OOP class hierarchy",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Write a small class hierarchy for Shape, Circle and Rectangle with an area method.",
+                          "relevance_to_role":  "A FACE Prep guide describes a first technical round on DSA, OOP, DBMS, OS and SQL; a June 2026 Glassdoor review lists sorting, normalization, C, data structures, paging and segmentation.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "abstract class Shape { abstract double area(); } class Circle extends Shape {...} class Rectangle extends Shape {...}; use polymorphism to sum areas in a list.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Inheritance",
+                                               "Polymorphism"
+                                           ],
+                          "follow_ups":  [
+                                             "Add a new shape without changing the sum function."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Duplicating logic"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "oop"
+                                   ],
+                          "notes":  "The guide presents this as a typical pattern, not a reported question. Topic context only (no candidate attribution): https://www.faceprep.in/article/sap-recruitment-process-for-freshers-sap-selection-process/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "SAP-AD-R2-007",
+                          "round_id":  "R2",
+                          "topic":  "Core Concepts",
+                          "subtopic":  "Deadlock conditions",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "State the four conditions for deadlock and one way to prevent it.",
+                          "relevance_to_role":  "A FACE Prep guide describes a first technical round on DSA, OOP, DBMS, OS and SQL; a June 2026 Glassdoor review lists sorting, normalization, C, data structures, paging and segmentation.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Mutual exclusion, hold and wait, no preemption, circular wait; prevent by ordering resource acquisition.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Deadlock"
+                                           ],
+                          "follow_ups":  [
+                                             "Detection versus avoidance?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Missing a condition"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "os"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.faceprep.in/article/sap-recruitment-process-for-freshers-sap-selection-process/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "SAP-AD-R2-008",
+                          "round_id":  "R2",
+                          "topic":  "Core Concepts",
+                          "subtopic":  "SQL joins and group by",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Write a query to find departments with more than five employees.",
+                          "relevance_to_role":  "A FACE Prep guide describes a first technical round on DSA, OOP, DBMS, OS and SQL; a June 2026 Glassdoor review lists sorting, normalization, C, data structures, paging and segmentation.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "SELECT dept_id, COUNT(*) FROM Employee GROUP BY dept_id HAVING COUNT(*) \u003e 5;",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "GROUP BY",
+                                               "HAVING"
+                                           ],
+                          "follow_ups":  [
+                                             "Include department names."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Using WHERE for the aggregate"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "sql"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.faceprep.in/article/sap-recruitment-process-for-freshers-sap-selection-process/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "SAP-AD-R2-009",
+                          "round_id":  "R2",
+                          "topic":  "Core Concepts",
+                          "subtopic":  "Graph traversal",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Explain DFS and BFS on a graph and when to use each.",
+                          "relevance_to_role":  "A FACE Prep guide describes a first technical round on DSA, OOP, DBMS, OS and SQL; a June 2026 Glassdoor review lists sorting, normalization, C, data structures, paging and segmentation.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "DFS uses a stack/recursion (cycle detection, components); BFS uses a queue (shortest path in unweighted graphs).",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Graphs"
+                                           ],
+                          "follow_ups":  [
+                                             "Complexity?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Using DFS for shortest path"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "graphs"
+                                   ],
+                          "notes":  "Reported in one undated LeetCode account by what appears to be an experienced Java full-stack hire; applicability to new graduates is uncertain. The prompt is original.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "SAP-AD-R2-010",
+                          "round_id":  "R2",
+                          "topic":  "Core Concepts",
+                          "subtopic":  "Dependency injection",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What is dependency injection and why is it useful?",
+                          "relevance_to_role":  "A FACE Prep guide describes a first technical round on DSA, OOP, DBMS, OS and SQL; a June 2026 Glassdoor review lists sorting, normalization, C, data structures, paging and segmentation.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Objects receive their dependencies from outside (constructor or setter), improving testability and loose coupling; frameworks such as Spring wire them.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "DI",
+                                               "Testing"
+                                           ],
+                          "follow_ups":  [
+                                             "Constructor versus field injection?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Confusing with inheritance"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "java"
+                                   ],
+                          "notes":  "Reported in one undated LeetCode account by what appears to be an experienced Java full-stack hire; applicability to new graduates is uncertain. The prompt is original.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "SAP-AD-R2-011",
+                          "round_id":  "R2",
+                          "topic":  "Core Concepts",
+                          "subtopic":  "Exception handling in a service",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "How would you handle exceptions in a Spring Boot REST service?",
+                          "relevance_to_role":  "A FACE Prep guide describes a first technical round on DSA, OOP, DBMS, OS and SQL; a June 2026 Glassdoor review lists sorting, normalization, C, data structures, paging and segmentation.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Use a global handler (@ControllerAdvice with @ExceptionHandler), return consistent error bodies with proper status codes, log with correlation ids, and avoid leaking internals.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Exceptions",
+                                               "REST"
+                                           ],
+                          "follow_ups":  [
+                                             "Checked versus unchecked?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Catching everything silently"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "java"
+                                   ],
+                          "notes":  "Reported in one undated LeetCode account by what appears to be an experienced Java full-stack hire; applicability to new graduates is uncertain. The prompt is original.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "SAP-AD-R2-012",
+                          "round_id":  "R2",
+                          "topic":  "Core Concepts",
+                          "subtopic":  "Hashing and collisions",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "How does a hash table handle collisions?",
+                          "relevance_to_role":  "A FACE Prep guide describes a first technical round on DSA, OOP, DBMS, OS and SQL; a June 2026 Glassdoor review lists sorting, normalization, C, data structures, paging and segmentation.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Chaining (lists per bucket) or open addressing (probing); keep load factor low and resize.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Hashing"
+                                           ],
+                          "follow_ups":  [
+                                             "What is rehashing?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Assuming no collisions"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "hashing"
+                                   ],
+                          "notes":  "The guide presents this as a typical pattern, not a reported question. Topic context only (no candidate attribution): https://www.faceprep.in/article/sap-recruitment-process-for-freshers-sap-selection-process/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "SAP-AD-R1-009",
+                          "round_id":  "R1",
+                          "topic":  "Arrays",
+                          "subtopic":  "Move zeros to the end",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Move zeros to the end keeping order.",
+                          "relevance_to_role":  "A FACE Prep guide describes an online test with about 25 aptitude MCQs, 2 to 3 coding problems and technical MCQs on OOP, DBMS and OS.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Two pointers.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Arrays",
+                                               "Move zeros to the end"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "arrays"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.faceprep.in/article/sap-recruitment-process-for-freshers-sap-selection-process/.",
+                          "coding":  {
+                                         "problem_statement":  "Move zeros to the end keeping order.",
+                                         "input_format":  "Line 1: n. Line 2: n integers.",
+                                         "output_format":  "n integers.",
+                                         "constraints":  "1 \u003c= n \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "6\n0 1 0 3 12 0",
+                                                             "output":  "1 3 12 0 0 0",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "3\n0 0 0",
+                                                             "output":  "0 0 0",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "All zeros",
+                                                            "None",
+                                                            "Single"
+                                                        ],
+                                         "expected_algorithm":  "Two pointers.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "SAP-AD-R1-010",
+                          "round_id":  "R1",
+                          "topic":  "Stack",
+                          "subtopic":  "Balanced brackets",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Print Yes if brackets are balanced, otherwise No.",
+                          "relevance_to_role":  "A FACE Prep guide describes an online test with about 25 aptitude MCQs, 2 to 3 coding problems and technical MCQs on OOP, DBMS and OS.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Stack.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Stack",
+                                               "Balanced brackets"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "stack"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.faceprep.in/article/sap-recruitment-process-for-freshers-sap-selection-process/.",
+                          "coding":  {
+                                         "problem_statement":  "Print Yes if brackets are balanced, otherwise No.",
+                                         "input_format":  "One line of ()[]{}.",
+                                         "output_format":  "Yes or No.",
+                                         "constraints":  "1 \u003c= length \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "{[()]}",
+                                                             "output":  "Yes",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "([)]",
+                                                             "output":  "No",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Wrong order",
+                                                            "Only closers",
+                                                            "Empty-like"
+                                                        ],
+                                         "expected_algorithm":  "Stack.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(n)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "SAP-AD-R3-003",
+                          "round_id":  "R3",
+                          "topic":  "Strings",
+                          "subtopic":  "Longest substring without repeats",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Print the length of the longest substring with no repeats.",
+                          "relevance_to_role":  "A FACE Prep guide describes a second technical round on problem-solving depth, basic design and a project walkthrough; an undated LeetCode account describes coding problems and Java service questions.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Sliding window.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Strings",
+                                               "Longest substring without repeats"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "sliding-window"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.faceprep.in/article/sap-recruitment-process-for-freshers-sap-selection-process/.",
+                          "coding":  {
+                                         "problem_statement":  "Print the length of the longest substring with no repeats.",
+                                         "input_format":  "One line: the string.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "1 \u003c= length \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "abcabcbb",
+                                                             "output":  "3",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "bbbbb",
+                                                             "output":  "1",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "All distinct",
+                                                            "All same",
+                                                            "Long"
+                                                        ],
+                                         "expected_algorithm":  "Sliding window.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(k)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "SAP-AD-R3-004",
+                          "round_id":  "R3",
+                          "topic":  "Dynamic Programming",
+                          "subtopic":  "House robber",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Print the maximum sum without taking adjacent elements.",
+                          "relevance_to_role":  "A FACE Prep guide describes a second technical round on problem-solving depth, basic design and a project walkthrough; an undated LeetCode account describes coding problems and Java service questions.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "dp.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Dynamic Programming",
+                                               "House robber"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "dp"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.faceprep.in/article/sap-recruitment-process-for-freshers-sap-selection-process/.",
+                          "coding":  {
+                                         "problem_statement":  "Print the maximum sum without taking adjacent elements.",
+                                         "input_format":  "Line 1: n. Line 2: non-negative integers.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "1 \u003c= n \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "4\n2 7 9 3",
+                                                             "output":  "11",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "1\n5",
+                                                             "output":  "5",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "n = 1",
+                                                            "Alternating",
+                                                            "All equal"
+                                                        ],
+                                         "expected_algorithm":  "dp.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "SAP-AD-R3-005",
+                          "round_id":  "R3",
+                          "topic":  "Arrays",
+                          "subtopic":  "Product except self",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "For each position print the product of all other elements without division.",
+                          "relevance_to_role":  "A FACE Prep guide describes a second technical round on problem-solving depth, basic design and a project walkthrough; an undated LeetCode account describes coding problems and Java service questions.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Prefix and suffix.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Arrays",
+                                               "Product except self"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "prefix"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.faceprep.in/article/sap-recruitment-process-for-freshers-sap-selection-process/.",
+                          "coding":  {
+                                         "problem_statement":  "For each position print the product of all other elements without division.",
+                                         "input_format":  "Line 1: n. Line 2: integers.",
+                                         "output_format":  "n integers.",
+                                         "constraints":  "2 \u003c= n \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "4\n1 2 3 4",
+                                                             "output":  "24 12 8 6",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "3\n0 5 2",
+                                                             "output":  "10 0 0",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Zeros",
+                                                            "Negatives",
+                                                            "Two"
+                                                        ],
+                                         "expected_algorithm":  "Prefix and suffix.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "SAP-AD-R3-006",
+                          "round_id":  "R3",
+                          "topic":  "Design",
+                          "subtopic":  "Order management schema",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "HARD",
+                          "prompt":  "Design a database schema for an order-management system.",
+                          "relevance_to_role":  "A FACE Prep guide describes a second technical round on problem-solving depth, basic design and a project walkthrough; an undated LeetCode account describes coding problems and Java service questions.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Tables: Customer, Product, Order, OrderItem, Payment, Shipment with keys and indexes; consider normalisation, order status history, inventory updates in transactions and reporting.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Schema design"
+                                           ],
+                          "follow_ups":  [
+                                             "How do you handle price changes?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "No order-item snapshot"
+                                              ],
+                          "suggested_time_min":  20,
+                          "tags":  [
+                                       "design"
+                                   ],
+                          "notes":  "The guide presents this as a typical pattern, not a reported question. Topic context only (no candidate attribution): https://www.faceprep.in/article/sap-recruitment-process-for-freshers-sap-selection-process/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "SAP-AD-R3-007",
+                          "round_id":  "R3",
+                          "topic":  "Design",
+                          "subtopic":  "Query optimisation",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "How did you optimise slow database queries in a project? Describe your approach.",
+                          "relevance_to_role":  "A FACE Prep guide describes a second technical round on problem-solving depth, basic design and a project walkthrough; an undated LeetCode account describes coding problems and Java service questions.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Read the query plan, add or fix indexes, avoid N+1 queries and SELECT *, paginate, cache, and re-measure.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Query plans"
+                                           ],
+                          "follow_ups":  [
+                                             "When can an index hurt?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Adding indexes blindly"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "dbms"
+                                   ],
+                          "notes":  "Reported in one undated LeetCode account by what appears to be an experienced Java full-stack hire; applicability to new graduates is uncertain. The prompt is original.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "SAP-AD-R3-008",
+                          "round_id":  "R3",
+                          "topic":  "Design",
+                          "subtopic":  "POST versus PUT",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "What is the difference between POST and PUT?",
+                          "relevance_to_role":  "A FACE Prep guide describes a second technical round on problem-solving depth, basic design and a project walkthrough; an undated LeetCode account describes coding problems and Java service questions.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "POST creates or triggers processing and is not idempotent; PUT replaces a resource at a known URL and is idempotent.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "REST",
+                                               "Idempotency"
+                                           ],
+                          "follow_ups":  [
+                                             "What about PATCH?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Calling them equivalent"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "rest"
+                                   ],
+                          "notes":  "Reported in one undated LeetCode account by what appears to be an experienced Java full-stack hire; applicability to new graduates is uncertain. The prompt is original.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "SAP-AD-R3-009",
+                          "round_id":  "R3",
+                          "topic":  "Design",
+                          "subtopic":  "Microservice communication",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "HARD",
+                          "prompt":  "How do microservices communicate asynchronously and why?",
+                          "relevance_to_role":  "A FACE Prep guide describes a second technical round on problem-solving depth, basic design and a project walkthrough; an undated LeetCode account describes coding problems and Java service questions.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Message brokers or event streams (Kafka, RabbitMQ) decouple services, absorb spikes and enable retries; handle idempotency and ordering.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Messaging"
+                                           ],
+                          "follow_ups":  [
+                                             "How do you trace requests across services?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Synchronous calls only"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "microservices"
+                                   ],
+                          "notes":  "Reported in one undated LeetCode account by what appears to be an experienced Java full-stack hire; applicability to new graduates is uncertain. The prompt is original.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "SAP-AD-R3-010",
+                          "round_id":  "R3",
+                          "topic":  "Project Discussion",
+                          "subtopic":  "Project walkthrough",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Walk me through your final-year or internship project.",
+                          "relevance_to_role":  "A FACE Prep guide describes a second technical round on problem-solving depth, basic design and a project walkthrough; an undated LeetCode account describes coding problems and Java service questions.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Problem, architecture, your role, a challenge, result.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Ownership"
+                                           ],
+                          "follow_ups":  [
+                                             "What would you improve?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Cannot explain own code"
+                                              ],
+                          "suggested_time_min":  8,
+                          "tags":  [
+                                       "project"
+                                   ],
+                          "notes":  "The guide presents this as a typical pattern, not a reported question. Topic context only (no candidate attribution): https://www.faceprep.in/article/sap-recruitment-process-for-freshers-sap-selection-process/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "SAP-AD-R3-011",
+                          "round_id":  "R3",
+                          "topic":  "Project Discussion",
+                          "subtopic":  "Logging and monitoring",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "How would you add logging and monitoring to your project?",
+                          "relevance_to_role":  "A FACE Prep guide describes a second technical round on problem-solving depth, basic design and a project walkthrough; an undated LeetCode account describes coding problems and Java service questions.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Structured logs with correlation ids, metrics and alerts, and tracing for distributed calls.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Observability"
+                                           ],
+                          "follow_ups":  [
+                                             "What should you not log?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Logging secrets"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "observability"
+                                   ],
+                          "notes":  "Reported in one undated LeetCode account by what appears to be an experienced Java full-stack hire; applicability to new graduates is uncertain. The prompt is original.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "SAP-AD-R3-012",
+                          "round_id":  "R3",
+                          "topic":  "Project Discussion",
+                          "subtopic":  "Caching",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What is Redis and where would you use a cache in your project?",
+                          "relevance_to_role":  "A FACE Prep guide describes a second technical round on problem-solving depth, basic design and a project walkthrough; an undated LeetCode account describes coding problems and Java service questions.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "An in-memory key-value store used for caching hot reads, sessions and rate limits; handle invalidation and TTLs.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Caching"
+                                           ],
+                          "follow_ups":  [
+                                             "What is cache invalidation?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Caching without expiry"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "caching"
+                                   ],
+                          "notes":  "Reported in one undated LeetCode account by what appears to be an experienced Java full-stack hire; applicability to new graduates is uncertain. The prompt is original.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "SAP-AD-R4-001",
+                          "round_id":  "R4",
+                          "topic":  "Collaboration",
+                          "subtopic":  "Different approach from your manager",
+                          "question_type":  "BEHAVIORAL",
+                          "difficulty":  "HARD",
+                          "prompt":  "Tell me about a time you and your manager had different approaches to a problem. What did you do?",
+                          "relevance_to_role":  "A FACE Prep guide describes a managerial interview with situational questions; an undated LeetCode account lists six behavioral questions.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "A disagreement handled with data and respect.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Specific, real example",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Own actions and reasoning are clear",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Outcome and learning stated",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Collaboration"
+                                           ],
+                          "follow_ups":  [
+                                             "What did you learn?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Vague story",
+                                                  "No outcome"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "behavioral"
+                                   ],
+                          "notes":  "Reported in one undated LeetCode account by what appears to be an experienced Java full-stack hire; applicability to new graduates is uncertain. Paraphrased.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  {
+                                             "competency":  "Collaboration",
+                                             "star_guidance":  "Situation, both views, how you reached a decision, result.",
+                                             "positive_signals":  [
+                                                                      "Respectful",
+                                                                      "Evidence",
+                                                                      "Commits"
+                                                                  ],
+                                             "negative_signals":  [
+                                                                      "Defiant or passive"
+                                                                  ]
+                                         }
+                      },
+                      {
+                          "question_id":  "SAP-AD-R4-002",
+                          "round_id":  "R4",
+                          "topic":  "Ownership",
+                          "subtopic":  "Handing over work",
+                          "question_type":  "BEHAVIORAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Suppose you hand over a component you owned for a long time. What steps would you take?",
+                          "relevance_to_role":  "A FACE Prep guide describes a managerial interview with situational questions; an undated LeetCode account lists six behavioral questions.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "A clear handover plan.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Specific, real example",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Own actions and reasoning are clear",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Outcome and learning stated",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Ownership"
+                                           ],
+                          "follow_ups":  [
+                                             "What did you learn?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Vague story",
+                                                  "No outcome"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "behavioral"
+                                   ],
+                          "notes":  "Reported in one undated LeetCode account by what appears to be an experienced Java full-stack hire; applicability to new graduates is uncertain. Paraphrased.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  {
+                                             "competency":  "Ownership",
+                                             "star_guidance":  "Document, walk through, shadow, hand over runbooks, stay reachable.",
+                                             "positive_signals":  [
+                                                                      "Structured",
+                                                                      "Empathetic"
+                                                                  ],
+                                             "negative_signals":  [
+                                                                      "Abrupt handover"
+                                                                  ]
+                                         }
+                      },
+                      {
+                          "question_id":  "SAP-AD-R4-003",
+                          "round_id":  "R4",
+                          "topic":  "Helping others",
+                          "subtopic":  "Helping a colleague",
+                          "question_type":  "BEHAVIORAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Tell me about a technical issue a colleague faced and how you helped.",
+                          "relevance_to_role":  "A FACE Prep guide describes a managerial interview with situational questions; an undated LeetCode account lists six behavioral questions.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "A concrete help case.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Specific, real example",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Own actions and reasoning are clear",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Outcome and learning stated",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Teamwork"
+                                           ],
+                          "follow_ups":  [
+                                             "What did you learn?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Vague story",
+                                                  "No outcome"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "behavioral"
+                                   ],
+                          "notes":  "Reported in one undated LeetCode account by what appears to be an experienced Java full-stack hire; applicability to new graduates is uncertain. Paraphrased.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  {
+                                             "competency":  "Teamwork",
+                                             "star_guidance":  "Situation, what you did, outcome.",
+                                             "positive_signals":  [
+                                                                      "Supportive",
+                                                                      "Specific"
+                                                                  ],
+                                             "negative_signals":  [
+                                                                      "Takes over"
+                                                                  ]
+                                         }
+                      },
+                      {
+                          "question_id":  "SAP-AD-R4-004",
+                          "round_id":  "R4",
+                          "topic":  "Prioritisation",
+                          "subtopic":  "Conflicting priorities",
+                          "question_type":  "BEHAVIORAL",
+                          "difficulty":  "HARD",
+                          "prompt":  "How do you prioritise when another team sees an issue as high priority and your team does not?",
+                          "relevance_to_role":  "A FACE Prep guide describes a managerial interview with situational questions; an undated LeetCode account lists six behavioral questions.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "A priority conflict resolved with impact data.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Specific, real example",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Own actions and reasoning are clear",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Outcome and learning stated",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Prioritisation"
+                                           ],
+                          "follow_ups":  [
+                                             "What did you learn?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Vague story",
+                                                  "No outcome"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "behavioral"
+                                   ],
+                          "notes":  "Reported in one undated LeetCode account by what appears to be an experienced Java full-stack hire; applicability to new graduates is uncertain. Paraphrased.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  {
+                                             "competency":  "Prioritisation",
+                                             "star_guidance":  "Understand impact, align on severity, negotiate, escalate if needed.",
+                                             "positive_signals":  [
+                                                                      "Listens",
+                                                                      "Data",
+                                                                      "Clear criteria"
+                                                                  ],
+                                             "negative_signals":  [
+                                                                      "Ignores"
+                                                                  ]
+                                         }
+                      },
+                      {
+                          "question_id":  "SAP-AD-R4-005",
+                          "round_id":  "R4",
+                          "topic":  "Learning from failure",
+                          "subtopic":  "A failure",
+                          "question_type":  "BEHAVIORAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Tell me about something you tried that failed and what you learned.",
+                          "relevance_to_role":  "A FACE Prep guide describes a managerial interview with situational questions; an undated LeetCode account lists six behavioral questions.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "A real failure with lessons.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Specific, real example",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Own actions and reasoning are clear",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Outcome and learning stated",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Growth mindset"
+                                           ],
+                          "follow_ups":  [
+                                             "What did you learn?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Vague story",
+                                                  "No outcome"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "behavioral"
+                                   ],
+                          "notes":  "Reported in one undated LeetCode account by what appears to be an experienced Java full-stack hire; applicability to new graduates is uncertain. Paraphrased.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  {
+                                             "competency":  "Growth mindset",
+                                             "star_guidance":  "What failed, your part, lesson.",
+                                             "positive_signals":  [
+                                                                      "Owns it",
+                                                                      "Learns"
+                                                                  ],
+                                             "negative_signals":  [
+                                                                      "Blames"
+                                                                  ]
+                                         }
+                      },
+                      {
+                          "question_id":  "SAP-AD-R4-006",
+                          "round_id":  "R4",
+                          "topic":  "HR",
+                          "subtopic":  "Short- and long-term goals",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Talk briefly about your short- and long-term goals.",
+                          "relevance_to_role":  "A FACE Prep guide describes a managerial interview with situational questions; an undated LeetCode account lists six behavioral questions.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Short term: learn the product and deliver. Long term: deeper expertise or leadership.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "How will you measure progress?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Unrealistic claims"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "Reported in one undated LeetCode account by what appears to be an experienced Java full-stack hire; applicability to new graduates is uncertain. Paraphrased.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "SAP-AD-R4-007",
+                          "round_id":  "R4",
+                          "topic":  "Situational",
+                          "subtopic":  "Slow system after an update",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "HARD",
+                          "prompt":  "A system became slow after a database update. How do you diagnose it?",
+                          "relevance_to_role":  "A FACE Prep guide describes a managerial interview with situational questions; an undated LeetCode account lists six behavioral questions.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Compare before and after (query plans, indexes, statistics), check locks and resource use, roll back or fix, then add monitoring.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Diagnosis"
+                                           ],
+                          "follow_ups":  [
+                                             "How do you prevent recurrence?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Guessing"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "scenario"
+                                   ],
+                          "notes":  "The guide presents this as a typical pattern, not a reported question. Topic context only (no candidate attribution): https://www.faceprep.in/article/sap-recruitment-process-for-freshers-sap-selection-process/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "SAP-AD-R4-008",
+                          "round_id":  "R4",
+                          "topic":  "Impact",
+                          "subtopic":  "Impact on a real user",
+                          "question_type":  "BEHAVIORAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Describe a project\u0027s impact on a real user.",
+                          "relevance_to_role":  "A FACE Prep guide describes a managerial interview with situational questions; an undated LeetCode account lists six behavioral questions.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "A project with measurable user impact.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Specific, real example",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Own actions and reasoning are clear",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Outcome and learning stated",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Customer focus"
+                                           ],
+                          "follow_ups":  [
+                                             "What did you learn?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Vague story",
+                                                  "No outcome"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "behavioral"
+                                   ],
+                          "notes":  "The guide presents this as a typical pattern, not a reported question. Topic context only (no candidate attribution): https://www.faceprep.in/article/sap-recruitment-process-for-freshers-sap-selection-process/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  {
+                                             "competency":  "Customer focus",
+                                             "star_guidance":  "User, what changed, evidence.",
+                                             "positive_signals":  [
+                                                                      "User-centred",
+                                                                      "Evidence"
+                                                                  ],
+                                             "negative_signals":  [
+                                                                      "Feature-only"
+                                                                  ]
+                                         }
+                      },
+                      {
+                          "question_id":  "SAP-AD-R4-009",
+                          "round_id":  "R4",
+                          "topic":  "Teamwork",
+                          "subtopic":  "Teammate disagreement",
+                          "question_type":  "BEHAVIORAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "How do you handle a disagreement with a teammate?",
+                          "relevance_to_role":  "A FACE Prep guide describes a managerial interview with situational questions; an undated LeetCode account lists six behavioral questions.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "A resolved disagreement.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Specific, real example",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Own actions and reasoning are clear",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Outcome and learning stated",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Collaboration"
+                                           ],
+                          "follow_ups":  [
+                                             "What did you learn?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Vague story",
+                                                  "No outcome"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "behavioral"
+                                   ],
+                          "notes":  "The guide presents this as a typical pattern, not a reported question. Topic context only (no candidate attribution): https://www.faceprep.in/article/sap-recruitment-process-for-freshers-sap-selection-process/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  {
+                                             "competency":  "Collaboration",
+                                             "star_guidance":  "Listen, find facts, compromise.",
+                                             "positive_signals":  [
+                                                                      "Respectful"
+                                                                  ],
+                                             "negative_signals":  [
+                                                                      "Blames"
+                                                                  ]
+                                         }
+                      },
+                      {
+                          "question_id":  "SAP-AD-R4-010",
+                          "round_id":  "R4",
+                          "topic":  "Ambiguity",
+                          "subtopic":  "Unclear requirements",
+                          "question_type":  "BEHAVIORAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Tell me about a time requirements were unclear.",
+                          "relevance_to_role":  "A FACE Prep guide describes a managerial interview with situational questions; an undated LeetCode account lists six behavioral questions.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Clarified and delivered.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Specific, real example",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Own actions and reasoning are clear",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Outcome and learning stated",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Ambiguity"
+                                           ],
+                          "follow_ups":  [
+                                             "What did you learn?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Vague story",
+                                                  "No outcome"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "behavioral"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.faceprep.in/article/sap-recruitment-process-for-freshers-sap-selection-process/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  {
+                                             "competency":  "Ambiguity",
+                                             "star_guidance":  "Clarify, assume, iterate.",
+                                             "positive_signals":  [
+                                                                      "Asks questions"
+                                                                  ],
+                                             "negative_signals":  [
+                                                                      "Waits"
+                                                                  ]
+                                         }
+                      },
+                      {
+                          "question_id":  "SAP-AD-R5-001",
+                          "round_id":  "R5",
+                          "topic":  "HR",
+                          "subtopic":  "Why SAP",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Why do you want to join SAP?",
+                          "relevance_to_role":  "A FACE Prep guide describes an HR interview on cultural fit, location, compensation and joining timeline.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Link enterprise software, cloud and Joule/AI direction, and learning culture to your goals.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "Which SAP product interests you?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Generic praise"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.faceprep.in/article/sap-recruitment-process-for-freshers-sap-selection-process/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "SAP-AD-R5-002",
+                          "round_id":  "R5",
+                          "topic":  "HR",
+                          "subtopic":  "Motivation and experience",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "What is your experience and motivation for this role?",
+                          "relevance_to_role":  "A FACE Prep guide describes an HR interview on cultural fit, location, compensation and joining timeline.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S3"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Summarise relevant skills and what attracts you.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "What would you do in six months?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Vague"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "Reported in a June 2026 review; paraphrased.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "SAP-AD-R5-003",
+                          "round_id":  "R5",
+                          "topic":  "HR",
+                          "subtopic":  "Location and compensation",
+                          "question_type":  "HR",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What are your location preferences and compensation expectations?",
+                          "relevance_to_role":  "A FACE Prep guide describes an HR interview on cultural fit, location, compensation and joining timeline.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Be flexible; show awareness of the fresher band.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "What matters more, pay or learning?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Unrealistic number"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.faceprep.in/article/sap-recruitment-process-for-freshers-sap-selection-process/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "SAP-AD-R5-004",
+                          "round_id":  "R5",
+                          "topic":  "HR",
+                          "subtopic":  "Remote versus office",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "What are the pros and cons of working remotely versus from the office?",
+                          "relevance_to_role":  "A FACE Prep guide describes an HR interview on cultural fit, location, compensation and joining timeline.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Balanced view: flexibility versus collaboration and mentoring.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "Which do you prefer?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "One-sided"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "Reported in one undated LeetCode account by what appears to be an experienced Java full-stack hire; applicability to new graduates is uncertain. Paraphrased.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "SAP-AD-R5-005",
+                          "round_id":  "R5",
+                          "topic":  "HR",
+                          "subtopic":  "Cross-team collaboration",
+                          "question_type":  "HR",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "How do you collaborate with other teams?",
+                          "relevance_to_role":  "A FACE Prep guide describes an HR interview on cultural fit, location, compensation and joining timeline.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Clear communication, shared goals, documentation, respect for dependencies.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "Example?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Blaming"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "Reported in one undated LeetCode account by what appears to be an experienced Java full-stack hire; applicability to new graduates is uncertain. Paraphrased.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "SAP-AD-R5-006",
+                          "round_id":  "R5",
+                          "topic":  "HR",
+                          "subtopic":  "Joining timeline",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "When can you join?",
+                          "relevance_to_role":  "A FACE Prep guide describes an HR interview on cultural fit, location, compensation and joining timeline.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Be honest and professional.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "Do you have other offers?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Evasive"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.faceprep.in/article/sap-recruitment-process-for-freshers-sap-selection-process/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      }
+                  ]
+}

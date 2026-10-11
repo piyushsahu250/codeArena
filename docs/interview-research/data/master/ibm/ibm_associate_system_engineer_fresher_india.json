@@ -1,0 +1,2940 @@
+{
+    "schema_version":  "codearena-interview-import/1",
+    "research":  {
+                     "company":  "IBM",
+                     "role":  "Associate System Engineer",
+                     "experience_level":  "FRESHER",
+                     "hiring_region":  "India",
+                     "target_year":  2026,
+                     "researched_on":  "2026-10-09",
+                     "researcher":  "Claude (research run 2026-10-09)",
+                     "job_description_url":  "https://www.ibm.com/careers/search?field_keyword_18[0]=Entry%20Level\u0026field_keyword_05[0]=India",
+                     "job_description_summary":  "IBM hires freshers in India as Associate System Engineers. Glassdoor reviews describe a multi-stage process: a cognitive ability test made of games, a personality test, an English assessment (an October 2026 review lists a four-question scenario-based writing test and a 42-question listening and speaking test), a coding assessment (a 2019 review: one coding question and five MCQs in 30 minutes), technical interviews on basic programming, data structures, OOP, SQL, DBMS, networks and projects (a September 2026 review), and a final technical and HR interview. The official IBM careers pages were not fetched.",
+                     "required_skills":  [
+                                             "Cognitive and numerical reasoning",
+                                             "Situational judgement",
+                                             "English writing and speaking",
+                                             "Basic programming and data structures",
+                                             "OOP, SQL, DBMS and networks",
+                                             "Project explanation",
+                                             "Communication"
+                                         ],
+                     "limitations":  [
+                                         "IBM\u0027s official careers pages were not fetched, so no round is marked DOCUMENTED.",
+                                         "Only three 2026 reviews on one Glassdoor page give process or topics, and none lists specific questions; the 2019 review (older than the 2025 cutoff) gives the coding-assessment format and the project \u0027other uses and profit\u0027 question, so those are marked low confidence.",
+                                         "The cognitive \u0027games\u0027, personality scenarios, Knockri writing test and SHL speaking test cannot be reproduced as text; items for rounds 1 to 3 are original proxies for the formats.",
+                                         "A September 2026 review of campus hiring in Bengaluru and an October 2026 review from Gandhinagar describe different campus processes; this bank combines them.",
+                                         "Reported items carry one report each and are unverified; most of the bank is original practice.",
+                                         "A review from 1 October 2026 said it had applied online and heard nothing; it contributed no content.",
+                                         "Evidence handling: practice questions cite no sources; where a source only supplied topic context it is named in the question notes. Practice and job-description-inferred questions are UNVERIFIED and capped at LOW confidence on import.",
+                                         "Review status: answers, samples and cited counts come from the researcher and were not independently re-run; spot checks only. Source titles and some dates are blank because the sources did not show them.",
+                                         "Source pages on LeetCode Discuss and Glassdoor returned HTTP 403 to the CodeArena audit tool (2026-10-11), so the cited questions were not re-confirmed against those pages."
+                                     ]
+                 },
+    "sources":  [
+                    {
+                        "source_id":  "S1",
+                        "kind":  "OTHER",
+                        "url":  "https://www.glassdoor.co.in/Interview/IBM-Interview-E354-RVW30689023.htm",
+                        "title":  "",
+                        "publisher":  "www.glassdoor.co.in",
+                        "published_on":  "2019-12-04",
+                        "accessed_on":  "2026-10-09",
+                        "reliability_note":  ""
+                    }
+                ],
+    "rounds":  [
+                   {
+                       "round_id":  "R1",
+                       "name":  "Cognitive Ability and Aptitude Assessment",
+                       "category":  "APTITUDE",
+                       "order":  1,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S1"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R2",
+                       "name":  "Personality and Behavioral Assessment",
+                       "category":  "BEHAVIORAL",
+                       "order":  2,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S1"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R3",
+                       "name":  "English Communication Assessment (Writing and Speaking)",
+                       "category":  "HR",
+                       "order":  3,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S1"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R4",
+                       "name":  "Coding Assessment",
+                       "category":  "CODING_ASSESSMENT",
+                       "order":  4,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S1"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R5",
+                       "name":  "Technical Interview",
+                       "category":  "CORE_TECHNICAL",
+                       "order":  5,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S1"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R6",
+                       "name":  "Final Technical and HR Interview",
+                       "category":  "CORE_TECHNICAL",
+                       "order":  6,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S1"
+                                      ]
+                   }
+               ],
+    "questions":  [
+                      {
+                          "question_id":  "IBM-ASE-R1-001",
+                          "round_id":  "R1",
+                          "topic":  "Logical Reasoning",
+                          "subtopic":  "Pattern recognition",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "Which shape completes the pattern: square, circle, triangle, square, circle, ?",
+                          "relevance_to_role":  "Glassdoor reviews describe a cognitive ability test made of short games; this item is a conventional aptitude proxy.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Triangle",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Cycles"
+                                           ],
+                          "follow_ups":  [
+                                             "What is the 20th shape?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Repeating the last"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "logical-reasoning"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/IBM-Interview-E354-RVW30689023.htm.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "Square",
+                                                      "Circle",
+                                                      "Triangle",
+                                                      "Star"
+                                                  ],
+                                      "correct_options":  [
+                                                              2
+                                                          ],
+                                      "explanation":  "The sequence repeats square, circle, triangle.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "IBM-ASE-R1-002",
+                          "round_id":  "R1",
+                          "topic":  "Numerical Reasoning",
+                          "subtopic":  "Ratios",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "A bag has red and blue balls in the ratio 5:3. If there are 40 balls, how many are blue?",
+                          "relevance_to_role":  "Glassdoor reviews describe a cognitive ability test made of short games; this item is a conventional aptitude proxy.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "15",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Ratios"
+                                           ],
+                          "follow_ups":  [
+                                             "How many red?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Using 5/8"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "numerical-reasoning"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/IBM-Interview-E354-RVW30689023.htm.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "12",
+                                                      "15",
+                                                      "18",
+                                                      "25"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "3/8 of 40 = 15.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "IBM-ASE-R1-003",
+                          "round_id":  "R1",
+                          "topic":  "Numerical Reasoning",
+                          "subtopic":  "Series",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "Find the next term: 4, 9, 19, 39, ?",
+                          "relevance_to_role":  "Glassdoor reviews describe a cognitive ability test made of short games; this item is a conventional aptitude proxy.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "79",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Recurrence"
+                                           ],
+                          "follow_ups":  [
+                                             "What is the 6th term?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Adding 20"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "numerical-reasoning"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/IBM-Interview-E354-RVW30689023.htm.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "59",
+                                                      "69",
+                                                      "79",
+                                                      "89"
+                                                  ],
+                                      "correct_options":  [
+                                                              2
+                                                          ],
+                                      "explanation":  "Each term is twice the previous plus 1: 39 x 2 + 1 = 79.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "IBM-ASE-R1-004",
+                          "round_id":  "R1",
+                          "topic":  "Memory",
+                          "subtopic":  "Sequence recall",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "You see the digits 7 2 9 4 shown briefly. Which sequence is the reverse of what you saw?",
+                          "relevance_to_role":  "Glassdoor reviews describe a cognitive ability test made of short games; this item is a conventional aptitude proxy.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "4 9 2 7",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Working memory"
+                                           ],
+                          "follow_ups":  [
+                                             "What is the sum of digits?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Rotating instead"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "memory"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/IBM-Interview-E354-RVW30689023.htm.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "4 9 2 7",
+                                                      "7 2 9 4",
+                                                      "2 7 4 9",
+                                                      "9 4 7 2"
+                                                  ],
+                                      "correct_options":  [
+                                                              0
+                                                          ],
+                                      "explanation":  "Reversing 7 2 9 4 gives 4 9 2 7.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "IBM-ASE-R1-005",
+                          "round_id":  "R1",
+                          "topic":  "Logical Reasoning",
+                          "subtopic":  "Deduction",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "If all analysts are planners and no planner is a tester, which is true?",
+                          "relevance_to_role":  "Glassdoor reviews describe a cognitive ability test made of short games; this item is a conventional aptitude proxy.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "No analyst is a tester",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Syllogism"
+                                           ],
+                          "follow_ups":  [
+                                             "What if some planners are testers?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Choosing \u0027some\u0027"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "logical-reasoning"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/IBM-Interview-E354-RVW30689023.htm.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "Some analysts are testers",
+                                                      "No analyst is a tester",
+                                                      "All testers are analysts",
+                                                      "Some planners are analysts only"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "Analysts are planners, and planners are not testers, so analysts are not testers.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "IBM-ASE-R1-006",
+                          "round_id":  "R1",
+                          "topic":  "Attention",
+                          "subtopic":  "Spot the difference",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "Compare \u0027IBM-4721-AX\u0027 and \u0027IBM-4712-AX\u0027. At which position (counting from 1) do they first differ?",
+                          "relevance_to_role":  "Glassdoor reviews describe a cognitive ability test made of short games; this item is a conventional aptitude proxy.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "7",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Attention to detail"
+                                           ],
+                          "follow_ups":  [
+                                             "How many positions differ in total?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Skipping the hyphen"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "attention"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/IBM-Interview-E354-RVW30689023.htm.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "5",
+                                                      "6",
+                                                      "7",
+                                                      "8"
+                                                  ],
+                                      "correct_options":  [
+                                                              2
+                                                          ],
+                                      "explanation":  "Positions: I(1) B(2) M(3) -(4) 4(5) 7(6) 2(7) 1(8). The second string has 1 at position 7, so they first differ at position 7.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "IBM-ASE-R1-007",
+                          "round_id":  "R1",
+                          "topic":  "Numerical Reasoning",
+                          "subtopic":  "Percentages",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "A cost rises from 200 to 250. What is the percentage increase?",
+                          "relevance_to_role":  "Glassdoor reviews describe a cognitive ability test made of short games; this item is a conventional aptitude proxy.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "25%",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Percentages"
+                                           ],
+                          "follow_ups":  [
+                                             "What percentage decrease reverses it?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Using 250 as the base"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "numerical-reasoning"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/IBM-Interview-E354-RVW30689023.htm.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "20%",
+                                                      "25%",
+                                                      "30%",
+                                                      "50%"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "Increase 50 on 200 = 25%.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "IBM-ASE-R1-008",
+                          "round_id":  "R1",
+                          "topic":  "Logical Reasoning",
+                          "subtopic":  "Rule learning",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "In a game each letter scores its alphabet position (A=1, B=2, ...) and vowels count double. What is the score of the word BAD?",
+                          "relevance_to_role":  "Glassdoor reviews describe a cognitive ability test made of short games; this item is a conventional aptitude proxy.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "8",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Rules"
+                                           ],
+                          "follow_ups":  [
+                                             "Score the word BEAD."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Forgetting to double the vowel"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "logical-reasoning"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/IBM-Interview-E354-RVW30689023.htm.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "7",
+                                                      "8",
+                                                      "9",
+                                                      "14"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "B = 2, A = 1 doubled = 2, D = 4; total 8.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "IBM-ASE-R2-001",
+                          "round_id":  "R2",
+                          "topic":  "Teamwork",
+                          "subtopic":  "Choosing a team response",
+                          "question_type":  "BEHAVIORAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Scenario: a teammate misses a deadline that affects your part. Do you (A) report it to the manager at once, or (B) talk to the teammate first and offer help? Choose and explain.",
+                          "relevance_to_role":  "A 2019 review (older than the 2025 cutoff) describes a personality test choosing between two scenarios where candidates can be eliminated.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Talk to the teammate first, offer help, agree a new date, escalate if it affects the delivery.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Specific, real example",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Own actions and reasoning are clear",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Outcome and learning stated",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Collaboration"
+                                           ],
+                          "follow_ups":  [
+                                             "What did you learn?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Vague story",
+                                                  "No outcome"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "behavioral"
+                                   ],
+                          "notes":  "The topic is reported in candidate accounts or guides; this item is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/IBM-Interview-E354-RVW30689023.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  {
+                                             "competency":  "Collaboration",
+                                             "star_guidance":  "State your choice, the reasoning, and when you would escalate.",
+                                             "positive_signals":  [
+                                                                      "Talks first",
+                                                                      "Escalates if needed"
+                                                                  ],
+                                             "negative_signals":  [
+                                                                      "Blames",
+                                                                      "Ignores"
+                                                                  ]
+                                         }
+                      },
+                      {
+                          "question_id":  "IBM-ASE-R2-002",
+                          "round_id":  "R2",
+                          "topic":  "Integrity",
+                          "subtopic":  "Honest reporting",
+                          "question_type":  "BEHAVIORAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Scenario: you find a bug in your own code just before a demo. Do you (A) hide it until after the demo, or (B) tell the team and fix or mitigate it? Choose and explain.",
+                          "relevance_to_role":  "A 2019 review (older than the 2025 cutoff) describes a personality test choosing between two scenarios where candidates can be eliminated.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Disclose early and offer a mitigation.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Specific, real example",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Own actions and reasoning are clear",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Outcome and learning stated",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Integrity"
+                                           ],
+                          "follow_ups":  [
+                                             "What did you learn?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Vague story",
+                                                  "No outcome"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "behavioral"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/IBM-Interview-E354-RVW30689023.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  {
+                                             "competency":  "Integrity",
+                                             "star_guidance":  "Choose B; explain risk, transparency and mitigation.",
+                                             "positive_signals":  [
+                                                                      "Transparent",
+                                                                      "Responsible"
+                                                                  ],
+                                             "negative_signals":  [
+                                                                      "Conceals"
+                                                                  ]
+                                         }
+                      },
+                      {
+                          "question_id":  "IBM-ASE-R2-003",
+                          "round_id":  "R2",
+                          "topic":  "Customer focus",
+                          "subtopic":  "Client request",
+                          "question_type":  "BEHAVIORAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Scenario: a client asks for a change outside the agreed scope. Do you (A) refuse, or (B) assess impact and discuss options? Choose and explain.",
+                          "relevance_to_role":  "A 2019 review (older than the 2025 cutoff) describes a personality test choosing between two scenarios where candidates can be eliminated.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Assess and discuss rather than say yes or no instantly.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Specific, real example",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Own actions and reasoning are clear",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Outcome and learning stated",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Customer focus"
+                                           ],
+                          "follow_ups":  [
+                                             "What did you learn?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Vague story",
+                                                  "No outcome"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "behavioral"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/IBM-Interview-E354-RVW30689023.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  {
+                                             "competency":  "Customer focus",
+                                             "star_guidance":  "Assess effort and priority, communicate options, update scope formally.",
+                                             "positive_signals":  [
+                                                                      "Listens",
+                                                                      "Negotiates"
+                                                                  ],
+                                             "negative_signals":  [
+                                                                      "Rigid or over-promising"
+                                                                  ]
+                                         }
+                      },
+                      {
+                          "question_id":  "IBM-ASE-R2-004",
+                          "round_id":  "R2",
+                          "topic":  "Adaptability",
+                          "subtopic":  "Changing priorities",
+                          "question_type":  "BEHAVIORAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Scenario: your priorities change midweek. How do you adapt?",
+                          "relevance_to_role":  "A 2019 review (older than the 2025 cutoff) describes a personality test choosing between two scenarios where candidates can be eliminated.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Re-prioritise with the team and manage risks.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Specific, real example",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Own actions and reasoning are clear",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Outcome and learning stated",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Adaptability"
+                                           ],
+                          "follow_ups":  [
+                                             "What did you learn?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Vague story",
+                                                  "No outcome"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "behavioral"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/IBM-Interview-E354-RVW30689023.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  {
+                                             "competency":  "Adaptability",
+                                             "star_guidance":  "Re-plan, communicate, re-estimate, focus on impact.",
+                                             "positive_signals":  [
+                                                                      "Flexible",
+                                                                      "Communicates"
+                                                                  ],
+                                             "negative_signals":  [
+                                                                      "Resists"
+                                                                  ]
+                                         }
+                      },
+                      {
+                          "question_id":  "IBM-ASE-R2-005",
+                          "round_id":  "R2",
+                          "topic":  "Learning",
+                          "subtopic":  "Learning on the job",
+                          "question_type":  "BEHAVIORAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Scenario: you are assigned a technology you do not know. What do you do?",
+                          "relevance_to_role":  "A 2019 review (older than the 2025 cutoff) describes a personality test choosing between two scenarios where candidates can be eliminated.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "A structured learning plan.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Specific, real example",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Own actions and reasoning are clear",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Outcome and learning stated",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Learning agility"
+                                           ],
+                          "follow_ups":  [
+                                             "What did you learn?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Vague story",
+                                                  "No outcome"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "behavioral"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/IBM-Interview-E354-RVW30689023.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  {
+                                             "competency":  "Learning agility",
+                                             "star_guidance":  "Plan, practise, ask mentors, deliver small increments.",
+                                             "positive_signals":  [
+                                                                      "Proactive"
+                                                                  ],
+                                             "negative_signals":  [
+                                                                      "Avoids"
+                                                                  ]
+                                         }
+                      },
+                      {
+                          "question_id":  "IBM-ASE-R2-006",
+                          "round_id":  "R2",
+                          "topic":  "Ownership",
+                          "subtopic":  "Taking responsibility",
+                          "question_type":  "BEHAVIORAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Scenario: a task nobody owns is blocking the team. What do you do?",
+                          "relevance_to_role":  "A 2019 review (older than the 2025 cutoff) describes a personality test choosing between two scenarios where candidates can be eliminated.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Take initiative and communicate.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Specific, real example",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Own actions and reasoning are clear",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Outcome and learning stated",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Ownership"
+                                           ],
+                          "follow_ups":  [
+                                             "What did you learn?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Vague story",
+                                                  "No outcome"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "behavioral"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/IBM-Interview-E354-RVW30689023.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  {
+                                             "competency":  "Ownership",
+                                             "star_guidance":  "Clarify, take or assign, communicate.",
+                                             "positive_signals":  [
+                                                                      "Initiative"
+                                                                  ],
+                                             "negative_signals":  [
+                                                                      "Waits"
+                                                                  ]
+                                         }
+                      },
+                      {
+                          "question_id":  "IBM-ASE-R2-007",
+                          "round_id":  "R2",
+                          "topic":  "Stress",
+                          "subtopic":  "Pressure",
+                          "question_type":  "BEHAVIORAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Scenario: two urgent tasks arrive together. How do you decide?",
+                          "relevance_to_role":  "A 2019 review (older than the 2025 cutoff) describes a personality test choosing between two scenarios where candidates can be eliminated.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Prioritise by impact and communicate.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Specific, real example",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Own actions and reasoning are clear",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Outcome and learning stated",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Prioritisation"
+                                           ],
+                          "follow_ups":  [
+                                             "What did you learn?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Vague story",
+                                                  "No outcome"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "behavioral"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/IBM-Interview-E354-RVW30689023.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  {
+                                             "competency":  "Prioritisation",
+                                             "star_guidance":  "Impact, deadlines, dependencies, stakeholders.",
+                                             "positive_signals":  [
+                                                                      "Structured"
+                                                                  ],
+                                             "negative_signals":  [
+                                                                      "Panics"
+                                                                  ]
+                                         }
+                      },
+                      {
+                          "question_id":  "IBM-ASE-R2-008",
+                          "round_id":  "R2",
+                          "topic":  "Feedback",
+                          "subtopic":  "Receiving feedback",
+                          "question_type":  "BEHAVIORAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Scenario: a reviewer criticises your work harshly. How do you respond?",
+                          "relevance_to_role":  "A 2019 review (older than the 2025 cutoff) describes a personality test choosing between two scenarios where candidates can be eliminated.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Accept feedback and improve.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Specific, real example",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Own actions and reasoning are clear",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Outcome and learning stated",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Growth mindset"
+                                           ],
+                          "follow_ups":  [
+                                             "What did you learn?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Vague story",
+                                                  "No outcome"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "behavioral"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/IBM-Interview-E354-RVW30689023.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  {
+                                             "competency":  "Growth mindset",
+                                             "star_guidance":  "Listen, clarify, act, follow up.",
+                                             "positive_signals":  [
+                                                                      "Receptive"
+                                                                  ],
+                                             "negative_signals":  [
+                                                                      "Defensive"
+                                                                  ]
+                                         }
+                      },
+                      {
+                          "question_id":  "IBM-ASE-R3-001",
+                          "round_id":  "R3",
+                          "topic":  "HR",
+                          "subtopic":  "Writing scenario 1",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Write a short reply (about 80 words) to a customer who reports that a report they need is delayed.",
+                          "relevance_to_role":  "An October 2026 review describes a writing test with 4 scenario-based questions and a listening and speaking test with 42 questions.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Acknowledge, apologise briefly, state the new time, explain next steps, offer a contact.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "How would you adapt it for an angry customer?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Blaming others",
+                                                  "Too long"
+                                              ],
+                          "suggested_time_min":  6,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "The topic is reported in candidate accounts or guides; this item is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/IBM-Interview-E354-RVW30689023.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "IBM-ASE-R3-002",
+                          "round_id":  "R3",
+                          "topic":  "HR",
+                          "subtopic":  "Writing scenario 2",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Write a short message (about 80 words) asking a teammate to review your code by tomorrow.",
+                          "relevance_to_role":  "An October 2026 review describes a writing test with 4 scenario-based questions and a listening and speaking test with 42 questions.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Polite request, context, deadline, link, thanks.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "How do you follow up?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Demanding tone"
+                                              ],
+                          "suggested_time_min":  6,
+                          "tags":  [
+                                       "writing"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/IBM-Interview-E354-RVW30689023.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "IBM-ASE-R3-003",
+                          "round_id":  "R3",
+                          "topic":  "HR",
+                          "subtopic":  "Writing scenario 3",
+                          "question_type":  "HR",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Write a short note (about 80 words) to your manager explaining that you need help with an unfamiliar tool.",
+                          "relevance_to_role":  "An October 2026 review describes a writing test with 4 scenario-based questions and a listening and speaking test with 42 questions.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Be specific, show effort made, propose options, ask for guidance.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "How would you ask in a meeting?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Vague"
+                                              ],
+                          "suggested_time_min":  6,
+                          "tags":  [
+                                       "writing"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/IBM-Interview-E354-RVW30689023.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "IBM-ASE-R3-004",
+                          "round_id":  "R3",
+                          "topic":  "HR",
+                          "subtopic":  "Writing scenario 4",
+                          "question_type":  "HR",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Write a short summary (about 80 words) of a meeting where two decisions were made and one action was assigned to you.",
+                          "relevance_to_role":  "An October 2026 review describes a writing test with 4 scenario-based questions and a listening and speaking test with 42 questions.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Decisions, owner, date, next steps.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "How do you share it?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Missing owners"
+                                              ],
+                          "suggested_time_min":  6,
+                          "tags":  [
+                                       "writing"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/IBM-Interview-E354-RVW30689023.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "IBM-ASE-R3-005",
+                          "round_id":  "R3",
+                          "topic":  "HR",
+                          "subtopic":  "Listening comprehension",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "You hear: \u0027The release moves from Tuesday to Thursday because testing found two defects.\u0027 State the new date and the reason.",
+                          "relevance_to_role":  "An October 2026 review describes a writing test with 4 scenario-based questions and a listening and speaking test with 42 questions.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Thursday; testing found two defects.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "What would you ask next?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Missing the reason"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "listening"
+                                   ],
+                          "notes":  "The topic is reported in candidate accounts or guides; this item is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/IBM-Interview-E354-RVW30689023.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "IBM-ASE-R3-006",
+                          "round_id":  "R3",
+                          "topic":  "HR",
+                          "subtopic":  "Speaking: describe a process",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Speak for one minute: describe how you would prepare for a technical interview.",
+                          "relevance_to_role":  "An October 2026 review describes a writing test with 4 scenario-based questions and a listening and speaking test with 42 questions.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Plan, revise fundamentals, practise problems, review projects, rest.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "What is your weakest area?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Fillers",
+                                                  "No structure"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "speaking"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/IBM-Interview-E354-RVW30689023.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "IBM-ASE-R3-007",
+                          "round_id":  "R3",
+                          "topic":  "HR",
+                          "subtopic":  "Speaking: opinion",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Speak for one minute: is remote work better for new engineers?",
+                          "relevance_to_role":  "An October 2026 review describes a writing test with 4 scenario-based questions and a listening and speaking test with 42 questions.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "State a view, give two reasons, acknowledge the other side.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "What would you choose?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "One-sided",
+                                                  "Rambling"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "speaking"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/IBM-Interview-E354-RVW30689023.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "IBM-ASE-R3-008",
+                          "round_id":  "R3",
+                          "topic":  "HR",
+                          "subtopic":  "Read aloud",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Read aloud clearly: \u0027Reliable systems depend on clear requirements, careful testing and honest communication.\u0027",
+                          "relevance_to_role":  "An October 2026 review describes a writing test with 4 scenario-based questions and a listening and speaking test with 42 questions.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Clear pronunciation, steady pace, natural pauses.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "Repeat it faster."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Mumbling",
+                                                  "Rushing"
+                                              ],
+                          "suggested_time_min":  1,
+                          "tags":  [
+                                       "speaking"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/IBM-Interview-E354-RVW30689023.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "IBM-ASE-R4-001",
+                          "round_id":  "R4",
+                          "topic":  "Programming",
+                          "subtopic":  "Output prediction",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "What is printed?\n\nint x = 3;\nx += x++ + 2;\nprintf(\"%d\", x);",
+                          "relevance_to_role":  "A 2019 review describes one coding question and 5 multiple-choice questions in 30 minutes.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Undefined",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Sequence points"
+                                           ],
+                          "follow_ups":  [
+                                             "Write it safely."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Choosing 8"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "programming"
+                                   ],
+                          "notes":  "The topic is reported in candidate accounts or guides; this item is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/IBM-Interview-E354-RVW30689023.htm.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "8",
+                                                      "9",
+                                                      "10",
+                                                      "Undefined"
+                                                  ],
+                                      "correct_options":  [
+                                                              3
+                                                          ],
+                                      "explanation":  "Modifying x twice in one expression is undefined behaviour in C/C++.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "IBM-ASE-R4-002",
+                          "round_id":  "R4",
+                          "topic":  "Data Structures",
+                          "subtopic":  "Stack",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "Elements 1, 2, 3 are pushed, then pop() is called once. What is on top now?",
+                          "relevance_to_role":  "A 2019 review describes one coding question and 5 multiple-choice questions in 30 minutes.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "2",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "LIFO"
+                                           ],
+                          "follow_ups":  [
+                                             "What if pop is called twice more?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Choosing 3"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "data-structures"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/IBM-Interview-E354-RVW30689023.htm.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "1",
+                                                      "2",
+                                                      "3",
+                                                      "Empty"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "pop removes 3, leaving 2 on top.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "IBM-ASE-R4-003",
+                          "round_id":  "R4",
+                          "topic":  "DBMS",
+                          "subtopic":  "SQL",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "Which clause filters groups after GROUP BY?",
+                          "relevance_to_role":  "A 2019 review describes one coding question and 5 multiple-choice questions in 30 minutes.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "HAVING",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "SQL"
+                                           ],
+                          "follow_ups":  [
+                                             "Can WHERE use COUNT(*)?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Choosing WHERE"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "dbms"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/IBM-Interview-E354-RVW30689023.htm.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "WHERE",
+                                                      "HAVING",
+                                                      "ORDER BY",
+                                                      "LIMIT"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "HAVING filters aggregated groups.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "IBM-ASE-R4-004",
+                          "round_id":  "R4",
+                          "topic":  "Complexity",
+                          "subtopic":  "Big O",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "What is the time complexity of finding the maximum in an unsorted array of n elements?",
+                          "relevance_to_role":  "A 2019 review describes one coding question and 5 multiple-choice questions in 30 minutes.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "O(n)",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Complexity"
+                                           ],
+                          "follow_ups":  [
+                                             "What if the array is sorted?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Choosing O(log n)"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "complexity"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/IBM-Interview-E354-RVW30689023.htm.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "O(1)",
+                                                      "O(log n)",
+                                                      "O(n)",
+                                                      "O(n log n)"
+                                                  ],
+                                      "correct_options":  [
+                                                              2
+                                                          ],
+                                      "explanation":  "Every element must be examined once.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "IBM-ASE-R4-005",
+                          "round_id":  "R4",
+                          "topic":  "OOP",
+                          "subtopic":  "Encapsulation",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "Which keyword in Java restricts access to a class member to the same class?",
+                          "relevance_to_role":  "A 2019 review describes one coding question and 5 multiple-choice questions in 30 minutes.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "private",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Access modifiers"
+                                           ],
+                          "follow_ups":  [
+                                             "What is package-private?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Choosing protected"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "oop"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/IBM-Interview-E354-RVW30689023.htm.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "public",
+                                                      "protected",
+                                                      "private",
+                                                      "static"
+                                                  ],
+                                      "correct_options":  [
+                                                              2
+                                                          ],
+                                      "explanation":  "private limits access to the declaring class.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "IBM-ASE-R4-006",
+                          "round_id":  "R4",
+                          "topic":  "Strings",
+                          "subtopic":  "Palindrome check",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Print Yes if the string is a palindrome ignoring case and non-alphanumerics.",
+                          "relevance_to_role":  "A 2019 review describes one coding question and 5 multiple-choice questions in 30 minutes.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Two pointers.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Strings",
+                                               "Palindrome check"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "strings"
+                                   ],
+                          "notes":  "The topic is reported in candidate accounts or guides; this item is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/IBM-Interview-E354-RVW30689023.htm.",
+                          "coding":  {
+                                         "problem_statement":  "Print Yes if the string is a palindrome ignoring case and non-alphanumerics.",
+                                         "input_format":  "One line.",
+                                         "output_format":  "Yes or No.",
+                                         "constraints":  "1 \u003c= length \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "A man, a plan, a canal: Panama",
+                                                             "output":  "Yes",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "race a car",
+                                                             "output":  "No",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Punctuation",
+                                                            "Case",
+                                                            "Single"
+                                                        ],
+                                         "expected_algorithm":  "Two pointers.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "IBM-ASE-R4-007",
+                          "round_id":  "R4",
+                          "topic":  "Arrays",
+                          "subtopic":  "Second largest",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Print the second largest distinct value, or -1.",
+                          "relevance_to_role":  "A 2019 review describes one coding question and 5 multiple-choice questions in 30 minutes.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Single pass.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Arrays",
+                                               "Second largest"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "arrays"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/IBM-Interview-E354-RVW30689023.htm.",
+                          "coding":  {
+                                         "problem_statement":  "Print the second largest distinct value, or -1.",
+                                         "input_format":  "Line 1: n. Line 2: integers.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "1 \u003c= n \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "5\n10 20 20 5 15",
+                                                             "output":  "15",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "3\n7 7 7",
+                                                             "output":  "-1",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "All equal",
+                                                            "Negatives",
+                                                            "n = 1"
+                                                        ],
+                                         "expected_algorithm":  "Single pass.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "IBM-ASE-R4-008",
+                          "round_id":  "R4",
+                          "topic":  "Math",
+                          "subtopic":  "Fibonacci terms",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Print the first n Fibonacci numbers.",
+                          "relevance_to_role":  "A 2019 review describes one coding question and 5 multiple-choice questions in 30 minutes.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Iteration.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Math",
+                                               "Fibonacci terms"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "math"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/IBM-Interview-E354-RVW30689023.htm.",
+                          "coding":  {
+                                         "problem_statement":  "Print the first n Fibonacci numbers.",
+                                         "input_format":  "One line: n.",
+                                         "output_format":  "Terms separated by spaces.",
+                                         "constraints":  "1 \u003c= n \u003c= 50",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "7",
+                                                             "output":  "0 1 1 2 3 5 8",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "1",
+                                                             "output":  "0",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "n = 1",
+                                                            "n = 2",
+                                                            "n = 50"
+                                                        ],
+                                         "expected_algorithm":  "Iteration.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "IBM-ASE-R5-001",
+                          "round_id":  "R5",
+                          "topic":  "Programming",
+                          "subtopic":  "Basic programming",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Write the logic for checking whether a number is prime and explain its complexity.",
+                          "relevance_to_role":  "A September 2026 review describes technical topics: basic programming, data structures, OOP, SQL, DBMS, networks and projects.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Test divisors up to sqrt(n); handle n \u003c 2; O(sqrt n).",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Loops",
+                                               "Complexity"
+                                           ],
+                          "follow_ups":  [
+                                             "How would you list primes below n?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Looping to n"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "programming"
+                                   ],
+                          "notes":  "The topic is reported in candidate accounts or guides; this item is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/IBM-Interview-E354-RVW30689023.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "IBM-ASE-R5-002",
+                          "round_id":  "R5",
+                          "topic":  "Data Structures",
+                          "subtopic":  "Core data structures",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Compare an array, a linked list, a stack and a queue. Give one use for each.",
+                          "relevance_to_role":  "A September 2026 review describes technical topics: basic programming, data structures, OOP, SQL, DBMS, networks and projects.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Array: indexing; linked list: insertions; stack: undo; queue: scheduling.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Data structures"
+                                           ],
+                          "follow_ups":  [
+                                             "Which supports O(1) insertion at the head?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Mixing LIFO and FIFO"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "dsa"
+                                   ],
+                          "notes":  "The topic is reported in candidate accounts or guides; this item is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/IBM-Interview-E354-RVW30689023.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "IBM-ASE-R5-003",
+                          "round_id":  "R5",
+                          "topic":  "OOP",
+                          "subtopic":  "OOP concepts",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Explain the four pillars of OOP with examples.",
+                          "relevance_to_role":  "A September 2026 review describes technical topics: basic programming, data structures, OOP, SQL, DBMS, networks and projects.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Encapsulation, abstraction, inheritance, polymorphism.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "OOP"
+                                           ],
+                          "follow_ups":  [
+                                             "Abstract class versus interface?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Only reciting names"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "oop"
+                                   ],
+                          "notes":  "The topic is reported in candidate accounts or guides; this item is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/IBM-Interview-E354-RVW30689023.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "IBM-ASE-R5-004",
+                          "round_id":  "R5",
+                          "topic":  "SQL",
+                          "subtopic":  "SQL queries",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Write a query to get the second highest salary and explain joins.",
+                          "relevance_to_role":  "A September 2026 review describes technical topics: basic programming, data structures, OOP, SQL, DBMS, networks and projects.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "SELECT MAX(salary) FROM Employee WHERE salary \u003c (SELECT MAX(salary) FROM Employee); inner, left, right, full joins.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "SQL"
+                                           ],
+                          "follow_ups":  [
+                                             "Use DENSE_RANK."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Using LIMIT without duplicates"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "sql"
+                                   ],
+                          "notes":  "The topic is reported in candidate accounts or guides; this item is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/IBM-Interview-E354-RVW30689023.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "IBM-ASE-R5-005",
+                          "round_id":  "R5",
+                          "topic":  "DBMS",
+                          "subtopic":  "Normalization and keys",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Explain normalization and keys.",
+                          "relevance_to_role":  "A September 2026 review describes technical topics: basic programming, data structures, OOP, SQL, DBMS, networks and projects.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "1NF, 2NF, 3NF; primary, candidate, foreign keys.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "DBMS"
+                                           ],
+                          "follow_ups":  [
+                                             "When denormalise?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Mixing forms"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "dbms"
+                                   ],
+                          "notes":  "The topic is reported in candidate accounts or guides; this item is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/IBM-Interview-E354-RVW30689023.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "IBM-ASE-R5-006",
+                          "round_id":  "R5",
+                          "topic":  "Networks",
+                          "subtopic":  "Networking basics",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Explain the OSI layers and the difference between TCP and UDP.",
+                          "relevance_to_role":  "A September 2026 review describes technical topics: basic programming, data structures, OOP, SQL, DBMS, networks and projects.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Seven layers; TCP reliable and connection-oriented; UDP lightweight.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "OSI",
+                                               "TCP",
+                                               "UDP"
+                                           ],
+                          "follow_ups":  [
+                                             "Where does a router operate?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Wrong layers"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "networks"
+                                   ],
+                          "notes":  "The topic is reported in candidate accounts or guides; this item is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/IBM-Interview-E354-RVW30689023.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "IBM-ASE-R5-007",
+                          "round_id":  "R5",
+                          "topic":  "Project Discussion",
+                          "subtopic":  "Your project",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Explain your project, your role and the technologies used.",
+                          "relevance_to_role":  "A September 2026 review describes technical topics: basic programming, data structures, OOP, SQL, DBMS, networks and projects.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Problem, role, stack, challenge, result.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Ownership"
+                                           ],
+                          "follow_ups":  [
+                                             "What would you improve?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Cannot explain own code"
+                                              ],
+                          "suggested_time_min":  8,
+                          "tags":  [
+                                       "project"
+                                   ],
+                          "notes":  "The topic is reported in candidate accounts or guides; this item is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/IBM-Interview-E354-RVW30689023.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "IBM-ASE-R5-008",
+                          "round_id":  "R5",
+                          "topic":  "Problem Solving",
+                          "subtopic":  "General problem solving",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "You are given a problem you have not seen. How do you approach it?",
+                          "relevance_to_role":  "A September 2026 review describes technical topics: basic programming, data structures, OOP, SQL, DBMS, networks and projects.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Clarify, examples, brute force, optimise, test.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Process"
+                                           ],
+                          "follow_ups":  [
+                                             "What if you get stuck?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Jumping to code"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "problem-solving"
+                                   ],
+                          "notes":  "The topic is reported in candidate accounts or guides; this item is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/IBM-Interview-E354-RVW30689023.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "IBM-ASE-R5-009",
+                          "round_id":  "R5",
+                          "topic":  "Cloud",
+                          "subtopic":  "IBM cloud and AI awareness",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "What do you know about IBM\u0027s hybrid cloud and AI offerings?",
+                          "relevance_to_role":  "A September 2026 review describes technical topics: basic programming, data structures, OOP, SQL, DBMS, networks and projects.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Hybrid cloud with Red Hat OpenShift, watsonx for AI, consulting; mention one you have used.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Company awareness"
+                                           ],
+                          "follow_ups":  [
+                                             "Which would you like to work on?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Wrong facts"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "company"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/IBM-Interview-E354-RVW30689023.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "IBM-ASE-R5-010",
+                          "round_id":  "R5",
+                          "topic":  "Operating Systems",
+                          "subtopic":  "Processes and threads",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Explain processes, threads and scheduling.",
+                          "relevance_to_role":  "A September 2026 review describes technical topics: basic programming, data structures, OOP, SQL, DBMS, networks and projects.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Process: program in execution; thread: unit within a process; scheduling picks the next process.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "OS"
+                                           ],
+                          "follow_ups":  [
+                                             "What is a context switch?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Mixing process and thread"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "os"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/IBM-Interview-E354-RVW30689023.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "IBM-ASE-R6-001",
+                          "round_id":  "R6",
+                          "topic":  "Project Discussion",
+                          "subtopic":  "Other uses of your project",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Where else could your project be used, and how could it make a profit?",
+                          "relevance_to_role":  "Glassdoor reviews describe a final interview mixing technical and HR questions, including a project discussion and how it could be used elsewhere.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S1"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Identify other user groups, a business model (subscription, licensing), a differentiator and costs.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Business thinking"
+                                           ],
+                          "follow_ups":  [
+                                             "How would you convince a customer to buy it by listing its features?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Feature list only"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "project"
+                                   ],
+                          "notes":  "A 2019 review (older, low confidence) reports questions about other uses of the project and how to make a profit; the prompt is paraphrased.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "IBM-ASE-R6-002",
+                          "round_id":  "R6",
+                          "topic":  "Project Discussion",
+                          "subtopic":  "Selling a solution",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Persuade a customer to adopt your project by explaining its features and benefits.",
+                          "relevance_to_role":  "Glassdoor reviews describe a final interview mixing technical and HR questions, including a project discussion and how it could be used elsewhere.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S1"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Start from the customer\u0027s pain, map features to benefits, give evidence and next steps.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "Handle an objection about cost."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Listing features only"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "communication"
+                                   ],
+                          "notes":  "A 2019 review (older, low confidence) reports a customer-persuasion question; the prompt is paraphrased.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "IBM-ASE-R6-003",
+                          "round_id":  "R6",
+                          "topic":  "HR",
+                          "subtopic":  "Introduction",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Tell me about yourself.",
+                          "relevance_to_role":  "Glassdoor reviews describe a final interview mixing technical and HR questions, including a project discussion and how it could be used elsewhere.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Education, skills, a project, why IBM.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "Which part best fits this role?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Reading the resume"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/IBM-Interview-E354-RVW30689023.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "IBM-ASE-R6-004",
+                          "round_id":  "R6",
+                          "topic":  "HR",
+                          "subtopic":  "Why IBM",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Why do you want to join IBM?",
+                          "relevance_to_role":  "Glassdoor reviews describe a final interview mixing technical and HR questions, including a project discussion and how it could be used elsewhere.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Link hybrid cloud, AI, consulting and learning to your goals.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "What do you know about its products?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Generic praise"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/IBM-Interview-E354-RVW30689023.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "IBM-ASE-R6-005",
+                          "round_id":  "R6",
+                          "topic":  "HR",
+                          "subtopic":  "Relocation and shifts",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Are you willing to relocate and work in shifts?",
+                          "relevance_to_role":  "Glassdoor reviews describe a final interview mixing technical and HR questions, including a project discussion and how it could be used elsewhere.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Be honest and flexible.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "Preferred cities?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Rigid answers"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/IBM-Interview-E354-RVW30689023.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "IBM-ASE-R6-006",
+                          "round_id":  "R6",
+                          "topic":  "HR",
+                          "subtopic":  "Strengths and weaknesses",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "What are your strengths and weaknesses?",
+                          "relevance_to_role":  "Glassdoor reviews describe a final interview mixing technical and HR questions, including a project discussion and how it could be used elsewhere.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Relevant strength with proof, genuine weakness with a plan.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "How do you improve?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Fake weakness"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/IBM-Interview-E354-RVW30689023.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "IBM-ASE-R6-007",
+                          "round_id":  "R6",
+                          "topic":  "Teamwork",
+                          "subtopic":  "Team challenge",
+                          "question_type":  "BEHAVIORAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Tell me about a team challenge and your role.",
+                          "relevance_to_role":  "Glassdoor reviews describe a final interview mixing technical and HR questions, including a project discussion and how it could be used elsewhere.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "A team success with a clear contribution.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Specific, real example",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Own actions and reasoning are clear",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Outcome and learning stated",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Collaboration"
+                                           ],
+                          "follow_ups":  [
+                                             "What did you learn?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Vague story",
+                                                  "No outcome"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "behavioral"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/IBM-Interview-E354-RVW30689023.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  {
+                                             "competency":  "Collaboration",
+                                             "star_guidance":  "Situation, role, action, result.",
+                                             "positive_signals":  [
+                                                                      "Shares credit"
+                                                                  ],
+                                             "negative_signals":  [
+                                                                      "Solo hero"
+                                                                  ]
+                                         }
+                      },
+                      {
+                          "question_id":  "IBM-ASE-R6-008",
+                          "round_id":  "R6",
+                          "topic":  "HR",
+                          "subtopic":  "Career goals",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Where do you see yourself in five years?",
+                          "relevance_to_role":  "Glassdoor reviews describe a final interview mixing technical and HR questions, including a project discussion and how it could be used elsewhere.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Strong engineer with growing ownership.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "How will you get there?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Unrealistic claims"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/IBM-Interview-E354-RVW30689023.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      }
+                  ]
+}

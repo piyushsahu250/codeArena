@@ -1,0 +1,3136 @@
+{
+    "schema_version":  "codearena-interview-import/1",
+    "research":  {
+                     "company":  "NVIDIA",
+                     "role":  "Software Engineer (New Grad, India)",
+                     "experience_level":  "FRESHER",
+                     "hiring_region":  "India",
+                     "target_year":  2026,
+                     "researched_on":  "2026-10-09",
+                     "researcher":  "Claude (research run 2026-10-09)",
+                     "job_description_url":  "https://www.nvidia.com/en-in/about-nvidia/careers/",
+                     "job_description_summary":  "NVIDIA hires new graduates in India as Software Engineers. An October 2025 Jointaro account describes an online assessment with C/C++ output-prediction questions and coding problems, with a CGPA cut-off above 7.8. An October 2025 intern account lists topics such as bit manipulation, hashing, DP, computer organisation, OS, DBMS and puzzles. Later technical rounds are inferred from editorial guidance as C++, GPU/CUDA fundamentals and design. The official careers page was not fetched.",
+                     "required_skills":  [
+                                             "C and C++",
+                                             "Data structures and algorithms",
+                                             "Bit manipulation",
+                                             "Computer organisation and OS",
+                                             "GPU and CUDA fundamentals",
+                                             "Concurrency",
+                                             "Project explanation"
+                                         ],
+                     "limitations":  [
+                                         "NVIDIA\u0027s official careers page was not fetched, so no round is marked DOCUMENTED.",
+                                         "Candidate-attributed material is one October 2025 online-assessment account (CGPA cut-off above 7.8) and one October 2025 intern topic list; items based on them carry one report each and are unverified.",
+                                         "GPU/CUDA, C++ and design items rest on unattributed GeeksforGeeks-style guidance and are original practice (class D).",
+                                         "Research-intern Glassdoor reviews found were non-India and were excluded.",
+                                         "Round structure beyond the online assessment is inferred.",
+                                         "Evidence handling: practice questions cite no sources; where a source only supplied topic context it is named in the question notes. Practice and job-description-inferred questions are UNVERIFIED and capped at LOW confidence on import.",
+                                         "Review status: answers, samples and cited counts come from the researcher and were not independently re-run; spot checks only. Source titles and some dates are blank because the sources did not show them."
+                                     ]
+                 },
+    "sources":  [
+                    {
+                        "source_id":  "S1",
+                        "kind":  "OTHER",
+                        "url":  "https://www.jointaro.com/interviews/companies/nvidia/experiences/software-engineer-india-october-16-2025-no-offer-positive-eb298e86/",
+                        "title":  "",
+                        "publisher":  "www.jointaro.com",
+                        "published_on":  "2025-10-16",
+                        "accessed_on":  "2026-10-09",
+                        "reliability_note":  ""
+                    },
+                    {
+                        "source_id":  "S2",
+                        "kind":  "OTHER",
+                        "url":  "https://www.jointaro.com/interviews/companies/nvidia/experiences/software-engineer-intern-new-delhi-delhi-october-1-2025-no-offer-positive-9bdac977/",
+                        "title":  "",
+                        "publisher":  "www.jointaro.com",
+                        "published_on":  "2025-10-01",
+                        "accessed_on":  "2026-10-09",
+                        "reliability_note":  ""
+                    },
+                    {
+                        "source_id":  "S3",
+                        "kind":  "OTHER",
+                        "url":  "https://geeksforgeeks.org/nvidia-recruitment-process",
+                        "title":  "",
+                        "publisher":  "geeksforgeeks.org",
+                        "published_on":  "2026-07-31",
+                        "accessed_on":  "2026-10-09",
+                        "reliability_note":  ""
+                    }
+                ],
+    "rounds":  [
+                   {
+                       "round_id":  "R1",
+                       "name":  "Online Assessment",
+                       "category":  "ONLINE_ASSESSMENT",
+                       "order":  1,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S1",
+                                          "S2",
+                                          "S3"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R2",
+                       "name":  "Technical Interview 1 (DSA and CS Fundamentals)",
+                       "category":  "DSA",
+                       "order":  2,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S3",
+                                          "S2"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R3",
+                       "name":  "Technical Interview 2 (C++, GPU Fundamentals and Design)",
+                       "category":  "CORE_TECHNICAL",
+                       "order":  3,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S3"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R4",
+                       "name":  "Hiring Manager and HR Interview",
+                       "category":  "HR",
+                       "order":  4,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S3",
+                                          "S1"
+                                      ]
+                   }
+               ],
+    "questions":  [
+                      {
+                          "question_id":  "NVD-SWE-R1-001",
+                          "round_id":  "R1",
+                          "topic":  "C Output",
+                          "subtopic":  "Strings and sizeof",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "What is printed?\n\nchar s[] = \"abc\";\nprintf(\"%zu %zu\", sizeof(s), strlen(s));",
+                          "relevance_to_role":  "An October 2025 account describes an online assessment with C and C++ output-based questions and a CGPA cut-off; a 2026 guide describes 2 to 3 coding problems plus MCQs.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "4 3",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "C strings"
+                                           ],
+                          "follow_ups":  [
+                                             "What if s were a char pointer?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Ignoring the terminator"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "c-output"
+                                   ],
+                          "notes":  "The topic is reported in candidate accounts; this item is an original practice question. Topic context only (no candidate attribution): https://www.jointaro.com/interviews/companies/nvidia/experiences/software-engineer-india-october-16-2025-no-offer-positive-eb298e86/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "3 3",
+                                                      "4 3",
+                                                      "3 4",
+                                                      "4 4"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "sizeof includes the terminator (4); strlen counts 3.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "NVD-SWE-R1-002",
+                          "round_id":  "R1",
+                          "topic":  "C Output",
+                          "subtopic":  "Integer overflow",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What is printed?\n\nunsigned char c = 255;\nc++;\nprintf(\"%d\", c);",
+                          "relevance_to_role":  "An October 2025 account describes an online assessment with C and C++ output-based questions and a CGPA cut-off; a 2026 guide describes 2 to 3 coding problems plus MCQs.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "0",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Wraparound"
+                                           ],
+                          "follow_ups":  [
+                                             "What if it were signed char?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Expecting 256"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "c-output"
+                                   ],
+                          "notes":  "The topic is reported in candidate accounts; this item is an original practice question. Topic context only (no candidate attribution): https://www.jointaro.com/interviews/companies/nvidia/experiences/software-engineer-india-october-16-2025-no-offer-positive-eb298e86/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "255",
+                                                      "256",
+                                                      "0",
+                                                      "1"
+                                                  ],
+                                      "correct_options":  [
+                                                              2
+                                                          ],
+                                      "explanation":  "An unsigned char wraps modulo 256, so 255 + 1 = 0.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "NVD-SWE-R1-003",
+                          "round_id":  "R1",
+                          "topic":  "C Output",
+                          "subtopic":  "Macros",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What is printed?\n\n#define SQ(x) x * x\nprintf(\"%d\", SQ(2 + 3));",
+                          "relevance_to_role":  "An October 2025 account describes an online assessment with C and C++ output-based questions and a CGPA cut-off; a 2026 guide describes 2 to 3 coding problems plus MCQs.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "11",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Macro pitfalls"
+                                           ],
+                          "follow_ups":  [
+                                             "Fix the macro."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Expecting 25"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "c-output"
+                                   ],
+                          "notes":  "The topic is reported in candidate accounts; this item is an original practice question. Topic context only (no candidate attribution): https://www.jointaro.com/interviews/companies/nvidia/experiences/software-engineer-india-october-16-2025-no-offer-positive-eb298e86/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "25",
+                                                      "11",
+                                                      "10",
+                                                      "Error"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "The macro expands to 2 + 3 * 2 + 3 = 11. Use ((x) * (x)).",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "NVD-SWE-R1-004",
+                          "round_id":  "R1",
+                          "topic":  "C Output",
+                          "subtopic":  "Pointer arithmetic",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What is printed?\n\nint a[] = {1, 2, 3};\nint *p = a;\np++;\nprintf(\"%d\", *p + *(p + 1));",
+                          "relevance_to_role":  "An October 2025 account describes an online assessment with C and C++ output-based questions and a CGPA cut-off; a 2026 guide describes 2 to 3 coding problems plus MCQs.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "5",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Pointer arithmetic"
+                                           ],
+                          "follow_ups":  [
+                                             "What is p - a?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Starting at index 0"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "c-output"
+                                   ],
+                          "notes":  "The topic is reported in candidate accounts; this item is an original practice question. Topic context only (no candidate attribution): https://www.jointaro.com/interviews/companies/nvidia/experiences/software-engineer-india-october-16-2025-no-offer-positive-eb298e86/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "3",
+                                                      "4",
+                                                      "5",
+                                                      "6"
+                                                  ],
+                                      "correct_options":  [
+                                                              2
+                                                          ],
+                                      "explanation":  "p points to 2; p + 1 points to 3; sum 5.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "NVD-SWE-R1-005",
+                          "round_id":  "R1",
+                          "topic":  "C Output",
+                          "subtopic":  "Static variables",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What is printed by calling f() three times?\n\nvoid f() { static int c = 0; c++; printf(\"%d \", c); }",
+                          "relevance_to_role":  "An October 2025 account describes an online assessment with C and C++ output-based questions and a CGPA cut-off; a 2026 guide describes 2 to 3 coding problems plus MCQs.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "1 2 3",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Storage classes"
+                                           ],
+                          "follow_ups":  [
+                                             "What if c were not static?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Resetting each call"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "c-output"
+                                   ],
+                          "notes":  "The topic is reported in candidate accounts; this item is an original practice question. Topic context only (no candidate attribution): https://www.jointaro.com/interviews/companies/nvidia/experiences/software-engineer-india-october-16-2025-no-offer-positive-eb298e86/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "1 1 1",
+                                                      "1 2 3",
+                                                      "0 1 2",
+                                                      "3 3 3"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "A static local keeps its value across calls.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "NVD-SWE-R1-006",
+                          "round_id":  "R1",
+                          "topic":  "C Output",
+                          "subtopic":  "Bitwise swap",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What is printed?\n\nint a = 3, b = 4;\na ^= b; b ^= a; a ^= b;\nprintf(\"%d %d\", a, b);",
+                          "relevance_to_role":  "An October 2025 account describes an online assessment with C and C++ output-based questions and a CGPA cut-off; a 2026 guide describes 2 to 3 coding problems plus MCQs.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "4 3",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "XOR"
+                                           ],
+                          "follow_ups":  [
+                                             "Why does it fail if a and b alias?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Skipping a step"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "c-output"
+                                   ],
+                          "notes":  "The topic is reported in candidate accounts; this item is an original practice question. Topic context only (no candidate attribution): https://www.jointaro.com/interviews/companies/nvidia/experiences/software-engineer-india-october-16-2025-no-offer-positive-eb298e86/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "3 4",
+                                                      "4 3",
+                                                      "7 7",
+                                                      "0 0"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "XOR swap exchanges the values.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "NVD-SWE-R1-007",
+                          "round_id":  "R1",
+                          "topic":  "C++ Output",
+                          "subtopic":  "References",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "What is printed?\n\nint x = 10;\nint \u0026r = x;\nr += 5;\ncout \u003c\u003c x;",
+                          "relevance_to_role":  "An October 2025 account describes an online assessment with C and C++ output-based questions and a CGPA cut-off; a 2026 guide describes 2 to 3 coding problems plus MCQs.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "15",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "References"
+                                           ],
+                          "follow_ups":  [
+                                             "Can a reference be null?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Thinking r is a copy"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "c++-output"
+                                   ],
+                          "notes":  "The topic is reported in candidate accounts; this item is an original practice question. Topic context only (no candidate attribution): https://www.jointaro.com/interviews/companies/nvidia/experiences/software-engineer-india-october-16-2025-no-offer-positive-eb298e86/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "10",
+                                                      "15",
+                                                      "5",
+                                                      "Error"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "r is an alias of x, so x becomes 15.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "NVD-SWE-R1-008",
+                          "round_id":  "R1",
+                          "topic":  "C++ Output",
+                          "subtopic":  "Constructors",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What order do constructors run for class D : public B when D d; is created?",
+                          "relevance_to_role":  "An October 2025 account describes an online assessment with C and C++ output-based questions and a CGPA cut-off; a 2026 guide describes 2 to 3 coding problems plus MCQs.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "B then D",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Construction order"
+                                           ],
+                          "follow_ups":  [
+                                             "What about members?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Reversing the order"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "c++-output"
+                                   ],
+                          "notes":  "The topic is reported in candidate accounts; this item is an original practice question. Topic context only (no candidate attribution): https://www.jointaro.com/interviews/companies/nvidia/experiences/software-engineer-india-october-16-2025-no-offer-positive-eb298e86/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "D then B",
+                                                      "B then D",
+                                                      "Only D",
+                                                      "Unspecified"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "Base constructors run before the derived constructor; destructors run in reverse.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "NVD-SWE-R1-009",
+                          "round_id":  "R1",
+                          "topic":  "C Output",
+                          "subtopic":  "Integer division",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "What is printed?\n\nprintf(\"%.1f\", 5 / 2 * 2.0);",
+                          "relevance_to_role":  "An October 2025 account describes an online assessment with C and C++ output-based questions and a CGPA cut-off; a 2026 guide describes 2 to 3 coding problems plus MCQs.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "4.0",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Type promotion"
+                                           ],
+                          "follow_ups":  [
+                                             "How to get 5.0?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Floating point division"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "c-output"
+                                   ],
+                          "notes":  "The topic is reported in candidate accounts; this item is an original practice question. Topic context only (no candidate attribution): https://www.jointaro.com/interviews/companies/nvidia/experiences/software-engineer-india-october-16-2025-no-offer-positive-eb298e86/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "5.0",
+                                                      "4.0",
+                                                      "5.5",
+                                                      "4.5"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "5 / 2 is integer division (2); 2 * 2.0 = 4.0.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "NVD-SWE-R1-010",
+                          "round_id":  "R1",
+                          "topic":  "C Output",
+                          "subtopic":  "Modulo with negatives",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "In C99 and later, what is -7 % 3?",
+                          "relevance_to_role":  "An October 2025 account describes an online assessment with C and C++ output-based questions and a CGPA cut-off; a 2026 guide describes 2 to 3 coding problems plus MCQs.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "-1",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Modulo"
+                                           ],
+                          "follow_ups":  [
+                                             "What is 7 % -3?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Assuming a positive remainder"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "c-output"
+                                   ],
+                          "notes":  "The topic is reported in candidate accounts; this item is an original practice question. Topic context only (no candidate attribution): https://www.jointaro.com/interviews/companies/nvidia/experiences/software-engineer-india-october-16-2025-no-offer-positive-eb298e86/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "2",
+                                                      "-1",
+                                                      "0",
+                                                      "3"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "The result has the sign of the dividend: -7 = -2 * 3 + (-1).",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "NVD-SWE-R1-011",
+                          "round_id":  "R1",
+                          "topic":  "Hashing",
+                          "subtopic":  "Group anagram count",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Given n words, print how many distinct anagram groups they form.",
+                          "relevance_to_role":  "An October 2025 account describes an online assessment with C and C++ output-based questions and a CGPA cut-off; a 2026 guide describes 2 to 3 coding problems plus MCQs.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Key by sorted letters.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Hashing",
+                                               "Group anagram count"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "hashing"
+                                   ],
+                          "notes":  "The site lists Group Anagrams among general NVIDIA problems without confirming it was asked; the statement here is original. Topic context only (no candidate attribution): https://www.jointaro.com/interviews/companies/nvidia/experiences/software-engineer-intern-new-delhi-delhi-october-1-2025-no-offer-positive-9bdac977/.",
+                          "coding":  {
+                                         "problem_statement":  "Given n words, print how many distinct anagram groups they form.",
+                                         "input_format":  "Line 1: n. Next n lines: words.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "1 \u003c= n \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "4\neat\ntea\ntan\nnat",
+                                                             "output":  "2",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "2\nabc\nabd",
+                                                             "output":  "2",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "All anagrams",
+                                                            "None",
+                                                            "Single"
+                                                        ],
+                                         "expected_algorithm":  "Key by sorted letters.",
+                                         "time_complexity":  "O(n k log k)",
+                                         "space_complexity":  "O(nk)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "NVD-SWE-R1-012",
+                          "round_id":  "R1",
+                          "topic":  "Heaps",
+                          "subtopic":  "Last stone weight",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Repeatedly smash the two heaviest stones: equal stones vanish, otherwise the difference remains.",
+                          "relevance_to_role":  "An October 2025 account describes an online assessment with C and C++ output-based questions and a CGPA cut-off; a 2026 guide describes 2 to 3 coding problems plus MCQs.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Max-heap simulation.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Heaps",
+                                               "Last stone weight"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "heap"
+                                   ],
+                          "notes":  "The site lists Last Stone Weight among general NVIDIA problems without confirming it was asked; the statement here is original. Topic context only (no candidate attribution): https://www.jointaro.com/interviews/companies/nvidia/experiences/software-engineer-intern-new-delhi-delhi-october-1-2025-no-offer-positive-9bdac977/.",
+                          "coding":  {
+                                         "problem_statement":  "Repeatedly smash the two heaviest stones: equal stones vanish, otherwise the difference remains. Print the weight of the last stone (0 if none).",
+                                         "input_format":  "Line 1: n. Line 2: n weights.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "1 \u003c= n \u003c= 1000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "6\n2 7 4 1 8 1",
+                                                             "output":  "1",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "1\n5",
+                                                             "output":  "5",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "n = 1",
+                                                            "All equal",
+                                                            "Two stones"
+                                                        ],
+                                         "expected_algorithm":  "Max-heap simulation.",
+                                         "time_complexity":  "O(n log n)",
+                                         "space_complexity":  "O(n)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "NVD-SWE-R1-013",
+                          "round_id":  "R1",
+                          "topic":  "Design",
+                          "subtopic":  "LRU cache simulation",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Simulate an LRU cache and print the results of the gets.",
+                          "relevance_to_role":  "An October 2025 account describes an online assessment with C and C++ output-based questions and a CGPA cut-off; a 2026 guide describes 2 to 3 coding problems plus MCQs.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Hash map plus linked list.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Design",
+                                               "LRU cache simulation"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "design"
+                                   ],
+                          "notes":  "The site lists LRU Cache among general NVIDIA problems without confirming it was asked; the statement here is original. Topic context only (no candidate attribution): https://www.jointaro.com/interviews/companies/nvidia/experiences/software-engineer-intern-new-delhi-delhi-october-1-2025-no-offer-positive-9bdac977/.",
+                          "coding":  {
+                                         "problem_statement":  "Simulate an LRU cache and print the results of the gets.",
+                                         "input_format":  "Line 1: capacity. Line 2: q. Then q operations \u0027put k v\u0027 or \u0027get k\u0027.",
+                                         "output_format":  "Results separated by spaces.",
+                                         "constraints":  "1 \u003c= capacity \u003c= 1000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "2\n7\nput 1 1\nput 2 2\nget 1\nput 3 3\nget 2\nget 3\nget 1",
+                                                             "output":  "1 -1 3 1",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "1\n4\nput 1 5\nput 2 6\nget 1\nget 2",
+                                                             "output":  "-1 6",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Update",
+                                                            "Capacity 1",
+                                                            "Missing"
+                                                        ],
+                                         "expected_algorithm":  "Hash map plus linked list.",
+                                         "time_complexity":  "O(1) per op",
+                                         "space_complexity":  "O(capacity)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "NVD-SWE-R1-014",
+                          "round_id":  "R1",
+                          "topic":  "Bit Manipulation",
+                          "subtopic":  "Count set bits",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Count the 1 bits in n.",
+                          "relevance_to_role":  "An October 2025 account describes an online assessment with C and C++ output-based questions and a CGPA cut-off; a 2026 guide describes 2 to 3 coding problems plus MCQs.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "n \u0026= n - 1 loop.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Bit Manipulation",
+                                               "Count set bits"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "bits"
+                                   ],
+                          "notes":  "The guide lists topics, not reported questions. Topic context only (no candidate attribution): https://geeksforgeeks.org/nvidia-recruitment-process.",
+                          "coding":  {
+                                         "problem_statement":  "Count the 1 bits in n.",
+                                         "input_format":  "One line: n.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "0 \u003c= n \u003c 2^31",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "13",
+                                                             "output":  "3",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "0",
+                                                             "output":  "0",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Zero",
+                                                            "All ones",
+                                                            "Power of two"
+                                                        ],
+                                         "expected_algorithm":  "n \u0026= n - 1 loop.",
+                                         "time_complexity":  "O(bits)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "NVD-SWE-R2-001",
+                          "round_id":  "R2",
+                          "topic":  "Bit Manipulation",
+                          "subtopic":  "Hamming distance",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Print the number of bit positions at which two integers differ.",
+                          "relevance_to_role":  "An October 2025 intern account lists COA, OS, DSA, puzzles and DBMS topics; a 2026 guide lists arrays, strings, trees, graphs, DP, bit manipulation and hashing.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "popcount(a ^ b).",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Bit Manipulation",
+                                               "Hamming distance"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "bits"
+                                   ],
+                          "notes":  "The guide lists topics, not reported questions. Topic context only (no candidate attribution): https://geeksforgeeks.org/nvidia-recruitment-process.",
+                          "coding":  {
+                                         "problem_statement":  "Print the number of bit positions at which two integers differ.",
+                                         "input_format":  "One line: a b.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "0 \u003c= a, b \u003c 2^31",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "1 4",
+                                                             "output":  "2",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "7 7",
+                                                             "output":  "0",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Equal",
+                                                            "Zero",
+                                                            "Large"
+                                                        ],
+                                         "expected_algorithm":  "popcount(a ^ b).",
+                                         "time_complexity":  "O(1)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "NVD-SWE-R2-002",
+                          "round_id":  "R2",
+                          "topic":  "Bit Manipulation",
+                          "subtopic":  "Power of two",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Print Yes if n is a power of two.",
+                          "relevance_to_role":  "An October 2025 intern account lists COA, OS, DSA, puzzles and DBMS topics; a 2026 guide lists arrays, strings, trees, graphs, DP, bit manipulation and hashing.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "n \u0026 (n-1) == 0 for n \u003e 0.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Bit Manipulation",
+                                               "Power of two"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "bits"
+                                   ],
+                          "notes":  "The guide lists topics, not reported questions. Topic context only (no candidate attribution): https://geeksforgeeks.org/nvidia-recruitment-process.",
+                          "coding":  {
+                                         "problem_statement":  "Print Yes if n is a power of two.",
+                                         "input_format":  "One line: n.",
+                                         "output_format":  "Yes or No.",
+                                         "constraints":  "0 \u003c= n \u003c= 10^18",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "16",
+                                                             "output":  "Yes",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "18",
+                                                             "output":  "No",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "0",
+                                                            "1",
+                                                            "Large"
+                                                        ],
+                                         "expected_algorithm":  "n \u0026 (n-1) == 0 for n \u003e 0.",
+                                         "time_complexity":  "O(1)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "NVD-SWE-R2-003",
+                          "round_id":  "R2",
+                          "topic":  "Bit Manipulation",
+                          "subtopic":  "Missing number with XOR",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Numbers 1 to n appear once except one missing.",
+                          "relevance_to_role":  "An October 2025 intern account lists COA, OS, DSA, puzzles and DBMS topics; a 2026 guide lists arrays, strings, trees, graphs, DP, bit manipulation and hashing.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "XOR 1..n with all values.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Bit Manipulation",
+                                               "Missing number with XOR"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "bits"
+                                   ],
+                          "notes":  "The guide lists topics, not reported questions. Topic context only (no candidate attribution): https://geeksforgeeks.org/nvidia-recruitment-process.",
+                          "coding":  {
+                                         "problem_statement":  "Numbers 1 to n appear once except one missing. Print the missing one using XOR.",
+                                         "input_format":  "Line 1: n. Line 2: n-1 integers.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "2 \u003c= n \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "4\n1 2 4",
+                                                             "output":  "3",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "2\n2",
+                                                             "output":  "1",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "First missing",
+                                                            "Last missing",
+                                                            "n = 2"
+                                                        ],
+                                         "expected_algorithm":  "XOR 1..n with all values.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "NVD-SWE-R2-004",
+                          "round_id":  "R2",
+                          "topic":  "Arrays",
+                          "subtopic":  "Two single numbers",
+                          "question_type":  "CODING",
+                          "difficulty":  "HARD",
+                          "prompt":  "Every value appears twice except two.",
+                          "relevance_to_role":  "An October 2025 intern account lists COA, OS, DSA, puzzles and DBMS topics; a 2026 guide lists arrays, strings, trees, graphs, DP, bit manipulation and hashing.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "XOR all; split by a set bit; XOR each group.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Arrays",
+                                               "Two single numbers"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "bits"
+                                   ],
+                          "notes":  "The guide lists topics, not reported questions. Topic context only (no candidate attribution): https://geeksforgeeks.org/nvidia-recruitment-process.",
+                          "coding":  {
+                                         "problem_statement":  "Every value appears twice except two. Print the two singles in ascending order.",
+                                         "input_format":  "Line 1: n. Line 2: n integers.",
+                                         "output_format":  "Two integers.",
+                                         "constraints":  "2 \u003c= n \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "6\n1 2 1 3 2 5",
+                                                             "output":  "3 5",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "4\n7 9 7 4",
+                                                             "output":  "4 9",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Negatives",
+                                                            "Adjacent",
+                                                            "Large"
+                                                        ],
+                                         "expected_algorithm":  "XOR all; split by a set bit; XOR each group.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "NVD-SWE-R2-005",
+                          "round_id":  "R2",
+                          "topic":  "Hashing",
+                          "subtopic":  "Subarrays with sum k",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Count subarrays with sum k.",
+                          "relevance_to_role":  "An October 2025 intern account lists COA, OS, DSA, puzzles and DBMS topics; a 2026 guide lists arrays, strings, trees, graphs, DP, bit manipulation and hashing.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Prefix sums and a hash map.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Hashing",
+                                               "Subarrays with sum k"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "hashing"
+                                   ],
+                          "notes":  "The guide lists topics, not reported questions. Topic context only (no candidate attribution): https://geeksforgeeks.org/nvidia-recruitment-process.",
+                          "coding":  {
+                                         "problem_statement":  "Count subarrays with sum k.",
+                                         "input_format":  "Line 1: n k. Line 2: integers.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "1 \u003c= n \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "5 3\n1 2 1 2 1",
+                                                             "output":  "4",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "3 0\n1 -1 0",
+                                                             "output":  "3",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Negatives",
+                                                            "Zeros",
+                                                            "k = 0"
+                                                        ],
+                                         "expected_algorithm":  "Prefix sums and a hash map.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(n)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "NVD-SWE-R2-006",
+                          "round_id":  "R2",
+                          "topic":  "Dynamic Programming",
+                          "subtopic":  "Longest common subsequence",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Print the length of the longest common subsequence of two strings.",
+                          "relevance_to_role":  "An October 2025 intern account lists COA, OS, DSA, puzzles and DBMS topics; a 2026 guide lists arrays, strings, trees, graphs, DP, bit manipulation and hashing.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "dp on prefixes.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Dynamic Programming",
+                                               "Longest common subsequence"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "dp"
+                                   ],
+                          "notes":  "The guide lists topics, not reported questions. Topic context only (no candidate attribution): https://geeksforgeeks.org/nvidia-recruitment-process.",
+                          "coding":  {
+                                         "problem_statement":  "Print the length of the longest common subsequence of two strings.",
+                                         "input_format":  "Line 1: first. Line 2: second.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "1 \u003c= lengths \u003c= 1000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "abcde\nace",
+                                                             "output":  "3",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "abc\ndef",
+                                                             "output":  "0",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "None",
+                                                            "Identical",
+                                                            "One char"
+                                                        ],
+                                         "expected_algorithm":  "dp on prefixes.",
+                                         "time_complexity":  "O(nm)",
+                                         "space_complexity":  "O(nm)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "NVD-SWE-R2-007",
+                          "round_id":  "R2",
+                          "topic":  "Computer Architecture",
+                          "subtopic":  "Cache and memory hierarchy",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Explain the memory hierarchy and why cache-friendly access patterns matter.",
+                          "relevance_to_role":  "An October 2025 intern account lists COA, OS, DSA, puzzles and DBMS topics; a 2026 guide lists arrays, strings, trees, graphs, DP, bit manipulation and hashing.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Registers, caches, RAM, storage: smaller is faster. Spatial and temporal locality raise hit rates; row-major traversal beats column-major for C arrays.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Locality"
+                                           ],
+                          "follow_ups":  [
+                                             "What is false sharing?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Ignoring access order"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "coa"
+                                   ],
+                          "notes":  "The topic is reported in candidate accounts; this item is an original practice question. Topic context only (no candidate attribution): https://www.jointaro.com/interviews/companies/nvidia/experiences/software-engineer-intern-new-delhi-delhi-october-1-2025-no-offer-positive-9bdac977/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "NVD-SWE-R2-008",
+                          "round_id":  "R2",
+                          "topic":  "Operating Systems",
+                          "subtopic":  "Processes, threads and scheduling",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Compare processes and threads, and describe preemptive scheduling.",
+                          "relevance_to_role":  "An October 2025 intern account lists COA, OS, DSA, puzzles and DBMS topics; a 2026 guide lists arrays, strings, trees, graphs, DP, bit manipulation and hashing.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Processes isolate memory; threads share it. Preemptive schedulers interrupt tasks on timer ticks to share the CPU fairly.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "OS"
+                                           ],
+                          "follow_ups":  [
+                                             "What is a context switch cost?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Mixing the two"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "os"
+                                   ],
+                          "notes":  "The topic is reported in candidate accounts; this item is an original practice question. Topic context only (no candidate attribution): https://www.jointaro.com/interviews/companies/nvidia/experiences/software-engineer-intern-new-delhi-delhi-october-1-2025-no-offer-positive-9bdac977/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "NVD-SWE-R2-009",
+                          "round_id":  "R2",
+                          "topic":  "DBMS",
+                          "subtopic":  "Indexes and transactions",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What is an index, and what do ACID transactions guarantee?",
+                          "relevance_to_role":  "An October 2025 intern account lists COA, OS, DSA, puzzles and DBMS topics; a 2026 guide lists arrays, strings, trees, graphs, DP, bit manipulation and hashing.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "B-tree indexes speed reads at a write cost. ACID: atomicity, consistency, isolation, durability.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "DBMS"
+                                           ],
+                          "follow_ups":  [
+                                             "Isolation levels?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Indexing everything"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "dbms"
+                                   ],
+                          "notes":  "The topic is reported in candidate accounts; this item is an original practice question. Topic context only (no candidate attribution): https://www.jointaro.com/interviews/companies/nvidia/experiences/software-engineer-intern-new-delhi-delhi-october-1-2025-no-offer-positive-9bdac977/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "NVD-SWE-R2-010",
+                          "round_id":  "R2",
+                          "topic":  "Puzzles",
+                          "subtopic":  "Burning ropes",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "You have two ropes that each burn in exactly 60 minutes but unevenly. How do you measure 45 minutes?",
+                          "relevance_to_role":  "An October 2025 intern account lists COA, OS, DSA, puzzles and DBMS topics; a 2026 guide lists arrays, strings, trees, graphs, DP, bit manipulation and hashing.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Light rope A at both ends and rope B at one end; when A finishes (30 min) light B\u0027s other end; B finishes 15 minutes later: total 45.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Lateral thinking"
+                                           ],
+                          "follow_ups":  [
+                                             "How would you measure 15 minutes?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Assuming uniform burn"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "puzzle"
+                                   ],
+                          "notes":  "The topic is reported in candidate accounts or guides; this item is an original practice question. Topic context only (no candidate attribution): https://www.jointaro.com/interviews/companies/nvidia/experiences/software-engineer-intern-new-delhi-delhi-october-1-2025-no-offer-positive-9bdac977/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "NVD-SWE-R2-011",
+                          "round_id":  "R2",
+                          "topic":  "Puzzles",
+                          "subtopic":  "Two eggs",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "HARD",
+                          "prompt":  "With two eggs and 100 floors, what is the minimum worst-case number of drops to find the critical floor?",
+                          "relevance_to_role":  "An October 2025 intern account lists COA, OS, DSA, puzzles and DBMS topics; a 2026 guide lists arrays, strings, trees, graphs, DP, bit manipulation and hashing.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "14: drop at 14, 27, 39, ... then scan linearly.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Optimisation"
+                                           ],
+                          "follow_ups":  [
+                                             "What with three eggs?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Using 10-floor steps"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "puzzle"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.jointaro.com/interviews/companies/nvidia/experiences/software-engineer-intern-new-delhi-delhi-october-1-2025-no-offer-positive-9bdac977/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "NVD-SWE-R2-012",
+                          "round_id":  "R2",
+                          "topic":  "Data Structures",
+                          "subtopic":  "Hash tables",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "How does a hash table handle collisions and resizing?",
+                          "relevance_to_role":  "An October 2025 intern account lists COA, OS, DSA, puzzles and DBMS topics; a 2026 guide lists arrays, strings, trees, graphs, DP, bit manipulation and hashing.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Chaining or open addressing; resize and rehash at a load factor threshold.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Hashing"
+                                           ],
+                          "follow_ups":  [
+                                             "What makes a good hash function?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Assuming O(1) worst case"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "hashing"
+                                   ],
+                          "notes":  "The guide lists topics, not reported questions. Topic context only (no candidate attribution): https://geeksforgeeks.org/nvidia-recruitment-process.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "NVD-SWE-R2-013",
+                          "round_id":  "R2",
+                          "topic":  "Problem Solving",
+                          "subtopic":  "Debugging a wrong answer",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Your solution passes samples but fails hidden tests. How do you find the bug?",
+                          "relevance_to_role":  "An October 2025 intern account lists COA, OS, DSA, puzzles and DBMS topics; a 2026 guide lists arrays, strings, trees, graphs, DP, bit manipulation and hashing.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Re-read constraints, test edge cases (empty, one element, duplicates, overflow), write a brute force and compare on random inputs, add asserts.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Testing"
+                                           ],
+                          "follow_ups":  [
+                                             "Which edge cases first?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Random changes"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "debugging"
+                                   ],
+                          "notes":  "The guide lists topics, not reported questions. Topic context only (no candidate attribution): https://geeksforgeeks.org/nvidia-recruitment-process.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "NVD-SWE-R2-014",
+                          "round_id":  "R2",
+                          "topic":  "Operating Systems",
+                          "subtopic":  "Deadlock",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What are the four conditions for deadlock and how can you prevent it?",
+                          "relevance_to_role":  "An October 2025 intern account lists COA, OS, DSA, puzzles and DBMS topics; a 2026 guide lists arrays, strings, trees, graphs, DP, bit manipulation and hashing.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Mutual exclusion, hold and wait, no preemption, circular wait. Prevent by breaking one, e.g. a global lock ordering.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Deadlock"
+                                           ],
+                          "follow_ups":  [
+                                             "How do you detect it?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Confusing deadlock with starvation"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "os"
+                                   ],
+                          "notes":  "The guide lists topics, not reported questions. Topic context only (no candidate attribution): https://geeksforgeeks.org/nvidia-recruitment-process.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "NVD-SWE-R3-001",
+                          "round_id":  "R3",
+                          "topic":  "C++",
+                          "subtopic":  "Smart pointers",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Explain unique_ptr, shared_ptr and weak_ptr. When would you use each?",
+                          "relevance_to_role":  "A 2026 guide describes later technical interviews on OOP, OS, networks, concurrency, GPU/CUDA (role-dependent), low-level design and debugging.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "unique_ptr: sole ownership; shared_ptr: reference-counted shared ownership; weak_ptr: non-owning observer to break cycles.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "RAII",
+                                               "Ownership"
+                                           ],
+                          "follow_ups":  [
+                                             "How do cycles leak?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Using shared_ptr everywhere"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "cpp"
+                                   ],
+                          "notes":  "The guide lists topics, not reported questions. Topic context only (no candidate attribution): https://geeksforgeeks.org/nvidia-recruitment-process.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "NVD-SWE-R3-002",
+                          "round_id":  "R3",
+                          "topic":  "C++",
+                          "subtopic":  "Move semantics",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "HARD",
+                          "prompt":  "What is move semantics and why does it help performance?",
+                          "relevance_to_role":  "A 2026 guide describes later technical interviews on OOP, OS, networks, concurrency, GPU/CUDA (role-dependent), low-level design and debugging.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Rvalue references let you transfer resources instead of copying; std::move casts to rvalue; move constructors leave the source valid but unspecified.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Move",
+                                               "Copy elision"
+                                           ],
+                          "follow_ups":  [
+                                             "When is a move not used?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Using the moved-from object"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "cpp"
+                                   ],
+                          "notes":  "The guide lists topics, not reported questions. Topic context only (no candidate attribution): https://geeksforgeeks.org/nvidia-recruitment-process.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "NVD-SWE-R3-003",
+                          "round_id":  "R3",
+                          "topic":  "C++",
+                          "subtopic":  "Virtual functions and vtables",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "How are virtual functions implemented? Why does a base class need a virtual destructor?",
+                          "relevance_to_role":  "A 2026 guide describes later technical interviews on OOP, OS, networks, concurrency, GPU/CUDA (role-dependent), low-level design and debugging.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Each polymorphic object has a vptr to a vtable of function pointers. Deleting through a base pointer without a virtual destructor skips the derived destructor (undefined behaviour).",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "vtable"
+                                           ],
+                          "follow_ups":  [
+                                             "What is object slicing?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Forgetting virtual destructors"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "cpp"
+                                   ],
+                          "notes":  "The guide lists topics, not reported questions. Topic context only (no candidate attribution): https://geeksforgeeks.org/nvidia-recruitment-process.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "NVD-SWE-R3-004",
+                          "round_id":  "R3",
+                          "topic":  "C++",
+                          "subtopic":  "Templates",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What are templates and how do they differ from macros?",
+                          "relevance_to_role":  "A 2026 guide describes later technical interviews on OOP, OS, networks, concurrency, GPU/CUDA (role-dependent), low-level design and debugging.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Templates generate type-safe code at compile time; macros are textual substitution with no type checks.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Templates"
+                                           ],
+                          "follow_ups":  [
+                                             "What is template specialisation?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Using macros for type safety"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "cpp"
+                                   ],
+                          "notes":  "The guide lists topics, not reported questions. Topic context only (no candidate attribution): https://geeksforgeeks.org/nvidia-recruitment-process.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "NVD-SWE-R3-005",
+                          "round_id":  "R3",
+                          "topic":  "GPU Fundamentals",
+                          "subtopic":  "CPU versus GPU",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "How do CPUs and GPUs differ in design, and which workloads suit a GPU?",
+                          "relevance_to_role":  "A 2026 guide describes later technical interviews on OOP, OS, networks, concurrency, GPU/CUDA (role-dependent), low-level design and debugging.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "CPUs have few powerful cores optimised for latency and control flow; GPUs have thousands of simpler cores optimised for throughput on data-parallel work such as matrix operations, graphics and ML.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Throughput",
+                                               "Parallelism"
+                                           ],
+                          "follow_ups":  [
+                                             "Why do branches hurt GPU performance?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Saying GPUs are faster at everything"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "gpu"
+                                   ],
+                          "notes":  "The guide lists topics, not reported questions. Topic context only (no candidate attribution): https://geeksforgeeks.org/nvidia-recruitment-process.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "NVD-SWE-R3-006",
+                          "round_id":  "R3",
+                          "topic":  "GPU Fundamentals",
+                          "subtopic":  "CUDA execution model",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "HARD",
+                          "prompt":  "Explain threads, blocks, grids and warps in CUDA.",
+                          "relevance_to_role":  "A 2026 guide describes later technical interviews on OOP, OS, networks, concurrency, GPU/CUDA (role-dependent), low-level design and debugging.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Threads form blocks; blocks form a grid; a warp is a group of 32 threads executing in lockstep (SIMT) on a streaming multiprocessor. Threads in a block share fast shared memory and can synchronise.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "SIMT",
+                                               "Warps"
+                                           ],
+                          "follow_ups":  [
+                                             "What is warp divergence?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Thinking threads are independent processors"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "gpu"
+                                   ],
+                          "notes":  "The guide lists topics, not reported questions. Topic context only (no candidate attribution): https://geeksforgeeks.org/nvidia-recruitment-process.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "NVD-SWE-R3-007",
+                          "round_id":  "R3",
+                          "topic":  "GPU Fundamentals",
+                          "subtopic":  "GPU memory hierarchy",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "HARD",
+                          "prompt":  "Describe global, shared and register memory on a GPU and why coalesced access matters.",
+                          "relevance_to_role":  "A 2026 guide describes later technical interviews on OOP, OS, networks, concurrency, GPU/CUDA (role-dependent), low-level design and debugging.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Global memory is large but slow; shared memory is on-chip and fast; registers are per-thread. Coalesced access lets a warp\u0027s loads combine into few transactions.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Memory"
+                                           ],
+                          "follow_ups":  [
+                                             "How would you tile a matrix multiply?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Ignoring coalescing"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "gpu"
+                                   ],
+                          "notes":  "The guide lists topics, not reported questions. Topic context only (no candidate attribution): https://geeksforgeeks.org/nvidia-recruitment-process.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "NVD-SWE-R3-008",
+                          "round_id":  "R3",
+                          "topic":  "GPU Fundamentals",
+                          "subtopic":  "Parallel reduction",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "HARD",
+                          "prompt":  "How would you compute the sum of a large array in parallel?",
+                          "relevance_to_role":  "A 2026 guide describes later technical interviews on OOP, OS, networks, concurrency, GPU/CUDA (role-dependent), low-level design and debugging.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Each thread sums a chunk, block-level tree reduction in shared memory, then combine block results with a second kernel or atomics.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Reduction"
+                                           ],
+                          "follow_ups":  [
+                                             "How do you avoid bank conflicts?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Using one atomic add per element"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "gpu"
+                                   ],
+                          "notes":  "The guide lists topics, not reported questions. Topic context only (no candidate attribution): https://geeksforgeeks.org/nvidia-recruitment-process.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "NVD-SWE-R3-009",
+                          "round_id":  "R3",
+                          "topic":  "Concurrency",
+                          "subtopic":  "Mutex versus atomic",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "When would you use a mutex versus an atomic variable?",
+                          "relevance_to_role":  "A 2026 guide describes later technical interviews on OOP, OS, networks, concurrency, GPU/CUDA (role-dependent), low-level design and debugging.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Atomics for single-variable updates (counters, flags) lock-free; mutexes for protecting multi-step critical sections.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Concurrency"
+                                           ],
+                          "follow_ups":  [
+                                             "What is the ABA problem?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Assuming atomics fix everything"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "concurrency"
+                                   ],
+                          "notes":  "The guide lists topics, not reported questions. Topic context only (no candidate attribution): https://geeksforgeeks.org/nvidia-recruitment-process.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "NVD-SWE-R3-010",
+                          "round_id":  "R3",
+                          "topic":  "Low-Level Design",
+                          "subtopic":  "Design a memory pool allocator",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "HARD",
+                          "prompt":  "Design a fixed-size memory pool allocator for many small objects.",
+                          "relevance_to_role":  "A 2026 guide describes later technical interviews on OOP, OS, networks, concurrency, GPU/CUDA (role-dependent), low-level design and debugging.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Preallocate a block, keep a free list of chunks, allocate by popping and free by pushing, O(1) both; handle alignment, thread safety and fragmentation.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Allocators"
+                                           ],
+                          "follow_ups":  [
+                                             "How do you make it thread-safe?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Calling malloc each time"
+                                              ],
+                          "suggested_time_min":  20,
+                          "tags":  [
+                                       "design"
+                                   ],
+                          "notes":  "The guide lists topics, not reported questions. Topic context only (no candidate attribution): https://geeksforgeeks.org/nvidia-recruitment-process.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "NVD-SWE-R3-011",
+                          "round_id":  "R3",
+                          "topic":  "Debugging",
+                          "subtopic":  "Segmentation fault",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "A C++ program crashes with a segmentation fault. How do you debug it?",
+                          "relevance_to_role":  "A 2026 guide describes later technical interviews on OOP, OS, networks, concurrency, GPU/CUDA (role-dependent), low-level design and debugging.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Run under gdb or with AddressSanitizer, inspect the backtrace, check null/dangling pointers, out-of-bounds access, stack overflow and use-after-free.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Debugging tools"
+                                           ],
+                          "follow_ups":  [
+                                             "What is a dangling pointer?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Adding prints blindly"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "debugging"
+                                   ],
+                          "notes":  "The guide lists topics, not reported questions. Topic context only (no candidate attribution): https://geeksforgeeks.org/nvidia-recruitment-process.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "NVD-SWE-R3-012",
+                          "round_id":  "R3",
+                          "topic":  "Matrix",
+                          "subtopic":  "Matrix transpose",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Transpose an r x c matrix and print it.",
+                          "relevance_to_role":  "A 2026 guide describes later technical interviews on OOP, OS, networks, concurrency, GPU/CUDA (role-dependent), low-level design and debugging.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Swap indices.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Matrix",
+                                               "Matrix transpose"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "matrix"
+                                   ],
+                          "notes":  "The guide lists topics, not reported questions. Topic context only (no candidate attribution): https://geeksforgeeks.org/nvidia-recruitment-process.",
+                          "coding":  {
+                                         "problem_statement":  "Transpose an r x c matrix and print it.",
+                                         "input_format":  "Line 1: r c. Next r lines: rows.",
+                                         "output_format":  "The transposed matrix.",
+                                         "constraints":  "1 \u003c= r, c \u003c= 100",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "2 3\n1 2 3\n4 5 6",
+                                                             "output":  "1 4\n2 5\n3 6",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "1 2\n7 8",
+                                                             "output":  "7\n8",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Single row",
+                                                            "Single column",
+                                                            "Square"
+                                                        ],
+                                         "expected_algorithm":  "Swap indices.",
+                                         "time_complexity":  "O(rc)",
+                                         "space_complexity":  "O(rc)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "NVD-SWE-R3-013",
+                          "round_id":  "R3",
+                          "topic":  "Dynamic Programming",
+                          "subtopic":  "Knapsack",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Print the maximum value that fits in capacity W (each item once).",
+                          "relevance_to_role":  "A 2026 guide describes later technical interviews on OOP, OS, networks, concurrency, GPU/CUDA (role-dependent), low-level design and debugging.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "0/1 knapsack.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Dynamic Programming",
+                                               "Knapsack"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "dp"
+                                   ],
+                          "notes":  "The guide lists topics, not reported questions. Topic context only (no candidate attribution): https://geeksforgeeks.org/nvidia-recruitment-process.",
+                          "coding":  {
+                                         "problem_statement":  "Print the maximum value that fits in capacity W (each item once).",
+                                         "input_format":  "Line 1: n W. Line 2: weights. Line 3: values.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "1 \u003c= n \u003c= 200",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "3 50\n10 20 30\n60 100 120",
+                                                             "output":  "220",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "2 5\n6 7\n10 20",
+                                                             "output":  "0",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Nothing fits",
+                                                            "All fit",
+                                                            "Single"
+                                                        ],
+                                         "expected_algorithm":  "0/1 knapsack.",
+                                         "time_complexity":  "O(nW)",
+                                         "space_complexity":  "O(W)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "NVD-SWE-R3-014",
+                          "round_id":  "R3",
+                          "topic":  "Learning",
+                          "subtopic":  "Learning a hard topic",
+                          "question_type":  "BEHAVIORAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Tell me about a hard technical topic you taught yourself (for example parallel programming).",
+                          "relevance_to_role":  "A 2026 guide describes later technical interviews on OOP, OS, networks, concurrency, GPU/CUDA (role-dependent), low-level design and debugging.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "A concrete self-taught topic applied.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Specific, real example",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Own actions and reasoning are clear",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Outcome and learning stated",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Learning agility"
+                                           ],
+                          "follow_ups":  [
+                                             "What did you learn?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Vague story",
+                                                  "No outcome"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "behavioral"
+                                   ],
+                          "notes":  "The guide lists topics, not reported questions. Topic context only (no candidate attribution): https://geeksforgeeks.org/nvidia-recruitment-process.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  {
+                                             "competency":  "Learning agility",
+                                             "star_guidance":  "What, how, application.",
+                                             "positive_signals":  [
+                                                                      "Self-directed",
+                                                                      "Applied"
+                                                                  ],
+                                             "negative_signals":  [
+                                                                      "Vague"
+                                                                  ]
+                                         }
+                      },
+                      {
+                          "question_id":  "NVD-SWE-R4-001",
+                          "round_id":  "R4",
+                          "topic":  "Project Discussion",
+                          "subtopic":  "Project design decisions",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Walk me through your project and one design decision you would revisit.",
+                          "relevance_to_role":  "A 2026 guide describes a hiring manager round (resume, projects, design decisions, teamwork) and an HR round (motivation, compensation, joining, relocation).",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Problem, architecture, your part, a decision and its trade-offs.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Ownership"
+                                           ],
+                          "follow_ups":  [
+                                             "How did you test it?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Cannot explain own code"
+                                              ],
+                          "suggested_time_min":  8,
+                          "tags":  [
+                                       "project"
+                                   ],
+                          "notes":  "The guide lists topics, not reported questions. Topic context only (no candidate attribution): https://geeksforgeeks.org/nvidia-recruitment-process.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "NVD-SWE-R4-002",
+                          "round_id":  "R4",
+                          "topic":  "Teamwork",
+                          "subtopic":  "Team challenge",
+                          "question_type":  "BEHAVIORAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Tell me about a time you worked through a team challenge.",
+                          "relevance_to_role":  "A 2026 guide describes a hiring manager round (resume, projects, design decisions, teamwork) and an HR round (motivation, compensation, joining, relocation).",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "A resolved challenge.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Specific, real example",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Own actions and reasoning are clear",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Outcome and learning stated",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Teamwork"
+                                           ],
+                          "follow_ups":  [
+                                             "What did you learn?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Vague story",
+                                                  "No outcome"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "behavioral"
+                                   ],
+                          "notes":  "The guide lists topics, not reported questions. Topic context only (no candidate attribution): https://geeksforgeeks.org/nvidia-recruitment-process.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  {
+                                             "competency":  "Teamwork",
+                                             "star_guidance":  "Situation, action, result.",
+                                             "positive_signals":  [
+                                                                      "Collaborates"
+                                                                  ],
+                                             "negative_signals":  [
+                                                                      "Blames"
+                                                                  ]
+                                         }
+                      },
+                      {
+                          "question_id":  "NVD-SWE-R4-003",
+                          "round_id":  "R4",
+                          "topic":  "HR",
+                          "subtopic":  "Why NVIDIA",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Why do you want to join NVIDIA?",
+                          "relevance_to_role":  "A 2026 guide describes a hiring manager round (resume, projects, design decisions, teamwork) and an HR round (motivation, compensation, joining, relocation).",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Link GPUs, AI, accelerated computing and learning to your interests.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "Which NVIDIA technology have you used?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Generic praise"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://geeksforgeeks.org/nvidia-recruitment-process.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "NVD-SWE-R4-004",
+                          "round_id":  "R4",
+                          "topic":  "HR",
+                          "subtopic":  "Eligibility and CGPA",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Your CGPA is above the cut-off for this drive. What have you done beyond coursework to prepare?",
+                          "relevance_to_role":  "A 2026 guide describes a hiring manager round (resume, projects, design decisions, teamwork) and an HR round (motivation, compensation, joining, relocation).",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Mention projects, open-source, contests, courses on parallel programming.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "What would you build next?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Only coursework"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "The topic is reported in candidate accounts; this item is an original practice question. Topic context only (no candidate attribution): https://www.jointaro.com/interviews/companies/nvidia/experiences/software-engineer-india-october-16-2025-no-offer-positive-eb298e86/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "NVD-SWE-R4-005",
+                          "round_id":  "R4",
+                          "topic":  "HR",
+                          "subtopic":  "Relocation",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Are you open to Bengaluru, Pune or Hyderabad?",
+                          "relevance_to_role":  "A 2026 guide describes a hiring manager round (resume, projects, design decisions, teamwork) and an HR round (motivation, compensation, joining, relocation).",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Be flexible and honest.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "Preference?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Rigid"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://geeksforgeeks.org/nvidia-recruitment-process.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "NVD-SWE-R4-006",
+                          "round_id":  "R4",
+                          "topic":  "HR",
+                          "subtopic":  "Compensation and joining",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "What are your expectations on compensation and joining timeline?",
+                          "relevance_to_role":  "A 2026 guide describes a hiring manager round (resume, projects, design decisions, teamwork) and an HR round (motivation, compensation, joining, relocation).",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Be informed and flexible; focus on growth.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "What matters most?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Unrealistic number"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://geeksforgeeks.org/nvidia-recruitment-process.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "NVD-SWE-R4-007",
+                          "round_id":  "R4",
+                          "topic":  "Problem Solving",
+                          "subtopic":  "Unfamiliar problem",
+                          "question_type":  "BEHAVIORAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Tell me how you approach a problem you have never seen.",
+                          "relevance_to_role":  "A 2026 guide describes a hiring manager round (resume, projects, design decisions, teamwork) and an HR round (motivation, compensation, joining, relocation).",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "A systematic approach.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Specific, real example",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Own actions and reasoning are clear",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Outcome and learning stated",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Problem solving"
+                                           ],
+                          "follow_ups":  [
+                                             "What did you learn?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Vague story",
+                                                  "No outcome"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "behavioral"
+                                   ],
+                          "notes":  "The guide lists topics, not reported questions. Topic context only (no candidate attribution): https://geeksforgeeks.org/nvidia-recruitment-process.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  {
+                                             "competency":  "Problem solving",
+                                             "star_guidance":  "Clarify, decompose, prototype, test.",
+                                             "positive_signals":  [
+                                                                      "Structured"
+                                                                  ],
+                                             "negative_signals":  [
+                                                                      "Guessing"
+                                                                  ]
+                                         }
+                      },
+                      {
+                          "question_id":  "NVD-SWE-R4-008",
+                          "round_id":  "R4",
+                          "topic":  "HR",
+                          "subtopic":  "Career goals",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Where do you see yourself in five years?",
+                          "relevance_to_role":  "A 2026 guide describes a hiring manager round (resume, projects, design decisions, teamwork) and an HR round (motivation, compensation, joining, relocation).",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Strong engineer, deeper systems or GPU expertise.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "How will you grow?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Unrealistic claims"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://geeksforgeeks.org/nvidia-recruitment-process.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      }
+                  ]
+}

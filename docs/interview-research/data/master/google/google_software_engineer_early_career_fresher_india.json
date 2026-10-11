@@ -1,0 +1,1943 @@
+{
+    "schema_version":  "codearena-interview-import/1",
+    "research":  {
+                     "company":  "Google",
+                     "role":  "Software Engineer, Early Career",
+                     "experience_level":  "FRESHER",
+                     "hiring_region":  "India",
+                     "target_year":  2026,
+                     "researched_on":  "2026-10-09",
+                     "researcher":  "Claude (research run 2026-10-09)",
+                     "job_description_url":  "https://www.google.com/about/careers/applications/students/",
+                     "job_description_summary":  "Google hires students and early-career engineers in India through programmes such as STEP (internship) and early-career Software Engineer roles. Glassdoor STEP Intern reviews (July and October 2026) describe a 15-minute recruiter call, three 45-minute technical coding rounds (sliding window, hashing, trees such as a modified lowest common ancestor) and team matching. The official careers pages were not fetched.",
+                     "required_skills":  [
+                                             "Data structures and algorithms",
+                                             "Coding in a language of choice",
+                                             "Complexity analysis",
+                                             "Testing and edge cases",
+                                             "Communication while problem solving",
+                                             "Collaboration (behavioral)"
+                                         ],
+                     "limitations":  [
+                                         "Google\u0027s official careers pages were not fetched, so no round is marked DOCUMENTED.",
+                                         "STEP rounds are REPORTED from a handful of Glassdoor reviews that mostly give no problem text; only two details are specific (sliding window with follow-ups, and a modified LeetCode lowest common ancestor). Those items are class B, one report each, unverified.",
+                                         "The Software Engineer, Early Career track has no India-specific candidate reports found; its rounds are marked PROPOSED (an online assessment, two coding interviews and a Googleyness round) and all of its questions are original practice.",
+                                         "Google does not publish its question bank; STEP is an internship programme, so STEP content is for intern-to-new-grad preparation.",
+                                         "Behavioral prompts follow Google\u0027s publicly described \u0027Googleyness\u0027 themes and are original.",
+                                         "One 2026 Glassdoor review (accepted offer) says only that the problems were LeetCode-style.",
+                                         "Evidence handling: practice questions cite no sources; where a source only supplied topic context it is named in the question notes. Practice and job-description-inferred questions are UNVERIFIED and capped at LOW confidence on import.",
+                                         "Review status: answers, samples and cited counts come from the researcher and were not independently re-run; spot checks only. Source titles and some dates are blank because the sources did not show them."
+                                     ]
+                 },
+    "sources":  [
+
+                ],
+    "rounds":  [
+                   {
+                       "round_id":  "R1",
+                       "name":  "Online Coding Assessment",
+                       "category":  "CODING_ASSESSMENT",
+                       "order":  1,
+                       "evidence":  "PROPOSED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+
+                                      ]
+                   },
+                   {
+                       "round_id":  "R2",
+                       "name":  "Technical Interview 1 (Coding)",
+                       "category":  "CODING_ASSESSMENT",
+                       "order":  2,
+                       "evidence":  "PROPOSED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+
+                                      ]
+                   },
+                   {
+                       "round_id":  "R3",
+                       "name":  "Technical Interview 2 (Coding)",
+                       "category":  "CODING_ASSESSMENT",
+                       "order":  3,
+                       "evidence":  "PROPOSED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+
+                                      ]
+                   },
+                   {
+                       "round_id":  "R4",
+                       "name":  "Googleyness and Behavioral Interview",
+                       "category":  "BEHAVIORAL",
+                       "order":  4,
+                       "evidence":  "PROPOSED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+
+                                      ]
+                   }
+               ],
+    "questions":  [
+                      {
+                          "question_id":  "GOO-SWE-R1-001",
+                          "round_id":  "R1",
+                          "topic":  "Arrays",
+                          "subtopic":  "Next greater element",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "For each element, print the first greater element to its right, or -1.",
+                          "relevance_to_role":  "Early-career software engineer hiring at Google commonly uses coding interviews; this structure is proposed from STEP reports and is not documented for this role.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Monotonic stack.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Arrays",
+                                               "Next greater element"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "stack"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Google-Interview-E9079-RVW103942046.htm.",
+                          "coding":  {
+                                         "problem_statement":  "For each element, print the first greater element to its right, or -1.",
+                                         "input_format":  "Line 1: n. Line 2: n integers.",
+                                         "output_format":  "n integers.",
+                                         "constraints":  "1 \u003c= n \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "5\n4 5 2 25 3",
+                                                             "output":  "5 25 25 -1 -1",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "3\n3 2 1",
+                                                             "output":  "-1 -1 -1",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Decreasing",
+                                                            "Equal values",
+                                                            "Single"
+                                                        ],
+                                         "expected_algorithm":  "Monotonic stack.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(n)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "GOO-SWE-R1-002",
+                          "round_id":  "R1",
+                          "topic":  "Dynamic Programming",
+                          "subtopic":  "Minimum coins",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Given coin values and an amount, print the fewest coins needed (unlimited supply), or -1.",
+                          "relevance_to_role":  "Early-career software engineer hiring at Google commonly uses coding interviews; this structure is proposed from STEP reports and is not documented for this role.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "dp over amounts.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Dynamic Programming",
+                                               "Minimum coins"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "dp"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Google-Interview-E9079-RVW103942046.htm.",
+                          "coding":  {
+                                         "problem_statement":  "Given coin values and an amount, print the fewest coins needed (unlimited supply), or -1.",
+                                         "input_format":  "Line 1: n. Line 2: n coin values. Line 3: amount.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "1 \u003c= n \u003c= 100",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "3\n1 2 5\n11",
+                                                             "output":  "3",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "1\n2\n3",
+                                                             "output":  "-1",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Impossible",
+                                                            "Amount 0",
+                                                            "Single coin"
+                                                        ],
+                                         "expected_algorithm":  "dp over amounts.",
+                                         "time_complexity":  "O(n x amount)",
+                                         "space_complexity":  "O(amount)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "GOO-SWE-R1-003",
+                          "round_id":  "R1",
+                          "topic":  "Arrays",
+                          "subtopic":  "Inversion count",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Count pairs i \u003c j with a[i] \u003e a[j].",
+                          "relevance_to_role":  "Early-career software engineer hiring at Google commonly uses coding interviews; this structure is proposed from STEP reports and is not documented for this role.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Merge sort counting gives O(n log n); brute force is O(n^2).",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Arrays",
+                                               "Inversion count"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "sorting"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Google-Interview-E9079-RVW103942046.htm.",
+                          "coding":  {
+                                         "problem_statement":  "Count pairs i \u003c j with a[i] \u003e a[j].",
+                                         "input_format":  "Line 1: n. Line 2: n integers.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "1 \u003c= n \u003c= 2000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "5\n2 4 1 3 5",
+                                                             "output":  "3",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "3\n3 2 1",
+                                                             "output":  "3",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Sorted",
+                                                            "Reversed",
+                                                            "Duplicates"
+                                                        ],
+                                         "expected_algorithm":  "Merge sort counting gives O(n log n); brute force is O(n^2).",
+                                         "time_complexity":  "O(n log n)",
+                                         "space_complexity":  "O(n)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "GOO-SWE-R1-004",
+                          "round_id":  "R1",
+                          "topic":  "Strings",
+                          "subtopic":  "Longest palindromic substring length",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Print the length of the longest palindromic substring.",
+                          "relevance_to_role":  "Early-career software engineer hiring at Google commonly uses coding interviews; this structure is proposed from STEP reports and is not documented for this role.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Expand around each centre.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Strings",
+                                               "Longest palindromic substring length"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "strings"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Google-Interview-E9079-RVW103942046.htm.",
+                          "coding":  {
+                                         "problem_statement":  "Print the length of the longest palindromic substring.",
+                                         "input_format":  "One line: the string.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "1 \u003c= length \u003c= 1000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "babad",
+                                                             "output":  "3",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "cbbd",
+                                                             "output":  "2",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Single char",
+                                                            "Whole string",
+                                                            "Even length"
+                                                        ],
+                                         "expected_algorithm":  "Expand around each centre.",
+                                         "time_complexity":  "O(n^2)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "GOO-SWE-R1-005",
+                          "round_id":  "R1",
+                          "topic":  "Matrix",
+                          "subtopic":  "Rotate a square matrix",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Rotate an n x n matrix 90 degrees clockwise and print it.",
+                          "relevance_to_role":  "Early-career software engineer hiring at Google commonly uses coding interviews; this structure is proposed from STEP reports and is not documented for this role.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "New[c][n-1-r] = old[r][c]; or transpose and reverse rows.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Matrix",
+                                               "Rotate a square matrix"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "matrix"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Google-Interview-E9079-RVW103942046.htm.",
+                          "coding":  {
+                                         "problem_statement":  "Rotate an n x n matrix 90 degrees clockwise and print it.",
+                                         "input_format":  "Line 1: n. Next n lines: n tokens each.",
+                                         "output_format":  "The rotated matrix.",
+                                         "constraints":  "1 \u003c= n \u003c= 100",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "2\n1 2\n3 4",
+                                                             "output":  "3 1\n4 2",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "3\n1 2 3\n4 5 6\n7 8 9",
+                                                             "output":  "7 4 1\n8 5 2\n9 6 3",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "n = 1",
+                                                            "Odd n",
+                                                            "Even n"
+                                                        ],
+                                         "expected_algorithm":  "New[c][n-1-r] = old[r][c]; or transpose and reverse rows.",
+                                         "time_complexity":  "O(n^2)",
+                                         "space_complexity":  "O(n^2)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "GOO-SWE-R2-001",
+                          "round_id":  "R2",
+                          "topic":  "Binary Search",
+                          "subtopic":  "Rotated array search",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Search a rotated sorted array of distinct values for a target; print its index or -1.",
+                          "relevance_to_role":  "Early-career software engineer hiring at Google commonly uses coding interviews; this structure is proposed from STEP reports and is not documented for this role.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Binary search choosing the sorted half.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Binary Search",
+                                               "Rotated array search"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "binary-search"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Google-Interview-E9079-RVW103942046.htm.",
+                          "coding":  {
+                                         "problem_statement":  "Search a rotated sorted array of distinct values for a target; print its index or -1.",
+                                         "input_format":  "Line 1: n. Line 2: n integers. Line 3: target.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "1 \u003c= n \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "6\n4 5 6 7 0 1\n0",
+                                                             "output":  "4",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "3\n1 3 5\n2",
+                                                             "output":  "-1",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "No rotation",
+                                                            "Absent",
+                                                            "n = 1"
+                                                        ],
+                                         "expected_algorithm":  "Binary search choosing the sorted half.",
+                                         "time_complexity":  "O(log n)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "GOO-SWE-R2-002",
+                          "round_id":  "R2",
+                          "topic":  "Sliding Window",
+                          "subtopic":  "Window maximum",
+                          "question_type":  "CODING",
+                          "difficulty":  "HARD",
+                          "prompt":  "Print the maximum of every window of size k.",
+                          "relevance_to_role":  "Early-career software engineer hiring at Google commonly uses coding interviews; this structure is proposed from STEP reports and is not documented for this role.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Monotonic deque.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Sliding Window",
+                                               "Window maximum"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "deque"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Google-Interview-E9079-RVW103942046.htm.",
+                          "coding":  {
+                                         "problem_statement":  "Print the maximum of every window of size k.",
+                                         "input_format":  "Line 1: n k. Line 2: n integers.",
+                                         "output_format":  "n-k+1 values.",
+                                         "constraints":  "1 \u003c= k \u003c= n \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "8 3\n1 3 -1 -3 5 3 6 7",
+                                                             "output":  "3 3 5 5 6 7",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "3 1\n4 2 9",
+                                                             "output":  "4 2 9",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "k = 1",
+                                                            "k = n",
+                                                            "Decreasing"
+                                                        ],
+                                         "expected_algorithm":  "Monotonic deque.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(k)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "GOO-SWE-R2-003",
+                          "round_id":  "R2",
+                          "topic":  "Arrays",
+                          "subtopic":  "Subarray with bounded range",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Print the length of the longest subarray in which the difference between maximum and minimum is at most k.",
+                          "relevance_to_role":  "Early-career software engineer hiring at Google commonly uses coding interviews; this structure is proposed from STEP reports and is not documented for this role.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Two monotonic deques with a sliding window.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Arrays",
+                                               "Subarray with bounded range"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "deque"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Google-Interview-E9079-RVW103942046.htm.",
+                          "coding":  {
+                                         "problem_statement":  "Print the length of the longest subarray in which the difference between maximum and minimum is at most k.",
+                                         "input_format":  "Line 1: n k. Line 2: n integers.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "1 \u003c= n \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "6 3\n1 4 2 6 5 3",
+                                                             "output":  "3",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "3 0\n1 2 3",
+                                                             "output":  "1",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "k = 0",
+                                                            "All equal",
+                                                            "Whole array"
+                                                        ],
+                                         "expected_algorithm":  "Two monotonic deques with a sliding window.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(n)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "GOO-SWE-R2-004",
+                          "round_id":  "R2",
+                          "topic":  "Graphs",
+                          "subtopic":  "Course ordering feasibility",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Given n tasks and m prerequisite pairs \u0027u v\u0027 (u before v), print Yes if all can be completed, otherwise No.",
+                          "relevance_to_role":  "Early-career software engineer hiring at Google commonly uses coding interviews; this structure is proposed from STEP reports and is not documented for this role.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Topological sort.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Graphs",
+                                               "Course ordering feasibility"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "graphs"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Google-Interview-E9079-RVW103942046.htm.",
+                          "coding":  {
+                                         "problem_statement":  "Given n tasks and m prerequisite pairs \u0027u v\u0027 (u before v), print Yes if all can be completed, otherwise No.",
+                                         "input_format":  "Line 1: n m. Next m lines: u v.",
+                                         "output_format":  "Yes or No.",
+                                         "constraints":  "1 \u003c= n \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "4 3\n0 1\n1 2\n2 3",
+                                                             "output":  "Yes",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "2 2\n0 1\n1 0",
+                                                             "output":  "No",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Cycle",
+                                                            "No edges",
+                                                            "Disconnected"
+                                                        ],
+                                         "expected_algorithm":  "Topological sort.",
+                                         "time_complexity":  "O(n+m)",
+                                         "space_complexity":  "O(n+m)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "GOO-SWE-R2-005",
+                          "round_id":  "R2",
+                          "topic":  "Strings",
+                          "subtopic":  "Count pattern occurrences",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Count (overlapping) occurrences of a pattern in a text.",
+                          "relevance_to_role":  "Early-career software engineer hiring at Google commonly uses coding interviews; this structure is proposed from STEP reports and is not documented for this role.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "KMP for O(n+m); naive slicing is O(nm).",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Strings",
+                                               "Count pattern occurrences"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "strings"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Google-Interview-E9079-RVW103942046.htm.",
+                          "coding":  {
+                                         "problem_statement":  "Count (overlapping) occurrences of a pattern in a text.",
+                                         "input_format":  "Line 1: text. Line 2: pattern.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "1 \u003c= lengths \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "aaaa\naa",
+                                                             "output":  "3",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "abcabc\nbc",
+                                                             "output":  "2",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Overlaps",
+                                                            "No match",
+                                                            "Pattern longer"
+                                                        ],
+                                         "expected_algorithm":  "KMP for O(n+m); naive slicing is O(nm).",
+                                         "time_complexity":  "O(n+m)",
+                                         "space_complexity":  "O(m)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "GOO-SWE-R2-006",
+                          "round_id":  "R2",
+                          "topic":  "Dynamic Programming",
+                          "subtopic":  "Knapsack",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Given weights, values and capacity, print the maximum total value (each item at most once).",
+                          "relevance_to_role":  "Early-career software engineer hiring at Google commonly uses coding interviews; this structure is proposed from STEP reports and is not documented for this role.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "0/1 knapsack DP.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Dynamic Programming",
+                                               "Knapsack"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "dp"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Google-Interview-E9079-RVW103942046.htm.",
+                          "coding":  {
+                                         "problem_statement":  "Given weights, values and capacity, print the maximum total value (each item at most once).",
+                                         "input_format":  "Line 1: n W. Line 2: weights. Line 3: values.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "1 \u003c= n \u003c= 200",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "3 50\n10 20 30\n60 100 120",
+                                                             "output":  "220",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "2 5\n6 7\n10 20",
+                                                             "output":  "0",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Nothing fits",
+                                                            "All fit",
+                                                            "Single item"
+                                                        ],
+                                         "expected_algorithm":  "0/1 knapsack DP.",
+                                         "time_complexity":  "O(nW)",
+                                         "space_complexity":  "O(W)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "GOO-SWE-R2-007",
+                          "round_id":  "R2",
+                          "topic":  "Intervals",
+                          "subtopic":  "Merge intervals",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Merge overlapping intervals and print the result sorted.",
+                          "relevance_to_role":  "Early-career software engineer hiring at Google commonly uses coding interviews; this structure is proposed from STEP reports and is not documented for this role.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Sort and extend.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Intervals",
+                                               "Merge intervals"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "intervals"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Google-Interview-E9079-RVW103942046.htm.",
+                          "coding":  {
+                                         "problem_statement":  "Merge overlapping intervals and print the result sorted.",
+                                         "input_format":  "Line 1: n. Next n lines: start end.",
+                                         "output_format":  "One interval per line.",
+                                         "constraints":  "1 \u003c= n \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "4\n1 3\n2 6\n8 10\n15 18",
+                                                             "output":  "1 6\n8 10\n15 18",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "2\n1 4\n4 5",
+                                                             "output":  "1 5",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Touching",
+                                                            "Nested",
+                                                            "Single"
+                                                        ],
+                                         "expected_algorithm":  "Sort and extend.",
+                                         "time_complexity":  "O(n log n)",
+                                         "space_complexity":  "O(n)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "GOO-SWE-R2-008",
+                          "round_id":  "R2",
+                          "topic":  "Problem Solving",
+                          "subtopic":  "Explaining your approach",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "How do you structure your thinking out loud during a coding interview?",
+                          "relevance_to_role":  "Early-career software engineer hiring at Google commonly uses coding interviews; this structure is proposed from STEP reports and is not documented for this role.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Restate the problem, give examples, propose brute force, find the bottleneck, optimise, code cleanly, test with examples and edge cases, and state complexity.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "What do you do when stuck?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Silent coding"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "communication"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Google-Interview-E9079-RVW103942046.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "GOO-SWE-R2-009",
+                          "round_id":  "R2",
+                          "topic":  "Data Structures",
+                          "subtopic":  "Choosing a data structure",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "When would you pick a heap, a balanced tree, a hash map or a trie?",
+                          "relevance_to_role":  "Early-career software engineer hiring at Google commonly uses coding interviews; this structure is proposed from STEP reports and is not documented for this role.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Heap for top-k or priority; balanced tree for ordered queries; hash map for O(1) lookup; trie for prefix queries.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Data structures"
+                                           ],
+                          "follow_ups":  [
+                                             "Which supports range queries?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Using a hash map for ordered data"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "dsa"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Google-Interview-E9079-RVW103942046.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "GOO-SWE-R2-010",
+                          "round_id":  "R2",
+                          "topic":  "Hashing",
+                          "subtopic":  "Hash collisions",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What is a hash collision and how do hash tables handle it?",
+                          "relevance_to_role":  "Early-career software engineer hiring at Google commonly uses coding interviews; this structure is proposed from STEP reports and is not documented for this role.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Two keys map to the same bucket. Handle with chaining or open addressing; keep the load factor low and resize to maintain amortised O(1).",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Hashing"
+                                           ],
+                          "follow_ups":  [
+                                             "Why can adversarial keys cause O(n) lookups?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Assuming no collisions"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "hashing"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Google-Interview-E9079-RVW103942046.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "GOO-SWE-R3-001",
+                          "round_id":  "R3",
+                          "topic":  "Dynamic Programming",
+                          "subtopic":  "Stair-style counting: coins combinations",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Count the combinations of coins (order does not matter) that sum to an amount.",
+                          "relevance_to_role":  "Early-career software engineer hiring at Google commonly uses coding interviews; this structure is proposed from STEP reports and is not documented for this role.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Unbounded knapsack counting.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Dynamic Programming",
+                                               "Stair-style counting: coins combinations"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "dp"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Google-Interview-E9079-RVW103942046.htm.",
+                          "coding":  {
+                                         "problem_statement":  "Count the combinations of coins (order does not matter) that sum to an amount.",
+                                         "input_format":  "Line 1: n. Line 2: n coins. Line 3: amount.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "1 \u003c= n \u003c= 50",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "3\n1 2 5\n11",
+                                                             "output":  "3",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "1\n2\n3",
+                                                             "output":  "-1",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "No way",
+                                                            "Single coin",
+                                                            "Large amount"
+                                                        ],
+                                         "expected_algorithm":  "Unbounded knapsack counting.",
+                                         "time_complexity":  "O(n x amount)",
+                                         "space_complexity":  "O(amount)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "GOO-SWE-R3-002",
+                          "round_id":  "R3",
+                          "topic":  "Graphs",
+                          "subtopic":  "Weighted shortest paths",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Print shortest distances from a source in an undirected weighted graph (-1 if unreachable).",
+                          "relevance_to_role":  "Early-career software engineer hiring at Google commonly uses coding interviews; this structure is proposed from STEP reports and is not documented for this role.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Dijkstra.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Graphs",
+                                               "Weighted shortest paths"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "graphs"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Google-Interview-E9079-RVW103942046.htm.",
+                          "coding":  {
+                                         "problem_statement":  "Print shortest distances from a source in an undirected weighted graph (-1 if unreachable).",
+                                         "input_format":  "Line 1: n m. m lines: u v w. Last line: source.",
+                                         "output_format":  "n values.",
+                                         "constraints":  "1 \u003c= n \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "4 4\n0 1 1\n1 2 2\n0 2 5\n2 3 1\n0",
+                                                             "output":  "0 1 3 4",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "3 1\n0 1 4\n0",
+                                                             "output":  "0 4 -1",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Unreachable",
+                                                            "Parallel edges",
+                                                            "Source only"
+                                                        ],
+                                         "expected_algorithm":  "Dijkstra.",
+                                         "time_complexity":  "O((n+m) log n)",
+                                         "space_complexity":  "O(n+m)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "GOO-SWE-R3-003",
+                          "round_id":  "R3",
+                          "topic":  "Arrays",
+                          "subtopic":  "Trapping rain water",
+                          "question_type":  "CODING",
+                          "difficulty":  "HARD",
+                          "prompt":  "Print the units of water trapped between bars.",
+                          "relevance_to_role":  "Early-career software engineer hiring at Google commonly uses coding interviews; this structure is proposed from STEP reports and is not documented for this role.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Two pointers.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Arrays",
+                                               "Trapping rain water"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "two-pointers"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Google-Interview-E9079-RVW103942046.htm.",
+                          "coding":  {
+                                         "problem_statement":  "Print the units of water trapped between bars.",
+                                         "input_format":  "Line 1: n. Line 2: heights.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "1 \u003c= n \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "6\n0 2 0 3 0 4",
+                                                             "output":  "5",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "3\n3 0 3",
+                                                             "output":  "3",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Monotonic",
+                                                            "Single",
+                                                            "Valley"
+                                                        ],
+                                         "expected_algorithm":  "Two pointers.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "GOO-SWE-R3-004",
+                          "round_id":  "R3",
+                          "topic":  "Heaps",
+                          "subtopic":  "Minimum meeting rooms",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Print the minimum rooms needed for n meetings (a room frees when a meeting ends).",
+                          "relevance_to_role":  "Early-career software engineer hiring at Google commonly uses coding interviews; this structure is proposed from STEP reports and is not documented for this role.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Min-heap of ends.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Heaps",
+                                               "Minimum meeting rooms"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "heap"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Google-Interview-E9079-RVW103942046.htm.",
+                          "coding":  {
+                                         "problem_statement":  "Print the minimum rooms needed for n meetings (a room frees when a meeting ends).",
+                                         "input_format":  "Line 1: n. Next n lines: start end.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "1 \u003c= n \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "3\n0 30\n5 10\n15 20",
+                                                             "output":  "2",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "2\n1 2\n2 3",
+                                                             "output":  "1",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Touching",
+                                                            "All overlap",
+                                                            "Single"
+                                                        ],
+                                         "expected_algorithm":  "Min-heap of ends.",
+                                         "time_complexity":  "O(n log n)",
+                                         "space_complexity":  "O(n)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "GOO-SWE-R3-005",
+                          "round_id":  "R3",
+                          "topic":  "Design",
+                          "subtopic":  "LRU cache",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Simulate an LRU cache and print the results of the gets.",
+                          "relevance_to_role":  "Early-career software engineer hiring at Google commonly uses coding interviews; this structure is proposed from STEP reports and is not documented for this role.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Hash map plus linked list.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Design",
+                                               "LRU cache"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "design"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Google-Interview-E9079-RVW103942046.htm.",
+                          "coding":  {
+                                         "problem_statement":  "Simulate an LRU cache and print the results of the gets.",
+                                         "input_format":  "Line 1: capacity. Line 2: q. Then q operations \u0027put k v\u0027 or \u0027get k\u0027.",
+                                         "output_format":  "Results separated by spaces.",
+                                         "constraints":  "1 \u003c= capacity \u003c= 1000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "2\n7\nput 1 1\nput 2 2\nget 1\nput 3 3\nget 2\nget 3\nget 1",
+                                                             "output":  "1 -1 3 1",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "1\n4\nput 1 5\nput 2 6\nget 1\nget 2",
+                                                             "output":  "-1 6",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Update key",
+                                                            "Capacity 1",
+                                                            "Missing key"
+                                                        ],
+                                         "expected_algorithm":  "Hash map plus linked list.",
+                                         "time_complexity":  "O(1) per op",
+                                         "space_complexity":  "O(capacity)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "GOO-SWE-R4-001",
+                          "round_id":  "R4",
+                          "topic":  "Googleyness",
+                          "subtopic":  "Ambiguity",
+                          "question_type":  "BEHAVIORAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Tell me about a time you had to move forward without clear requirements.",
+                          "relevance_to_role":  "Early-career software engineer hiring at Google commonly uses coding interviews; this structure is proposed from STEP reports and is not documented for this role.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "A project advanced by clarifying and iterating.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Specific, real example",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Own actions and reasoning are clear",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Outcome and learning stated",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Comfort with ambiguity"
+                                           ],
+                          "follow_ups":  [
+                                             "What did you learn?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Vague story",
+                                                  "No outcome"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "behavioral"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Google-Interview-E9079-RVW103942046.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  {
+                                             "competency":  "Comfort with ambiguity",
+                                             "star_guidance":  "The situation, how you clarified, the decision, the result.",
+                                             "positive_signals":  [
+                                                                      "Asks questions",
+                                                                      "Iterates"
+                                                                  ],
+                                             "negative_signals":  [
+                                                                      "Waits"
+                                                                  ]
+                                         }
+                      },
+                      {
+                          "question_id":  "GOO-SWE-R4-002",
+                          "round_id":  "R4",
+                          "topic":  "Googleyness",
+                          "subtopic":  "Disagreement",
+                          "question_type":  "BEHAVIORAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Describe a disagreement with a teammate and how it was resolved.",
+                          "relevance_to_role":  "Early-career software engineer hiring at Google commonly uses coding interviews; this structure is proposed from STEP reports and is not documented for this role.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "A disagreement resolved with evidence.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Specific, real example",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Own actions and reasoning are clear",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Outcome and learning stated",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Collaboration"
+                                           ],
+                          "follow_ups":  [
+                                             "What did you learn?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Vague story",
+                                                  "No outcome"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "behavioral"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Google-Interview-E9079-RVW103942046.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  {
+                                             "competency":  "Collaboration",
+                                             "star_guidance":  "The disagreement, your approach, outcome.",
+                                             "positive_signals":  [
+                                                                      "Data-driven",
+                                                                      "Respectful"
+                                                                  ],
+                                             "negative_signals":  [
+                                                                      "Wins by authority"
+                                                                  ]
+                                         }
+                      },
+                      {
+                          "question_id":  "GOO-SWE-R4-003",
+                          "round_id":  "R4",
+                          "topic":  "Googleyness",
+                          "subtopic":  "Helping others",
+                          "question_type":  "BEHAVIORAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Tell me about a time you helped someone succeed.",
+                          "relevance_to_role":  "Early-career software engineer hiring at Google commonly uses coding interviews; this structure is proposed from STEP reports and is not documented for this role.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "A concrete example of mentoring.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Specific, real example",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Own actions and reasoning are clear",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Outcome and learning stated",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Humility and support"
+                                           ],
+                          "follow_ups":  [
+                                             "What did you learn?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Vague story",
+                                                  "No outcome"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "behavioral"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Google-Interview-E9079-RVW103942046.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  {
+                                             "competency":  "Humility and support",
+                                             "star_guidance":  "Who, what you did, the effect.",
+                                             "positive_signals":  [
+                                                                      "Generous",
+                                                                      "Specific"
+                                                                  ],
+                                             "negative_signals":  [
+                                                                      "Self-focused"
+                                                                  ]
+                                         }
+                      },
+                      {
+                          "question_id":  "GOO-SWE-R4-004",
+                          "round_id":  "R4",
+                          "topic":  "Googleyness",
+                          "subtopic":  "Taking initiative",
+                          "question_type":  "BEHAVIORAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Tell me about something you started on your own initiative.",
+                          "relevance_to_role":  "Early-career software engineer hiring at Google commonly uses coding interviews; this structure is proposed from STEP reports and is not documented for this role.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "An initiative with a measurable result.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Specific, real example",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Own actions and reasoning are clear",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Outcome and learning stated",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Initiative"
+                                           ],
+                          "follow_ups":  [
+                                             "What did you learn?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Vague story",
+                                                  "No outcome"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "behavioral"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Google-Interview-E9079-RVW103942046.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  {
+                                             "competency":  "Initiative",
+                                             "star_guidance":  "Why, what you did, the impact.",
+                                             "positive_signals":  [
+                                                                      "Self-starter",
+                                                                      "Measured"
+                                                                  ],
+                                             "negative_signals":  [
+                                                                      "Needs direction"
+                                                                  ]
+                                         }
+                      },
+                      {
+                          "question_id":  "GOO-SWE-R4-005",
+                          "round_id":  "R4",
+                          "topic":  "HR",
+                          "subtopic":  "Why Google",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Why do you want to work at Google?",
+                          "relevance_to_role":  "Early-career software engineer hiring at Google commonly uses coding interviews; this structure is proposed from STEP reports and is not documented for this role.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Link specific products, scale and learning culture to your interests.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "Which Google product would you improve?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Generic praise"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "motivation"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Google-Interview-E9079-RVW103942046.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      }
+                  ]
+}

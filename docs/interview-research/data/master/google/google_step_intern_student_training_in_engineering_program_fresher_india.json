@@ -1,0 +1,1839 @@
+{
+    "schema_version":  "codearena-interview-import/1",
+    "research":  {
+                     "company":  "Google",
+                     "role":  "STEP Intern (Student Training in Engineering Program)",
+                     "experience_level":  "FRESHER",
+                     "hiring_region":  "India",
+                     "target_year":  2026,
+                     "researched_on":  "2026-10-09",
+                     "researcher":  "Claude (research run 2026-10-09)",
+                     "job_description_url":  "https://www.google.com/about/careers/applications/students/",
+                     "job_description_summary":  "Google hires students and early-career engineers in India through programmes such as STEP (internship) and early-career Software Engineer roles. Glassdoor STEP Intern reviews (July and October 2026) describe a 15-minute recruiter call, three 45-minute technical coding rounds (sliding window, hashing, trees such as a modified lowest common ancestor) and team matching. The official careers pages were not fetched.",
+                     "required_skills":  [
+                                             "Data structures and algorithms",
+                                             "Coding in a language of choice",
+                                             "Complexity analysis",
+                                             "Testing and edge cases",
+                                             "Communication while problem solving",
+                                             "Collaboration (behavioral)"
+                                         ],
+                     "limitations":  [
+                                         "Google\u0027s official careers pages were not fetched, so no round is marked DOCUMENTED.",
+                                         "STEP rounds are REPORTED from a handful of Glassdoor reviews that mostly give no problem text; only two details are specific (sliding window with follow-ups, and a modified LeetCode lowest common ancestor). Those items are class B, one report each, unverified.",
+                                         "The Software Engineer, Early Career track has no India-specific candidate reports found; its rounds are marked PROPOSED (an online assessment, two coding interviews and a Googleyness round) and all of its questions are original practice.",
+                                         "Google does not publish its question bank; STEP is an internship programme, so STEP content is for intern-to-new-grad preparation.",
+                                         "Behavioral prompts follow Google\u0027s publicly described \u0027Googleyness\u0027 themes and are original.",
+                                         "One 2026 Glassdoor review (accepted offer) says only that the problems were LeetCode-style.",
+                                         "Evidence handling: practice questions cite no sources; where a source only supplied topic context it is named in the question notes. Practice and job-description-inferred questions are UNVERIFIED and capped at LOW confidence on import.",
+                                         "Review status: answers, samples and cited counts come from the researcher and were not independently re-run; spot checks only. Source titles and some dates are blank because the sources did not show them.",
+                                         "Source pages on LeetCode Discuss and Glassdoor returned HTTP 403 to the CodeArena audit tool (2026-10-11), so the cited questions were not re-confirmed against those pages."
+                                     ]
+                 },
+    "sources":  [
+                    {
+                        "source_id":  "S1",
+                        "kind":  "CANDIDATE_REPORT",
+                        "url":  "https://www.glassdoor.co.in/Interview/Google-Interview-E9079-RVW103942046.htm",
+                        "title":  "",
+                        "publisher":  "www.glassdoor.co.in",
+                        "published_on":  "2026-07-05",
+                        "accessed_on":  "2026-10-09",
+                        "reliability_note":  ""
+                    }
+                ],
+    "rounds":  [
+                   {
+                       "round_id":  "R1",
+                       "name":  "HR Recruiter Screen",
+                       "category":  "HR",
+                       "order":  1,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S1"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R2",
+                       "name":  "Technical Interview 1 (Coding)",
+                       "category":  "CODING_ASSESSMENT",
+                       "order":  2,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S1"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R3",
+                       "name":  "Technical Interview 2 (Coding)",
+                       "category":  "CODING_ASSESSMENT",
+                       "order":  3,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S1"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R4",
+                       "name":  "Technical Interview 3 (Coding)",
+                       "category":  "CODING_ASSESSMENT",
+                       "order":  4,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S1"
+                                      ]
+                   }
+               ],
+    "questions":  [
+                      {
+                          "question_id":  "GOO-STEP-R1-001",
+                          "round_id":  "R1",
+                          "topic":  "HR",
+                          "subtopic":  "Resume and backlog check",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Do you have any active backlogs? Walk me through your resume highlights.",
+                          "relevance_to_role":  "STEP Intern reviews describe a 15-minute recruiter call checking resume details and backlogs.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S1"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Answer factually; summarise projects and skills in under two minutes.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "Which project are you proudest of?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Hiding facts",
+                                                  "Rambling"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "Reported in one STEP review; the prompt is paraphrased.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "GOO-STEP-R1-002",
+                          "round_id":  "R1",
+                          "topic":  "HR",
+                          "subtopic":  "Why STEP",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Why do you want to join the STEP programme?",
+                          "relevance_to_role":  "STEP Intern reviews describe a 15-minute recruiter call checking resume details and backlogs.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Link curiosity about large-scale engineering, mentoring and growth to concrete interests.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "What do you want to learn?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Generic praise"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Google-Interview-E9079-RVW103942046.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "GOO-STEP-R1-003",
+                          "round_id":  "R1",
+                          "topic":  "HR",
+                          "subtopic":  "Availability",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Are you available for the programme dates, and which location would you prefer?",
+                          "relevance_to_role":  "STEP Intern reviews describe a 15-minute recruiter call checking resume details and backlogs.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "State availability clearly and flexibility on location.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "What would change your availability?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Vague answers"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Google-Interview-E9079-RVW103942046.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "GOO-STEP-R2-001",
+                          "round_id":  "R2",
+                          "topic":  "Sliding Window",
+                          "subtopic":  "Longest substring with at most k distinct characters",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Given a string and k, print the length of the longest substring containing at most k distinct characters.",
+                          "relevance_to_role":  "STEP Intern reviews describe a 45-minute coding round with a sliding-window problem and follow-ups.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S1"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Sliding window with a frequency map; shrink when distinct \u003e k.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Sliding Window",
+                                               "Longest substring with at most k distinct characters"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "sliding-window"
+                                   ],
+                          "notes":  "A STEP review mentions a sliding window problem with follow-ups; the statement here is original.",
+                          "coding":  {
+                                         "problem_statement":  "Given a string and k, print the length of the longest substring containing at most k distinct characters.",
+                                         "input_format":  "Line 1: the string. Line 2: k.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "1 \u003c= length \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "eceba\n2",
+                                                             "output":  "3",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "aaaa\n1",
+                                                             "output":  "4",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "k = 1",
+                                                            "k larger than distinct",
+                                                            "Single character"
+                                                        ],
+                                         "expected_algorithm":  "Sliding window with a frequency map; shrink when distinct \u003e k.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(k)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "GOO-STEP-R2-002",
+                          "round_id":  "R2",
+                          "topic":  "Sliding Window",
+                          "subtopic":  "Longest substring without repeats",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Print the length of the longest substring with no repeated characters.",
+                          "relevance_to_role":  "STEP Intern reviews describe a 45-minute coding round with a sliding-window problem and follow-ups.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Sliding window with last-seen indexes.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Sliding Window",
+                                               "Longest substring without repeats"
+                                           ],
+                          "follow_ups":  [
+                                             "Print the substring itself."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "sliding-window"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Google-Interview-E9079-RVW103942046.htm.",
+                          "coding":  {
+                                         "problem_statement":  "Print the length of the longest substring with no repeated characters.",
+                                         "input_format":  "One line: the string.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "1 \u003c= length \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "abcabcbb",
+                                                             "output":  "3",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "bbbbb",
+                                                             "output":  "1",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "All distinct",
+                                                            "All same",
+                                                            "Long"
+                                                        ],
+                                         "expected_algorithm":  "Sliding window with last-seen indexes.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(k)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "GOO-STEP-R2-003",
+                          "round_id":  "R2",
+                          "topic":  "Hashing",
+                          "subtopic":  "Subarrays with sum k",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Count the contiguous subarrays whose sum equals k.",
+                          "relevance_to_role":  "STEP Intern reviews describe a 45-minute coding round with a sliding-window problem and follow-ups.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Prefix sums with a hash map of counts.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Hashing",
+                                               "Subarrays with sum k"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "hashing"
+                                   ],
+                          "notes":  "The topic is reported in candidate accounts or guides; this item is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Google-Interview-E9079-RVW103942046.htm.",
+                          "coding":  {
+                                         "problem_statement":  "Count the contiguous subarrays whose sum equals k.",
+                                         "input_format":  "Line 1: n k. Line 2: n integers.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "1 \u003c= n \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "5 3\n1 2 1 2 1",
+                                                             "output":  "4",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "3 0\n1 -1 0",
+                                                             "output":  "3",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Negatives",
+                                                            "Zeros",
+                                                            "k = 0"
+                                                        ],
+                                         "expected_algorithm":  "Prefix sums with a hash map of counts.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(n)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "GOO-STEP-R2-004",
+                          "round_id":  "R2",
+                          "topic":  "Hashing",
+                          "subtopic":  "Group anagram count",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Given n words, print how many distinct anagram groups there are.",
+                          "relevance_to_role":  "STEP Intern reviews describe a 45-minute coding round with a sliding-window problem and follow-ups.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Key each word by its sorted letters.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Hashing",
+                                               "Group anagram count"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "hashing"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Google-Interview-E9079-RVW103942046.htm.",
+                          "coding":  {
+                                         "problem_statement":  "Given n words, print how many distinct anagram groups there are.",
+                                         "input_format":  "Line 1: n. Next n lines: one word each.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "1 \u003c= n \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "4\neat\ntea\ntan\nnat",
+                                                             "output":  "2",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "2\nabc\nabd",
+                                                             "output":  "2",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "All anagrams",
+                                                            "None",
+                                                            "Single"
+                                                        ],
+                                         "expected_algorithm":  "Key each word by its sorted letters.",
+                                         "time_complexity":  "O(n k log k)",
+                                         "space_complexity":  "O(n k)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "GOO-STEP-R2-005",
+                          "round_id":  "R2",
+                          "topic":  "Strings",
+                          "subtopic":  "Valid palindrome after one removal",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Print Yes if the string can become a palindrome after deleting at most one character, otherwise No.",
+                          "relevance_to_role":  "STEP Intern reviews describe a 45-minute coding round with a sliding-window problem and follow-ups.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Two pointers; on mismatch try skipping either side.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Strings",
+                                               "Valid palindrome after one removal"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "two-pointers"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Google-Interview-E9079-RVW103942046.htm.",
+                          "coding":  {
+                                         "problem_statement":  "Print Yes if the string can become a palindrome after deleting at most one character, otherwise No.",
+                                         "input_format":  "One line: the string.",
+                                         "output_format":  "Yes or No.",
+                                         "constraints":  "1 \u003c= length \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "abca",
+                                                             "output":  "Yes",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "abc",
+                                                             "output":  "No",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Already palindrome",
+                                                            "One char",
+                                                            "Fails after skip"
+                                                        ],
+                                         "expected_algorithm":  "Two pointers; on mismatch try skipping either side.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "GOO-STEP-R2-006",
+                          "round_id":  "R2",
+                          "topic":  "Binary Search",
+                          "subtopic":  "Binary search",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Search a sorted array for a target and print its 0-based index or -1.",
+                          "relevance_to_role":  "STEP Intern reviews describe a 45-minute coding round with a sliding-window problem and follow-ups.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Standard binary search.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Binary Search",
+                                               "Binary search"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "binary-search"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Google-Interview-E9079-RVW103942046.htm.",
+                          "coding":  {
+                                         "problem_statement":  "Search a sorted array for a target and print its 0-based index or -1.",
+                                         "input_format":  "Line 1: n. Line 2: n sorted integers. Line 3: target.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "1 \u003c= n \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "5\n1 3 5 7 9\n7",
+                                                             "output":  "3",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "3\n2 4 6\n5",
+                                                             "output":  "-1",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Absent",
+                                                            "Ends",
+                                                            "n = 1"
+                                                        ],
+                                         "expected_algorithm":  "Standard binary search.",
+                                         "time_complexity":  "O(log n)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "GOO-STEP-R2-007",
+                          "round_id":  "R2",
+                          "topic":  "Problem Solving",
+                          "subtopic":  "Clarifying a problem",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "An interviewer gives you a vague problem statement. What questions do you ask before coding?",
+                          "relevance_to_role":  "STEP Intern reviews describe a 45-minute coding round with a sliding-window problem and follow-ups.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Clarify input size and ranges, duplicates, empty inputs, output format, whether to optimise time or memory, and confirm examples before choosing an approach.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Communication",
+                                               "Assumptions"
+                                           ],
+                          "follow_ups":  [
+                                             "How do you handle an ambiguous answer?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Starting to code immediately"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "communication"
+                                   ],
+                          "notes":  "The topic is reported in candidate accounts or guides; this item is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Google-Interview-E9079-RVW103942046.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "GOO-STEP-R2-008",
+                          "round_id":  "R2",
+                          "topic":  "Complexity",
+                          "subtopic":  "Time and space trade-offs",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "You solved a problem in O(n^2) time and O(1) space. How would you reason about trading space for time?",
+                          "relevance_to_role":  "STEP Intern reviews describe a 45-minute coding round with a sliding-window problem and follow-ups.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Identify repeated work, add a hash map or prefix array to cut time to O(n) at O(n) space; check constraints to decide whether the memory is acceptable.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Trade-offs"
+                                           ],
+                          "follow_ups":  [
+                                             "When is the O(n^2) approach acceptable?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Optimising without checking constraints"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "complexity"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Google-Interview-E9079-RVW103942046.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "GOO-STEP-R2-009",
+                          "round_id":  "R2",
+                          "topic":  "Testing",
+                          "subtopic":  "Test cases for your code",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "How do you choose test cases for a function that merges two sorted arrays?",
+                          "relevance_to_role":  "STEP Intern reviews describe a 45-minute coding round with a sliding-window problem and follow-ups.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Empty arrays, one empty, equal elements, duplicates, negatives, very different lengths, already merged order, large inputs for performance.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Edge cases"
+                                           ],
+                          "follow_ups":  [
+                                             "Which case is most likely to break a loop?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Testing only the happy path"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "testing"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Google-Interview-E9079-RVW103942046.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "GOO-STEP-R3-001",
+                          "round_id":  "R3",
+                          "topic":  "Trees",
+                          "subtopic":  "Lowest common ancestor (modified)",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "A rooted tree is given as a parent array (root parent is -1).",
+                          "relevance_to_role":  "STEP Intern reviews describe a 45-minute tree-based coding round with follow-ups.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S1"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Collect ancestors then climb; or binary lifting for many queries.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Trees",
+                                               "Lowest common ancestor (modified)"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "trees"
+                                   ],
+                          "notes":  "A STEP review mentions a modified LeetCode lowest common ancestor problem; this statement uses a parent array and is original.",
+                          "coding":  {
+                                         "problem_statement":  "A rooted tree is given as a parent array (root parent is -1). Print the lowest common ancestor of two nodes.",
+                                         "input_format":  "Line 1: n. Line 2: n parents. Line 3: u v.",
+                                         "output_format":  "One node id.",
+                                         "constraints":  "1 \u003c= n \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "5\n-1 0 0 1 1\n3 4",
+                                                             "output":  "1",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "3\n-1 0 0\n1 2",
+                                                             "output":  "0",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "One is ancestor",
+                                                            "Same node",
+                                                            "Deep tree"
+                                                        ],
+                                         "expected_algorithm":  "Collect ancestors then climb; or binary lifting for many queries.",
+                                         "time_complexity":  "O(depth)",
+                                         "space_complexity":  "O(depth)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "GOO-STEP-R3-002",
+                          "round_id":  "R3",
+                          "topic":  "Trees",
+                          "subtopic":  "Tree diameter",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Print the number of edges on the longest path in an undirected tree.",
+                          "relevance_to_role":  "STEP Intern reviews describe a 45-minute tree-based coding round with follow-ups.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Two BFS passes.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Trees",
+                                               "Tree diameter"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "trees"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Google-Interview-E9079-RVW103942046.htm.",
+                          "coding":  {
+                                         "problem_statement":  "Print the number of edges on the longest path in an undirected tree.",
+                                         "input_format":  "Line 1: n. Next n-1 lines: u v.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "1 \u003c= n \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "5\n0 1\n1 2\n1 3\n3 4",
+                                                             "output":  "3",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "2\n0 1",
+                                                             "output":  "1",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Path",
+                                                            "Star",
+                                                            "Two nodes"
+                                                        ],
+                                         "expected_algorithm":  "Two BFS passes.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(n)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "GOO-STEP-R3-003",
+                          "round_id":  "R3",
+                          "topic":  "Graphs",
+                          "subtopic":  "Grid shortest path",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "In a grid with \u0027.",
+                          "relevance_to_role":  "STEP Intern reviews describe a 45-minute tree-based coding round with follow-ups.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "BFS from the start.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Graphs",
+                                               "Grid shortest path"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "graphs"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Google-Interview-E9079-RVW103942046.htm.",
+                          "coding":  {
+                                         "problem_statement":  "In a grid with \u0027.\u0027 open and \u0027#\u0027 blocked cells, print the number of cells on the shortest path from top-left to bottom-right moving in four directions, or -1.",
+                                         "input_format":  "Line 1: r c. Next r lines: the grid.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "1 \u003c= r, c \u003c= 500",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "3 3\n...\n.#.\n...",
+                                                             "output":  "5",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "2 2\n.#\n#.",
+                                                             "output":  "-1",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Blocked start",
+                                                            "No path",
+                                                            "1x1"
+                                                        ],
+                                         "expected_algorithm":  "BFS from the start.",
+                                         "time_complexity":  "O(rc)",
+                                         "space_complexity":  "O(rc)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "GOO-STEP-R3-004",
+                          "round_id":  "R3",
+                          "topic":  "Graphs",
+                          "subtopic":  "Number of islands",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Count the islands of 1 in a grid (four-directional connectivity).",
+                          "relevance_to_role":  "STEP Intern reviews describe a 45-minute tree-based coding round with follow-ups.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Flood fill.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Graphs",
+                                               "Number of islands"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "graphs"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Google-Interview-E9079-RVW103942046.htm.",
+                          "coding":  {
+                                         "problem_statement":  "Count the islands of 1 in a grid (four-directional connectivity).",
+                                         "input_format":  "Line 1: r c. Next r lines: rows.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "1 \u003c= r, c \u003c= 300",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "4 5\n11000\n11000\n00100\n00011",
+                                                             "output":  "3",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "1 1\n0",
+                                                             "output":  "0",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "All water",
+                                                            "All land",
+                                                            "Diagonals"
+                                                        ],
+                                         "expected_algorithm":  "Flood fill.",
+                                         "time_complexity":  "O(rc)",
+                                         "space_complexity":  "O(rc)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "GOO-STEP-R3-005",
+                          "round_id":  "R3",
+                          "topic":  "Dynamic Programming",
+                          "subtopic":  "Longest increasing subsequence",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Print the length of the longest strictly increasing subsequence.",
+                          "relevance_to_role":  "STEP Intern reviews describe a 45-minute tree-based coding round with follow-ups.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Patience sorting with binary search.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Dynamic Programming",
+                                               "Longest increasing subsequence"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "dp"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Google-Interview-E9079-RVW103942046.htm.",
+                          "coding":  {
+                                         "problem_statement":  "Print the length of the longest strictly increasing subsequence.",
+                                         "input_format":  "Line 1: n. Line 2: n integers.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "1 \u003c= n \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "6\n10 9 2 5 3 7",
+                                                             "output":  "3",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "4\n4 4 4 4",
+                                                             "output":  "1",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "All equal",
+                                                            "Sorted",
+                                                            "Descending"
+                                                        ],
+                                         "expected_algorithm":  "Patience sorting with binary search.",
+                                         "time_complexity":  "O(n log n)",
+                                         "space_complexity":  "O(n)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "GOO-STEP-R3-006",
+                          "round_id":  "R3",
+                          "topic":  "Trees",
+                          "subtopic":  "Tree traversals",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Explain preorder, inorder, postorder and level-order traversals and give one use of each.",
+                          "relevance_to_role":  "STEP Intern reviews describe a 45-minute tree-based coding round with follow-ups.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Preorder (root first) copies a tree; inorder gives sorted order for a BST; postorder deletes or evaluates children first; level-order uses a queue for shortest depth.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Traversals"
+                                           ],
+                          "follow_ups":  [
+                                             "Which traversal needs a queue?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Mixing order names"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "trees"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Google-Interview-E9079-RVW103942046.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "GOO-STEP-R3-007",
+                          "round_id":  "R3",
+                          "topic":  "Trees",
+                          "subtopic":  "Follow-up: iterative traversal",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "How would you do an inorder traversal without recursion?",
+                          "relevance_to_role":  "STEP Intern reviews describe a 45-minute tree-based coding round with follow-ups.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Use an explicit stack: push left spine, pop, visit, move to the right child.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Stack",
+                                               "Iteration"
+                                           ],
+                          "follow_ups":  [
+                                             "How would you do it in O(1) space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Forgetting to go right after visiting"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "trees"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Google-Interview-E9079-RVW103942046.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "GOO-STEP-R3-008",
+                          "round_id":  "R3",
+                          "topic":  "Recursion",
+                          "subtopic":  "Recursion versus iteration",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "When would you convert a recursive solution into an iterative one?",
+                          "relevance_to_role":  "STEP Intern reviews describe a 45-minute tree-based coding round with follow-ups.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "When depth could overflow the stack, for performance, or to control memory; use an explicit stack or loop with the same state.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Recursion",
+                                               "Stack"
+                                           ],
+                          "follow_ups":  [
+                                             "How does tail recursion help?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Ignoring stack depth limits"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "recursion"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Google-Interview-E9079-RVW103942046.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "GOO-STEP-R4-001",
+                          "round_id":  "R4",
+                          "topic":  "Strings",
+                          "subtopic":  "Minimum window containing a pattern",
+                          "question_type":  "CODING",
+                          "difficulty":  "HARD",
+                          "prompt":  "Print the length of the shortest substring of the text that contains every character of the pattern (with multiplicity), or 0 if none.",
+                          "relevance_to_role":  "A STEP Intern review describes three technical coding rounds in total, followed by team matching.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Sliding window with counts of needed characters.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Strings",
+                                               "Minimum window containing a pattern"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "sliding-window"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Google-Interview-E9079-RVW103942046.htm.",
+                          "coding":  {
+                                         "problem_statement":  "Print the length of the shortest substring of the text that contains every character of the pattern (with multiplicity), or 0 if none.",
+                                         "input_format":  "Line 1: the text. Line 2: the pattern.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "1 \u003c= lengths \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "ADOBECODEBANC\nABC",
+                                                             "output":  "4",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "a\naa",
+                                                             "output":  "0",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Pattern longer",
+                                                            "Exact match",
+                                                            "Repeated letters"
+                                                        ],
+                                         "expected_algorithm":  "Sliding window with counts of needed characters.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(k)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "GOO-STEP-R4-002",
+                          "round_id":  "R4",
+                          "topic":  "Dynamic Programming",
+                          "subtopic":  "Longest common subsequence",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Print the length of the longest common subsequence of two strings.",
+                          "relevance_to_role":  "A STEP Intern review describes three technical coding rounds in total, followed by team matching.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "dp on prefixes.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Dynamic Programming",
+                                               "Longest common subsequence"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "dp"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Google-Interview-E9079-RVW103942046.htm.",
+                          "coding":  {
+                                         "problem_statement":  "Print the length of the longest common subsequence of two strings.",
+                                         "input_format":  "Line 1: first string. Line 2: second string.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "1 \u003c= lengths \u003c= 1000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "abcde\nace",
+                                                             "output":  "3",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "abc\ndef",
+                                                             "output":  "0",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "No common",
+                                                            "Identical",
+                                                            "One char"
+                                                        ],
+                                         "expected_algorithm":  "dp on prefixes.",
+                                         "time_complexity":  "O(nm)",
+                                         "space_complexity":  "O(nm)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "GOO-STEP-R4-003",
+                          "round_id":  "R4",
+                          "topic":  "Matrix",
+                          "subtopic":  "Spiral order",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Print the elements of a matrix in spiral order starting top-left going clockwise.",
+                          "relevance_to_role":  "A STEP Intern review describes three technical coding rounds in total, followed by team matching.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Peel layers or rotate the remaining matrix.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Matrix",
+                                               "Spiral order"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "matrix"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Google-Interview-E9079-RVW103942046.htm.",
+                          "coding":  {
+                                         "problem_statement":  "Print the elements of a matrix in spiral order starting top-left going clockwise.",
+                                         "input_format":  "Line 1: r c. Next r lines: rows.",
+                                         "output_format":  "Elements separated by spaces.",
+                                         "constraints":  "1 \u003c= r, c \u003c= 100",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "3 3\n1 2 3\n4 5 6\n7 8 9",
+                                                             "output":  "1 2 3 6 9 8 7 4 5",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "2 3\n1 2 3\n4 5 6",
+                                                             "output":  "1 2 3 6 5 4",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Single row",
+                                                            "Single column",
+                                                            "Non-square"
+                                                        ],
+                                         "expected_algorithm":  "Peel layers or rotate the remaining matrix.",
+                                         "time_complexity":  "O(rc)",
+                                         "space_complexity":  "O(rc)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "GOO-STEP-R4-004",
+                          "round_id":  "R4",
+                          "topic":  "Googleyness",
+                          "subtopic":  "Collaboration",
+                          "question_type":  "BEHAVIORAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Tell me about a time you worked with a team to solve a technical problem.",
+                          "relevance_to_role":  "A STEP Intern review describes three technical coding rounds in total, followed by team matching.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "A team problem solved with your clear contribution.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Specific, real example",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Own actions and reasoning are clear",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Outcome and learning stated",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Collaboration"
+                                           ],
+                          "follow_ups":  [
+                                             "What did you learn?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Vague story",
+                                                  "No outcome"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "behavioral"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Google-Interview-E9079-RVW103942046.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  {
+                                             "competency":  "Collaboration",
+                                             "star_guidance":  "Situation, your contribution, how you handled differing views, result.",
+                                             "positive_signals":  [
+                                                                      "Listens",
+                                                                      "Shares credit",
+                                                                      "Delivers"
+                                                                  ],
+                                             "negative_signals":  [
+                                                                      "Solo hero"
+                                                                  ]
+                                         }
+                      },
+                      {
+                          "question_id":  "GOO-STEP-R4-005",
+                          "round_id":  "R4",
+                          "topic":  "Learning",
+                          "subtopic":  "Learning from failure",
+                          "question_type":  "BEHAVIORAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Tell me about a project that did not go as planned and what you took from it.",
+                          "relevance_to_role":  "A STEP Intern review describes three technical coding rounds in total, followed by team matching.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "A real setback with a lesson applied later.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Specific, real example",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Own actions and reasoning are clear",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Outcome and learning stated",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Growth mindset"
+                                           ],
+                          "follow_ups":  [
+                                             "What did you learn?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Vague story",
+                                                  "No outcome"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "behavioral"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Google-Interview-E9079-RVW103942046.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  {
+                                             "competency":  "Growth mindset",
+                                             "star_guidance":  "What failed, your role, what you changed.",
+                                             "positive_signals":  [
+                                                                      "Reflective",
+                                                                      "Specific"
+                                                                  ],
+                                             "negative_signals":  [
+                                                                      "Blames others"
+                                                                  ]
+                                         }
+                      }
+                  ]
+}

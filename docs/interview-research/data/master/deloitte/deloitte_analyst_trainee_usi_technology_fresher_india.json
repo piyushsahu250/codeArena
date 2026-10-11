@@ -1,0 +1,2990 @@
+{
+    "schema_version":  "codearena-interview-import/1",
+    "research":  {
+                     "company":  "Deloitte",
+                     "role":  "Analyst Trainee (USI Technology)",
+                     "experience_level":  "FRESHER",
+                     "hiring_region":  "India",
+                     "target_year":  2026,
+                     "researched_on":  "2026-10-09",
+                     "researcher":  "Claude (research run 2026-10-09)",
+                     "job_description_url":  "https://www.deloitte.com/in/en/careers.html",
+                     "job_description_summary":  "Deloitte hires Analyst Trainees in India for its US-India (USI) technology practice. Three 2026 Glassdoor India reviews (May to July) describe shortlisting through the National Level Assessment, an online assessment, and an interview of about 40 to 45 minutes covering self-introduction, OS (deadlock), DBMS, simple coding (count alphabets and digits), basic programming and project discussion. A February 2026 JobRise guide (no verifiable sources) adds a Versant spoken English test, aptitude, DSA, system design, cloud and SQL topics and HR questions. The official careers page was not fetched.",
+                     "required_skills":  [
+                                             "Aptitude and verbal ability",
+                                             "Basic programming and DSA",
+                                             "DBMS and SQL",
+                                             "Operating systems",
+                                             "Project explanation",
+                                             "Spoken English",
+                                             "Communication"
+                                         ],
+                     "limitations":  [
+                                         "Deloitte\u0027s official careers page was not fetched, so no round is marked DOCUMENTED.",
+                                         "Candidate-attributed material is three 2026 Glassdoor India reviews for Analyst Trainee; they give topics and a few questions without exact text, so class B items are paraphrases with low confidence.",
+                                         "The JobRise guide (2026-02-11) cites no verifiable candidate sources; its lists are used as class D topic context.",
+                                         "The Versant test is automated and audio-based; its items are not public, so the spoken-English prompts are practice proxies.",
+                                         "Aptitude, verbal and logical questions are original practice; the actual online assessment content was not found.",
+                                         "Consulting and case-study tracks were not modelled; only the USI technology Analyst track is covered.",
+                                         "Evidence handling: practice questions cite no sources; where a source only supplied topic context it is named in the question notes. Practice and job-description-inferred questions are UNVERIFIED and capped at LOW confidence on import.",
+                                         "Review status: answers, samples and cited counts come from the researcher and were not independently re-run; spot checks only. Source titles and some dates are blank because the sources did not show them.",
+                                         "Source pages on LeetCode Discuss and Glassdoor returned HTTP 403 to the CodeArena audit tool (2026-10-11), so the cited questions were not re-confirmed against those pages."
+                                     ]
+                 },
+    "sources":  [
+                    {
+                        "source_id":  "S1",
+                        "kind":  "OTHER",
+                        "url":  "https://jobrise.io/en/blog/deloitte-interview-questions-freshers-2026/",
+                        "title":  "",
+                        "publisher":  "jobrise.io",
+                        "published_on":  "2026-02-11",
+                        "accessed_on":  "2026-10-09",
+                        "reliability_note":  ""
+                    },
+                    {
+                        "source_id":  "S2",
+                        "kind":  "OTHER",
+                        "url":  "https://www.glassdoor.co.in/Interview/Deloitte-Interview-E2763-RVW71649526.htm",
+                        "title":  "",
+                        "publisher":  "www.glassdoor.co.in",
+                        "published_on":  "2026-07-07",
+                        "accessed_on":  "2026-10-09",
+                        "reliability_note":  ""
+                    }
+                ],
+    "rounds":  [
+                   {
+                       "round_id":  "R1",
+                       "name":  "Online Assessment (Aptitude, Technical and Versant)",
+                       "category":  "ONLINE_ASSESSMENT",
+                       "order":  1,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S1",
+                                          "S2"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R2",
+                       "name":  "Technical Interview",
+                       "category":  "CORE_TECHNICAL",
+                       "order":  2,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S2",
+                                          "S1"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R3",
+                       "name":  "Project and Managerial Interview",
+                       "category":  "PROJECT_DISCUSSION",
+                       "order":  3,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S2",
+                                          "S1"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R4",
+                       "name":  "HR Interview",
+                       "category":  "HR",
+                       "order":  4,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S2",
+                                          "S1"
+                                      ]
+                   }
+               ],
+    "questions":  [
+                      {
+                          "question_id":  "DLT-SWE-R1-001",
+                          "round_id":  "R1",
+                          "topic":  "Aptitude",
+                          "subtopic":  "Percentages",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "A number is increased by 25% and then decreased by 20%. What is the net change?",
+                          "relevance_to_role":  "A February 2026 guide describes an online assessment of aptitude plus technical questions and a Versant spoken English test; a May 2026 review describes shortlisting through the National Level Assessment followed by an online assessment.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "No change",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Successive percentages"
+                                           ],
+                          "follow_ups":  [
+                                             "Reverse the order."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Adding the percentages"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "aptitude"
+                                   ],
+                          "notes":  "The topic appears in sources; this item is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/deloitte-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "No change",
+                                                      "5% increase",
+                                                      "5% decrease",
+                                                      "10% increase"
+                                                  ],
+                                      "correct_options":  [
+                                                              0
+                                                          ],
+                                      "explanation":  "1.25 x 0.8 = 1.0, so no change.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "DLT-SWE-R1-002",
+                          "round_id":  "R1",
+                          "topic":  "Aptitude",
+                          "subtopic":  "Speed and distance",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "A car covers 60 km at 30 km/h and returns at 60 km/h. What is its average speed for the trip?",
+                          "relevance_to_role":  "A February 2026 guide describes an online assessment of aptitude plus technical questions and a Versant spoken English test; a May 2026 review describes shortlisting through the National Level Assessment followed by an online assessment.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "40 km/h",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Average speed"
+                                           ],
+                          "follow_ups":  [
+                                             "What if distances differ?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Using arithmetic mean"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "aptitude"
+                                   ],
+                          "notes":  "The topic appears in sources; this item is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/deloitte-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "45 km/h",
+                                                      "40 km/h",
+                                                      "50 km/h",
+                                                      "35 km/h"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "Total 120 km over 2 + 1 = 3 hours = 40 km/h (harmonic mean).",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "DLT-SWE-R1-003",
+                          "round_id":  "R1",
+                          "topic":  "Aptitude",
+                          "subtopic":  "Profit and loss",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "An item bought for 800 is sold at a 15% profit. What is the selling price?",
+                          "relevance_to_role":  "A February 2026 guide describes an online assessment of aptitude plus technical questions and a Versant spoken English test; a May 2026 review describes shortlisting through the National Level Assessment followed by an online assessment.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "920",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Profit"
+                                           ],
+                          "follow_ups":  [
+                                             "What marked price gives 15% after a 10% discount?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Adding 15 to 800"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "aptitude"
+                                   ],
+                          "notes":  "The topic appears in sources; this item is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/deloitte-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "900",
+                                                      "920",
+                                                      "940",
+                                                      "960"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "800 x 1.15 = 920.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "DLT-SWE-R1-004",
+                          "round_id":  "R1",
+                          "topic":  "Aptitude",
+                          "subtopic":  "Time and work",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "A finishes a job in 10 days and B in 15 days. How long do they need together?",
+                          "relevance_to_role":  "A February 2026 guide describes an online assessment of aptitude plus technical questions and a Versant spoken English test; a May 2026 review describes shortlisting through the National Level Assessment followed by an online assessment.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "6",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Rates"
+                                           ],
+                          "follow_ups":  [
+                                             "A leaves after 2 days?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Averaging"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "aptitude"
+                                   ],
+                          "notes":  "The topic appears in sources; this item is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/deloitte-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "5",
+                                                      "6",
+                                                      "7",
+                                                      "8"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "Rates 1/10 + 1/15 = 1/6, so 6 days.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "DLT-SWE-R1-005",
+                          "round_id":  "R1",
+                          "topic":  "Logical Reasoning",
+                          "subtopic":  "Number series",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "What comes next: 3, 6, 11, 18, 27, ?",
+                          "relevance_to_role":  "A February 2026 guide describes an online assessment of aptitude plus technical questions and a Versant spoken English test; a May 2026 review describes shortlisting through the National Level Assessment followed by an online assessment.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "38",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Pattern spotting"
+                                           ],
+                          "follow_ups":  [
+                                             "Give the nth term."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Constant difference"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "reasoning"
+                                   ],
+                          "notes":  "The topic appears in sources; this item is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/deloitte-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "36",
+                                                      "38",
+                                                      "40",
+                                                      "35"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "Differences 3, 5, 7, 9, so next +11: 38.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "DLT-SWE-R1-006",
+                          "round_id":  "R1",
+                          "topic":  "Logical Reasoning",
+                          "subtopic":  "Blood relations",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Pointing to a man, a woman says, \u0027He is the son of my mother\u0027s only son.\u0027 How is he related to her?",
+                          "relevance_to_role":  "A February 2026 guide describes an online assessment of aptitude plus technical questions and a Versant spoken English test; a May 2026 review describes shortlisting through the National Level Assessment followed by an online assessment.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Nephew",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Relations"
+                                           ],
+                          "follow_ups":  [
+                                             "Change to daughter."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Choosing brother"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "reasoning"
+                                   ],
+                          "notes":  "The topic appears in sources; this item is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/deloitte-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "Brother",
+                                                      "Nephew",
+                                                      "Son",
+                                                      "Cousin"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "Her mother\u0027s only son is her brother, so the man is her brother\u0027s son: her nephew.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "DLT-SWE-R1-007",
+                          "round_id":  "R1",
+                          "topic":  "Verbal",
+                          "subtopic":  "Sentence correction",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "Choose the correct sentence.",
+                          "relevance_to_role":  "A February 2026 guide describes an online assessment of aptitude plus technical questions and a Versant spoken English test; a May 2026 review describes shortlisting through the National Level Assessment followed by an online assessment.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Each of the students has a book.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Subject-verb agreement"
+                                           ],
+                          "follow_ups":  [
+                                             "Fix: \u0027Neither of them are ready.\u0027"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Matching the plural noun"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "verbal"
+                                   ],
+                          "notes":  "The topic appears in sources; this item is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/deloitte-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "Each of the students have a book.",
+                                                      "Each of the students has a book.",
+                                                      "Each of the students are having a book.",
+                                                      "Each students has a book."
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "\u0027Each\u0027 is singular, so it takes \u0027has\u0027.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "DLT-SWE-R1-008",
+                          "round_id":  "R1",
+                          "topic":  "Verbal",
+                          "subtopic":  "Synonyms",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "Choose the word closest to \u0027meticulous\u0027.",
+                          "relevance_to_role":  "A February 2026 guide describes an online assessment of aptitude plus technical questions and a Versant spoken English test; a May 2026 review describes shortlisting through the National Level Assessment followed by an online assessment.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Thorough",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Vocabulary"
+                                           ],
+                          "follow_ups":  [
+                                             "Use it in a sentence."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Picking an antonym"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "verbal"
+                                   ],
+                          "notes":  "The topic appears in sources; this item is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/deloitte-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "Careless",
+                                                      "Thorough",
+                                                      "Hasty",
+                                                      "Casual"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "Meticulous means showing great attention to detail.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "DLT-SWE-R1-009",
+                          "round_id":  "R1",
+                          "topic":  "Programming",
+                          "subtopic":  "for loop",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "How many times does the loop run?\n\nfor (int i = 1; i \u003c= 10; i += 3) { }",
+                          "relevance_to_role":  "A February 2026 guide describes an online assessment of aptitude plus technical questions and a Versant spoken English test; a May 2026 review describes shortlisting through the National Level Assessment followed by an online assessment.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "4",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Loops"
+                                           ],
+                          "follow_ups":  [
+                                             "What if i \u003c 10?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Counting 10/3"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "programming"
+                                   ],
+                          "notes":  "The topic is reported in candidate accounts; this item is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Deloitte-Interview-E2763-RVW71649526.htm.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "3",
+                                                      "4",
+                                                      "5",
+                                                      "10"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "i takes 1, 4, 7, 10: four iterations.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "DLT-SWE-R1-010",
+                          "round_id":  "R1",
+                          "topic":  "Programming",
+                          "subtopic":  "Output of nested loop",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What is printed?\n\nint c = 0;\nfor (int i = 0; i \u003c 3; i++)\n  for (int j = i; j \u003c 3; j++) c++;\nprint(c);",
+                          "relevance_to_role":  "A February 2026 guide describes an online assessment of aptitude plus technical questions and a Versant spoken English test; a May 2026 review describes shortlisting through the National Level Assessment followed by an online assessment.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "6",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Loop counting"
+                                           ],
+                          "follow_ups":  [
+                                             "Generalise to n."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Answering 9"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "programming"
+                                   ],
+                          "notes":  "The topic appears in sources; this item is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Deloitte-Interview-E2763-RVW71649526.htm.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "6",
+                                                      "9",
+                                                      "3",
+                                                      "5"
+                                                  ],
+                                      "correct_options":  [
+                                                              0
+                                                          ],
+                                      "explanation":  "Iterations: 3 + 2 + 1 = 6.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "DLT-SWE-R1-011",
+                          "round_id":  "R1",
+                          "topic":  "DBMS",
+                          "subtopic":  "Primary key",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "Which statement about a primary key is true?",
+                          "relevance_to_role":  "A February 2026 guide describes an online assessment of aptitude plus technical questions and a Versant spoken English test; a May 2026 review describes shortlisting through the National Level Assessment followed by an online assessment.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "It uniquely identifies a row",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Keys"
+                                           ],
+                          "follow_ups":  [
+                                             "Primary vs unique key?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Allowing NULL"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "dbms"
+                                   ],
+                          "notes":  "DBMS is a reported topic; this item is original. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Deloitte-Interview-E2763-RVW71649526.htm.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "It can contain NULL",
+                                                      "It uniquely identifies a row",
+                                                      "A table can have two",
+                                                      "It must be numeric"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "A primary key uniquely identifies rows and cannot be NULL; one per table.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "DLT-SWE-R1-012",
+                          "round_id":  "R1",
+                          "topic":  "Operating Systems",
+                          "subtopic":  "Scheduling",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Which scheduling algorithm can cause starvation of long jobs?",
+                          "relevance_to_role":  "A February 2026 guide describes an online assessment of aptitude plus technical questions and a Versant spoken English test; a May 2026 review describes shortlisting through the National Level Assessment followed by an online assessment.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Shortest job first",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Scheduling"
+                                           ],
+                          "follow_ups":  [
+                                             "How does aging help?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Choosing round robin"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "os"
+                                   ],
+                          "notes":  "OS is a reported topic; this item is original. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Deloitte-Interview-E2763-RVW71649526.htm.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "Round robin",
+                                                      "Shortest job first",
+                                                      "FCFS",
+                                                      "Priority with aging"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "SJF keeps favouring short jobs; aging is the cure for priority starvation.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "DLT-SWE-R1-013",
+                          "round_id":  "R1",
+                          "topic":  "Strings",
+                          "subtopic":  "Count letters and digits",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Print the number of alphabets and the number of digits in the string, separated by a space.",
+                          "relevance_to_role":  "A February 2026 guide describes an online assessment of aptitude plus technical questions and a Versant spoken English test; a May 2026 review describes shortlisting through the National Level Assessment followed by an online assessment.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Single pass using character classification.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Strings",
+                                               "Count letters and digits"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "strings"
+                                   ],
+                          "notes":  "A program counting alphabets and numbers in a string is reported (July 2026 review); the statement is paraphrased, not verified.",
+                          "coding":  {
+                                         "problem_statement":  "Print the number of alphabets and the number of digits in the string, separated by a space.",
+                                         "input_format":  "One line: the string.",
+                                         "output_format":  "Two integers.",
+                                         "constraints":  "1 \u003c= length \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "ab12c!",
+                                                             "output":  "3 2",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "!!!",
+                                                             "output":  "0 0",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "No letters",
+                                                            "No digits",
+                                                            "Symbols only"
+                                                        ],
+                                         "expected_algorithm":  "Single pass using character classification.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "DLT-SWE-R1-014",
+                          "round_id":  "R1",
+                          "topic":  "Strings",
+                          "subtopic":  "Vowels and consonants",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Print the number of vowels and consonants in the text (letters only).",
+                          "relevance_to_role":  "A February 2026 guide describes an online assessment of aptitude plus technical questions and a Versant spoken English test; a May 2026 review describes shortlisting through the National Level Assessment followed by an online assessment.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Classify letters.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Strings",
+                                               "Vowels and consonants"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "strings"
+                                   ],
+                          "notes":  "A simple coding question is reported without details; this problem is original. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Deloitte-Interview-E2763-RVW71649526.htm.",
+                          "coding":  {
+                                         "problem_statement":  "Print the number of vowels and consonants in the text (letters only).",
+                                         "input_format":  "One line: the text.",
+                                         "output_format":  "Two integers.",
+                                         "constraints":  "1 \u003c= length \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "Hello World",
+                                                             "output":  "3 7",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "AEIOU",
+                                                             "output":  "5 0",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "All vowels",
+                                                            "No letters",
+                                                            "Mixed case"
+                                                        ],
+                                         "expected_algorithm":  "Classify letters.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "DLT-SWE-R1-015",
+                          "round_id":  "R1",
+                          "topic":  "Math",
+                          "subtopic":  "FizzBuzz",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Print 1 to n replacing multiples of 3 with Fizz, of 5 with Buzz, of both with FizzBuzz.",
+                          "relevance_to_role":  "A February 2026 guide describes an online assessment of aptitude plus technical questions and a Versant spoken English test; a May 2026 review describes shortlisting through the National Level Assessment followed by an online assessment.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Check 15 first.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Math",
+                                               "FizzBuzz"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "math"
+                                   ],
+                          "notes":  "The topic appears in sources; this item is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/deloitte-interview-questions-freshers-2026/.",
+                          "coding":  {
+                                         "problem_statement":  "Print 1 to n replacing multiples of 3 with Fizz, of 5 with Buzz, of both with FizzBuzz.",
+                                         "input_format":  "One line: n.",
+                                         "output_format":  "n lines.",
+                                         "constraints":  "1 \u003c= n \u003c= 1000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "5",
+                                                             "output":  "1\n2\nFizz\n4\nBuzz",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "15",
+                                                             "output":  "1\n2\nFizz\n4\nBuzz\nFizz\n7\n8\nFizz\nBuzz\n11\nFizz\n13\n14\nFizzBuzz",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "n = 1",
+                                                            "n = 15",
+                                                            "Large n"
+                                                        ],
+                                         "expected_algorithm":  "Check 15 first.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "DLT-SWE-R1-016",
+                          "round_id":  "R1",
+                          "topic":  "HR",
+                          "subtopic":  "Versant: introduce yourself",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "(Open question in the spoken English test) Describe your typical day in about 30 seconds.",
+                          "relevance_to_role":  "A February 2026 guide describes an online assessment of aptitude plus technical questions and a Versant spoken English test; a May 2026 review describes shortlisting through the National Level Assessment followed by an online assessment.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Speak clearly in full sentences with simple grammar; keep a steady pace.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "How would you shorten it?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Long pauses"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "The Versant test has open questions, but its actual items are not public; this prompt is a practice proxy. Topic context only (no candidate attribution): https://jobrise.io/en/blog/deloitte-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "DLT-SWE-R1-017",
+                          "round_id":  "R1",
+                          "topic":  "HR",
+                          "subtopic":  "Versant: opinion",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "(Open question) Do you prefer working alone or in a team? Give one reason.",
+                          "relevance_to_role":  "A February 2026 guide describes an online assessment of aptitude plus technical questions and a Versant spoken English test; a May 2026 review describes shortlisting through the National Level Assessment followed by an online assessment.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "State a preference and one reason with an example.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "When does the other work better?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "One-word answer"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "The Versant test has open questions, but its actual items are not public; this prompt is a practice proxy. Topic context only (no candidate attribution): https://jobrise.io/en/blog/deloitte-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "DLT-SWE-R2-001",
+                          "round_id":  "R2",
+                          "topic":  "Searching",
+                          "subtopic":  "Linear search count",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Print how many times the target occurs in the array.",
+                          "relevance_to_role":  "Three 2026 Glassdoor reviews (May to July) describe technical questions on operating systems, DBMS, basic programming, searching and a simple coding question; a February 2026 guide lists DSA, system design, cloud and SQL topics.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Single scan.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Searching",
+                                               "Linear search count"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "searching"
+                                   ],
+                          "notes":  "The topic is reported in candidate accounts or guides; this item is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Deloitte-Interview-E2763-RVW71649526.htm.",
+                          "coding":  {
+                                         "problem_statement":  "Print how many times the target occurs in the array.",
+                                         "input_format":  "Line 1: n. Line 2: n values. Line 3: target.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "1 \u003c= n \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "5\n1 2 3 2 2\n2",
+                                                             "output":  "3",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "3\n1 1 1\n4",
+                                                             "output":  "0",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Absent",
+                                                            "All equal",
+                                                            "Single"
+                                                        ],
+                                         "expected_algorithm":  "Single scan.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "DLT-SWE-R2-002",
+                          "round_id":  "R2",
+                          "topic":  "Searching",
+                          "subtopic":  "Binary search",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Print the zero-based index of the target in the sorted array, or -1.",
+                          "relevance_to_role":  "Three 2026 Glassdoor reviews (May to July) describe technical questions on operating systems, DBMS, basic programming, searching and a simple coding question; a February 2026 guide lists DSA, system design, cloud and SQL topics.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Halve the range.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Searching",
+                                               "Binary search"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "searching"
+                                   ],
+                          "notes":  "Searching algorithms are a reported topic; this problem is original. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Deloitte-Interview-E2763-RVW71649526.htm.",
+                          "coding":  {
+                                         "problem_statement":  "Print the zero-based index of the target in the sorted array, or -1.",
+                                         "input_format":  "Line 1: n. Line 2: sorted array. Line 3: target.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "1 \u003c= n \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "5\n1 3 5 7 9\n7",
+                                                             "output":  "3",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "3\n1 2 3\n8",
+                                                             "output":  "-1",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Absent",
+                                                            "First",
+                                                            "Last"
+                                                        ],
+                                         "expected_algorithm":  "Halve the range.",
+                                         "time_complexity":  "O(log n)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "DLT-SWE-R2-003",
+                          "round_id":  "R2",
+                          "topic":  "Linked List",
+                          "subtopic":  "Reverse a list",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Reverse the list values and print them.",
+                          "relevance_to_role":  "Three 2026 Glassdoor reviews (May to July) describe technical questions on operating systems, DBMS, basic programming, searching and a simple coding question; a February 2026 guide lists DSA, system design, cloud and SQL topics.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Reverse pointers iteratively.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Linked List",
+                                               "Reverse a list"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "linked-list"
+                                   ],
+                          "notes":  "The guide cites no verifiable candidate sources for its list; topics are used as context only. Topic context only (no candidate attribution): https://jobrise.io/en/blog/deloitte-interview-questions-freshers-2026/.",
+                          "coding":  {
+                                         "problem_statement":  "Reverse the list values and print them.",
+                                         "input_format":  "Line 1: n. Line 2: n values.",
+                                         "output_format":  "The reversed values.",
+                                         "constraints":  "1 \u003c= n \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "3\n1 2 3",
+                                                             "output":  "3 2 1",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "1\n9",
+                                                             "output":  "9",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Single node",
+                                                            "Two nodes",
+                                                            "Duplicates"
+                                                        ],
+                                         "expected_algorithm":  "Reverse pointers iteratively.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "DLT-SWE-R2-004",
+                          "round_id":  "R2",
+                          "topic":  "Arrays",
+                          "subtopic":  "Max consecutive ones",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Print the longest run of 1s in a binary array.",
+                          "relevance_to_role":  "Three 2026 Glassdoor reviews (May to July) describe technical questions on operating systems, DBMS, basic programming, searching and a simple coding question; a February 2026 guide lists DSA, system design, cloud and SQL topics.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Running counter.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Arrays",
+                                               "Max consecutive ones"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "arrays"
+                                   ],
+                          "notes":  "A simple coding question is reported without details; this problem is original. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Deloitte-Interview-E2763-RVW71649526.htm.",
+                          "coding":  {
+                                         "problem_statement":  "Print the longest run of 1s in a binary array.",
+                                         "input_format":  "Line 1: n. Line 2: values.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "1 \u003c= n \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "6\n1 1 0 1 1 1",
+                                                             "output":  "3",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "3\n0 0 0",
+                                                             "output":  "0",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "All zeros",
+                                                            "All ones",
+                                                            "Alternating"
+                                                        ],
+                                         "expected_algorithm":  "Running counter.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "DLT-SWE-R2-005",
+                          "round_id":  "R2",
+                          "topic":  "Operating Systems",
+                          "subtopic":  "Deadlock",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What is a deadlock? What are its necessary conditions and how can you avoid it?",
+                          "relevance_to_role":  "Three 2026 Glassdoor reviews (May to July) describe technical questions on operating systems, DBMS, basic programming, searching and a simple coding question; a February 2026 guide lists DSA, system design, cloud and SQL topics.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Processes wait on each other forever. Conditions: mutual exclusion, hold and wait, no preemption, circular wait. Avoid by breaking one, e.g. ordering locks or the banker\u0027s algorithm.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Deadlock"
+                                           ],
+                          "follow_ups":  [
+                                             "Detection versus prevention?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Confusing it with starvation"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "os"
+                                   ],
+                          "notes":  "Reported in a 2026 Glassdoor review; paraphrased, not verified.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "DLT-SWE-R2-006",
+                          "round_id":  "R2",
+                          "topic":  "DBMS",
+                          "subtopic":  "Normalisation",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What is normalisation? Explain 1NF, 2NF and 3NF.",
+                          "relevance_to_role":  "Three 2026 Glassdoor reviews (May to July) describe technical questions on operating systems, DBMS, basic programming, searching and a simple coding question; a February 2026 guide lists DSA, system design, cloud and SQL topics.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Organising tables to remove redundancy: 1NF atomic values, 2NF no partial dependency, 3NF no transitive dependency.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Normal forms"
+                                           ],
+                          "follow_ups":  [
+                                             "When denormalise?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Listing names only"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "dbms"
+                                   ],
+                          "notes":  "The topic is reported in candidate accounts; this item is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Deloitte-Interview-E2763-RVW71649526.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "DLT-SWE-R2-007",
+                          "round_id":  "R2",
+                          "topic":  "DBMS",
+                          "subtopic":  "SQL top three",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Write a query for the top 3 departments by average salary.",
+                          "relevance_to_role":  "Three 2026 Glassdoor reviews (May to July) describe technical questions on operating systems, DBMS, basic programming, searching and a simple coding question; a February 2026 guide lists DSA, system design, cloud and SQL topics.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "SELECT dept, AVG(salary) a FROM emp GROUP BY dept ORDER BY a DESC LIMIT 3;",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Aggregation"
+                                           ],
+                          "follow_ups":  [
+                                             "How would you handle ties?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Using WHERE on aggregates"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "sql"
+                                   ],
+                          "notes":  "The guide cites no verifiable candidate sources for its list; topics are used as context only. Topic context only (no candidate attribution): https://jobrise.io/en/blog/deloitte-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "DLT-SWE-R2-008",
+                          "round_id":  "R2",
+                          "topic":  "DBMS",
+                          "subtopic":  "Indexes",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Compare B-tree and hash indexes.",
+                          "relevance_to_role":  "Three 2026 Glassdoor reviews (May to July) describe technical questions on operating systems, DBMS, basic programming, searching and a simple coding question; a February 2026 guide lists DSA, system design, cloud and SQL topics.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "B-tree supports ranges and ordering in O(log n); hash is O(1) for equality only.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Indexes"
+                                           ],
+                          "follow_ups":  [
+                                             "Which for WHERE price \u003e 100?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Using hash for ranges"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "dbms"
+                                   ],
+                          "notes":  "The guide cites no verifiable candidate sources for its list; topics are used as context only. Topic context only (no candidate attribution): https://jobrise.io/en/blog/deloitte-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "DLT-SWE-R2-009",
+                          "round_id":  "R2",
+                          "topic":  "Data Structures",
+                          "subtopic":  "Big O",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "What is Big O? Rank O(1), O(log n), O(n), O(n log n), O(n^2).",
+                          "relevance_to_role":  "Three 2026 Glassdoor reviews (May to July) describe technical questions on operating systems, DBMS, basic programming, searching and a simple coding question; a February 2026 guide lists DSA, system design, cloud and SQL topics.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "An upper bound on growth with input size; the ranking is as listed from fastest to slowest.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Complexity"
+                                           ],
+                          "follow_ups":  [
+                                             "Explain amortised O(1)."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Mixing best and worst case"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "ds"
+                                   ],
+                          "notes":  "The guide cites no verifiable candidate sources for its list; topics are used as context only. Topic context only (no candidate attribution): https://jobrise.io/en/blog/deloitte-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "DLT-SWE-R2-010",
+                          "round_id":  "R2",
+                          "topic":  "Data Structures",
+                          "subtopic":  "HashMap internals",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "How does a hash map work and handle collisions?",
+                          "relevance_to_role":  "Three 2026 Glassdoor reviews (May to July) describe technical questions on operating systems, DBMS, basic programming, searching and a simple coding question; a February 2026 guide lists DSA, system design, cloud and SQL topics.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Hash to a bucket; chain or probe on collision; resize at a load factor.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Hashing"
+                                           ],
+                          "follow_ups":  [
+                                             "Why should keys be immutable?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Claiming O(1) always"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "ds"
+                                   ],
+                          "notes":  "The guide cites no verifiable candidate sources for its list; topics are used as context only. Topic context only (no candidate attribution): https://jobrise.io/en/blog/deloitte-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "DLT-SWE-R2-011",
+                          "round_id":  "R2",
+                          "topic":  "Algorithms",
+                          "subtopic":  "Dynamic programming",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What is dynamic programming? Give an example.",
+                          "relevance_to_role":  "Three 2026 Glassdoor reviews (May to July) describe technical questions on operating systems, DBMS, basic programming, searching and a simple coding question; a February 2026 guide lists DSA, system design, cloud and SQL topics.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Solve overlapping subproblems once and reuse results via memoisation or tabulation, e.g. Fibonacci or coin change.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "DP"
+                                           ],
+                          "follow_ups":  [
+                                             "Top-down versus bottom-up?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Confusing with divide and conquer"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "dp"
+                                   ],
+                          "notes":  "The guide cites no verifiable candidate sources for its list; topics are used as context only. Topic context only (no candidate attribution): https://jobrise.io/en/blog/deloitte-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "DLT-SWE-R2-012",
+                          "round_id":  "R2",
+                          "topic":  "System Design",
+                          "subtopic":  "URL shortener",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "HARD",
+                          "prompt":  "Design a URL shortener.",
+                          "relevance_to_role":  "Three 2026 Glassdoor reviews (May to July) describe technical questions on operating systems, DBMS, basic programming, searching and a simple coding question; a February 2026 guide lists DSA, system design, cloud and SQL topics.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Generate unique short codes (base62 of an id or hash), store mapping in a key-value store, cache hot reads, handle collisions, expiry and analytics.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Design"
+                                           ],
+                          "follow_ups":  [
+                                             "How do you generate unique ids at scale?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Ignoring collisions"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "design"
+                                   ],
+                          "notes":  "The guide cites no verifiable candidate sources for its list; topics are used as context only. Topic context only (no candidate attribution): https://jobrise.io/en/blog/deloitte-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "DLT-SWE-R2-013",
+                          "round_id":  "R2",
+                          "topic":  "System Design",
+                          "subtopic":  "Microservices versus monolith",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Compare microservices and a monolith.",
+                          "relevance_to_role":  "Three 2026 Glassdoor reviews (May to July) describe technical questions on operating systems, DBMS, basic programming, searching and a simple coding question; a February 2026 guide lists DSA, system design, cloud and SQL topics.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Monolith is simpler to build and deploy; microservices scale and deploy independently but add network, consistency and operational complexity.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Architecture"
+                                           ],
+                          "follow_ups":  [
+                                             "When to start with a monolith?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Claiming microservices are always better"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "design"
+                                   ],
+                          "notes":  "The guide cites no verifiable candidate sources for its list; topics are used as context only. Topic context only (no candidate attribution): https://jobrise.io/en/blog/deloitte-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "DLT-SWE-R2-014",
+                          "round_id":  "R2",
+                          "topic":  "Web",
+                          "subtopic":  "REST versus GraphQL",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Compare REST and GraphQL.",
+                          "relevance_to_role":  "Three 2026 Glassdoor reviews (May to July) describe technical questions on operating systems, DBMS, basic programming, searching and a simple coding question; a February 2026 guide lists DSA, system design, cloud and SQL topics.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "REST has fixed resource endpoints; GraphQL lets clients request exactly the fields they need through one endpoint, at the cost of caching and complexity.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "APIs"
+                                           ],
+                          "follow_ups":  [
+                                             "Over-fetching?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Saying GraphQL replaces databases"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "web"
+                                   ],
+                          "notes":  "The guide cites no verifiable candidate sources for its list; topics are used as context only. Topic context only (no candidate attribution): https://jobrise.io/en/blog/deloitte-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "DLT-SWE-R2-015",
+                          "round_id":  "R2",
+                          "topic":  "Cloud",
+                          "subtopic":  "IaaS, PaaS, SaaS",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Explain IaaS, PaaS and SaaS with examples.",
+                          "relevance_to_role":  "Three 2026 Glassdoor reviews (May to July) describe technical questions on operating systems, DBMS, basic programming, searching and a simple coding question; a February 2026 guide lists DSA, system design, cloud and SQL topics.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "IaaS: virtual machines (EC2); PaaS: managed platforms (App Service); SaaS: finished software (Office 365).",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Cloud models"
+                                           ],
+                          "follow_ups":  [
+                                             "Who manages what in each?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Mixing the layers"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "cloud"
+                                   ],
+                          "notes":  "The guide cites no verifiable candidate sources for its list; topics are used as context only. Topic context only (no candidate attribution): https://jobrise.io/en/blog/deloitte-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "DLT-SWE-R2-016",
+                          "round_id":  "R2",
+                          "topic":  "DevOps",
+                          "subtopic":  "Docker and CI/CD",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What is Docker and what does a CI/CD pipeline do?",
+                          "relevance_to_role":  "Three 2026 Glassdoor reviews (May to July) describe technical questions on operating systems, DBMS, basic programming, searching and a simple coding question; a February 2026 guide lists DSA, system design, cloud and SQL topics.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Docker packages apps with dependencies in containers; CI builds and tests each change; CD deploys it automatically.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Containers",
+                                               "Pipelines"
+                                           ],
+                          "follow_ups":  [
+                                             "Image versus container?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Equating containers with VMs"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "devops"
+                                   ],
+                          "notes":  "The guide cites no verifiable candidate sources for its list; topics are used as context only. Topic context only (no candidate attribution): https://jobrise.io/en/blog/deloitte-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "DLT-SWE-R2-017",
+                          "round_id":  "R2",
+                          "topic":  "Databases",
+                          "subtopic":  "SQL versus NoSQL",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "When would you choose NoSQL over SQL?",
+                          "relevance_to_role":  "Three 2026 Glassdoor reviews (May to July) describe technical questions on operating systems, DBMS, basic programming, searching and a simple coding question; a February 2026 guide lists DSA, system design, cloud and SQL topics.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "For flexible schemas, horizontal scale and simple access patterns; SQL for relations, constraints and transactions.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Databases"
+                                           ],
+                          "follow_ups":  [
+                                             "What is CAP?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Saying NoSQL has no schema at all"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "dbms"
+                                   ],
+                          "notes":  "The guide cites no verifiable candidate sources for its list; topics are used as context only. Topic context only (no candidate attribution): https://jobrise.io/en/blog/deloitte-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "DLT-SWE-R2-018",
+                          "round_id":  "R2",
+                          "topic":  "Programming",
+                          "subtopic":  "Searching algorithms",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Compare linear search and binary search.",
+                          "relevance_to_role":  "Three 2026 Glassdoor reviews (May to July) describe technical questions on operating systems, DBMS, basic programming, searching and a simple coding question; a February 2026 guide lists DSA, system design, cloud and SQL topics.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Linear: O(n) on any data; binary: O(log n) but needs sorted data.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Searching"
+                                           ],
+                          "follow_ups":  [
+                                             "When is linear better?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Applying binary search to unsorted data"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "searching"
+                                   ],
+                          "notes":  "Reported in a 2026 Glassdoor review; paraphrased, not verified.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "DLT-SWE-R2-019",
+                          "round_id":  "R2",
+                          "topic":  "Operating Systems",
+                          "subtopic":  "Process versus thread",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "What is the difference between a process and a thread?",
+                          "relevance_to_role":  "Three 2026 Glassdoor reviews (May to July) describe technical questions on operating systems, DBMS, basic programming, searching and a simple coding question; a February 2026 guide lists DSA, system design, cloud and SQL topics.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "A process has its own address space; threads share the process memory but have their own stack and registers.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Process",
+                                               "Thread"
+                                           ],
+                          "follow_ups":  [
+                                             "What is a context switch?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Saying threads have separate heaps"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "os"
+                                   ],
+                          "notes":  "The topic is reported in candidate accounts or guides; this item is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Deloitte-Interview-E2763-RVW71649526.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "DLT-SWE-R3-001",
+                          "round_id":  "R3",
+                          "topic":  "Project Discussion",
+                          "subtopic":  "Your project",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Tell me about your project.",
+                          "relevance_to_role":  "Three 2026 Glassdoor reviews describe project discussion (role, technologies, challenges); a February 2026 guide lists technical-decision and production-debugging questions.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  3,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Problem, solution, your exact role, technologies and why they were chosen.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Ownership"
+                                           ],
+                          "follow_ups":  [
+                                             "What was the biggest challenge?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Cannot explain own work"
+                                              ],
+                          "suggested_time_min":  8,
+                          "tags":  [
+                                       "project"
+                                   ],
+                          "notes":  "Project questions appear in all three 2026 reviews; paraphrased.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "DLT-SWE-R3-002",
+                          "round_id":  "R3",
+                          "topic":  "Project Discussion",
+                          "subtopic":  "Role and technologies",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What was your role and which technologies did you use? Why?",
+                          "relevance_to_role":  "Three 2026 Glassdoor reviews describe project discussion (role, technologies, challenges); a February 2026 guide lists technical-decision and production-debugging questions.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "State your responsibilities, stack choices and alternatives considered.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Trade-offs"
+                                           ],
+                          "follow_ups":  [
+                                             "What would you change?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Listing buzzwords"
+                                              ],
+                          "suggested_time_min":  6,
+                          "tags":  [
+                                       "project"
+                                   ],
+                          "notes":  "Reported in a 2026 Glassdoor review; paraphrased, not verified.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "DLT-SWE-R3-003",
+                          "round_id":  "R3",
+                          "topic":  "Project Discussion",
+                          "subtopic":  "Challenges faced",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What challenges did you face and how did you solve them?",
+                          "relevance_to_role":  "Three 2026 Glassdoor reviews describe project discussion (role, technologies, challenges); a February 2026 guide lists technical-decision and production-debugging questions.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Describe a real obstacle, options considered, the fix and the result.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Problem solving"
+                                           ],
+                          "follow_ups":  [
+                                             "How did you test the fix?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "No real challenge"
+                                              ],
+                          "suggested_time_min":  6,
+                          "tags":  [
+                                       "project"
+                                   ],
+                          "notes":  "Reported in a 2026 Glassdoor review; paraphrased, not verified.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "DLT-SWE-R3-004",
+                          "round_id":  "R3",
+                          "topic":  "Technical Decisions",
+                          "subtopic":  "A technical decision",
+                          "question_type":  "BEHAVIORAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Tell me about a technical decision you made and its trade-offs.",
+                          "relevance_to_role":  "Three 2026 Glassdoor reviews describe project discussion (role, technologies, challenges); a February 2026 guide lists technical-decision and production-debugging questions.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "A reasoned decision with trade-offs.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Specific, real example",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Own actions and reasoning are clear",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Outcome and learning stated",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Judgement"
+                                           ],
+                          "follow_ups":  [
+                                             "What did you learn?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Vague story",
+                                                  "No outcome"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "behavioral"
+                                   ],
+                          "notes":  "The guide cites no verifiable candidate sources for its list; topics are used as context only. Topic context only (no candidate attribution): https://jobrise.io/en/blog/deloitte-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  {
+                                             "competency":  "Judgement",
+                                             "star_guidance":  "Context, options, choice, result.",
+                                             "positive_signals":  [
+                                                                      "Reasoned"
+                                                                  ],
+                                             "negative_signals":  [
+                                                                      "No trade-offs"
+                                                                  ]
+                                         }
+                      },
+                      {
+                          "question_id":  "DLT-SWE-R3-005",
+                          "round_id":  "R3",
+                          "topic":  "Debugging",
+                          "subtopic":  "Debugging a production issue",
+                          "question_type":  "BEHAVIORAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Describe how you would debug a production issue.",
+                          "relevance_to_role":  "Three 2026 Glassdoor reviews describe project discussion (role, technologies, challenges); a February 2026 guide lists technical-decision and production-debugging questions.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "A systematic debugging approach.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Specific, real example",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Own actions and reasoning are clear",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Outcome and learning stated",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Problem solving"
+                                           ],
+                          "follow_ups":  [
+                                             "What did you learn?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Vague story",
+                                                  "No outcome"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "behavioral"
+                                   ],
+                          "notes":  "The guide cites no verifiable candidate sources for its list; topics are used as context only. Topic context only (no candidate attribution): https://jobrise.io/en/blog/deloitte-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  {
+                                             "competency":  "Problem solving",
+                                             "star_guidance":  "Reproduce, logs, isolate, fix, postmortem.",
+                                             "positive_signals":  [
+                                                                      "Systematic"
+                                                                  ],
+                                             "negative_signals":  [
+                                                                      "Guessing"
+                                                                  ]
+                                         }
+                      },
+                      {
+                          "question_id":  "DLT-SWE-R3-006",
+                          "round_id":  "R3",
+                          "topic":  "Learning",
+                          "subtopic":  "Outside your comfort zone",
+                          "question_type":  "BEHAVIORAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Tell me about learning something outside your comfort zone.",
+                          "relevance_to_role":  "Three 2026 Glassdoor reviews describe project discussion (role, technologies, challenges); a February 2026 guide lists technical-decision and production-debugging questions.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "A concrete stretch example.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Specific, real example",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Own actions and reasoning are clear",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Outcome and learning stated",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Learning agility"
+                                           ],
+                          "follow_ups":  [
+                                             "What did you learn?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Vague story",
+                                                  "No outcome"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "behavioral"
+                                   ],
+                          "notes":  "The guide cites no verifiable candidate sources for its list; topics are used as context only. Topic context only (no candidate attribution): https://jobrise.io/en/blog/deloitte-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  {
+                                             "competency":  "Learning agility",
+                                             "star_guidance":  "Situation, action, outcome.",
+                                             "positive_signals":  [
+                                                                      "Self-directed"
+                                                                  ],
+                                             "negative_signals":  [
+                                                                      "Vague"
+                                                                  ]
+                                         }
+                      },
+                      {
+                          "question_id":  "DLT-SWE-R3-007",
+                          "round_id":  "R3",
+                          "topic":  "Staying Current",
+                          "subtopic":  "Keeping up with technology",
+                          "question_type":  "BEHAVIORAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "How do you stay current with technology?",
+                          "relevance_to_role":  "Three 2026 Glassdoor reviews describe project discussion (role, technologies, challenges); a February 2026 guide lists technical-decision and production-debugging questions.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Specific habits and applications.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Specific, real example",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Own actions and reasoning are clear",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Outcome and learning stated",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Curiosity"
+                                           ],
+                          "follow_ups":  [
+                                             "What did you learn?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Vague story",
+                                                  "No outcome"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "behavioral"
+                                   ],
+                          "notes":  "The guide cites no verifiable candidate sources for its list; topics are used as context only. Topic context only (no candidate attribution): https://jobrise.io/en/blog/deloitte-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  {
+                                             "competency":  "Curiosity",
+                                             "star_guidance":  "Sources, practice, application.",
+                                             "positive_signals":  [
+                                                                      "Concrete habits"
+                                                                  ],
+                                             "negative_signals":  [
+                                                                      "Vague"
+                                                                  ]
+                                         }
+                      },
+                      {
+                          "question_id":  "DLT-SWE-R4-001",
+                          "round_id":  "R4",
+                          "topic":  "HR",
+                          "subtopic":  "Self introduction",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Please introduce yourself.",
+                          "relevance_to_role":  "A February 2026 guide lists HR questions (why Deloitte, failure, role knowledge, salary expectations); one May 2026 review describes a combined project, coding and HR interview of 40 to 45 minutes.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Name, education, key skills or projects, why this role. Keep it to about a minute.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "What should I know that is not on your resume?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Reading the resume"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "A self-introduction opens the interview in the July 2026 review; paraphrased.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "DLT-SWE-R4-002",
+                          "round_id":  "R4",
+                          "topic":  "HR",
+                          "subtopic":  "Why Deloitte",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Why Deloitte?",
+                          "relevance_to_role":  "A February 2026 guide lists HR questions (why Deloitte, failure, role knowledge, salary expectations); one May 2026 review describes a combined project, coding and HR interview of 40 to 45 minutes.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Link the firm\u0027s technology and consulting work and learning culture to your goals.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "Which service line interests you?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Generic praise"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "The guide cites no verifiable candidate sources for its list; topics are used as context only. Topic context only (no candidate attribution): https://jobrise.io/en/blog/deloitte-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "DLT-SWE-R4-003",
+                          "round_id":  "R4",
+                          "topic":  "HR",
+                          "subtopic":  "A failure",
+                          "question_type":  "HR",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Tell me about a failure.",
+                          "relevance_to_role":  "A February 2026 guide lists HR questions (why Deloitte, failure, role knowledge, salary expectations); one May 2026 review describes a combined project, coding and HR interview of 40 to 45 minutes.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Pick a real failure, own it, state the lesson and the change.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "What would you do differently?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "No ownership"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "The guide cites no verifiable candidate sources for its list; topics are used as context only. Topic context only (no candidate attribution): https://jobrise.io/en/blog/deloitte-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "DLT-SWE-R4-004",
+                          "round_id":  "R4",
+                          "topic":  "HR",
+                          "subtopic":  "Role knowledge",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "What do you know about the Analyst role?",
+                          "relevance_to_role":  "A February 2026 guide lists HR questions (why Deloitte, failure, role knowledge, salary expectations); one May 2026 review describes a combined project, coding and HR interview of 40 to 45 minutes.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Mention responsibilities, learning plan and the project environment.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "What do you expect in year one?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "No research"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "The guide cites no verifiable candidate sources for its list; topics are used as context only. Topic context only (no candidate attribution): https://jobrise.io/en/blog/deloitte-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "DLT-SWE-R4-005",
+                          "round_id":  "R4",
+                          "topic":  "HR",
+                          "subtopic":  "Salary expectations",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "What are your salary expectations?",
+                          "relevance_to_role":  "A February 2026 guide lists HR questions (why Deloitte, failure, role knowledge, salary expectations); one May 2026 review describes a combined project, coding and HR interview of 40 to 45 minutes.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Be informed and flexible; focus on learning and growth.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "What matters most?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Unrealistic number"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "The guide cites no verifiable candidate sources for its list; topics are used as context only. Topic context only (no candidate attribution): https://jobrise.io/en/blog/deloitte-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "DLT-SWE-R4-006",
+                          "round_id":  "R4",
+                          "topic":  "HR",
+                          "subtopic":  "Location and joining",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Are you open to relocating (Hyderabad, Bengaluru, Pune, Mumbai) and joining on time?",
+                          "relevance_to_role":  "A February 2026 guide lists HR questions (why Deloitte, failure, role knowledge, salary expectations); one May 2026 review describes a combined project, coding and HR interview of 40 to 45 minutes.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Be honest and flexible.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "Any constraints?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Rigid"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "The guide cites no verifiable candidate sources for its list; topics are used as context only. Topic context only (no candidate attribution): https://jobrise.io/en/blog/deloitte-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "DLT-SWE-R4-007",
+                          "round_id":  "R4",
+                          "topic":  "HR",
+                          "subtopic":  "Strengths and weaknesses",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "What are your strengths and one weakness you are working on?",
+                          "relevance_to_role":  "A February 2026 guide lists HR questions (why Deloitte, failure, role knowledge, salary expectations); one May 2026 review describes a combined project, coding and HR interview of 40 to 45 minutes.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "A real strength with evidence and a weakness with a plan.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "How are you improving?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Fake weakness"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "The guide cites no verifiable candidate sources for its list; topics are used as context only. Topic context only (no candidate attribution): https://jobrise.io/en/blog/deloitte-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      }
+                  ]
+}

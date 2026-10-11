@@ -1,0 +1,2290 @@
+{
+    "schema_version":  "codearena-interview-import/1",
+    "research":  {
+                     "company":  "Qualcomm",
+                     "role":  "Software Engineer I (Embedded and Software)",
+                     "experience_level":  "FRESHER",
+                     "hiring_region":  "India",
+                     "target_year":  2026,
+                     "researched_on":  "2026-10-09",
+                     "researcher":  "Claude (research run 2026-10-09)",
+                     "job_description_url":  "https://www.qualcomm.com/company/careers",
+                     "job_description_summary":  "Qualcomm hires engineers in India (Hyderabad, Bengaluru) for software, embedded and validation roles. A May 2026 Glassdoor review describes an online assessment (aptitude 20, maths 20, programming 20), a first technical round on OS and DSA (process versus thread), a second technical round on low-level C/C++, OOP, a HackerRank DSA problem and a bit-flip question, and an HR round. A 2026 hiring post lists C, OS and DSA. The official careers page was not fetched.",
+                     "required_skills":  [
+                                             "C and C++",
+                                             "Data structures and algorithms",
+                                             "Operating systems",
+                                             "Bit manipulation",
+                                             "Digital electronics and VLSI (validation)",
+                                             "Embedded basics",
+                                             "Aptitude and maths"
+                                         ],
+                     "limitations":  [
+                                         "Qualcomm\u0027s official careers page was not fetched, so no round is marked DOCUMENTED.",
+                                         "Candidate-attributed material is essentially one Glassdoor review (May 2026; exact day not captured, recorded as the 1st of the month); only process versus thread and the bit-flip question are reported as questions, so only 2 items carry class B and are unverified.",
+                                         "The freshershunt hiring post is undated in the capture (recorded as 2026-01-01 as a placeholder) and gives topics only.",
+                                         "An older LeetCode Discuss post and 2015/2024 Jointaro experiences were seen but are outside the recency window and used only as context.",
+                                         "The Validation Engineer track is inferred from the review\u0027s mention of validation, VLSI, digital electronics and C topics; its content is original practice.",
+                                         "Aptitude and maths items are original practice; section sizes come from the single review.",
+                                         "Evidence handling: practice questions cite no sources; where a source only supplied topic context it is named in the question notes. Practice and job-description-inferred questions are UNVERIFIED and capped at LOW confidence on import.",
+                                         "Review status: answers, samples and cited counts come from the researcher and were not independently re-run; spot checks only. Source titles and some dates are blank because the sources did not show them.",
+                                         "Source pages on LeetCode Discuss and Glassdoor returned HTTP 403 to the CodeArena audit tool (2026-10-11), so the cited questions were not re-confirmed against those pages."
+                                     ]
+                 },
+    "sources":  [
+                    {
+                        "source_id":  "S1",
+                        "kind":  "OTHER",
+                        "url":  "https://www.glassdoor.co.in/Interview/Qualcomm-Interview-E640-RVW81941403.htm",
+                        "title":  "",
+                        "publisher":  "www.glassdoor.co.in",
+                        "published_on":  "2026-05-01",
+                        "accessed_on":  "2026-10-09",
+                        "reliability_note":  ""
+                    },
+                    {
+                        "source_id":  "S2",
+                        "kind":  "OTHER",
+                        "url":  "https://freshershunt.in/qualcomm-associate-engineer-hiring-hyderabad-2026/",
+                        "title":  "",
+                        "publisher":  "freshershunt.in",
+                        "published_on":  "2026-01-01",
+                        "accessed_on":  "2026-10-09",
+                        "reliability_note":  ""
+                    }
+                ],
+    "rounds":  [
+                   {
+                       "round_id":  "R1",
+                       "name":  "Online Assessment",
+                       "category":  "ONLINE_ASSESSMENT",
+                       "order":  1,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S1"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R2",
+                       "name":  "Technical Interview 1 (OS and DSA)",
+                       "category":  "DSA",
+                       "order":  2,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S1",
+                                          "S2"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R3",
+                       "name":  "Technical Interview 2 (C/C++, OOP and Coding)",
+                       "category":  "CODING_ASSESSMENT",
+                       "order":  3,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S1",
+                                          "S2"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R4",
+                       "name":  "HR Interview",
+                       "category":  "HR",
+                       "order":  4,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S2"
+                                      ]
+                   }
+               ],
+    "questions":  [
+                      {
+                          "question_id":  "QCM-SWE-R1-001",
+                          "round_id":  "R1",
+                          "topic":  "Aptitude",
+                          "subtopic":  "Work and time",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "A can finish a job in 12 days and B in 6 days. Working together, how many days do they need?",
+                          "relevance_to_role":  "A May 2026 Glassdoor review describes an online assessment with aptitude (20), maths (20) and programming (20) sections.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "4",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Rates"
+                                           ],
+                          "follow_ups":  [
+                                             "What if A leaves after 2 days?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Adding the days"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "aptitude"
+                                   ],
+                          "notes":  "Aptitude, maths and programming sections are reported; this item is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Qualcomm-Interview-E640-RVW81941403.htm.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "3",
+                                                      "4",
+                                                      "5",
+                                                      "9"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "Rates 1/12 + 1/6 = 3/12 = 1/4, so 4 days.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "QCM-SWE-R1-002",
+                          "round_id":  "R1",
+                          "topic":  "Aptitude",
+                          "subtopic":  "Percentages",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "A price rises by 20% and then falls by 20%. What is the net change?",
+                          "relevance_to_role":  "A May 2026 Glassdoor review describes an online assessment with aptitude (20), maths (20) and programming (20) sections.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "4% decrease",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Successive percentages"
+                                           ],
+                          "follow_ups":  [
+                                             "What if the order is reversed?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Assuming they cancel"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "aptitude"
+                                   ],
+                          "notes":  "Aptitude, maths and programming sections are reported; this item is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Qualcomm-Interview-E640-RVW81941403.htm.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "No change",
+                                                      "4% decrease",
+                                                      "4% increase",
+                                                      "2% decrease"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "1.2 x 0.8 = 0.96, a 4% decrease.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "QCM-SWE-R1-003",
+                          "round_id":  "R1",
+                          "topic":  "Aptitude",
+                          "subtopic":  "Series",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "What comes next: 2, 6, 12, 20, 30, ?",
+                          "relevance_to_role":  "A May 2026 Glassdoor review describes an online assessment with aptitude (20), maths (20) and programming (20) sections.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "42",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Pattern spotting"
+                                           ],
+                          "follow_ups":  [
+                                             "Give the nth term."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Using constant difference"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "aptitude"
+                                   ],
+                          "notes":  "Aptitude, maths and programming sections are reported; this item is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Qualcomm-Interview-E640-RVW81941403.htm.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "40",
+                                                      "42",
+                                                      "44",
+                                                      "36"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "Differences are 4, 6, 8, 10, so next is +12: 42 (n x (n+1)).",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "QCM-SWE-R1-004",
+                          "round_id":  "R1",
+                          "topic":  "Maths",
+                          "subtopic":  "Permutations",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "In how many ways can the letters of the word LEVEL be arranged?",
+                          "relevance_to_role":  "A May 2026 Glassdoor review describes an online assessment with aptitude (20), maths (20) and programming (20) sections.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "30",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Repeated letters"
+                                           ],
+                          "follow_ups":  [
+                                             "What about MISSISSIPPI?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Ignoring repeats"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "maths"
+                                   ],
+                          "notes":  "Aptitude, maths and programming sections are reported; this item is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Qualcomm-Interview-E640-RVW81941403.htm.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "120",
+                                                      "60",
+                                                      "30",
+                                                      "24"
+                                                  ],
+                                      "correct_options":  [
+                                                              2
+                                                          ],
+                                      "explanation":  "5! / (2! x 2!) = 120 / 4 = 30.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "QCM-SWE-R1-005",
+                          "round_id":  "R1",
+                          "topic":  "Maths",
+                          "subtopic":  "Probability",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Two fair dice are rolled. What is the probability that the sum is 7?",
+                          "relevance_to_role":  "A May 2026 Glassdoor review describes an online assessment with aptitude (20), maths (20) and programming (20) sections.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "1/6",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Counting outcomes"
+                                           ],
+                          "follow_ups":  [
+                                             "Probability of sum 9?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Dividing by 11"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "maths"
+                                   ],
+                          "notes":  "Aptitude, maths and programming sections are reported; this item is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Qualcomm-Interview-E640-RVW81941403.htm.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "1/6",
+                                                      "1/12",
+                                                      "7/36",
+                                                      "1/9"
+                                                  ],
+                                      "correct_options":  [
+                                                              0
+                                                          ],
+                                      "explanation":  "6 of 36 outcomes sum to 7, so 1/6.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "QCM-SWE-R1-006",
+                          "round_id":  "R1",
+                          "topic":  "Maths",
+                          "subtopic":  "Modular arithmetic",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What is the remainder when 2^10 is divided by 7?",
+                          "relevance_to_role":  "A May 2026 Glassdoor review describes an online assessment with aptitude (20), maths (20) and programming (20) sections.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "2",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Cyclic remainders"
+                                           ],
+                          "follow_ups":  [
+                                             "What is 3^100 mod 7?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Not using the cycle"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "maths"
+                                   ],
+                          "notes":  "Aptitude, maths and programming sections are reported; this item is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Qualcomm-Interview-E640-RVW81941403.htm.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "1",
+                                                      "2",
+                                                      "4",
+                                                      "6"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "2^3 = 8 = 1 (mod 7), so 2^9 = 1 and 2^10 = 2 (mod 7); check: 1024 = 7 x 146 + 2.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "QCM-SWE-R1-007",
+                          "round_id":  "R1",
+                          "topic":  "C Programming",
+                          "subtopic":  "Operator precedence",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What is printed?\n\nint x = 5;\nprintf(\"%d\", x++ + ++x);",
+                          "relevance_to_role":  "A May 2026 Glassdoor review describes an online assessment with aptitude (20), maths (20) and programming (20) sections.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Undefined behaviour",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Sequence points"
+                                           ],
+                          "follow_ups":  [
+                                             "How would you write it safely?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Computing 12"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "c"
+                                   ],
+                          "notes":  "Programming questions are reported; this item is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Qualcomm-Interview-E640-RVW81941403.htm.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "10",
+                                                      "12",
+                                                      "11",
+                                                      "Undefined behaviour"
+                                                  ],
+                                      "correct_options":  [
+                                                              3
+                                                          ],
+                                      "explanation":  "x is modified twice without a sequence point, so the result is undefined.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "QCM-SWE-R1-008",
+                          "round_id":  "R1",
+                          "topic":  "C Programming",
+                          "subtopic":  "Pointer sizes",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "On a 64-bit system, what does sizeof(int *) typically return?",
+                          "relevance_to_role":  "A May 2026 Glassdoor review describes an online assessment with aptitude (20), maths (20) and programming (20) sections.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "8",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Pointer size"
+                                           ],
+                          "follow_ups":  [
+                                             "What about a function pointer?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Tying size to int"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "c"
+                                   ],
+                          "notes":  "Programming questions are reported; this item is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Qualcomm-Interview-E640-RVW81941403.htm.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "2",
+                                                      "4",
+                                                      "8",
+                                                      "It depends on the pointee"
+                                                  ],
+                                      "correct_options":  [
+                                                              2
+                                                          ],
+                                      "explanation":  "Pointers are 8 bytes on a typical 64-bit platform regardless of the pointee type.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "QCM-SWE-R1-009",
+                          "round_id":  "R1",
+                          "topic":  "Math",
+                          "subtopic":  "Prime check",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Print Yes if n is prime, otherwise No.",
+                          "relevance_to_role":  "A May 2026 Glassdoor review describes an online assessment with aptitude (20), maths (20) and programming (20) sections.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Trial division up to sqrt(n).",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Math",
+                                               "Prime check"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "math"
+                                   ],
+                          "notes":  "Programming section is reported; this statement is original. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Qualcomm-Interview-E640-RVW81941403.htm.",
+                          "coding":  {
+                                         "problem_statement":  "Print Yes if n is prime, otherwise No.",
+                                         "input_format":  "One line: n.",
+                                         "output_format":  "Yes or No.",
+                                         "constraints":  "1 \u003c= n \u003c= 1000000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "7",
+                                                             "output":  "Yes",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "1",
+                                                             "output":  "No",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "n = 1",
+                                                            "n = 2",
+                                                            "Large prime",
+                                                            "Perfect square"
+                                                        ],
+                                         "expected_algorithm":  "Trial division up to sqrt(n).",
+                                         "time_complexity":  "O(sqrt n)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "QCM-SWE-R1-010",
+                          "round_id":  "R1",
+                          "topic":  "Arrays",
+                          "subtopic":  "Maximum subarray sum",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Print the maximum sum of a contiguous non-empty subarray.",
+                          "relevance_to_role":  "A May 2026 Glassdoor review describes an online assessment with aptitude (20), maths (20) and programming (20) sections.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Kadane\u0027s algorithm.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Arrays",
+                                               "Maximum subarray sum"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "arrays"
+                                   ],
+                          "notes":  "Programming section is reported; this statement is original. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Qualcomm-Interview-E640-RVW81941403.htm.",
+                          "coding":  {
+                                         "problem_statement":  "Print the maximum sum of a contiguous non-empty subarray.",
+                                         "input_format":  "Line 1: n. Line 2: n integers.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "1 \u003c= n \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "5\n-2 1 -3 4 -1",
+                                                             "output":  "4",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "3\n-3 -1 -2",
+                                                             "output":  "-1",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "All negative",
+                                                            "Single element",
+                                                            "All positive"
+                                                        ],
+                                         "expected_algorithm":  "Kadane\u0027s algorithm.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "QCM-SWE-R1-011",
+                          "round_id":  "R1",
+                          "topic":  "Strings",
+                          "subtopic":  "Palindrome check",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Print Yes if the string is a palindrome, otherwise No.",
+                          "relevance_to_role":  "A May 2026 Glassdoor review describes an online assessment with aptitude (20), maths (20) and programming (20) sections.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Two pointers from both ends.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Strings",
+                                               "Palindrome check"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "strings"
+                                   ],
+                          "notes":  "Programming section is reported; this statement is original. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Qualcomm-Interview-E640-RVW81941403.htm.",
+                          "coding":  {
+                                         "problem_statement":  "Print Yes if the string is a palindrome, otherwise No.",
+                                         "input_format":  "One line: the string.",
+                                         "output_format":  "Yes or No.",
+                                         "constraints":  "1 \u003c= length \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "madam",
+                                                             "output":  "Yes",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "ab",
+                                                             "output":  "No",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Single character",
+                                                            "Even length",
+                                                            "Odd length"
+                                                        ],
+                                         "expected_algorithm":  "Two pointers from both ends.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "QCM-SWE-R1-012",
+                          "round_id":  "R1",
+                          "topic":  "Searching",
+                          "subtopic":  "Binary search",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Given a sorted array, print the zero-based index of target or -1.",
+                          "relevance_to_role":  "A May 2026 Glassdoor review describes an online assessment with aptitude (20), maths (20) and programming (20) sections.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Binary search on the sorted array.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Searching",
+                                               "Binary search"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "searching"
+                                   ],
+                          "notes":  "Programming section is reported; this statement is original. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Qualcomm-Interview-E640-RVW81941403.htm.",
+                          "coding":  {
+                                         "problem_statement":  "Given a sorted array, print the zero-based index of target or -1.",
+                                         "input_format":  "Line 1: n. Line 2: sorted array. Line 3: target.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "1 \u003c= n \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "5\n1 3 5 7 9\n7",
+                                                             "output":  "3",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "3\n1 2 3\n8",
+                                                             "output":  "-1",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Absent",
+                                                            "First element",
+                                                            "Last element"
+                                                        ],
+                                         "expected_algorithm":  "Binary search on the sorted array.",
+                                         "time_complexity":  "O(log n)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "QCM-SWE-R2-001",
+                          "round_id":  "R2",
+                          "topic":  "Operating Systems",
+                          "subtopic":  "Process versus thread",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "What is the difference between a process and a thread?",
+                          "relevance_to_role":  "A May 2026 Glassdoor review describes a first technical round on OS (process versus thread) and data structures; a 2026 hiring post lists C, OS and DSA.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S1"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "A process has its own address space and resources; threads in a process share code, heap and files but have their own stack and registers. Thread switches are cheaper; processes isolate faults.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Process",
+                                               "Thread"
+                                           ],
+                          "follow_ups":  [
+                                             "What does a thread not share?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Saying threads have separate memory"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "os"
+                                   ],
+                          "notes":  "Candidate-reported question (May 2026 review), paraphrased; not verified.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "QCM-SWE-R2-002",
+                          "round_id":  "R2",
+                          "topic":  "Operating Systems",
+                          "subtopic":  "Context switch",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What happens during a context switch and why is it costly?",
+                          "relevance_to_role":  "A May 2026 Glassdoor review describes a first technical round on OS (process versus thread) and data structures; a 2026 hiring post lists C, OS and DSA.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "The kernel saves the registers and program counter of the running task into its PCB and loads another\u0027s; caches and TLB lose locality, so performance dips.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Context switch"
+                                           ],
+                          "follow_ups":  [
+                                             "How do threads reduce the cost?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Ignoring cache effects"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "os"
+                                   ],
+                          "notes":  "The source lists topics, not reported questions. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Qualcomm-Interview-E640-RVW81941403.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "QCM-SWE-R2-003",
+                          "round_id":  "R2",
+                          "topic":  "Operating Systems",
+                          "subtopic":  "Synchronisation",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Explain a mutex versus a semaphore. Give a use for each.",
+                          "relevance_to_role":  "A May 2026 Glassdoor review describes a first technical round on OS (process versus thread) and data structures; a 2026 hiring post lists C, OS and DSA.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "A mutex gives exclusive ownership of a critical section; a counting semaphore controls access to N resources or signals between threads.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Mutex",
+                                               "Semaphore"
+                                           ],
+                          "follow_ups":  [
+                                             "What is priority inversion?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Treating them as identical"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "os"
+                                   ],
+                          "notes":  "The source lists topics, not reported questions. Topic context only (no candidate attribution): https://freshershunt.in/qualcomm-associate-engineer-hiring-hyderabad-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "QCM-SWE-R2-004",
+                          "round_id":  "R2",
+                          "topic":  "Operating Systems",
+                          "subtopic":  "Virtual memory",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What is virtual memory and what is a page fault?",
+                          "relevance_to_role":  "A May 2026 Glassdoor review describes a first technical round on OS (process versus thread) and data structures; a 2026 hiring post lists C, OS and DSA.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Each process sees a private address space mapped to physical frames via page tables; a page fault occurs when the page is not resident and the OS must load it.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Paging"
+                                           ],
+                          "follow_ups":  [
+                                             "What is thrashing?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Confusing it with swap only"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "os"
+                                   ],
+                          "notes":  "The source lists topics, not reported questions. Topic context only (no candidate attribution): https://freshershunt.in/qualcomm-associate-engineer-hiring-hyderabad-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "QCM-SWE-R2-005",
+                          "round_id":  "R2",
+                          "topic":  "Data Structures",
+                          "subtopic":  "Linked list cycle",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "How do you detect a cycle in a linked list and find where it begins?",
+                          "relevance_to_role":  "A May 2026 Glassdoor review describes a first technical round on OS (process versus thread) and data structures; a 2026 hiring post lists C, OS and DSA.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Floyd\u0027s tortoise and hare detects the cycle; reset one pointer to the head and advance both one step at a time to find the start.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Two pointers"
+                                           ],
+                          "follow_ups":  [
+                                             "Why does it work?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Using extra memory without noting it"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "linked-list"
+                                   ],
+                          "notes":  "The source lists topics, not reported questions. Topic context only (no candidate attribution): https://freshershunt.in/qualcomm-associate-engineer-hiring-hyderabad-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "QCM-SWE-R2-006",
+                          "round_id":  "R2",
+                          "topic":  "Data Structures",
+                          "subtopic":  "Stack versus queue",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Compare a stack and a queue. Where does an OS or embedded system use each?",
+                          "relevance_to_role":  "A May 2026 Glassdoor review describes a first technical round on OS (process versus thread) and data structures; a 2026 hiring post lists C, OS and DSA.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Stack is LIFO (call frames, interrupt context); queue is FIFO (task scheduling, message buffers).",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "LIFO",
+                                               "FIFO"
+                                           ],
+                          "follow_ups":  [
+                                             "How would you implement a circular queue?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Mixing LIFO and FIFO"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "ds"
+                                   ],
+                          "notes":  "The source lists topics, not reported questions. Topic context only (no candidate attribution): https://freshershunt.in/qualcomm-associate-engineer-hiring-hyderabad-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "QCM-SWE-R2-007",
+                          "round_id":  "R2",
+                          "topic":  "Data Structures",
+                          "subtopic":  "Hash table collisions",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "How are hash collisions handled?",
+                          "relevance_to_role":  "A May 2026 Glassdoor review describes a first technical round on OS (process versus thread) and data structures; a 2026 hiring post lists C, OS and DSA.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Chaining stores colliding keys in a list; open addressing probes for another slot. Resize at a load factor.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Hashing"
+                                           ],
+                          "follow_ups":  [
+                                             "Compare their cache behaviour."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Claiming O(1) worst case"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "hashing"
+                                   ],
+                          "notes":  "The source lists topics, not reported questions. Topic context only (no candidate attribution): https://freshershunt.in/qualcomm-associate-engineer-hiring-hyderabad-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "QCM-SWE-R2-008",
+                          "round_id":  "R2",
+                          "topic":  "Linked List",
+                          "subtopic":  "Reverse a list",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Reverse the given list of values and print them.",
+                          "relevance_to_role":  "A May 2026 Glassdoor review describes a first technical round on OS (process versus thread) and data structures; a 2026 hiring post lists C, OS and DSA.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Reverse pointers iteratively.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Linked List",
+                                               "Reverse a list"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "linked-list"
+                                   ],
+                          "notes":  "The source lists topics, not reported questions. Topic context only (no candidate attribution): https://freshershunt.in/qualcomm-associate-engineer-hiring-hyderabad-2026/.",
+                          "coding":  {
+                                         "problem_statement":  "Reverse the given list of values and print them.",
+                                         "input_format":  "Line 1: n. Line 2: n values.",
+                                         "output_format":  "The reversed values.",
+                                         "constraints":  "1 \u003c= n \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "3\n1 2 3",
+                                                             "output":  "3 2 1",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "1\n9",
+                                                             "output":  "9",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Single node",
+                                                            "Two nodes",
+                                                            "Duplicates"
+                                                        ],
+                                         "expected_algorithm":  "Reverse pointers iteratively.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "QCM-SWE-R2-009",
+                          "round_id":  "R2",
+                          "topic":  "Arrays",
+                          "subtopic":  "Missing number",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Numbers 1.",
+                          "relevance_to_role":  "A May 2026 Glassdoor review describes a first technical round on OS (process versus thread) and data structures; a 2026 hiring post lists C, OS and DSA.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Sum formula or XOR.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Arrays",
+                                               "Missing number"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "arrays"
+                                   ],
+                          "notes":  "The source lists topics, not reported questions. Topic context only (no candidate attribution): https://freshershunt.in/qualcomm-associate-engineer-hiring-hyderabad-2026/.",
+                          "coding":  {
+                                         "problem_statement":  "Numbers 1..n appear once except one missing number. Print it.",
+                                         "input_format":  "Line 1: n. Line 2: n-1 numbers.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "2 \u003c= n \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "5\n1 2 4 5",
+                                                             "output":  "3",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "3\n3 1",
+                                                             "output":  "2",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Missing 1",
+                                                            "Missing n"
+                                                        ],
+                                         "expected_algorithm":  "Sum formula or XOR.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "QCM-SWE-R2-010",
+                          "round_id":  "R2",
+                          "topic":  "Strings",
+                          "subtopic":  "Anagram check",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Print Yes if the two strings are anagrams, otherwise No.",
+                          "relevance_to_role":  "A May 2026 Glassdoor review describes a first technical round on OS (process versus thread) and data structures; a 2026 hiring post lists C, OS and DSA.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Compare letter counts.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Strings",
+                                               "Anagram check"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "strings"
+                                   ],
+                          "notes":  "The source lists topics, not reported questions. Topic context only (no candidate attribution): https://freshershunt.in/qualcomm-associate-engineer-hiring-hyderabad-2026/.",
+                          "coding":  {
+                                         "problem_statement":  "Print Yes if the two strings are anagrams, otherwise No.",
+                                         "input_format":  "Two lines: the strings.",
+                                         "output_format":  "Yes or No.",
+                                         "constraints":  "1 \u003c= length \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "listen\nsilent",
+                                                             "output":  "Yes",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "ab\nabc",
+                                                             "output":  "No",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Different lengths",
+                                                            "Repeated letters"
+                                                        ],
+                                         "expected_algorithm":  "Compare letter counts.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "QCM-SWE-R3-001",
+                          "round_id":  "R3",
+                          "topic":  "Bit Manipulation",
+                          "subtopic":  "Flip a bit",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Flip the kth bit (counting from 1 at the least significant bit) of a number.",
+                          "relevance_to_role":  "A May 2026 Glassdoor review describes a second technical round on low-level C/C++, OOP, a HackerRank DSA problem and a bit-flip question.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S1"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "XOR with 1 \u003c\u003c (k-1).",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Bit Manipulation",
+                                               "Flip a bit"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "bits"
+                                   ],
+                          "notes":  "Flipping a bit in a 4-bit number is reported (May 2026 review); the statement here is generalised and original.",
+                          "coding":  {
+                                         "problem_statement":  "Flip the kth bit (counting from 1 at the least significant bit) of a number.",
+                                         "input_format":  "One line: n k.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "0 \u003c= n \u003c 2^31; 1 \u003c= k \u003c= 31",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "10 3",
+                                                             "output":  "14",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "7 1",
+                                                             "output":  "6",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "k = 1",
+                                                            "Zero",
+                                                            "Bit above the top"
+                                                        ],
+                                         "expected_algorithm":  "XOR with 1 \u003c\u003c (k-1).",
+                                         "time_complexity":  "O(1)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "QCM-SWE-R3-002",
+                          "round_id":  "R3",
+                          "topic":  "Bit Manipulation",
+                          "subtopic":  "Count set bits",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Count the number of 1 bits in the binary form of n.",
+                          "relevance_to_role":  "A May 2026 Glassdoor review describes a second technical round on low-level C/C++, OOP, a HackerRank DSA problem and a bit-flip question.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Brian Kernighan: n \u0026= n - 1.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Bit Manipulation",
+                                               "Count set bits"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "bits"
+                                   ],
+                          "notes":  "Bit manipulation is a reported topic; this statement is original. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Qualcomm-Interview-E640-RVW81941403.htm.",
+                          "coding":  {
+                                         "problem_statement":  "Count the number of 1 bits in the binary form of n.",
+                                         "input_format":  "One line: n.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "0 \u003c= n \u003c 2^31",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "13",
+                                                             "output":  "3",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "0",
+                                                             "output":  "0",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Zero",
+                                                            "All ones",
+                                                            "Power of two"
+                                                        ],
+                                         "expected_algorithm":  "Brian Kernighan: n \u0026= n - 1.",
+                                         "time_complexity":  "O(bits)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "QCM-SWE-R3-003",
+                          "round_id":  "R3",
+                          "topic":  "Bit Manipulation",
+                          "subtopic":  "Swap nibbles",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Swap the high and low nibbles of an 8-bit value and print the result.",
+                          "relevance_to_role":  "A May 2026 Glassdoor review describes a second technical round on low-level C/C++, OOP, a HackerRank DSA problem and a bit-flip question.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Mask and shift by 4.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Bit Manipulation",
+                                               "Swap nibbles"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "bits"
+                                   ],
+                          "notes":  "Bit manipulation is a reported topic; this statement is original. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Qualcomm-Interview-E640-RVW81941403.htm.",
+                          "coding":  {
+                                         "problem_statement":  "Swap the high and low nibbles of an 8-bit value and print the result.",
+                                         "input_format":  "One line: n (0 to 255).",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "0 \u003c= n \u003c= 255",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "26",
+                                                             "output":  "161",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "255",
+                                                             "output":  "255",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Zero",
+                                                            "Equal nibbles"
+                                                        ],
+                                         "expected_algorithm":  "Mask and shift by 4.",
+                                         "time_complexity":  "O(1)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "QCM-SWE-R3-004",
+                          "round_id":  "R3",
+                          "topic":  "Array and API",
+                          "subtopic":  "HackerRank-style: sum of digits",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Print the sum of the digits of the given number.",
+                          "relevance_to_role":  "A May 2026 Glassdoor review describes a second technical round on low-level C/C++, OOP, a HackerRank DSA problem and a bit-flip question.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Iterate characters.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Array and API",
+                                               "HackerRank-style: sum of digits"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "strings"
+                                   ],
+                          "notes":  "A HackerRank DSA problem is reported without details; this is an original problem. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Qualcomm-Interview-E640-RVW81941403.htm.",
+                          "coding":  {
+                                         "problem_statement":  "Print the sum of the digits of the given number.",
+                                         "input_format":  "One line: the number.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "1 \u003c= digits \u003c= 100",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "12345",
+                                                             "output":  "15",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "9",
+                                                             "output":  "9",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Single digit",
+                                                            "Many zeros"
+                                                        ],
+                                         "expected_algorithm":  "Iterate characters.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "QCM-SWE-R3-005",
+                          "round_id":  "R3",
+                          "topic":  "C",
+                          "subtopic":  "volatile and const",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What does volatile mean? Can a variable be both const and volatile?",
+                          "relevance_to_role":  "A May 2026 Glassdoor review describes a second technical round on low-level C/C++, OOP, a HackerRank DSA problem and a bit-flip question.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "volatile tells the compiler the value may change outside program flow (hardware, ISR), so reads cannot be optimised away. A read-only status register is const volatile.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "volatile"
+                                           ],
+                          "follow_ups":  [
+                                             "Why does an ISR flag need volatile?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Thinking volatile gives atomicity"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "c"
+                                   ],
+                          "notes":  "Low-level C/C++ is a reported topic; this item is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Qualcomm-Interview-E640-RVW81941403.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "QCM-SWE-R3-006",
+                          "round_id":  "R3",
+                          "topic":  "C",
+                          "subtopic":  "Pointers and arrays",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Is an array name a pointer? Explain the difference between int *p and int a[10].",
+                          "relevance_to_role":  "A May 2026 Glassdoor review describes a second technical round on low-level C/C++, OOP, a HackerRank DSA problem and a bit-flip question.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "An array name decays to a pointer in most expressions but is not one: sizeof differs, it is not assignable, and it owns storage.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Decay"
+                                           ],
+                          "follow_ups":  [
+                                             "What does a[i] mean as pointer arithmetic?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Saying they are identical"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "c"
+                                   ],
+                          "notes":  "Low-level C/C++ is a reported topic; this item is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Qualcomm-Interview-E640-RVW81941403.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "QCM-SWE-R3-007",
+                          "round_id":  "R3",
+                          "topic":  "C",
+                          "subtopic":  "Memory layout",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Describe where globals, locals and malloc\u0027d data live in memory.",
+                          "relevance_to_role":  "A May 2026 Glassdoor review describes a second technical round on low-level C/C++, OOP, a HackerRank DSA problem and a bit-flip question.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Initialised globals in data, zero-initialised in bss, code in text, locals on the stack, malloc\u0027d objects on the heap.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Memory layout"
+                                           ],
+                          "follow_ups":  [
+                                             "What causes a stack overflow?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Mixing stack and heap"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "c"
+                                   ],
+                          "notes":  "Low-level C/C++ is a reported topic; this item is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Qualcomm-Interview-E640-RVW81941403.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "QCM-SWE-R3-008",
+                          "round_id":  "R3",
+                          "topic":  "C++ and OOP",
+                          "subtopic":  "Virtual functions",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What is runtime polymorphism and why do you need a virtual destructor?",
+                          "relevance_to_role":  "A May 2026 Glassdoor review describes a second technical round on low-level C/C++, OOP, a HackerRank DSA problem and a bit-flip question.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Virtual calls dispatch through a vtable by dynamic type. Without a virtual destructor, deleting via a base pointer skips the derived destructor.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "vtable"
+                                           ],
+                          "follow_ups":  [
+                                             "What is slicing?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Forgetting the destructor"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "cpp"
+                                   ],
+                          "notes":  "OOP is a reported topic; this item is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Qualcomm-Interview-E640-RVW81941403.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "QCM-SWE-R3-009",
+                          "round_id":  "R3",
+                          "topic":  "C++ and OOP",
+                          "subtopic":  "OOP pillars",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Explain encapsulation, inheritance, polymorphism and abstraction with a short example.",
+                          "relevance_to_role":  "A May 2026 Glassdoor review describes a second technical round on low-level C/C++, OOP, a HackerRank DSA problem and a bit-flip question.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Bundle data with methods and hide internals; derive types; override behaviour; expose interfaces without details.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "OOP"
+                                           ],
+                          "follow_ups":  [
+                                             "Compose or inherit?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Textbook definitions only"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "cpp"
+                                   ],
+                          "notes":  "OOP is a reported topic; this item is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Qualcomm-Interview-E640-RVW81941403.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "QCM-SWE-R3-010",
+                          "round_id":  "R3",
+                          "topic":  "Embedded",
+                          "subtopic":  "Interrupts",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What is an interrupt service routine and what should it avoid doing?",
+                          "relevance_to_role":  "A May 2026 Glassdoor review describes a second technical round on low-level C/C++, OOP, a HackerRank DSA problem and a bit-flip question.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "A handler run on a hardware event; keep it short, avoid blocking calls, malloc and heavy printf, set a flag or enqueue work for the main loop.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "ISR"
+                                           ],
+                          "follow_ups":  [
+                                             "What is interrupt latency?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Doing long work in the ISR"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "embedded"
+                                   ],
+                          "notes":  "The source lists topics, not reported questions. Topic context only (no candidate attribution): https://freshershunt.in/qualcomm-associate-engineer-hiring-hyderabad-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "QCM-SWE-R4-001",
+                          "round_id":  "R4",
+                          "topic":  "HR",
+                          "subtopic":  "Why Qualcomm",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Why do you want to join Qualcomm?",
+                          "relevance_to_role":  "A 2026 hiring post describes an HR round after the technical interviews; no specific questions are reported.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Link wireless, mobile SoC and edge AI work to your interests and projects.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "Which Qualcomm product interests you?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Generic praise"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://freshershunt.in/qualcomm-associate-engineer-hiring-hyderabad-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "QCM-SWE-R4-002",
+                          "round_id":  "R4",
+                          "topic":  "HR",
+                          "subtopic":  "Strengths and weaknesses",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "What are your strengths and one area you are improving?",
+                          "relevance_to_role":  "A 2026 hiring post describes an HR round after the technical interviews; no specific questions are reported.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Give a real strength with evidence and a weakness with a concrete improvement plan.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "What has changed since?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Fake weakness"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://freshershunt.in/qualcomm-associate-engineer-hiring-hyderabad-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "QCM-SWE-R4-003",
+                          "round_id":  "R4",
+                          "topic":  "HR",
+                          "subtopic":  "Location and joining",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Are you open to Hyderabad or Bengaluru and joining on the given timeline?",
+                          "relevance_to_role":  "A 2026 hiring post describes an HR round after the technical interviews; no specific questions are reported.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Be honest and flexible about location and dates.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "Any constraints?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Rigid answer"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://freshershunt.in/qualcomm-associate-engineer-hiring-hyderabad-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      }
+                  ]
+}

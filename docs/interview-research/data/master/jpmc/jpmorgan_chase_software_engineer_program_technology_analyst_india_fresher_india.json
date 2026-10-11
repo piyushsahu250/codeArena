@@ -1,0 +1,3134 @@
+{
+    "schema_version":  "codearena-interview-import/1",
+    "research":  {
+                     "company":  "JPMorgan Chase",
+                     "role":  "Software Engineer Program (Technology Analyst), India",
+                     "experience_level":  "FRESHER",
+                     "hiring_region":  "India",
+                     "target_year":  2026,
+                     "researched_on":  "2026-10-09",
+                     "researcher":  "Claude (research run 2026-10-09)",
+                     "job_description_url":  "https://www.jpmorganchase.com/careers/explore-opportunities/students-and-graduates",
+                     "job_description_summary":  "JPMorgan Chase hires technology analysts in India through the Software Engineer Program and the Code for Good hackathon. A February 2026 JobRise guide (no cited candidate sources) describes a 60 to 90 minute HackerRank assessment with 2 coding problems and MCQs on Java, DBMS and OS, a technical phone screen, Super Day rounds on DSA, CS fundamentals and behavioral questions based on Business Principles, and an HR round. An August 2025 Jointaro intern account gives one coding question about filtering API queries. The official careers page was not fetched.",
+                     "required_skills":  [
+                                             "Data structures and algorithms",
+                                             "Java and OOP",
+                                             "DBMS and SQL",
+                                             "Operating systems",
+                                             "Design patterns and clean code",
+                                             "Behavioral communication"
+                                         ],
+                     "limitations":  [
+                                         "JPMorgan Chase\u0027s official careers page was not fetched, so no round is marked DOCUMENTED.",
+                                         "The February 2026 JobRise guide cites no candidate sources for its question list; everything based on it is class D (topic context).",
+                                         "The only candidate-attributed question is one Jointaro internship report (August 2025, Code for Good) about filtering API queries; one item is class B and unverified.",
+                                         "Glassdoor reviews found for 2026 were not India-tagged, listed no questions or described only a generic HireVue; they were not used. LeetCode posts found were for experienced SDE3 hires and were excluded.",
+                                         "Structure of the Software Engineer Program rounds is taken from the guide; the Code for Good hackathon format is not modelled.",
+                                         "System design items are extension questions; the guide lists system design for experienced roles only.",
+                                         "Evidence handling: practice questions cite no sources; where a source only supplied topic context it is named in the question notes. Practice and job-description-inferred questions are UNVERIFIED and capped at LOW confidence on import.",
+                                         "Review status: answers, samples and cited counts come from the researcher and were not independently re-run; spot checks only. Source titles and some dates are blank because the sources did not show them."
+                                     ]
+                 },
+    "sources":  [
+                    {
+                        "source_id":  "S1",
+                        "kind":  "CANDIDATE_REPORT",
+                        "url":  "https://www.jointaro.com/interviews/companies/jpmorgan-chase/experiences/software-engineer-internship-india-august-5-2025-no-offer-positive-ce5eeced/",
+                        "title":  "",
+                        "publisher":  "www.jointaro.com",
+                        "published_on":  "2025-08-05",
+                        "accessed_on":  "2026-10-09",
+                        "reliability_note":  ""
+                    },
+                    {
+                        "source_id":  "S2",
+                        "kind":  "OTHER",
+                        "url":  "https://jobrise.io/en/blog/jpmorgan-interview-questions-india-2026/",
+                        "title":  "",
+                        "publisher":  "jobrise.io",
+                        "published_on":  "2026-02-12",
+                        "accessed_on":  "2026-10-09",
+                        "reliability_note":  ""
+                    }
+                ],
+    "rounds":  [
+                   {
+                       "round_id":  "R1",
+                       "name":  "HackerRank Online Assessment",
+                       "category":  "ONLINE_ASSESSMENT",
+                       "order":  1,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S1",
+                                          "S2"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R2",
+                       "name":  "Technical Phone Screen",
+                       "category":  "CORE_TECHNICAL",
+                       "order":  2,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S2"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R3",
+                       "name":  "Super Day: Coding and CS Fundamentals",
+                       "category":  "CODING_ASSESSMENT",
+                       "order":  3,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S2"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R4",
+                       "name":  "Super Day: Behavioral and HR",
+                       "category":  "BEHAVIORAL",
+                       "order":  4,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S2"
+                                      ]
+                   }
+               ],
+    "questions":  [
+                      {
+                          "question_id":  "JPM-SWE-R1-001",
+                          "round_id":  "R1",
+                          "topic":  "Strings",
+                          "subtopic":  "Filter API queries",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Given n request log lines \u0027METHOD /path status\u0027 and a filter \u0027METHOD status\u0027, print the matching paths in order, or NONE.",
+                          "relevance_to_role":  "A February 2026 guide describes a HackerRank assessment of 60 to 90 minutes with 2 coding problems plus MCQs on Java, DBMS and OS; an August 2025 intern account describes a coding round.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S1"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Single pass comparing method and status.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Strings",
+                                               "Filter API queries"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "strings"
+                                   ],
+                          "notes":  "A coding question about filtering a string of API queries is reported (Aug 2025, Code for Good internship); paraphrased, not verified.",
+                          "coding":  {
+                                         "problem_statement":  "Given n request log lines \u0027METHOD /path status\u0027 and a filter \u0027METHOD status\u0027, print the matching paths in order, or NONE.",
+                                         "input_format":  "Line 1: n. Next n lines: log lines. Last line: filter.",
+                                         "output_format":  "Paths separated by spaces, or NONE.",
+                                         "constraints":  "1 \u003c= n \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "3\nGET /a 200\nPOST /b 500\nGET /c 200\nGET 200",
+                                                             "output":  "/a /c",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "1\nGET /x 404\nGET 200",
+                                                             "output":  "NONE",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "No match",
+                                                            "All match",
+                                                            "Same path twice"
+                                                        ],
+                                         "expected_algorithm":  "Single pass comparing method and status.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(n)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "JPM-SWE-R1-002",
+                          "round_id":  "R1",
+                          "topic":  "Arrays",
+                          "subtopic":  "Maximum profit, one transaction",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Print the maximum profit from one buy then one sell (0 if none).",
+                          "relevance_to_role":  "A February 2026 guide describes a HackerRank assessment of 60 to 90 minutes with 2 coding problems plus MCQs on Java, DBMS and OS; an August 2025 intern account describes a coding round.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Track the running minimum.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Arrays",
+                                               "Maximum profit, one transaction"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "arrays"
+                                   ],
+                          "notes":  "The guide lists this topic without a source; this item is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/jpmorgan-interview-questions-india-2026/.",
+                          "coding":  {
+                                         "problem_statement":  "Print the maximum profit from one buy then one sell (0 if none).",
+                                         "input_format":  "Line 1: n. Line 2: prices.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "1 \u003c= n \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "6\n7 1 5 3 6 4",
+                                                             "output":  "5",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "4\n9 7 4 1",
+                                                             "output":  "0",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Decreasing",
+                                                            "Single day",
+                                                            "Flat"
+                                                        ],
+                                         "expected_algorithm":  "Track the running minimum.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "JPM-SWE-R1-003",
+                          "round_id":  "R1",
+                          "topic":  "Arrays",
+                          "subtopic":  "Maximum profit, many transactions",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "You may trade many times (one share at a time).",
+                          "relevance_to_role":  "A February 2026 guide describes a HackerRank assessment of 60 to 90 minutes with 2 coding problems plus MCQs on Java, DBMS and OS; an August 2025 intern account describes a coding round.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Sum every positive daily gain.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Arrays",
+                                               "Maximum profit, many transactions"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "arrays"
+                                   ],
+                          "notes":  "The guide lists this topic without a source; this item is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/jpmorgan-interview-questions-india-2026/.",
+                          "coding":  {
+                                         "problem_statement":  "You may trade many times (one share at a time). Print the maximum total profit.",
+                                         "input_format":  "Line 1: n. Line 2: prices.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "1 \u003c= n \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "6\n7 1 5 3 6 4",
+                                                             "output":  "7",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "3\n3 2 1",
+                                                             "output":  "0",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Decreasing",
+                                                            "Increasing",
+                                                            "Flat"
+                                                        ],
+                                         "expected_algorithm":  "Sum every positive daily gain.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "JPM-SWE-R1-004",
+                          "round_id":  "R1",
+                          "topic":  "Strings",
+                          "subtopic":  "Longest substring without repeats",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Print the length of the longest substring without repeating characters.",
+                          "relevance_to_role":  "A February 2026 guide describes a HackerRank assessment of 60 to 90 minutes with 2 coding problems plus MCQs on Java, DBMS and OS; an August 2025 intern account describes a coding round.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Sliding window with last-seen index.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Strings",
+                                               "Longest substring without repeats"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "strings"
+                                   ],
+                          "notes":  "The guide lists this topic without a source; this item is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/jpmorgan-interview-questions-india-2026/.",
+                          "coding":  {
+                                         "problem_statement":  "Print the length of the longest substring without repeating characters.",
+                                         "input_format":  "One line: the string.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "1 \u003c= length \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "abcabcbb",
+                                                             "output":  "3",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "bbbbb",
+                                                             "output":  "1",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "All same",
+                                                            "All distinct",
+                                                            "Single char"
+                                                        ],
+                                         "expected_algorithm":  "Sliding window with last-seen index.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(k)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "JPM-SWE-R1-005",
+                          "round_id":  "R1",
+                          "topic":  "Hash Maps",
+                          "subtopic":  "Group transactions by date",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Given n transactions \u0027date amount\u0027, print each date with its total in date order.",
+                          "relevance_to_role":  "A February 2026 guide describes a HackerRank assessment of 60 to 90 minutes with 2 coding problems plus MCQs on Java, DBMS and OS; an August 2025 intern account describes a coding round.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Accumulate in a map, sort keys.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Hash Maps",
+                                               "Group transactions by date"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "hashing"
+                                   ],
+                          "notes":  "The guide lists this topic without a source; this item is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/jpmorgan-interview-questions-india-2026/.",
+                          "coding":  {
+                                         "problem_statement":  "Given n transactions \u0027date amount\u0027, print each date with its total in date order.",
+                                         "input_format":  "Line 1: n. Next n lines: date and amount.",
+                                         "output_format":  "Lines \u0027date total\u0027.",
+                                         "constraints":  "1 \u003c= n \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "3\n2026-01-02 5\n2026-01-01 3\n2026-01-02 4",
+                                                             "output":  "2026-01-01 3\n2026-01-02 9",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "1\n2026-03-01 10",
+                                                             "output":  "2026-03-01 10",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Single date",
+                                                            "All same date",
+                                                            "Unsorted input"
+                                                        ],
+                                         "expected_algorithm":  "Accumulate in a map, sort keys.",
+                                         "time_complexity":  "O(n log n)",
+                                         "space_complexity":  "O(d)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "JPM-SWE-R1-006",
+                          "round_id":  "R1",
+                          "topic":  "Java",
+                          "subtopic":  "String immutability",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "What is printed?\n\nString s = \"ab\";\ns.concat(\"cd\");\nSystem.out.print(s);",
+                          "relevance_to_role":  "A February 2026 guide describes a HackerRank assessment of 60 to 90 minutes with 2 coding problems plus MCQs on Java, DBMS and OS; an August 2025 intern account describes a coding round.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "ab",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Immutability"
+                                           ],
+                          "follow_ups":  [
+                                             "How would you keep the result?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Expecting abcd"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "java"
+                                   ],
+                          "notes":  "The guide lists this topic without a source; this item is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/jpmorgan-interview-questions-india-2026/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "abcd",
+                                                      "ab",
+                                                      "cd",
+                                                      "Compile error"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "Strings are immutable; concat returns a new string that is discarded.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "JPM-SWE-R1-007",
+                          "round_id":  "R1",
+                          "topic":  "Java",
+                          "subtopic":  "equals versus ==",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "What does new String(\"a\") == new String(\"a\") evaluate to?",
+                          "relevance_to_role":  "A February 2026 guide describes a HackerRank assessment of 60 to 90 minutes with 2 coding problems plus MCQs on Java, DBMS and OS; an August 2025 intern account describes a coding round.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "false",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Equality"
+                                           ],
+                          "follow_ups":  [
+                                             "Where does the string pool help?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Using == for content"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "java"
+                                   ],
+                          "notes":  "The guide lists this topic without a source; this item is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/jpmorgan-interview-questions-india-2026/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "true",
+                                                      "false",
+                                                      "Compile error",
+                                                      "Depends on the JVM version"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "== compares references; two new objects are different.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "JPM-SWE-R1-008",
+                          "round_id":  "R1",
+                          "topic":  "Java",
+                          "subtopic":  "Abstract class versus interface",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Which statement is true in Java 8+?",
+                          "relevance_to_role":  "A February 2026 guide describes a HackerRank assessment of 60 to 90 minutes with 2 coding problems plus MCQs on Java, DBMS and OS; an August 2025 intern account describes a coding round.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "A class can implement several interfaces",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "OOP"
+                                           ],
+                          "follow_ups":  [
+                                             "When use each?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Believing interfaces have no bodies"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "java"
+                                   ],
+                          "notes":  "The guide lists this topic without a source; this item is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/jpmorgan-interview-questions-india-2026/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "Interfaces cannot have method bodies",
+                                                      "A class can extend several abstract classes",
+                                                      "A class can implement several interfaces",
+                                                      "Abstract classes cannot have constructors"
+                                                  ],
+                                      "correct_options":  [
+                                                              2
+                                                          ],
+                                      "explanation":  "A class can implement many interfaces but extend only one class; interfaces may have default methods.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "JPM-SWE-R1-009",
+                          "round_id":  "R1",
+                          "topic":  "DBMS",
+                          "subtopic":  "ACID",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "Which ACID property ensures a committed transaction survives a crash?",
+                          "relevance_to_role":  "A February 2026 guide describes a HackerRank assessment of 60 to 90 minutes with 2 coding problems plus MCQs on Java, DBMS and OS; an August 2025 intern account describes a coding round.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Durability",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "ACID"
+                                           ],
+                          "follow_ups":  [
+                                             "How is atomicity achieved?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Confusing with atomicity"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "dbms"
+                                   ],
+                          "notes":  "The guide lists this topic without a source; this item is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/jpmorgan-interview-questions-india-2026/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "Atomicity",
+                                                      "Consistency",
+                                                      "Isolation",
+                                                      "Durability"
+                                                  ],
+                                      "correct_options":  [
+                                                              3
+                                                          ],
+                                      "explanation":  "Durability means committed changes persist, typically via the write-ahead log.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "JPM-SWE-R1-010",
+                          "round_id":  "R1",
+                          "topic":  "DBMS",
+                          "subtopic":  "SQL join",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Which join returns all rows from the left table even with no match on the right?",
+                          "relevance_to_role":  "A February 2026 guide describes a HackerRank assessment of 60 to 90 minutes with 2 coding problems plus MCQs on Java, DBMS and OS; an August 2025 intern account describes a coding round.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "LEFT JOIN",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Joins"
+                                           ],
+                          "follow_ups":  [
+                                             "How do you find unmatched rows?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Choosing INNER"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "dbms"
+                                   ],
+                          "notes":  "The guide lists this topic without a source; this item is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/jpmorgan-interview-questions-india-2026/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "INNER JOIN",
+                                                      "LEFT JOIN",
+                                                      "CROSS JOIN",
+                                                      "SELF JOIN only"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "LEFT JOIN keeps unmatched left rows with NULLs on the right.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "JPM-SWE-R1-011",
+                          "round_id":  "R1",
+                          "topic":  "Operating Systems",
+                          "subtopic":  "Deadlock conditions",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Which is NOT a necessary condition for deadlock?",
+                          "relevance_to_role":  "A February 2026 guide describes a HackerRank assessment of 60 to 90 minutes with 2 coding problems plus MCQs on Java, DBMS and OS; an August 2025 intern account describes a coding round.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Preemption",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Deadlock"
+                                           ],
+                          "follow_ups":  [
+                                             "How does lock ordering help?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Mixing up the list"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "os"
+                                   ],
+                          "notes":  "The guide lists this topic without a source; this item is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/jpmorgan-interview-questions-india-2026/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "Mutual exclusion",
+                                                      "Hold and wait",
+                                                      "Preemption",
+                                                      "Circular wait"
+                                                  ],
+                                      "correct_options":  [
+                                                              2
+                                                          ],
+                                      "explanation":  "Deadlock requires no preemption; preemption would break it.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "JPM-SWE-R1-012",
+                          "round_id":  "R1",
+                          "topic":  "Operating Systems",
+                          "subtopic":  "Process versus thread",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "What do threads of the same process share?",
+                          "relevance_to_role":  "A February 2026 guide describes a HackerRank assessment of 60 to 90 minutes with 2 coding problems plus MCQs on Java, DBMS and OS; an August 2025 intern account describes a coding round.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Heap and code",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Threads"
+                                           ],
+                          "follow_ups":  [
+                                             "What is thread-local storage?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Saying stacks are shared"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "os"
+                                   ],
+                          "notes":  "The guide lists this topic without a source; this item is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/jpmorgan-interview-questions-india-2026/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "Stack",
+                                                      "Registers",
+                                                      "Heap and code",
+                                                      "Program counter"
+                                                  ],
+                                      "correct_options":  [
+                                                              2
+                                                          ],
+                                      "explanation":  "Threads share heap, code and open files; each has its own stack, registers and PC.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "JPM-SWE-R1-013",
+                          "round_id":  "R1",
+                          "topic":  "Complexity",
+                          "subtopic":  "Choosing a data structure",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "You need fast insert, delete and lookup by key plus iteration in sorted order. Which structure?",
+                          "relevance_to_role":  "A February 2026 guide describes a HackerRank assessment of 60 to 90 minutes with 2 coding problems plus MCQs on Java, DBMS and OS; an August 2025 intern account describes a coding round.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "A balanced BST / TreeMap gives O(log n) for all and sorted iteration; a hash map gives O(1) but no order.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Trade-offs"
+                                           ],
+                          "follow_ups":  [
+                                             "What if order is not needed?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Naming hash map only"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "ds"
+                                   ],
+                          "notes":  "The guide lists this topic without a source; this item is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/jpmorgan-interview-questions-india-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "JPM-SWE-R1-014",
+                          "round_id":  "R1",
+                          "topic":  "Problem Solving",
+                          "subtopic":  "Passing both coding problems",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "The assessment reportedly needs both problems solved. How do you manage 60 to 90 minutes?",
+                          "relevance_to_role":  "A February 2026 guide describes a HackerRank assessment of 60 to 90 minutes with 2 coding problems plus MCQs on Java, DBMS and OS; an August 2025 intern account describes a coding round.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Read both first, solve the easier first, aim for correct before optimal, reserve time to test edge cases.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Time management"
+                                           ],
+                          "follow_ups":  [
+                                             "What if one is unsolved?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Spending all time on one"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "problem-solving"
+                                   ],
+                          "notes":  "The guide cites no candidate sources; topics are used as context only. Topic context only (no candidate attribution): https://jobrise.io/en/blog/jpmorgan-interview-questions-india-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "JPM-SWE-R1-015",
+                          "round_id":  "R1",
+                          "topic":  "Java",
+                          "subtopic":  "Exception handling",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What is printed?\n\ntry { return 1; } finally { System.out.print(\"F\"); }",
+                          "relevance_to_role":  "A February 2026 guide describes a HackerRank assessment of 60 to 90 minutes with 2 coding problems plus MCQs on Java, DBMS and OS; an August 2025 intern account describes a coding round.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "F then returns 1",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "finally"
+                                           ],
+                          "follow_ups":  [
+                                             "What if finally also returns?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Skipping finally"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "java"
+                                   ],
+                          "notes":  "The guide lists this topic without a source; this item is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/jpmorgan-interview-questions-india-2026/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "1",
+                                                      "F then returns 1",
+                                                      "F only",
+                                                      "Compile error"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "The finally block runs before the method returns, so F is printed and 1 is returned.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "JPM-SWE-R2-001",
+                          "round_id":  "R2",
+                          "topic":  "Design",
+                          "subtopic":  "LRU cache",
+                          "question_type":  "CODING",
+                          "difficulty":  "HARD",
+                          "prompt":  "Simulate an LRU cache and print the result of each get (-1 if absent).",
+                          "relevance_to_role":  "A February 2026 guide describes a 45 to 60 minute technical phone screen on DSA, OOP and projects.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Hash map plus doubly linked list.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Design",
+                                               "LRU cache"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "design"
+                                   ],
+                          "notes":  "The guide lists this topic without a source; this item is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/jpmorgan-interview-questions-india-2026/.",
+                          "coding":  {
+                                         "problem_statement":  "Simulate an LRU cache and print the result of each get (-1 if absent).",
+                                         "input_format":  "Line 1: capacity. Line 2: q. Next q lines: \u0027put k v\u0027 or \u0027get k\u0027.",
+                                         "output_format":  "Results of each get on one line.",
+                                         "constraints":  "1 \u003c= capacity \u003c= 1000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "2\n6\nput 1 1\nput 2 2\nget 1\nput 3 3\nget 2\nget 3",
+                                                             "output":  "1 -1 3",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "1\n3\nput 1 1\nput 2 2\nget 1",
+                                                             "output":  "-1",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Capacity 1",
+                                                            "Overwrite key",
+                                                            "Missing key"
+                                                        ],
+                                         "expected_algorithm":  "Hash map plus doubly linked list.",
+                                         "time_complexity":  "O(1) per op",
+                                         "space_complexity":  "O(capacity)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "JPM-SWE-R2-002",
+                          "round_id":  "R2",
+                          "topic":  "Arrays",
+                          "subtopic":  "Two sum",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Print the 1-based indices of two numbers adding to the target, or -1.",
+                          "relevance_to_role":  "A February 2026 guide describes a 45 to 60 minute technical phone screen on DSA, OOP and projects.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Hash map of seen values.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Arrays",
+                                               "Two sum"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "arrays"
+                                   ],
+                          "notes":  "The guide lists this topic without a source; this item is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/jpmorgan-interview-questions-india-2026/.",
+                          "coding":  {
+                                         "problem_statement":  "Print the 1-based indices of two numbers adding to the target, or -1.",
+                                         "input_format":  "Line 1: n. Line 2: numbers. Line 3: target.",
+                                         "output_format":  "Two indices or -1.",
+                                         "constraints":  "2 \u003c= n \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "4\n2 7 11 15\n9",
+                                                             "output":  "1 2",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "2\n1 2\n10",
+                                                             "output":  "-1",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "No pair",
+                                                            "Duplicates",
+                                                            "Negatives"
+                                                        ],
+                                         "expected_algorithm":  "Hash map of seen values.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(n)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "JPM-SWE-R2-003",
+                          "round_id":  "R2",
+                          "topic":  "Stacks",
+                          "subtopic":  "Valid brackets",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Print Yes if the brackets are balanced, otherwise No.",
+                          "relevance_to_role":  "A February 2026 guide describes a 45 to 60 minute technical phone screen on DSA, OOP and projects.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Stack of openers.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Stacks",
+                                               "Valid brackets"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "stacks"
+                                   ],
+                          "notes":  "The guide lists this topic without a source; this item is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/jpmorgan-interview-questions-india-2026/.",
+                          "coding":  {
+                                         "problem_statement":  "Print Yes if the brackets are balanced, otherwise No.",
+                                         "input_format":  "One line: the string of brackets.",
+                                         "output_format":  "Yes or No.",
+                                         "constraints":  "1 \u003c= length \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "{[]}",
+                                                             "output":  "Yes",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "([)]",
+                                                             "output":  "No",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Empty-like",
+                                                            "Only closers",
+                                                            "Nested"
+                                                        ],
+                                         "expected_algorithm":  "Stack of openers.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(n)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "JPM-SWE-R2-004",
+                          "round_id":  "R2",
+                          "topic":  "Intervals",
+                          "subtopic":  "Merge intervals",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Merge overlapping intervals and print them sorted.",
+                          "relevance_to_role":  "A February 2026 guide describes a 45 to 60 minute technical phone screen on DSA, OOP and projects.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Sort by start and sweep.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Intervals",
+                                               "Merge intervals"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "intervals"
+                                   ],
+                          "notes":  "The guide lists this topic without a source; this item is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/jpmorgan-interview-questions-india-2026/.",
+                          "coding":  {
+                                         "problem_statement":  "Merge overlapping intervals and print them sorted.",
+                                         "input_format":  "Line 1: n. Next n lines: start end.",
+                                         "output_format":  "Merged intervals, one per line.",
+                                         "constraints":  "1 \u003c= n \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "3\n1 3\n2 6\n8 10",
+                                                             "output":  "1 6\n8 10",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "2\n1 4\n4 5",
+                                                             "output":  "1 5",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Touching",
+                                                            "Nested",
+                                                            "Single"
+                                                        ],
+                                         "expected_algorithm":  "Sort by start and sweep.",
+                                         "time_complexity":  "O(n log n)",
+                                         "space_complexity":  "O(n)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "JPM-SWE-R2-005",
+                          "round_id":  "R2",
+                          "topic":  "Linked Lists",
+                          "subtopic":  "Cycle detection and start",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Detect a cycle in a linked list and find its starting node.",
+                          "relevance_to_role":  "A February 2026 guide describes a 45 to 60 minute technical phone screen on DSA, OOP and projects.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Floyd\u0027s tortoise and hare; after meeting reset one pointer to the head and advance both by one to find the start.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Two pointers"
+                                           ],
+                          "follow_ups":  [
+                                             "Why does reset work?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Using extra memory without noting it"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "linked-list"
+                                   ],
+                          "notes":  "The guide lists this topic without a source; this item is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/jpmorgan-interview-questions-india-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "JPM-SWE-R2-006",
+                          "round_id":  "R2",
+                          "topic":  "Trees",
+                          "subtopic":  "Serialize and deserialize a binary tree",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "HARD",
+                          "prompt":  "How would you serialize and deserialize a binary tree?",
+                          "relevance_to_role":  "A February 2026 guide describes a 45 to 60 minute technical phone screen on DSA, OOP and projects.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Preorder with null markers (or level order); rebuild recursively by consuming tokens in the same order.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Traversal"
+                                           ],
+                          "follow_ups":  [
+                                             "How would you handle BST specially?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Forgetting null markers"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "trees"
+                                   ],
+                          "notes":  "The guide lists this topic without a source; this item is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/jpmorgan-interview-questions-india-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "JPM-SWE-R2-007",
+                          "round_id":  "R2",
+                          "topic":  "OOP",
+                          "subtopic":  "Four pillars with a banking example",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Explain OOP pillars using an account class hierarchy.",
+                          "relevance_to_role":  "A February 2026 guide describes a 45 to 60 minute technical phone screen on DSA, OOP and projects.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Encapsulate balance, inherit SavingsAccount from Account, override interest calculation (polymorphism), expose an interface (abstraction).",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "OOP"
+                                           ],
+                          "follow_ups":  [
+                                             "Where would composition be better?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Textbook only"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "oop"
+                                   ],
+                          "notes":  "The guide lists this topic without a source; this item is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/jpmorgan-interview-questions-india-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "JPM-SWE-R2-008",
+                          "round_id":  "R2",
+                          "topic":  "Java",
+                          "subtopic":  "HashMap internals",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "How does HashMap work internally and how are collisions handled?",
+                          "relevance_to_role":  "A February 2026 guide describes a 45 to 60 minute technical phone screen on DSA, OOP and projects.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Array of buckets indexed by hash; collisions chain in a list that becomes a tree after a threshold; resize and rehash at load factor 0.75.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Hashing"
+                                           ],
+                          "follow_ups":  [
+                                             "What breaks if equals/hashCode are inconsistent?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Claiming O(1) always"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "java"
+                                   ],
+                          "notes":  "The guide lists this topic without a source; this item is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/jpmorgan-interview-questions-india-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "JPM-SWE-R2-009",
+                          "round_id":  "R2",
+                          "topic":  "Project",
+                          "subtopic":  "Project deep dive",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Walk me through a project: your part, design choices and testing.",
+                          "relevance_to_role":  "A February 2026 guide describes a 45 to 60 minute technical phone screen on DSA, OOP and projects.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Problem, architecture, own contribution, one trade-off and how you tested.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Ownership"
+                                           ],
+                          "follow_ups":  [
+                                             "What would you change?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Cannot explain own code"
+                                              ],
+                          "suggested_time_min":  8,
+                          "tags":  [
+                                       "project"
+                                   ],
+                          "notes":  "The guide cites no candidate sources; topics are used as context only. Topic context only (no candidate attribution): https://jobrise.io/en/blog/jpmorgan-interview-questions-india-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "JPM-SWE-R2-010",
+                          "round_id":  "R2",
+                          "topic":  "Java",
+                          "subtopic":  "Collections",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Compare ArrayList, LinkedList, HashSet and TreeSet.",
+                          "relevance_to_role":  "A February 2026 guide describes a 45 to 60 minute technical phone screen on DSA, OOP and projects.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "ArrayList: fast index; LinkedList: fast ends/inserts with a handle; HashSet: O(1) unique; TreeSet: sorted O(log n).",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Collections"
+                                           ],
+                          "follow_ups":  [
+                                             "When use LinkedHashMap?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Defaulting to ArrayList"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "java"
+                                   ],
+                          "notes":  "The guide lists this topic without a source; this item is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/jpmorgan-interview-questions-india-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "JPM-SWE-R2-011",
+                          "round_id":  "R2",
+                          "topic":  "Java",
+                          "subtopic":  "Multithreading basics",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "How do you create threads in Java and prevent data races?",
+                          "relevance_to_role":  "A February 2026 guide describes a 45 to 60 minute technical phone screen on DSA, OOP and projects.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Runnable/Thread or executors; use synchronized, locks, volatile for visibility and atomic classes for counters.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Concurrency"
+                                           ],
+                          "follow_ups":  [
+                                             "volatile versus synchronized?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Thinking volatile gives atomicity"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "java"
+                                   ],
+                          "notes":  "The guide lists this topic without a source; this item is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/jpmorgan-interview-questions-india-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "JPM-SWE-R2-012",
+                          "round_id":  "R2",
+                          "topic":  "Problem Solving",
+                          "subtopic":  "Clarifying requirements",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "What do you ask before coding an ambiguous problem?",
+                          "relevance_to_role":  "A February 2026 guide describes a 45 to 60 minute technical phone screen on DSA, OOP and projects.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Input size and ranges, duplicates, empty input, expected output on ties, and memory limits.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Clarifying"
+                                           ],
+                          "follow_ups":  [
+                                             "How do you confirm your understanding?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Coding immediately"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "problem-solving"
+                                   ],
+                          "notes":  "The guide cites no candidate sources; topics are used as context only. Topic context only (no candidate attribution): https://jobrise.io/en/blog/jpmorgan-interview-questions-india-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "JPM-SWE-R3-001",
+                          "round_id":  "R3",
+                          "topic":  "Banking",
+                          "subtopic":  "Account balance with declines",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Starting from a balance, process deposits \u0027D amt\u0027 and withdrawals \u0027W amt\u0027.",
+                          "relevance_to_role":  "A February 2026 guide describes Super Day rounds on DSA, clean code and CS fundamentals (ACID, abstract class versus interface, HashMap internals, processes versus threads, deadlock).",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Single pass updating the balance.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Banking",
+                                               "Account balance with declines"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "simulation"
+                                   ],
+                          "notes":  "The guide lists this topic without a source; this item is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/jpmorgan-interview-questions-india-2026/.",
+                          "coding":  {
+                                         "problem_statement":  "Starting from a balance, process deposits \u0027D amt\u0027 and withdrawals \u0027W amt\u0027. A withdrawal over the balance is declined. Print the final balance, then DECLINED once per declined withdrawal on the next line if any.",
+                                         "input_format":  "Line 1: starting balance. Line 2: n. Next n lines: type and amount.",
+                                         "output_format":  "Final balance; optional second line of DECLINED.",
+                                         "constraints":  "1 \u003c= n \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "100\n3\nD 50\nW 500\nW 20",
+                                                             "output":  "130\nDECLINED",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "10\n1\nW 5",
+                                                             "output":  "5",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "No declines",
+                                                            "All declined",
+                                                            "Exactly equal"
+                                                        ],
+                                         "expected_algorithm":  "Single pass updating the balance.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "JPM-SWE-R3-002",
+                          "round_id":  "R3",
+                          "topic":  "Heaps",
+                          "subtopic":  "Kth largest element",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Print the kth largest element.",
+                          "relevance_to_role":  "A February 2026 guide describes Super Day rounds on DSA, clean code and CS fundamentals (ACID, abstract class versus interface, HashMap internals, processes versus threads, deadlock).",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Min-heap of size k.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Heaps",
+                                               "Kth largest element"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "heaps"
+                                   ],
+                          "notes":  "The guide lists this topic without a source; this item is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/jpmorgan-interview-questions-india-2026/.",
+                          "coding":  {
+                                         "problem_statement":  "Print the kth largest element.",
+                                         "input_format":  "Line 1: n k. Line 2: numbers.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "1 \u003c= k \u003c= n \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "5 2\n3 2 1 5 6",
+                                                             "output":  "5",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "3 1\n1 1 1",
+                                                             "output":  "1",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "k = 1",
+                                                            "k = n",
+                                                            "Duplicates"
+                                                        ],
+                                         "expected_algorithm":  "Min-heap of size k.",
+                                         "time_complexity":  "O(n log k)",
+                                         "space_complexity":  "O(k)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "JPM-SWE-R3-003",
+                          "round_id":  "R3",
+                          "topic":  "Arrays",
+                          "subtopic":  "Rotate array",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Rotate the array right by k and print it.",
+                          "relevance_to_role":  "A February 2026 guide describes Super Day rounds on DSA, clean code and CS fundamentals (ACID, abstract class versus interface, HashMap internals, processes versus threads, deadlock).",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Reverse three times or index shift.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Arrays",
+                                               "Rotate array"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "arrays"
+                                   ],
+                          "notes":  "The guide lists this topic without a source; this item is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/jpmorgan-interview-questions-india-2026/.",
+                          "coding":  {
+                                         "problem_statement":  "Rotate the array right by k and print it.",
+                                         "input_format":  "Line 1: n k. Line 2: array.",
+                                         "output_format":  "The rotated array.",
+                                         "constraints":  "1 \u003c= n \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "5 2\n1 2 3 4 5",
+                                                             "output":  "4 5 1 2 3",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "3 3\n1 2 3",
+                                                             "output":  "1 2 3",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "k = 0",
+                                                            "k = n",
+                                                            "k \u003e n"
+                                                        ],
+                                         "expected_algorithm":  "Reverse three times or index shift.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "JPM-SWE-R3-004",
+                          "round_id":  "R3",
+                          "topic":  "Databases",
+                          "subtopic":  "ACID in banking",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Explain ACID and why it matters for transferring money between accounts.",
+                          "relevance_to_role":  "A February 2026 guide describes Super Day rounds on DSA, clean code and CS fundamentals (ACID, abstract class versus interface, HashMap internals, processes versus threads, deadlock).",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Atomic debit+credit, consistent balances, isolated concurrent transfers, durable commits; use transactions and appropriate isolation.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "ACID"
+                                           ],
+                          "follow_ups":  [
+                                             "What anomaly does READ COMMITTED allow?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Listing letters only"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "dbms"
+                                   ],
+                          "notes":  "The guide lists this topic without a source; this item is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/jpmorgan-interview-questions-india-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "JPM-SWE-R3-005",
+                          "round_id":  "R3",
+                          "topic":  "Databases",
+                          "subtopic":  "Indexing",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What is a database index and what does it cost?",
+                          "relevance_to_role":  "A February 2026 guide describes Super Day rounds on DSA, clean code and CS fundamentals (ACID, abstract class versus interface, HashMap internals, processes versus threads, deadlock).",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "A B-tree structure speeding lookups; costs space and slows writes; use on selective, frequently filtered columns.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Indexes"
+                                           ],
+                          "follow_ups":  [
+                                             "What is a covering index?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Indexing every column"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "dbms"
+                                   ],
+                          "notes":  "The guide lists this topic without a source; this item is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/jpmorgan-interview-questions-india-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "JPM-SWE-R3-006",
+                          "round_id":  "R3",
+                          "topic":  "Databases",
+                          "subtopic":  "SQL top groups",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Write a query for the top 3 departments by average salary.",
+                          "relevance_to_role":  "A February 2026 guide describes Super Day rounds on DSA, clean code and CS fundamentals (ACID, abstract class versus interface, HashMap internals, processes versus threads, deadlock).",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "SELECT dept, AVG(salary) a FROM emp GROUP BY dept ORDER BY a DESC LIMIT 3;",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Aggregation"
+                                           ],
+                          "follow_ups":  [
+                                             "How do ties behave?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Using WHERE for aggregates"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "sql"
+                                   ],
+                          "notes":  "The guide lists this topic without a source; this item is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/jpmorgan-interview-questions-india-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "JPM-SWE-R3-007",
+                          "round_id":  "R3",
+                          "topic":  "Operating Systems",
+                          "subtopic":  "Deadlock",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What is deadlock and how do you prevent it?",
+                          "relevance_to_role":  "A February 2026 guide describes Super Day rounds on DSA, clean code and CS fundamentals (ACID, abstract class versus interface, HashMap internals, processes versus threads, deadlock).",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Circular wait over locks; prevent with lock ordering, timeouts or avoiding hold-and-wait.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Deadlock"
+                                           ],
+                          "follow_ups":  [
+                                             "Detect versus prevent?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Confusing with starvation"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "os"
+                                   ],
+                          "notes":  "The guide lists this topic without a source; this item is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/jpmorgan-interview-questions-india-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "JPM-SWE-R3-008",
+                          "round_id":  "R3",
+                          "topic":  "Operating Systems",
+                          "subtopic":  "Mutex versus semaphore",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Compare a mutex and a semaphore.",
+                          "relevance_to_role":  "A February 2026 guide describes Super Day rounds on DSA, clean code and CS fundamentals (ACID, abstract class versus interface, HashMap internals, processes versus threads, deadlock).",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Mutex: one owner, mutual exclusion; semaphore: counter allowing N holders or signalling.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Synchronisation"
+                                           ],
+                          "follow_ups":  [
+                                             "What is a binary semaphore?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Treating them as identical"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "os"
+                                   ],
+                          "notes":  "The guide lists this topic without a source; this item is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/jpmorgan-interview-questions-india-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "JPM-SWE-R3-009",
+                          "round_id":  "R3",
+                          "topic":  "Operating Systems",
+                          "subtopic":  "Virtual memory",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What is virtual memory and how does paging work?",
+                          "relevance_to_role":  "A February 2026 guide describes Super Day rounds on DSA, clean code and CS fundamentals (ACID, abstract class versus interface, HashMap internals, processes versus threads, deadlock).",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Per-process address spaces mapped to frames through page tables; page faults load pages on demand.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Paging"
+                                           ],
+                          "follow_ups":  [
+                                             "What is the TLB?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Equating it with swap"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "os"
+                                   ],
+                          "notes":  "The guide lists this topic without a source; this item is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/jpmorgan-interview-questions-india-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "JPM-SWE-R3-010",
+                          "round_id":  "R3",
+                          "topic":  "Design Patterns",
+                          "subtopic":  "Singleton, Factory, Observer, Strategy",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Pick two of these patterns and show where each fits in a payments service.",
+                          "relevance_to_role":  "A February 2026 guide describes Super Day rounds on DSA, clean code and CS fundamentals (ACID, abstract class versus interface, HashMap internals, processes versus threads, deadlock).",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Factory builds payment handlers by type; Strategy swaps fee rules; Observer notifies on completion; Singleton for config (with thread-safety care).",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Patterns"
+                                           ],
+                          "follow_ups":  [
+                                             "Why is Singleton criticised?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Memorised definitions"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "design"
+                                   ],
+                          "notes":  "The guide lists this topic without a source; this item is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/jpmorgan-interview-questions-india-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "JPM-SWE-R3-011",
+                          "round_id":  "R3",
+                          "topic":  "Software Design",
+                          "subtopic":  "Payment processing system",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "HARD",
+                          "prompt":  "Outline a payment processing system at a high level.",
+                          "relevance_to_role":  "A February 2026 guide describes Super Day rounds on DSA, clean code and CS fundamentals (ACID, abstract class versus interface, HashMap internals, processes versus threads, deadlock).",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "API gateway, idempotent payment service, ledger with double-entry, async processing with queues, retries with idempotency keys, audit logs, reconciliation and fraud checks.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Idempotency",
+                                               "Ledger"
+                                           ],
+                          "follow_ups":  [
+                                             "How do you avoid double charges?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Ignoring failures"
+                                              ],
+                          "suggested_time_min":  20,
+                          "tags":  [
+                                       "design"
+                                   ],
+                          "notes":  "System design topics are listed for experienced roles in the guide; this is an extension question and is original. Topic context only (no candidate attribution): https://jobrise.io/en/blog/jpmorgan-interview-questions-india-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "JPM-SWE-R3-012",
+                          "round_id":  "R3",
+                          "topic":  "Code Quality",
+                          "subtopic":  "Clean code and review",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "What does clean, maintainable code look like to you?",
+                          "relevance_to_role":  "A February 2026 guide describes Super Day rounds on DSA, clean code and CS fundamentals (ACID, abstract class versus interface, HashMap internals, processes versus threads, deadlock).",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Clear names, small functions, tests, no duplication, error handling, comments explaining why.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Clean code"
+                                           ],
+                          "follow_ups":  [
+                                             "Refactor a long function: how?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Only mentioning comments"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "code-quality"
+                                   ],
+                          "notes":  "The guide cites no candidate sources; topics are used as context only. Topic context only (no candidate attribution): https://jobrise.io/en/blog/jpmorgan-interview-questions-india-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "JPM-SWE-R3-013",
+                          "round_id":  "R3",
+                          "topic":  "SOLID",
+                          "subtopic":  "Dependency inversion",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Explain dependency inversion with an example.",
+                          "relevance_to_role":  "A February 2026 guide describes Super Day rounds on DSA, clean code and CS fundamentals (ACID, abstract class versus interface, HashMap internals, processes versus threads, deadlock).",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "High-level modules depend on abstractions; inject a PaymentGateway interface rather than a concrete class, making testing easy.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "SOLID"
+                                           ],
+                          "follow_ups":  [
+                                             "How does DI differ from the principle?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Confusing DI and DIP"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "design"
+                                   ],
+                          "notes":  "The guide lists this topic without a source; this item is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/jpmorgan-interview-questions-india-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "JPM-SWE-R4-001",
+                          "round_id":  "R4",
+                          "topic":  "Teamwork",
+                          "subtopic":  "Going above and beyond",
+                          "question_type":  "BEHAVIORAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Tell me about a time you went above and beyond for a teammate or customer.",
+                          "relevance_to_role":  "A February 2026 guide describes a Super Day behavioral round on the firm\u0027s Business Principles and an HR round on compensation and joining.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "A concrete example with impact.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Specific, real example",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Own actions and reasoning are clear",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Outcome and learning stated",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Service orientation"
+                                           ],
+                          "follow_ups":  [
+                                             "What did you learn?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Vague story",
+                                                  "No outcome"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "behavioral"
+                                   ],
+                          "notes":  "The guide cites no candidate sources; topics are used as context only. Topic context only (no candidate attribution): https://jobrise.io/en/blog/jpmorgan-interview-questions-india-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  {
+                                             "competency":  "Service orientation",
+                                             "star_guidance":  "Situation, what extra you did, result.",
+                                             "positive_signals":  [
+                                                                      "Specific",
+                                                                      "Impact"
+                                                                  ],
+                                             "negative_signals":  [
+                                                                      "Vague"
+                                                                  ]
+                                         }
+                      },
+                      {
+                          "question_id":  "JPM-SWE-R4-002",
+                          "round_id":  "R4",
+                          "topic":  "Decisions",
+                          "subtopic":  "Decision with incomplete information",
+                          "question_type":  "BEHAVIORAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Describe a decision you made with incomplete information.",
+                          "relevance_to_role":  "A February 2026 guide describes a Super Day behavioral round on the firm\u0027s Business Principles and an HR round on compensation and joining.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Reasoned decision with follow-up.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Specific, real example",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Own actions and reasoning are clear",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Outcome and learning stated",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Judgement"
+                                           ],
+                          "follow_ups":  [
+                                             "What did you learn?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Vague story",
+                                                  "No outcome"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "behavioral"
+                                   ],
+                          "notes":  "The guide cites no candidate sources; topics are used as context only. Topic context only (no candidate attribution): https://jobrise.io/en/blog/jpmorgan-interview-questions-india-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  {
+                                             "competency":  "Judgement",
+                                             "star_guidance":  "Context, how you reduced risk, outcome.",
+                                             "positive_signals":  [
+                                                                      "Reasoned",
+                                                                      "Reviewed outcome"
+                                                                  ],
+                                             "negative_signals":  [
+                                                                      "Freezes"
+                                                                  ]
+                                         }
+                      },
+                      {
+                          "question_id":  "JPM-SWE-R4-003",
+                          "round_id":  "R4",
+                          "topic":  "Conflict",
+                          "subtopic":  "Disagreement with a teammate",
+                          "question_type":  "BEHAVIORAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Tell me about a disagreement with a teammate.",
+                          "relevance_to_role":  "A February 2026 guide describes a Super Day behavioral round on the firm\u0027s Business Principles and an HR round on compensation and joining.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Resolved by listening and aligning on goals.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Specific, real example",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Own actions and reasoning are clear",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Outcome and learning stated",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Collaboration"
+                                           ],
+                          "follow_ups":  [
+                                             "What did you learn?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Vague story",
+                                                  "No outcome"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "behavioral"
+                                   ],
+                          "notes":  "The guide cites no candidate sources; topics are used as context only. Topic context only (no candidate attribution): https://jobrise.io/en/blog/jpmorgan-interview-questions-india-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  {
+                                             "competency":  "Collaboration",
+                                             "star_guidance":  "Situation, approach, resolution.",
+                                             "positive_signals":  [
+                                                                      "Listens"
+                                                                  ],
+                                             "negative_signals":  [
+                                                                      "Blames"
+                                                                  ]
+                                         }
+                      },
+                      {
+                          "question_id":  "JPM-SWE-R4-004",
+                          "round_id":  "R4",
+                          "topic":  "Failure",
+                          "subtopic":  "A project that went wrong",
+                          "question_type":  "BEHAVIORAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Tell me about a project that went wrong and what you learned.",
+                          "relevance_to_role":  "A February 2026 guide describes a Super Day behavioral round on the firm\u0027s Business Principles and an HR round on compensation and joining.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Owned the failure and changed practice.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Specific, real example",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Own actions and reasoning are clear",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Outcome and learning stated",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Accountability"
+                                           ],
+                          "follow_ups":  [
+                                             "What did you learn?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Vague story",
+                                                  "No outcome"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "behavioral"
+                                   ],
+                          "notes":  "The guide cites no candidate sources; topics are used as context only. Topic context only (no candidate attribution): https://jobrise.io/en/blog/jpmorgan-interview-questions-india-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  {
+                                             "competency":  "Accountability",
+                                             "star_guidance":  "Situation, your part, lesson.",
+                                             "positive_signals":  [
+                                                                      "Owns it"
+                                                                  ],
+                                             "negative_signals":  [
+                                                                      "Blames others"
+                                                                  ]
+                                         }
+                      },
+                      {
+                          "question_id":  "JPM-SWE-R4-005",
+                          "round_id":  "R4",
+                          "topic":  "HR",
+                          "subtopic":  "Why JPMorgan",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Why JPMorgan rather than a pure technology company?",
+                          "relevance_to_role":  "A February 2026 guide describes a Super Day behavioral round on the firm\u0027s Business Principles and an HR round on compensation and joining.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Scale, financial domain, technology at a bank, and career growth.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "Which business interests you?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Generic praise"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "The guide cites no candidate sources; topics are used as context only. Topic context only (no candidate attribution): https://jobrise.io/en/blog/jpmorgan-interview-questions-india-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "JPM-SWE-R4-006",
+                          "round_id":  "R4",
+                          "topic":  "Integrity",
+                          "subtopic":  "Doing the right thing",
+                          "question_type":  "BEHAVIORAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Tell me about a time you did the right thing when it was inconvenient.",
+                          "relevance_to_role":  "A February 2026 guide describes a Super Day behavioral round on the firm\u0027s Business Principles and an HR round on compensation and joining.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "A concrete integrity example.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Specific, real example",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Own actions and reasoning are clear",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Outcome and learning stated",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Integrity"
+                                           ],
+                          "follow_ups":  [
+                                             "What did you learn?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Vague story",
+                                                  "No outcome"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "behavioral"
+                                   ],
+                          "notes":  "The guide cites no candidate sources; topics are used as context only. Topic context only (no candidate attribution): https://jobrise.io/en/blog/jpmorgan-interview-questions-india-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  {
+                                             "competency":  "Integrity",
+                                             "star_guidance":  "Situation, choice, consequence.",
+                                             "positive_signals":  [
+                                                                      "Principled"
+                                                                  ],
+                                             "negative_signals":  [
+                                                                      "No example"
+                                                                  ]
+                                         }
+                      },
+                      {
+                          "question_id":  "JPM-SWE-R4-007",
+                          "round_id":  "R4",
+                          "topic":  "Learning",
+                          "subtopic":  "Learning a new technology",
+                          "question_type":  "BEHAVIORAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "How do you learn a new technology quickly?",
+                          "relevance_to_role":  "A February 2026 guide describes a Super Day behavioral round on the firm\u0027s Business Principles and an HR round on compensation and joining.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Learn by building.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Specific, real example",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Own actions and reasoning are clear",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Outcome and learning stated",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Learning agility"
+                                           ],
+                          "follow_ups":  [
+                                             "What did you learn?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Vague story",
+                                                  "No outcome"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "behavioral"
+                                   ],
+                          "notes":  "The guide cites no candidate sources; topics are used as context only. Topic context only (no candidate attribution): https://jobrise.io/en/blog/jpmorgan-interview-questions-india-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  {
+                                             "competency":  "Learning agility",
+                                             "star_guidance":  "Resources, small project, feedback.",
+                                             "positive_signals":  [
+                                                                      "Practical"
+                                                                  ],
+                                             "negative_signals":  [
+                                                                      "Vague"
+                                                                  ]
+                                         }
+                      },
+                      {
+                          "question_id":  "JPM-SWE-R4-008",
+                          "round_id":  "R4",
+                          "topic":  "HR",
+                          "subtopic":  "Compensation and joining",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "What are your expectations on compensation and joining timeline?",
+                          "relevance_to_role":  "A February 2026 guide describes a Super Day behavioral round on the firm\u0027s Business Principles and an HR round on compensation and joining.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Be informed and flexible; focus on growth.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "What matters most?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Unrealistic"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "The guide cites no candidate sources; topics are used as context only. Topic context only (no candidate attribution): https://jobrise.io/en/blog/jpmorgan-interview-questions-india-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "JPM-SWE-R4-009",
+                          "round_id":  "R4",
+                          "topic":  "HR",
+                          "subtopic":  "Location",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Are you open to Bengaluru, Hyderabad, Mumbai or Pune?",
+                          "relevance_to_role":  "A February 2026 guide describes a Super Day behavioral round on the firm\u0027s Business Principles and an HR round on compensation and joining.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Be honest and flexible.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "Preference?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Rigid"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "The guide cites no candidate sources; topics are used as context only. Topic context only (no candidate attribution): https://jobrise.io/en/blog/jpmorgan-interview-questions-india-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "JPM-SWE-R4-010",
+                          "round_id":  "R4",
+                          "topic":  "HR",
+                          "subtopic":  "Career goals",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Where do you see yourself in 5 years?",
+                          "relevance_to_role":  "A February 2026 guide describes a Super Day behavioral round on the firm\u0027s Business Principles and an HR round on compensation and joining.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Technical depth and growth at the firm.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "How will you get there?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Vague"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "The guide cites no candidate sources; topics are used as context only. Topic context only (no candidate attribution): https://jobrise.io/en/blog/jpmorgan-interview-questions-india-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      }
+                  ]
+}

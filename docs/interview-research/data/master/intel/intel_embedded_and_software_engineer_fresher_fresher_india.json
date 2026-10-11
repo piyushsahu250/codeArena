@@ -1,0 +1,1635 @@
+{
+    "schema_version":  "codearena-interview-import/1",
+    "research":  {
+                     "company":  "Intel",
+                     "role":  "Embedded and Software Engineer (Fresher)",
+                     "experience_level":  "FRESHER",
+                     "hiring_region":  "India",
+                     "target_year":  2026,
+                     "researched_on":  "2026-10-09",
+                     "researcher":  "Claude (research run 2026-10-09)",
+                     "job_description_url":  "https://jobs.intel.com/en/search-jobs/India",
+                     "job_description_summary":  "Intel hires students and freshers in India as Graduate Technical Interns and, per a May 2026 FACE Prep guide, as Software Development, Hardware Validation and Embedded Software Engineers. The guide describes an online aptitude test, an online technical test (C/C++, DSA, OS, networks, DBMS; digital logic and architecture for ECE/EEE), an optional group discussion and an HR interview. Three 2026 Glassdoor reviews of Graduate Technical Intern interviews describe resume shortlisting by teams and a 45 to 60 minute technical interview on projects, C++, OOP, OS, networks and cryptography. The official careers page was not fetched.",
+                     "required_skills":  [
+                                             "C and C++",
+                                             "Data structures and algorithms",
+                                             "OS and networking fundamentals",
+                                             "Digital logic and computer architecture (ECE/EEE)",
+                                             "Embedded C basics",
+                                             "Project explanation",
+                                             "Communication"
+                                         ],
+                     "limitations":  [
+                                         "Intel\u0027s official careers page was not fetched, so no round is marked DOCUMENTED.",
+                                         "The FACE Prep guide (2026-05-07) cites no candidate sources and gives no actual questions; it is used as topic context (class D).",
+                                         "Candidate-attributed material is three Glassdoor reviews (January, February and March 2025 interviews, posted February to April 2026) for Graduate Technical Intern; they give project and fundamentals topics. Items based on them carry one report each and are unverified. One review does not state a country.",
+                                         "A 2023 Graduate Engineer Trainee account (electronics basics) is older than the 2025 cutoff and was used only as context.",
+                                         "The Embedded and Software Engineer (Fresher) track is inferred from the guide and has no direct candidate reports; its content is original practice.",
+                                         "Group discussion is described as optional and not held in every drive.",
+                                         "Evidence handling: practice questions cite no sources; where a source only supplied topic context it is named in the question notes. Practice and job-description-inferred questions are UNVERIFIED and capped at LOW confidence on import.",
+                                         "Review status: answers, samples and cited counts come from the researcher and were not independently re-run; spot checks only. Source titles and some dates are blank because the sources did not show them.",
+                                         "Source pages on LeetCode Discuss and Glassdoor returned HTTP 403 to the CodeArena audit tool (2026-10-11), so the cited questions were not re-confirmed against those pages."
+                                     ]
+                 },
+    "sources":  [
+                    {
+                        "source_id":  "S1",
+                        "kind":  "OTHER",
+                        "url":  "https://faceprep.in/article/intel-recruitment-process-a-comprehensive-guide-for-freshers-2025/",
+                        "title":  "",
+                        "publisher":  "faceprep.in",
+                        "published_on":  "2026-05-07",
+                        "accessed_on":  "2026-10-09",
+                        "reliability_note":  ""
+                    },
+                    {
+                        "source_id":  "S2",
+                        "kind":  "OTHER",
+                        "url":  "https://static.glassdoor.it/Interview/Intel-Corporation-Graduate-Technical-Intern-Interview-Questions-EI_IE1519.0,17_KO18,43.htm",
+                        "title":  "",
+                        "publisher":  "static.glassdoor.it",
+                        "published_on":  "2026-04-24",
+                        "accessed_on":  "2026-10-09",
+                        "reliability_note":  ""
+                    }
+                ],
+    "rounds":  [
+                   {
+                       "round_id":  "R1",
+                       "name":  "Online Aptitude and Technical Test",
+                       "category":  "APTITUDE",
+                       "order":  1,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S1"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R2",
+                       "name":  "Technical Interview",
+                       "category":  "CORE_TECHNICAL",
+                       "order":  2,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S1",
+                                          "S2"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R3",
+                       "name":  "HR Interview",
+                       "category":  "HR",
+                       "order":  3,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S1"
+                                      ]
+                   }
+               ],
+    "questions":  [
+                      {
+                          "question_id":  "INT-EMB-R1-001",
+                          "round_id":  "R1",
+                          "topic":  "Embedded C",
+                          "subtopic":  "volatile keyword",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Why declare a hardware status register as volatile in C?",
+                          "relevance_to_role":  "A 2026 FACE Prep guide describes an online aptitude test and an online technical test (C/C++, DSA, OS, networks, DBMS; digital logic and computer architecture for ECE/EEE) before interviews.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "To stop the compiler caching its value in a register",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "volatile"
+                                           ],
+                          "follow_ups":  [
+                                             "Can a variable be const volatile?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Thinking it makes access atomic"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "embedded-c"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://faceprep.in/article/intel-recruitment-process-a-comprehensive-guide-for-freshers-2025/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "To speed it up",
+                                                      "To stop the compiler caching its value in a register",
+                                                      "To make it constant",
+                                                      "To place it in ROM"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "volatile tells the compiler the value can change outside program flow, so every access must read memory.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INT-EMB-R1-002",
+                          "round_id":  "R1",
+                          "topic":  "Embedded C",
+                          "subtopic":  "Interrupt service routines",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Which is good practice inside an interrupt service routine?",
+                          "relevance_to_role":  "A 2026 FACE Prep guide describes an online aptitude test and an online technical test (C/C++, DSA, OS, networks, DBMS; digital logic and computer architecture for ECE/EEE) before interviews.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Do minimal work and set a flag",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "ISR"
+                                           ],
+                          "follow_ups":  [
+                                             "Why avoid malloc?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Doing long work in an ISR"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "embedded-c"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://faceprep.in/article/intel-recruitment-process-a-comprehensive-guide-for-freshers-2025/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "Call printf",
+                                                      "Do minimal work and set a flag",
+                                                      "Allocate memory with malloc",
+                                                      "Block on a mutex"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "ISRs should be short and non-blocking; defer work to the main loop.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INT-EMB-R1-003",
+                          "round_id":  "R1",
+                          "topic":  "Computer Architecture",
+                          "subtopic":  "Endianness",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "On a little-endian machine the 32-bit value 0x12345678 is stored with which byte at the lowest address?",
+                          "relevance_to_role":  "A 2026 FACE Prep guide describes an online aptitude test and an online technical test (C/C++, DSA, OS, networks, DBMS; digital logic and computer architecture for ECE/EEE) before interviews.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "0x78",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Endianness"
+                                           ],
+                          "follow_ups":  [
+                                             "What about big-endian?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Choosing 0x12"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "computer-architecture"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://faceprep.in/article/intel-recruitment-process-a-comprehensive-guide-for-freshers-2025/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "0x12",
+                                                      "0x34",
+                                                      "0x56",
+                                                      "0x78"
+                                                  ],
+                                      "correct_options":  [
+                                                              3
+                                                          ],
+                                      "explanation":  "Little-endian stores the least significant byte first: 0x78.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INT-EMB-R1-004",
+                          "round_id":  "R1",
+                          "topic":  "Digital Logic",
+                          "subtopic":  "Flip-flops",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "A D flip-flop with D = 1 on a rising clock edge will output Q equal to:",
+                          "relevance_to_role":  "A 2026 FACE Prep guide describes an online aptitude test and an online technical test (C/C++, DSA, OS, networks, DBMS; digital logic and computer architecture for ECE/EEE) before interviews.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "1",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Sequential logic"
+                                           ],
+                          "follow_ups":  [
+                                             "What does a T flip-flop do?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Confusing with T"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "digital-logic"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://faceprep.in/article/intel-recruitment-process-a-comprehensive-guide-for-freshers-2025/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "0",
+                                                      "1",
+                                                      "Toggle",
+                                                      "Unchanged"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "A D flip-flop stores D on the clock edge.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INT-EMB-R1-005",
+                          "round_id":  "R1",
+                          "topic":  "Digital Logic",
+                          "subtopic":  "Number systems",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "What is the 8-bit two\u0027s complement representation of -5?",
+                          "relevance_to_role":  "A 2026 FACE Prep guide describes an online aptitude test and an online technical test (C/C++, DSA, OS, networks, DBMS; digital logic and computer architecture for ECE/EEE) before interviews.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "11111011",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Two\u0027s complement"
+                                           ],
+                          "follow_ups":  [
+                                             "Range of 8-bit two\u0027s complement?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Using sign-magnitude"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "digital-logic"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://faceprep.in/article/intel-recruitment-process-a-comprehensive-guide-for-freshers-2025/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "11111011",
+                                                      "10000101",
+                                                      "11111010",
+                                                      "00000101"
+                                                  ],
+                                      "correct_options":  [
+                                                              0
+                                                          ],
+                                      "explanation":  "Invert 00000101 to get 11111010, then add 1: 11111011.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INT-EMB-R1-006",
+                          "round_id":  "R1",
+                          "topic":  "C Programming",
+                          "subtopic":  "Struct padding",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "On a typical 32-bit system, what is sizeof of struct { char c; int i; }?",
+                          "relevance_to_role":  "A 2026 FACE Prep guide describes an online aptitude test and an online technical test (C/C++, DSA, OS, networks, DBMS; digital logic and computer architecture for ECE/EEE) before interviews.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "8",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Alignment"
+                                           ],
+                          "follow_ups":  [
+                                             "How does reordering help?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Adding sizes"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "c-programming"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://faceprep.in/article/intel-recruitment-process-a-comprehensive-guide-for-freshers-2025/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "5",
+                                                      "6",
+                                                      "8",
+                                                      "4"
+                                                  ],
+                                      "correct_options":  [
+                                                              2
+                                                          ],
+                                      "explanation":  "The int is aligned to 4 bytes, so 3 padding bytes follow c: total 8.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INT-EMB-R1-007",
+                          "round_id":  "R1",
+                          "topic":  "C Programming",
+                          "subtopic":  "Output prediction",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What is printed?\n\nint x = 5;\nint y = x++ * 2;\nprintf(\"%d %d\", x, y);",
+                          "relevance_to_role":  "A 2026 FACE Prep guide describes an online aptitude test and an online technical test (C/C++, DSA, OS, networks, DBMS; digital logic and computer architecture for ECE/EEE) before interviews.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "6 10",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Post-increment"
+                                           ],
+                          "follow_ups":  [
+                                             "What if it were ++x?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Using the new x"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "c-programming"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://faceprep.in/article/intel-recruitment-process-a-comprehensive-guide-for-freshers-2025/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "6 10",
+                                                      "5 10",
+                                                      "6 12",
+                                                      "5 12"
+                                                  ],
+                                      "correct_options":  [
+                                                              0
+                                                          ],
+                                      "explanation":  "Post-increment uses 5 in the product (10), then x becomes 6.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INT-EMB-R1-008",
+                          "round_id":  "R1",
+                          "topic":  "Operating Systems",
+                          "subtopic":  "Scheduling",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "Which scheduling policy is commonly used in real-time systems to run the highest priority ready task?",
+                          "relevance_to_role":  "A 2026 FACE Prep guide describes an online aptitude test and an online technical test (C/C++, DSA, OS, networks, DBMS; digital logic and computer architecture for ECE/EEE) before interviews.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Priority-based preemptive",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "RTOS"
+                                           ],
+                          "follow_ups":  [
+                                             "What is priority inversion?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Choosing FCFS"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "operating-systems"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://faceprep.in/article/intel-recruitment-process-a-comprehensive-guide-for-freshers-2025/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "FCFS",
+                                                      "Priority-based preemptive",
+                                                      "Round Robin only",
+                                                      "Random"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "Real-time kernels use priority-based preemptive scheduling.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INT-EMB-R1-009",
+                          "round_id":  "R1",
+                          "topic":  "Computer Networks",
+                          "subtopic":  "Protocol layers",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "Which layer does IP belong to?",
+                          "relevance_to_role":  "A 2026 FACE Prep guide describes an online aptitude test and an online technical test (C/C++, DSA, OS, networks, DBMS; digital logic and computer architecture for ECE/EEE) before interviews.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Network",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Layers"
+                                           ],
+                          "follow_ups":  [
+                                             "Where is TCP?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Choosing Transport"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "computer-networks"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://faceprep.in/article/intel-recruitment-process-a-comprehensive-guide-for-freshers-2025/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "Application",
+                                                      "Transport",
+                                                      "Network",
+                                                      "Physical"
+                                                  ],
+                                      "correct_options":  [
+                                                              2
+                                                          ],
+                                      "explanation":  "IP operates at the network layer.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INT-EMB-R2-001",
+                          "round_id":  "R2",
+                          "topic":  "Bit Manipulation",
+                          "subtopic":  "Reverse bits of a byte",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Reverse the 8 bits of a byte value and print the result.",
+                          "relevance_to_role":  "A 2026 FACE Prep guide describes an online aptitude test and an online technical test (C/C++, DSA, OS, networks, DBMS; digital logic and computer architecture for ECE/EEE) before interviews.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Shift out each bit into the result.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Bit Manipulation",
+                                               "Reverse bits of a byte"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "bits"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://faceprep.in/article/intel-recruitment-process-a-comprehensive-guide-for-freshers-2025/.",
+                          "coding":  {
+                                         "problem_statement":  "Reverse the 8 bits of a byte value and print the result.",
+                                         "input_format":  "One line: n (0 to 255).",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "0 \u003c= n \u003c= 255",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "1",
+                                                             "output":  "128",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "13",
+                                                             "output":  "176",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "0",
+                                                            "255",
+                                                            "Palindromic bits"
+                                                        ],
+                                         "expected_algorithm":  "Shift out each bit into the result.",
+                                         "time_complexity":  "O(1)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INT-EMB-R2-002",
+                          "round_id":  "R2",
+                          "topic":  "Bit Manipulation",
+                          "subtopic":  "Swap nibbles",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Swap the upper and lower 4 bits of a byte.",
+                          "relevance_to_role":  "A 2026 FACE Prep guide describes an online aptitude test and an online technical test (C/C++, DSA, OS, networks, DBMS; digital logic and computer architecture for ECE/EEE) before interviews.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Mask and shift.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Bit Manipulation",
+                                               "Swap nibbles"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "bits"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://faceprep.in/article/intel-recruitment-process-a-comprehensive-guide-for-freshers-2025/.",
+                          "coding":  {
+                                         "problem_statement":  "Swap the upper and lower 4 bits of a byte.",
+                                         "input_format":  "One line: n (0 to 255).",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "0 \u003c= n \u003c= 255",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "100",
+                                                             "output":  "70",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "15",
+                                                             "output":  "240",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "0",
+                                                            "255",
+                                                            "Symmetric nibbles"
+                                                        ],
+                                         "expected_algorithm":  "Mask and shift.",
+                                         "time_complexity":  "O(1)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INT-EMB-R2-003",
+                          "round_id":  "R2",
+                          "topic":  "Bit Manipulation",
+                          "subtopic":  "Set a range of bits",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Set all bits from position l to r (1-indexed from the least significant bit) in a number.",
+                          "relevance_to_role":  "A 2026 FACE Prep guide describes an online aptitude test and an online technical test (C/C++, DSA, OS, networks, DBMS; digital logic and computer architecture for ECE/EEE) before interviews.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "OR with ((1 \u003c\u003c (r-l+1)) - 1) \u003c\u003c (l-1).",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Bit Manipulation",
+                                               "Set a range of bits"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "bits"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://faceprep.in/article/intel-recruitment-process-a-comprehensive-guide-for-freshers-2025/.",
+                          "coding":  {
+                                         "problem_statement":  "Set all bits from position l to r (1-indexed from the least significant bit) in a number.",
+                                         "input_format":  "One line: n l r.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "0 \u003c= n \u003c 2^31",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "0 2 4",
+                                                             "output":  "14",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "5 1 1",
+                                                             "output":  "5",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "l = r",
+                                                            "Already set",
+                                                            "High bits"
+                                                        ],
+                                         "expected_algorithm":  "OR with ((1 \u003c\u003c (r-l+1)) - 1) \u003c\u003c (l-1).",
+                                         "time_complexity":  "O(1)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INT-EMB-R2-004",
+                          "round_id":  "R2",
+                          "topic":  "Bit Manipulation",
+                          "subtopic":  "Single number",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Every value appears twice except one.",
+                          "relevance_to_role":  "A 2026 FACE Prep guide describes an online aptitude test and an online technical test (C/C++, DSA, OS, networks, DBMS; digital logic and computer architecture for ECE/EEE) before interviews.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "XOR all values.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Bit Manipulation",
+                                               "Single number"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "bits"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://faceprep.in/article/intel-recruitment-process-a-comprehensive-guide-for-freshers-2025/.",
+                          "coding":  {
+                                         "problem_statement":  "Every value appears twice except one. Print the single value.",
+                                         "input_format":  "Line 1: n. Line 2: n integers.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "1 \u003c= n \u003c= 100000 (odd)",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "5\n4 1 2 1 2",
+                                                             "output":  "4",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "1\n9",
+                                                             "output":  "9",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "n = 1",
+                                                            "Negatives",
+                                                            "Zero"
+                                                        ],
+                                         "expected_algorithm":  "XOR all values.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INT-EMB-R2-005",
+                          "round_id":  "R2",
+                          "topic":  "Bit Manipulation",
+                          "subtopic":  "Lowest set bit",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Print the value of the lowest set bit of n.",
+                          "relevance_to_role":  "A 2026 FACE Prep guide describes an online aptitude test and an online technical test (C/C++, DSA, OS, networks, DBMS; digital logic and computer architecture for ECE/EEE) before interviews.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "n \u0026 -n.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Bit Manipulation",
+                                               "Lowest set bit"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "bits"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://faceprep.in/article/intel-recruitment-process-a-comprehensive-guide-for-freshers-2025/.",
+                          "coding":  {
+                                         "problem_statement":  "Print the value of the lowest set bit of n.",
+                                         "input_format":  "One line: n.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "1 \u003c= n \u003c 2^31",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "12",
+                                                             "output":  "4",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "1",
+                                                             "output":  "1",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Power of two",
+                                                            "Odd",
+                                                            "Large"
+                                                        ],
+                                         "expected_algorithm":  "n \u0026 -n.",
+                                         "time_complexity":  "O(1)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INT-EMB-R2-006",
+                          "round_id":  "R2",
+                          "topic":  "Bit Manipulation",
+                          "subtopic":  "Byte order",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Print the four bytes of a 32-bit unsigned integer in little-endian order.",
+                          "relevance_to_role":  "A 2026 FACE Prep guide describes an online aptitude test and an online technical test (C/C++, DSA, OS, networks, DBMS; digital logic and computer architecture for ECE/EEE) before interviews.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Shift and mask each byte.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Bit Manipulation",
+                                               "Byte order"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "bits"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://faceprep.in/article/intel-recruitment-process-a-comprehensive-guide-for-freshers-2025/.",
+                          "coding":  {
+                                         "problem_statement":  "Print the four bytes of a 32-bit unsigned integer in little-endian order.",
+                                         "input_format":  "One line: n.",
+                                         "output_format":  "Four integers separated by spaces.",
+                                         "constraints":  "0 \u003c= n \u003c 2^32",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "305419896",
+                                                             "output":  "120 86 52 18",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "1",
+                                                             "output":  "1 0 0 0",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Zero",
+                                                            "Max value",
+                                                            "Single byte"
+                                                        ],
+                                         "expected_algorithm":  "Shift and mask each byte.",
+                                         "time_complexity":  "O(1)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INT-EMB-R2-007",
+                          "round_id":  "R2",
+                          "topic":  "Embedded C",
+                          "subtopic":  "Memory-mapped registers",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "HARD",
+                          "prompt":  "How do you access a memory-mapped hardware register in C? Show a safe way to set one bit.",
+                          "relevance_to_role":  "A 2026 FACE Prep guide describes an online aptitude test and an online technical test (C/C++, DSA, OS, networks, DBMS; digital logic and computer architecture for ECE/EEE) before interviews.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Use a volatile pointer to the fixed address: #define REG (*(volatile uint32_t *)0x40021000); REG |= (1u \u003c\u003c 5); Use read-modify-write carefully and consider atomic set/clear registers.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "volatile",
+                                               "Bit operations"
+                                           ],
+                          "follow_ups":  [
+                                             "What is a read-modify-write hazard?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Forgetting volatile"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "embedded"
+                                   ],
+                          "notes":  "The guide lists topics, not reported questions. Topic context only (no candidate attribution): https://faceprep.in/article/intel-recruitment-process-a-comprehensive-guide-for-freshers-2025/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INT-EMB-R2-008",
+                          "round_id":  "R2",
+                          "topic":  "Embedded C",
+                          "subtopic":  "Race conditions with ISRs",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "HARD",
+                          "prompt":  "A variable is shared between the main loop and an ISR. How do you keep it safe?",
+                          "relevance_to_role":  "2026 Glassdoor reviews describe a 45 to 60 minute technical interview with the hiring team after resume shortlisting, centred on projects and fundamentals.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Declare it volatile, make updates atomic or disable interrupts briefly around multi-step access, and keep ISRs short. Use a ring buffer or flags for communication.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Atomicity",
+                                               "Interrupts"
+                                           ],
+                          "follow_ups":  [
+                                             "Why is volatile not enough?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Relying on volatile alone"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "embedded"
+                                   ],
+                          "notes":  "The topic is reported in candidate accounts; this item is an original practice question. Topic context only (no candidate attribution): https://static.glassdoor.it/Interview/Intel-Corporation-Graduate-Technical-Intern-Interview-Questions-EI_IE1519.0,17_KO18,43.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INT-EMB-R2-009",
+                          "round_id":  "R2",
+                          "topic":  "Computer Architecture",
+                          "subtopic":  "Cache and memory hierarchy",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Explain cache hierarchy, hit and miss, and why locality matters.",
+                          "relevance_to_role":  "A 2026 FACE Prep guide describes an online aptitude test and an online technical test (C/C++, DSA, OS, networks, DBMS; digital logic and computer architecture for ECE/EEE) before interviews.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Small fast caches sit between CPU and RAM; temporal and spatial locality increase hits; miss penalties dominate performance.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Cache",
+                                               "Locality"
+                                           ],
+                          "follow_ups":  [
+                                             "What is a write-back policy?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Ignoring locality"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "architecture"
+                                   ],
+                          "notes":  "The guide lists topics, not reported questions. Topic context only (no candidate attribution): https://faceprep.in/article/intel-recruitment-process-a-comprehensive-guide-for-freshers-2025/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INT-EMB-R2-010",
+                          "round_id":  "R2",
+                          "topic":  "Operating Systems",
+                          "subtopic":  "Process versus thread",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Explain process versus thread and their memory.",
+                          "relevance_to_role":  "2026 Glassdoor reviews describe a 45 to 60 minute technical interview with the hiring team after resume shortlisting, centred on projects and fundamentals.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Processes have isolated address spaces; threads share heap and globals but have separate stacks.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "OS"
+                                           ],
+                          "follow_ups":  [
+                                             "What is a context switch?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Saying threads have separate heaps"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "os"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://static.glassdoor.it/Interview/Intel-Corporation-Graduate-Technical-Intern-Interview-Questions-EI_IE1519.0,17_KO18,43.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INT-EMB-R2-011",
+                          "round_id":  "R2",
+                          "topic":  "Embedded C",
+                          "subtopic":  "Pointers to functions",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What is a function pointer in C and where is it used in embedded systems?",
+                          "relevance_to_role":  "A 2026 FACE Prep guide describes an online aptitude test and an online technical test (C/C++, DSA, OS, networks, DBMS; digital logic and computer architecture for ECE/EEE) before interviews.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "A variable holding a function address, used for callbacks, interrupt vector tables and state machines: void (*handler)(void) = on_timer;",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Function pointers",
+                                               "Callbacks"
+                                           ],
+                          "follow_ups":  [
+                                             "How do you declare an array of them?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Wrong declaration syntax"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "embedded"
+                                   ],
+                          "notes":  "The guide lists topics, not reported questions. Topic context only (no candidate attribution): https://faceprep.in/article/intel-recruitment-process-a-comprehensive-guide-for-freshers-2025/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INT-EMB-R3-001",
+                          "round_id":  "R3",
+                          "topic":  "HR",
+                          "subtopic":  "Introduction and projects",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Tell me about yourself and your key project.",
+                          "relevance_to_role":  "A 2026 FACE Prep guide describes a 30 to 45 minute HR interview on goals, Why Intel, relocation and situational questions.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Education, skills, one project.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "What was hardest?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Reading the resume"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://faceprep.in/article/intel-recruitment-process-a-comprehensive-guide-for-freshers-2025/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INT-EMB-R3-002",
+                          "round_id":  "R3",
+                          "topic":  "HR",
+                          "subtopic":  "Why Intel",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Why Intel and why embedded or software roles?",
+                          "relevance_to_role":  "A 2026 FACE Prep guide describes a 30 to 45 minute HR interview on goals, Why Intel, relocation and situational questions.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Link platforms, firmware and silicon to your interests.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "Which product?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Generic"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://faceprep.in/article/intel-recruitment-process-a-comprehensive-guide-for-freshers-2025/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INT-EMB-R3-003",
+                          "round_id":  "R3",
+                          "topic":  "Debugging",
+                          "subtopic":  "Difficult bug",
+                          "question_type":  "BEHAVIORAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Tell me about a hard bug you debugged and how.",
+                          "relevance_to_role":  "A 2026 FACE Prep guide describes a 30 to 45 minute HR interview on goals, Why Intel, relocation and situational questions.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "A bug found by isolating variables.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Specific, real example",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Own actions and reasoning are clear",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Outcome and learning stated",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Problem solving"
+                                           ],
+                          "follow_ups":  [
+                                             "What did you learn?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Vague story",
+                                                  "No outcome"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "behavioral"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://faceprep.in/article/intel-recruitment-process-a-comprehensive-guide-for-freshers-2025/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  {
+                                             "competency":  "Problem solving",
+                                             "star_guidance":  "Symptoms, hypotheses, tools, root cause, fix.",
+                                             "positive_signals":  [
+                                                                      "Systematic"
+                                                                  ],
+                                             "negative_signals":  [
+                                                                      "Guessing"
+                                                                  ]
+                                         }
+                      },
+                      {
+                          "question_id":  "INT-EMB-R3-004",
+                          "round_id":  "R3",
+                          "topic":  "HR",
+                          "subtopic":  "Group discussion",
+                          "question_type":  "HR",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Discuss in two minutes: \u0027How is AI changing chip design?\u0027",
+                          "relevance_to_role":  "A 2026 FACE Prep guide describes a 30 to 45 minute HR interview on goals, Why Intel, relocation and situational questions.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Open with a view, give two points (verification, layout optimisation), a risk, and a close.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "What is a limitation?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Rambling"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "gd"
+                                   ],
+                          "notes":  "The guide lists topics, not reported questions. Topic context only (no candidate attribution): https://faceprep.in/article/intel-recruitment-process-a-comprehensive-guide-for-freshers-2025/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INT-EMB-R3-005",
+                          "round_id":  "R3",
+                          "topic":  "HR",
+                          "subtopic":  "Relocation",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Are you willing to relocate to Bengaluru or Hyderabad?",
+                          "relevance_to_role":  "A 2026 FACE Prep guide describes a 30 to 45 minute HR interview on goals, Why Intel, relocation and situational questions.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Be flexible and honest.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "Preference?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Rigid"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://faceprep.in/article/intel-recruitment-process-a-comprehensive-guide-for-freshers-2025/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      }
+                  ]
+}

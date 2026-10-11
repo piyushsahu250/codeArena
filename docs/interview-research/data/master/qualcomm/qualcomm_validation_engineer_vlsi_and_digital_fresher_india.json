@@ -1,0 +1,951 @@
+{
+    "schema_version":  "codearena-interview-import/1",
+    "research":  {
+                     "company":  "Qualcomm",
+                     "role":  "Validation Engineer (VLSI and Digital)",
+                     "experience_level":  "FRESHER",
+                     "hiring_region":  "India",
+                     "target_year":  2026,
+                     "researched_on":  "2026-10-09",
+                     "researcher":  "Claude (research run 2026-10-09)",
+                     "job_description_url":  "https://www.qualcomm.com/company/careers",
+                     "job_description_summary":  "Qualcomm hires engineers in India (Hyderabad, Bengaluru) for software, embedded and validation roles. A May 2026 Glassdoor review describes an online assessment (aptitude 20, maths 20, programming 20), a first technical round on OS and DSA (process versus thread), a second technical round on low-level C/C++, OOP, a HackerRank DSA problem and a bit-flip question, and an HR round. A 2026 hiring post lists C, OS and DSA. The official careers page was not fetched.",
+                     "required_skills":  [
+                                             "C and C++",
+                                             "Data structures and algorithms",
+                                             "Operating systems",
+                                             "Bit manipulation",
+                                             "Digital electronics and VLSI (validation)",
+                                             "Embedded basics",
+                                             "Aptitude and maths"
+                                         ],
+                     "limitations":  [
+                                         "Qualcomm\u0027s official careers page was not fetched, so no round is marked DOCUMENTED.",
+                                         "Candidate-attributed material is essentially one Glassdoor review (May 2026; exact day not captured, recorded as the 1st of the month); only process versus thread and the bit-flip question are reported as questions, so only 2 items carry class B and are unverified.",
+                                         "The freshershunt hiring post is undated in the capture (recorded as 2026-01-01 as a placeholder) and gives topics only.",
+                                         "An older LeetCode Discuss post and 2015/2024 Jointaro experiences were seen but are outside the recency window and used only as context.",
+                                         "The Validation Engineer track is inferred from the review\u0027s mention of validation, VLSI, digital electronics and C topics; its content is original practice.",
+                                         "Aptitude and maths items are original practice; section sizes come from the single review.",
+                                         "Evidence handling: practice questions cite no sources; where a source only supplied topic context it is named in the question notes. Practice and job-description-inferred questions are UNVERIFIED and capped at LOW confidence on import.",
+                                         "Review status: answers, samples and cited counts come from the researcher and were not independently re-run; spot checks only. Source titles and some dates are blank because the sources did not show them.",
+                                         "Source pages on LeetCode Discuss and Glassdoor returned HTTP 403 to the CodeArena audit tool (2026-10-11), so the cited questions were not re-confirmed against those pages."
+                                     ]
+                 },
+    "sources":  [
+                    {
+                        "source_id":  "S1",
+                        "kind":  "OTHER",
+                        "url":  "https://www.glassdoor.co.in/Interview/Qualcomm-Interview-E640-RVW81941403.htm",
+                        "title":  "",
+                        "publisher":  "www.glassdoor.co.in",
+                        "published_on":  "2026-05-01",
+                        "accessed_on":  "2026-10-09",
+                        "reliability_note":  ""
+                    },
+                    {
+                        "source_id":  "S2",
+                        "kind":  "OTHER",
+                        "url":  "https://freshershunt.in/qualcomm-associate-engineer-hiring-hyderabad-2026/",
+                        "title":  "",
+                        "publisher":  "freshershunt.in",
+                        "published_on":  "2026-01-01",
+                        "accessed_on":  "2026-10-09",
+                        "reliability_note":  ""
+                    }
+                ],
+    "rounds":  [
+                   {
+                       "round_id":  "R1",
+                       "name":  "Online Assessment",
+                       "category":  "ONLINE_ASSESSMENT",
+                       "order":  1,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S1"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R2",
+                       "name":  "Technical Interview 1 (Digital Electronics and VLSI)",
+                       "category":  "CORE_TECHNICAL",
+                       "order":  2,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S1"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R3",
+                       "name":  "Technical Interview 2 (C and Validation)",
+                       "category":  "CORE_TECHNICAL",
+                       "order":  3,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S1"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R4",
+                       "name":  "HR Interview",
+                       "category":  "HR",
+                       "order":  4,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S2"
+                                      ]
+                   }
+               ],
+    "questions":  [
+                      {
+                          "question_id":  "QCM-VAL-R1-001",
+                          "round_id":  "R1",
+                          "topic":  "Digital Electronics",
+                          "subtopic":  "Boolean simplification",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "Simplify A + A\u0027B.",
+                          "relevance_to_role":  "A May 2026 Glassdoor review describes an online assessment with aptitude (20), maths (20) and programming (20) sections.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "A + B",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Boolean algebra"
+                                           ],
+                          "follow_ups":  [
+                                             "Prove it with a truth table."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Choosing A"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "digital"
+                                   ],
+                          "notes":  "Digital electronics is a reported topic; this item is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Qualcomm-Interview-E640-RVW81941403.htm.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "A",
+                                                      "B",
+                                                      "A + B",
+                                                      "AB"
+                                                  ],
+                                      "correct_options":  [
+                                                              2
+                                                          ],
+                                      "explanation":  "A + A\u0027B = A + B by the absorption identity.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "QCM-VAL-R1-002",
+                          "round_id":  "R1",
+                          "topic":  "Digital Electronics",
+                          "subtopic":  "Flip-flops",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "A T flip-flop with T = 1 is clocked repeatedly. What does it do?",
+                          "relevance_to_role":  "A May 2026 Glassdoor review describes an online assessment with aptitude (20), maths (20) and programming (20) sections.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Toggles each clock",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "T flip-flop"
+                                           ],
+                          "follow_ups":  [
+                                             "Build a counter from it."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Mixing T with D"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "digital"
+                                   ],
+                          "notes":  "Digital electronics is a reported topic; this item is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Qualcomm-Interview-E640-RVW81941403.htm.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "Holds its state",
+                                                      "Toggles each clock",
+                                                      "Sets to 1",
+                                                      "Resets to 0"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "With T = 1 the output toggles every clock edge, dividing the frequency by 2.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "QCM-VAL-R1-003",
+                          "round_id":  "R1",
+                          "topic":  "Aptitude",
+                          "subtopic":  "Ratios",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "If A:B = 2:3 and B:C = 4:5, what is A:C?",
+                          "relevance_to_role":  "A May 2026 Glassdoor review describes an online assessment with aptitude (20), maths (20) and programming (20) sections.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "8:15",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Chaining ratios"
+                                           ],
+                          "follow_ups":  [
+                                             "Find A:B:C if A+B+C=70."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Multiplying wrongly"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "aptitude"
+                                   ],
+                          "notes":  "Aptitude is a reported section; this item is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Qualcomm-Interview-E640-RVW81941403.htm.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "8:15",
+                                                      "2:5",
+                                                      "6:5",
+                                                      "4:15"
+                                                  ],
+                                      "correct_options":  [
+                                                              0
+                                                          ],
+                                      "explanation":  "A:B:C = 8:12:15, so A:C = 8:15.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "QCM-VAL-R1-004",
+                          "round_id":  "R1",
+                          "topic":  "Bit Manipulation",
+                          "subtopic":  "Parity of a number",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Print Odd if the number of 1 bits in n is odd, otherwise Even.",
+                          "relevance_to_role":  "A May 2026 Glassdoor review describes an online assessment with aptitude (20), maths (20) and programming (20) sections.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Count set bits or XOR-fold.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Bit Manipulation",
+                                               "Parity of a number"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "bits"
+                                   ],
+                          "notes":  "Programming is a reported section; this statement is original. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Qualcomm-Interview-E640-RVW81941403.htm.",
+                          "coding":  {
+                                         "problem_statement":  "Print Odd if the number of 1 bits in n is odd, otherwise Even.",
+                                         "input_format":  "One line: n.",
+                                         "output_format":  "Odd or Even.",
+                                         "constraints":  "0 \u003c= n \u003c 2^31",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "7",
+                                                             "output":  "Odd",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "0",
+                                                             "output":  "Even",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Zero",
+                                                            "Power of two",
+                                                            "All ones"
+                                                        ],
+                                         "expected_algorithm":  "Count set bits or XOR-fold.",
+                                         "time_complexity":  "O(bits)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "QCM-VAL-R2-001",
+                          "round_id":  "R2",
+                          "topic":  "VLSI",
+                          "subtopic":  "CMOS inverter",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Explain how a CMOS inverter works and why it has low static power.",
+                          "relevance_to_role":  "A May 2026 Glassdoor review describes a first technical round on OS (process versus thread) and data structures; a 2026 hiring post lists C, OS and DSA.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "PMOS pulls up when input is low; NMOS pulls down when high. Only one conducts at steady state, so there is no direct VDD-to-ground path apart from leakage.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "CMOS"
+                                           ],
+                          "follow_ups":  [
+                                             "Where does dynamic power come from?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Ignoring leakage"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "vlsi"
+                                   ],
+                          "notes":  "VLSI is a reported topic; this item is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Qualcomm-Interview-E640-RVW81941403.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "QCM-VAL-R2-002",
+                          "round_id":  "R2",
+                          "topic":  "VLSI",
+                          "subtopic":  "Setup and hold time",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "HARD",
+                          "prompt":  "What are setup and hold times and what happens if they are violated?",
+                          "relevance_to_role":  "A May 2026 Glassdoor review describes a first technical round on OS (process versus thread) and data structures; a 2026 hiring post lists C, OS and DSA.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Setup is how long data must be stable before the clock edge; hold is how long after. Violations cause metastability or wrong capture; fix setup by slowing the clock or pipelining, hold by adding delay.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Timing"
+                                           ],
+                          "follow_ups":  [
+                                             "How do you fix a hold violation?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Fixing hold by slowing the clock"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "vlsi"
+                                   ],
+                          "notes":  "VLSI is a reported topic; this item is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Qualcomm-Interview-E640-RVW81941403.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "QCM-VAL-R2-003",
+                          "round_id":  "R2",
+                          "topic":  "Digital Electronics",
+                          "subtopic":  "Combinational versus sequential",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Differentiate combinational and sequential circuits with examples.",
+                          "relevance_to_role":  "A May 2026 Glassdoor review describes a first technical round on OS (process versus thread) and data structures; a 2026 hiring post lists C, OS and DSA.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Combinational output depends only on current inputs (adders, muxes); sequential depends on state and clock (counters, registers, FSMs).",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Logic"
+                                           ],
+                          "follow_ups":  [
+                                             "Is a latch sequential?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Calling a mux sequential"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "digital"
+                                   ],
+                          "notes":  "Digital electronics is a reported topic; this item is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Qualcomm-Interview-E640-RVW81941403.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "QCM-VAL-R2-004",
+                          "round_id":  "R2",
+                          "topic":  "Digital Electronics",
+                          "subtopic":  "Mealy versus Moore",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Compare Mealy and Moore FSMs.",
+                          "relevance_to_role":  "A May 2026 Glassdoor review describes a first technical round on OS (process versus thread) and data structures; a 2026 hiring post lists C, OS and DSA.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Moore output depends only on state; Mealy on state and input, so it often needs fewer states and reacts a cycle sooner but can glitch.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "FSM"
+                                           ],
+                          "follow_ups":  [
+                                             "Design a 101 sequence detector."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Mixing the output rules"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "digital"
+                                   ],
+                          "notes":  "Digital electronics is a reported topic; this item is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Qualcomm-Interview-E640-RVW81941403.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "QCM-VAL-R2-005",
+                          "round_id":  "R2",
+                          "topic":  "Digital Electronics",
+                          "subtopic":  "Metastability",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "HARD",
+                          "prompt":  "What is metastability and how do synchronisers reduce it?",
+                          "relevance_to_role":  "A May 2026 Glassdoor review describes a first technical round on OS (process versus thread) and data structures; a 2026 hiring post lists C, OS and DSA.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "A flip-flop sampling during its setup/hold window can settle slowly to an undefined level. A two-flop synchroniser gives time to resolve before the value is used.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "CDC"
+                                           ],
+                          "follow_ups":  [
+                                             "Why not use one flop?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Claiming it can be eliminated"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "digital"
+                                   ],
+                          "notes":  "Digital electronics is a reported topic; this item is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Qualcomm-Interview-E640-RVW81941403.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "QCM-VAL-R3-001",
+                          "round_id":  "R3",
+                          "topic":  "Bit Manipulation",
+                          "subtopic":  "Set a range of bits",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Set all bits from position l to r (1-based from the LSB) in n.",
+                          "relevance_to_role":  "A May 2026 Glassdoor review describes a second technical round on low-level C/C++, OOP, a HackerRank DSA problem and a bit-flip question.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "OR with a mask of (r-l+1) ones shifted.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Bit Manipulation",
+                                               "Set a range of bits"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you do better on time or space?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force only",
+                                                  "Missing edge cases"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "bits"
+                                   ],
+                          "notes":  "Validation-role C questions are a reported topic; this statement is original. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Qualcomm-Interview-E640-RVW81941403.htm.",
+                          "coding":  {
+                                         "problem_statement":  "Set all bits from position l to r (1-based from the LSB) in n.",
+                                         "input_format":  "One line: n l r.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "0 \u003c= n \u003c 2^31; 1 \u003c= l \u003c= r \u003c= 31",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "8 1 3",
+                                                             "output":  "15",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "0 2 4",
+                                                             "output":  "14",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "l = r",
+                                                            "Already set",
+                                                            "Zero"
+                                                        ],
+                                         "expected_algorithm":  "OR with a mask of (r-l+1) ones shifted.",
+                                         "time_complexity":  "O(1)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "Small",
+                                                                        "Edge cases",
+                                                                        "Large",
+                                                                        "Adversarial"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "QCM-VAL-R3-002",
+                          "round_id":  "R3",
+                          "topic":  "C",
+                          "subtopic":  "Register access in C",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "How do you set, clear and toggle a bit in a memory-mapped register?",
+                          "relevance_to_role":  "A May 2026 Glassdoor review describes a second technical round on low-level C/C++, OOP, a HackerRank DSA problem and a bit-flip question.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Set with |= (1\u003c\u003cn), clear with \u0026= ~(1\u003c\u003cn), toggle with ^= (1\u003c\u003cn); declare the pointer volatile.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Bit ops"
+                                           ],
+                          "follow_ups":  [
+                                             "Why volatile?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Using = instead of",
+                                                  "="
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "c"
+                                   ],
+                          "notes":  "C and validation topics are reported; this item is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Qualcomm-Interview-E640-RVW81941403.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "QCM-VAL-R3-003",
+                          "round_id":  "R3",
+                          "topic":  "Validation",
+                          "subtopic":  "Verification versus validation",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "What is the difference between verification and validation in a chip flow?",
+                          "relevance_to_role":  "A May 2026 Glassdoor review describes a second technical round on low-level C/C++, OOP, a HackerRank DSA problem and a bit-flip question.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Verification checks the design meets its spec (simulation, formal); validation checks the real silicon behaves correctly in the system.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "V\u0026V"
+                                           ],
+                          "follow_ups":  [
+                                             "Where do directed and random tests fit?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Treating them as synonyms"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "validation"
+                                   ],
+                          "notes":  "Validation topics are reported; this item is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Qualcomm-Interview-E640-RVW81941403.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "QCM-VAL-R3-004",
+                          "round_id":  "R3",
+                          "topic":  "Validation",
+                          "subtopic":  "Debugging a failing test",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "A validation test passes in simulation but fails on silicon. How do you debug?",
+                          "relevance_to_role":  "A May 2026 Glassdoor review describes a second technical round on low-level C/C++, OOP, a HackerRank DSA problem and a bit-flip question.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Reproduce reliably, check timing, clocks, reset, voltage and temperature, compare logs and waveforms, isolate with a minimal test, and check for race or metastability issues.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Debug"
+                                           ],
+                          "follow_ups":  [
+                                             "What if it is intermittent?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Only rerunning the test"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "validation"
+                                   ],
+                          "notes":  "Validation topics are reported; this item is an original practice question. Topic context only (no candidate attribution): https://www.glassdoor.co.in/Interview/Qualcomm-Interview-E640-RVW81941403.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "QCM-VAL-R4-001",
+                          "round_id":  "R4",
+                          "topic":  "HR",
+                          "subtopic":  "Why validation",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Why do you want a validation role rather than design?",
+                          "relevance_to_role":  "A 2026 hiring post describes an HR round after the technical interviews; no specific questions are reported.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Explain interest in finding bugs, system understanding and tooling.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "What project shows this?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Saying it is a fallback"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://freshershunt.in/qualcomm-associate-engineer-hiring-hyderabad-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "QCM-VAL-R4-002",
+                          "round_id":  "R4",
+                          "topic":  "HR",
+                          "subtopic":  "Why Qualcomm",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Why Qualcomm, and what do you know about its products?",
+                          "relevance_to_role":  "A 2026 hiring post describes an HR round after the technical interviews; no specific questions are reported.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Mention SoCs, modems and edge AI honestly and link to your coursework.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "Which product interests you?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Generic praise"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://freshershunt.in/qualcomm-associate-engineer-hiring-hyderabad-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      }
+                  ]
+}
