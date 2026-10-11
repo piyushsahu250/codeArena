@@ -20,8 +20,12 @@ const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
 const ISO = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z/g;
 function norm(v) {
   if (v === null || v === undefined) return null;
-  if (typeof v === "string") return v.replace(UUID, "<id>").replace(ISO, "<time>");
-  if (Array.isArray(v)) return v.map(norm);
+  if (typeof v === "string") return v.replace(UUID, "<id>").replace(ISO, "<time>").replace(/\d{13}/g, "<ts>"); // the per-run timestamp in disposable names
+  if (Array.isArray(v)) {
+    const items = v.map(norm);
+    // Lists the API returns without an ORDER BY (a test's questions) come back in storage order, which differs between databases: compare them by their own `order`.
+    return items.every((x) => x && typeof x === "object" && typeof x.order === "number") ? [...items].sort((a, b) => a.order - b.order) : items;
+  }
   if (typeof v === "object") { const o = {}; for (const k of Object.keys(v).sort()) o[k] = norm(v[k]); return o; }
   return v;
 }
