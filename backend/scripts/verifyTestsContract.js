@@ -171,7 +171,7 @@ async function cleanup() {
   const key = `zz-tc-${ts}`;
   await call("notify: in-app notification", "POST", `/tests/${testId}/notify`, T.s1, { sendInApp: true, idempotencyKey: key });
   await call("notify: the same key again is not re-sent", "POST", `/tests/${testId}/notify`, T.s1, { sendInApp: true, idempotencyKey: key });
-  note("in-app notifications created for the student", await prisma.notification.count({ where: { userId: stuA.id, type: "TEST_NOTIFICATION" } }));
+  note("in-app notifications created for the student", await prisma.notification.count({ where: { recipientId: stuA.id, type: "TEST_NOTIFICATION" } }));
   await call("notification-log: owner", "GET", `/tests/${testId}/notification-log`, T.s1);
   await call("notification-log: other staff refused", "GET", `/tests/${testId}/notification-log`, T.s2);
   await call("notification-log: other institute refused", "GET", `/tests/${testId}/notification-log`, T.instB);
