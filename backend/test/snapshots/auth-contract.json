@@ -1,0 +1,897 @@
+[
+  {
+    "name": "register: disabled",
+    "status": 403,
+    "body": {
+      "error": "User registration is managed by the administrator. Please contact your institute administrator to receive your login credentials."
+    }
+  },
+  {
+    "name": "login: no body fields",
+    "status": 500,
+    "body": {
+      "error": "Login failed"
+    }
+  },
+  {
+    "name": "login: email not a string",
+    "status": 500,
+    "body": {
+      "error": "Login failed"
+    }
+  },
+  {
+    "name": "login: unknown email",
+    "status": 401,
+    "body": {
+      "error": "Invalid email or password."
+    }
+  },
+  {
+    "name": "login: wrong password",
+    "status": 401,
+    "body": {
+      "error": "Invalid email or password."
+    }
+  },
+  {
+    "name": "login: missing password",
+    "status": 401,
+    "body": {
+      "error": "Invalid email or password."
+    }
+  },
+  {
+    "name": "login: student succeeds",
+    "status": 200,
+    "body": {
+      "token": "<token>",
+      "user": {
+        "email": "zz-ac-stu-<ts>@example.invalid",
+        "emailVerified": false,
+        "id": "<id>",
+        "institute": {
+          "logoUrl": null,
+          "name": "ZZ AC P <ts>"
+        },
+        "instituteId": "<id>",
+        "mustChangePassword": false,
+        "name": "ZZ AC stu",
+        "pendingEmail": null,
+        "profileComplete": true,
+        "requireProfileCompletion": false,
+        "role": "STUDENT"
+      }
+    }
+  },
+  {
+    "name": "login: same student again (known device)",
+    "status": 200,
+    "body": {
+      "token": "<token>",
+      "user": {
+        "email": "zz-ac-stu-<ts>@example.invalid",
+        "emailVerified": false,
+        "id": "<id>",
+        "institute": {
+          "logoUrl": null,
+          "name": "ZZ AC P <ts>"
+        },
+        "instituteId": "<id>",
+        "mustChangePassword": false,
+        "name": "ZZ AC stu",
+        "pendingEmail": null,
+        "profileComplete": true,
+        "requireProfileCompletion": false,
+        "role": "STUDENT"
+      }
+    }
+  },
+  {
+    "name": "login: deactivated account, right password",
+    "status": 403,
+    "body": {
+      "error": "This account has been deactivated. Contact your administrator."
+    }
+  },
+  {
+    "name": "login: deactivated account, wrong password",
+    "status": 401,
+    "body": {
+      "error": "Invalid email or password."
+    }
+  },
+  {
+    "name": "login: institute deactivated",
+    "status": 403,
+    "body": {
+      "error": "Your institute's access has been deactivated. Contact the platform administrator."
+    }
+  },
+  {
+    "name": "login: must change password",
+    "status": 200,
+    "body": {
+      "token": "<token>",
+      "user": {
+        "email": "zz-ac-mcp-<ts>@example.invalid",
+        "emailVerified": false,
+        "id": "<id>",
+        "institute": {
+          "logoUrl": null,
+          "name": "ZZ AC P <ts>"
+        },
+        "instituteId": "<id>",
+        "mustChangePassword": true,
+        "name": "ZZ AC mcp",
+        "pendingEmail": null,
+        "profileComplete": true,
+        "requireProfileCompletion": false,
+        "role": "STUDENT"
+      }
+    }
+  },
+  {
+    "name": "login: password past the institute expiry",
+    "status": 200,
+    "body": {
+      "token": "<token>",
+      "user": {
+        "email": "zz-ac-stale-<ts>@example.invalid",
+        "emailVerified": false,
+        "id": "<id>",
+        "institute": {
+          "logoUrl": null,
+          "name": "ZZ AC E <ts>"
+        },
+        "instituteId": "<id>",
+        "mustChangePassword": true,
+        "name": "ZZ AC stale",
+        "pendingEmail": null,
+        "profileComplete": true,
+        "requireProfileCompletion": false,
+        "role": "STUDENT"
+      }
+    }
+  },
+  {
+    "name": "login: profile completion required",
+    "status": 200,
+    "body": {
+      "token": "<token>",
+      "user": {
+        "email": "zz-ac-prof-<ts>@example.invalid",
+        "emailVerified": false,
+        "id": "<id>",
+        "institute": {
+          "logoUrl": null,
+          "name": "ZZ AC R <ts>"
+        },
+        "instituteId": "<id>",
+        "mustChangePassword": false,
+        "name": "ZZ AC prof",
+        "pendingEmail": null,
+        "profileComplete": false,
+        "requireProfileCompletion": true,
+        "role": "STUDENT"
+      }
+    }
+  },
+  {
+    "name": "login: platform admin",
+    "status": 200,
+    "body": {
+      "token": "<token>",
+      "user": {
+        "email": "zz-ac-admin-<ts>@example.invalid",
+        "emailVerified": false,
+        "id": "<id>",
+        "institute": null,
+        "instituteId": null,
+        "mustChangePassword": false,
+        "name": "ZZ AC admin",
+        "pendingEmail": null,
+        "profileComplete": true,
+        "requireProfileCompletion": false,
+        "role": "ADMIN"
+      }
+    }
+  },
+  {
+    "name": "login: single-session institute, first login",
+    "status": 200,
+    "body": {
+      "token": "<token>",
+      "user": {
+        "email": "zz-ac-single-<ts>@example.invalid",
+        "emailVerified": false,
+        "id": "<id>",
+        "institute": {
+          "logoUrl": null,
+          "name": "ZZ AC S <ts>"
+        },
+        "instituteId": "<id>",
+        "mustChangePassword": false,
+        "name": "ZZ AC single",
+        "pendingEmail": null,
+        "profileComplete": true,
+        "requireProfileCompletion": false,
+        "role": "STAFF"
+      }
+    }
+  },
+  {
+    "name": "login: single-session institute, second login",
+    "status": 200,
+    "body": {
+      "token": "<token>",
+      "user": {
+        "email": "zz-ac-single-<ts>@example.invalid",
+        "emailVerified": false,
+        "id": "<id>",
+        "institute": {
+          "logoUrl": null,
+          "name": "ZZ AC S <ts>"
+        },
+        "instituteId": "<id>",
+        "mustChangePassword": false,
+        "name": "ZZ AC single",
+        "pendingEmail": null,
+        "profileComplete": true,
+        "requireProfileCompletion": false,
+        "role": "STAFF"
+      }
+    }
+  },
+  {
+    "name": "expired password sets the stored flag",
+    "db": {
+      "mustChangePassword": true
+    }
+  },
+  {
+    "name": "login sessions per user",
+    "db": {
+      "gone": 0,
+      "single": 2,
+      "singleActive": 1,
+      "stu": 2
+    }
+  },
+  {
+    "name": "last login stamped",
+    "db": {
+      "gone": true,
+      "stu": true
+    }
+  },
+  {
+    "name": "session: first single-session token is dead",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "This session has been signed out. Please log in again."
+    }
+  },
+  {
+    "name": "session: second single-session token works",
+    "status": 200,
+    "body": {
+      "permissions": [
+        "placement.console",
+        "staff.console",
+        "staff.workspace",
+        "staffAnalytics.self"
+      ],
+      "role": "STAFF"
+    }
+  },
+  {
+    "name": "login limit: wrong attempt 1",
+    "status": 401,
+    "body": {
+      "error": "Invalid email or password."
+    }
+  },
+  {
+    "name": "login limit: wrong attempt 2",
+    "status": 401,
+    "body": {
+      "error": "Invalid email or password."
+    }
+  },
+  {
+    "name": "login limit: wrong attempt 3",
+    "status": 401,
+    "body": {
+      "error": "Invalid email or password."
+    }
+  },
+  {
+    "name": "login limit: wrong attempt 4",
+    "status": 401,
+    "body": {
+      "error": "Invalid email or password."
+    }
+  },
+  {
+    "name": "login limit: wrong attempt 5",
+    "status": 401,
+    "body": {
+      "error": "Invalid email or password."
+    }
+  },
+  {
+    "name": "login limit: sixth attempt with the right password",
+    "status": 429,
+    "body": {
+      "error": "Too many login attempts. Please try again later."
+    }
+  },
+  {
+    "name": "login limit: another address is not affected",
+    "status": 200,
+    "body": {
+      "token": "<token>",
+      "user": {
+        "email": "zz-ac-lim-<ts>@example.invalid",
+        "emailVerified": false,
+        "id": "<id>",
+        "institute": {
+          "logoUrl": null,
+          "name": "ZZ AC P <ts>"
+        },
+        "instituteId": "<id>",
+        "mustChangePassword": false,
+        "name": "ZZ AC lim",
+        "pendingEmail": null,
+        "profileComplete": true,
+        "requireProfileCompletion": false,
+        "role": "STUDENT"
+      }
+    }
+  },
+  {
+    "name": "permissions: anonymous",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "Missing or invalid Authorization header"
+    }
+  },
+  {
+    "name": "permissions: student",
+    "status": 200,
+    "body": {
+      "permissions": [
+        "student.portal"
+      ],
+      "role": "STUDENT"
+    }
+  },
+  {
+    "name": "permissions: platform admin",
+    "status": 200,
+    "body": {
+      "permissions": [
+        "institute.console",
+        "placement.console",
+        "platform.console",
+        "staff.console",
+        "staffAnalytics.view"
+      ],
+      "role": "ADMIN"
+    }
+  },
+  {
+    "name": "logout: anonymous",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "Missing or invalid Authorization header"
+    }
+  },
+  {
+    "name": "logout: student",
+    "status": 200,
+    "body": {
+      "message": "Logged out"
+    }
+  },
+  {
+    "name": "logout: the same token afterwards",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "This session has been signed out. Please log in again."
+    }
+  },
+  {
+    "name": "logout: the same token logs out again",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "This session has been signed out. Please log in again."
+    }
+  },
+  {
+    "name": "forgot: no email",
+    "status": 400,
+    "body": {
+      "error": "Email is required"
+    }
+  },
+  {
+    "name": "forgot: unknown email gets the same answer",
+    "status": 200,
+    "body": {
+      "message": "If that email is registered, a reset link has been sent."
+    }
+  },
+  {
+    "name": "forgot: registered email",
+    "status": 200,
+    "body": {
+      "message": "If that email is registered, a reset link has been sent."
+    }
+  },
+  {
+    "name": "forgot: what was stored",
+    "db": {
+      "cooldownStamped": true,
+      "expiresInMinutes": 60,
+      "tokenStored": true
+    }
+  },
+  {
+    "name": "forgot: second request within 24h gets the same answer",
+    "status": 200,
+    "body": {
+      "message": "If that email is registered, a reset link has been sent."
+    }
+  },
+  {
+    "name": "forgot limit: request 1",
+    "status": 200,
+    "body": {
+      "message": "If that email is registered, a reset link has been sent."
+    }
+  },
+  {
+    "name": "forgot limit: request 2",
+    "status": 200,
+    "body": {
+      "message": "If that email is registered, a reset link has been sent."
+    }
+  },
+  {
+    "name": "forgot limit: request 3",
+    "status": 200,
+    "body": {
+      "message": "If that email is registered, a reset link has been sent."
+    }
+  },
+  {
+    "name": "forgot limit: fourth request from one address",
+    "status": 429,
+    "body": {
+      "error": "Too many password reset requests. Please try again later."
+    }
+  },
+  {
+    "name": "forgot: audit rows",
+    "db": [
+      "PASSWORD_RESET_BLOCKED:STUDENT:inst:{\"reason\":\"24h_cooldown\"}",
+      "PASSWORD_RESET_REQUESTED:STUDENT:inst:{}"
+    ]
+  },
+  {
+    "name": "reset: nothing sent",
+    "status": 400,
+    "body": {
+      "error": "token and newPassword are required"
+    }
+  },
+  {
+    "name": "reset: weak password",
+    "status": 400,
+    "body": {
+      "error": "Password must be at least 8 characters"
+    }
+  },
+  {
+    "name": "reset: no uppercase",
+    "status": 400,
+    "body": {
+      "error": "Password must contain at least one uppercase letter"
+    }
+  },
+  {
+    "name": "reset: unknown token",
+    "status": 400,
+    "body": {
+      "error": "This reset link is invalid or has expired"
+    }
+  },
+  {
+    "name": "reset: expired token",
+    "status": 400,
+    "body": {
+      "error": "This reset link is invalid or has expired"
+    }
+  },
+  {
+    "name": "reset: password used recently",
+    "status": 400,
+    "body": {
+      "error": "You've used this password recently. Choose a password you haven't used in your last 3 passwords."
+    }
+  },
+  {
+    "name": "reset: a session open before the reset",
+    "status": 200,
+    "body": {
+      "token": "<token>",
+      "user": {
+        "email": "zz-ac-stu-<ts>@example.invalid",
+        "emailVerified": false,
+        "id": "<id>",
+        "institute": {
+          "logoUrl": null,
+          "name": "ZZ AC P <ts>"
+        },
+        "instituteId": "<id>",
+        "mustChangePassword": false,
+        "name": "ZZ AC stu",
+        "pendingEmail": null,
+        "profileComplete": true,
+        "requireProfileCompletion": false,
+        "role": "STUDENT"
+      }
+    }
+  },
+  {
+    "name": "reset: succeeds",
+    "status": 200,
+    "body": {
+      "message": "Password updated. Please sign in again with your new password."
+    }
+  },
+  {
+    "name": "reset: the token cannot be used twice",
+    "status": 400,
+    "body": {
+      "error": "This reset link is invalid or has expired"
+    }
+  },
+  {
+    "name": "reset: sessions open before it are closed",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "This session has been signed out. Please log in again."
+    }
+  },
+  {
+    "name": "reset: old password no longer works",
+    "status": 401,
+    "body": {
+      "error": "Invalid email or password."
+    }
+  },
+  {
+    "name": "reset: new password works",
+    "status": 200,
+    "body": {
+      "token": "<token>",
+      "user": {
+        "email": "zz-ac-stu-<ts>@example.invalid",
+        "emailVerified": false,
+        "id": "<id>",
+        "institute": {
+          "logoUrl": null,
+          "name": "ZZ AC P <ts>"
+        },
+        "instituteId": "<id>",
+        "mustChangePassword": false,
+        "name": "ZZ AC stu",
+        "pendingEmail": null,
+        "profileComplete": true,
+        "requireProfileCompletion": false,
+        "role": "STUDENT"
+      }
+    }
+  },
+  {
+    "name": "reset: what was stored",
+    "db": {
+      "historyRows": 1,
+      "tokenCleared": true
+    }
+  },
+  {
+    "name": "reset: audit rows",
+    "db": [
+      "PASSWORD_RESET:{\"via\":\"self_service_forgot_password\",\"sessionsRevoked\":true}",
+      "PASSWORD_RESET_BLOCKED:{\"reason\":\"24h_cooldown\"}",
+      "PASSWORD_RESET_FAILED:{\"reason\":\"expired_or_used_token\"}",
+      "PASSWORD_RESET_FAILED:{\"reason\":\"password_reused\"}",
+      "PASSWORD_RESET_REQUESTED:{}"
+    ]
+  },
+  {
+    "name": "e-mails queued for the student",
+    "db": [
+      "LOGIN_ALERT",
+      "OTHER_SYSTEM_EMAIL",
+      "PASSWORD_RESET"
+    ]
+  },
+  {
+    "name": "reset limit: attempt 1",
+    "status": 400,
+    "body": {
+      "error": "This reset link is invalid or has expired"
+    }
+  },
+  {
+    "name": "reset limit: attempt 2",
+    "status": 400,
+    "body": {
+      "error": "This reset link is invalid or has expired"
+    }
+  },
+  {
+    "name": "reset limit: attempt 3",
+    "status": 400,
+    "body": {
+      "error": "This reset link is invalid or has expired"
+    }
+  },
+  {
+    "name": "reset limit: attempt 4",
+    "status": 400,
+    "body": {
+      "error": "This reset link is invalid or has expired"
+    }
+  },
+  {
+    "name": "reset limit: attempt 5",
+    "status": 400,
+    "body": {
+      "error": "This reset link is invalid or has expired"
+    }
+  },
+  {
+    "name": "reset limit: attempt 6",
+    "status": 400,
+    "body": {
+      "error": "This reset link is invalid or has expired"
+    }
+  },
+  {
+    "name": "reset limit: attempt 7",
+    "status": 400,
+    "body": {
+      "error": "This reset link is invalid or has expired"
+    }
+  },
+  {
+    "name": "reset limit: attempt 8",
+    "status": 400,
+    "body": {
+      "error": "This reset link is invalid or has expired"
+    }
+  },
+  {
+    "name": "reset limit: attempt 9",
+    "status": 400,
+    "body": {
+      "error": "This reset link is invalid or has expired"
+    }
+  },
+  {
+    "name": "reset limit: attempt 10",
+    "status": 400,
+    "body": {
+      "error": "This reset link is invalid or has expired"
+    }
+  },
+  {
+    "name": "reset limit: eleventh attempt",
+    "status": 429,
+    "body": {
+      "error": "Too many password reset attempts. Please try again later."
+    }
+  },
+  {
+    "name": "verify: no token",
+    "status": 400,
+    "body": {
+      "error": "token is required"
+    }
+  },
+  {
+    "name": "verify: unknown token",
+    "status": 400,
+    "body": {
+      "error": "This verification link is invalid or has expired"
+    }
+  },
+  {
+    "name": "verify: expired token",
+    "status": 400,
+    "body": {
+      "error": "This verification link is invalid or has expired"
+    }
+  },
+  {
+    "name": "verify: address taken meanwhile",
+    "status": 409,
+    "body": {
+      "error": "This email address was registered to another account in the meantime. Please request the change again with a different address."
+    }
+  },
+  {
+    "name": "verify: pending state after the clash",
+    "db": {
+      "pendingEmail": null,
+      "pendingEmailTokenExpiry": null,
+      "pendingEmailTokenHash": null
+    }
+  },
+  {
+    "name": "verify: the same token again",
+    "status": 400,
+    "body": {
+      "error": "This verification link is invalid or has expired"
+    }
+  },
+  {
+    "name": "verify: succeeds",
+    "status": 200,
+    "body": {
+      "message": "Email address confirmed. You can now sign in with your new email."
+    }
+  },
+  {
+    "name": "verify: token cannot be replayed",
+    "status": 400,
+    "body": {
+      "error": "This verification link is invalid or has expired"
+    }
+  },
+  {
+    "name": "verify: stored state",
+    "db": {
+      "email": "zz-ac-new-<ts>@example.invalid",
+      "emailVerified": true,
+      "pendingCleared": true,
+      "stamped": true
+    }
+  },
+  {
+    "name": "verify: audit rows",
+    "db": [
+      {
+        "action": "EMAIL_VERIFIED",
+        "details": {
+          "newEmail": "zz-ac-new-<ts>@example.invalid"
+        },
+        "institute": "set",
+        "role": "STUDENT",
+        "student": "set"
+      }
+    ]
+  },
+  {
+    "name": "verify limit: attempt 1",
+    "status": 400,
+    "body": {
+      "error": "This verification link is invalid or has expired"
+    }
+  },
+  {
+    "name": "verify limit: attempt 2",
+    "status": 400,
+    "body": {
+      "error": "This verification link is invalid or has expired"
+    }
+  },
+  {
+    "name": "verify limit: attempt 3",
+    "status": 400,
+    "body": {
+      "error": "This verification link is invalid or has expired"
+    }
+  },
+  {
+    "name": "verify limit: attempt 4",
+    "status": 400,
+    "body": {
+      "error": "This verification link is invalid or has expired"
+    }
+  },
+  {
+    "name": "verify limit: attempt 5",
+    "status": 400,
+    "body": {
+      "error": "This verification link is invalid or has expired"
+    }
+  },
+  {
+    "name": "verify limit: attempt 6",
+    "status": 400,
+    "body": {
+      "error": "This verification link is invalid or has expired"
+    }
+  },
+  {
+    "name": "verify limit: attempt 7",
+    "status": 400,
+    "body": {
+      "error": "This verification link is invalid or has expired"
+    }
+  },
+  {
+    "name": "verify limit: attempt 8",
+    "status": 400,
+    "body": {
+      "error": "This verification link is invalid or has expired"
+    }
+  },
+  {
+    "name": "verify limit: attempt 9",
+    "status": 400,
+    "body": {
+      "error": "This verification link is invalid or has expired"
+    }
+  },
+  {
+    "name": "verify limit: attempt 10",
+    "status": 400,
+    "body": {
+      "error": "This verification link is invalid or has expired"
+    }
+  },
+  {
+    "name": "verify limit: eleventh attempt",
+    "status": 429,
+    "body": {
+      "error": "Too many verification attempts. Please try again later."
+    }
+  },
+  {
+    "name": "login audit rows",
+    "db": [
+      "LOGIN:STAFF:inst:student:{\"isNewDevice\":false,\"isFirstLogin\":false}",
+      "LOGIN:STAFF:inst:student:{\"isNewDevice\":false,\"isFirstLogin\":true}",
+      "LOGIN:STUDENT:inst:student:{\"isNewDevice\":false,\"isFirstLogin\":false}",
+      "LOGIN:STUDENT:inst:student:{\"isNewDevice\":false,\"isFirstLogin\":false}",
+      "LOGIN:STUDENT:inst:student:{\"isNewDevice\":false,\"isFirstLogin\":false}",
+      "LOGIN:STUDENT:inst:student:{\"isNewDevice\":false,\"isFirstLogin\":true}",
+      "LOGIN:STUDENT:inst:student:{\"isNewDevice\":false,\"isFirstLogin\":true}",
+      "LOGIN:STUDENT:inst:student:{\"isNewDevice\":false,\"isFirstLogin\":true}",
+      "LOGIN_FAILED:STUDENT:inst:student:{\"email\":\"zz-ac-gone-<ts>@example.invalid\"}",
+      "LOGIN_FAILED:STUDENT:inst:student:{\"email\":\"zz-ac-lim-<ts>@example.invalid\"}",
+      "LOGIN_FAILED:STUDENT:inst:student:{\"email\":\"zz-ac-lim-<ts>@example.invalid\"}",
+      "LOGIN_FAILED:STUDENT:inst:student:{\"email\":\"zz-ac-lim-<ts>@example.invalid\"}",
+      "LOGIN_FAILED:STUDENT:inst:student:{\"email\":\"zz-ac-lim-<ts>@example.invalid\"}",
+      "LOGIN_FAILED:STUDENT:inst:student:{\"email\":\"zz-ac-lim-<ts>@example.invalid\"}",
+      "LOGIN_FAILED:STUDENT:inst:student:{\"email\":\"zz-ac-stu-<ts>@example.invalid\"}",
+      "LOGIN_FAILED:STUDENT:inst:student:{\"email\":\"zz-ac-stu-<ts>@example.invalid\"}",
+      "LOGIN_FAILED:STUDENT:inst:student:{\"email\":\"zz-ac-stu-<ts>@example.invalid\"}",
+      "LOGOUT:STUDENT:-:student:{}"
+    ]
+  },
+  {
+    "name": "login alerts queued",
+    "db": [
+      "stu:1",
+      "single:1",
+      "stale:1",
+      "prof:1",
+      "admin:1"
+    ]
+  }
+]

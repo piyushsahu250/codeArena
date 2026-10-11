@@ -6,6 +6,7 @@
 /backend/prisma/schema.prisma   @piyushsahu250
 /backend/src/middleware/        @piyushsahu250
 /backend/src/routes/auth.js     @piyushsahu250
+/backend/src/modules/auth/       @piyushsahu250
 /backend/src/utils/permissions.js @piyushsahu250
 /backend/src/utils/sessions.js  @piyushsahu250
 /backend/src/utils/examSecurity.js @piyushsahu250
