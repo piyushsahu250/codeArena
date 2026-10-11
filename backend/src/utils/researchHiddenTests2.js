@@ -244,8 +244,7 @@ def("accountBalance", (s) => { const L = lines(s); let bal = Number(L[0]); const
 def("filterApi", (s) => { const L = lines(s); const n = Number(L[0]); const [fm, fs] = L[n + 1].split(" "); const out = []; for (let i = 1; i <= n; i++) { const [m, p, st] = L[i].split(" "); if (m === fm && st === fs) out.push(p); } return out.length ? out.join(" ") : "NONE"; }, null, () => [J("1", "GET /a 200", "GET 200"), J("1", "GET /a 200", "POST 200"), J("3", "GET /a 200", "POST /b 500", "GET /c 200", "GET 200"), J("4", "GET /x 404", "GET /y 404", "GET /z 200", "GET /x 404", "GET 404"), J("2", "DELETE /u/1 204", "DELETE /u/2 500", "DELETE 500"), J("5", "PUT /a 200", "PUT /b 200", "GET /c 200", "PUT /d 201", "PUT /e 200", "PUT 200")]);
 
 // ---------- question id -> problem ----------
-// Not generated on purpose: GOO-SWE-R3-001 and ZOH-SD-R3-004 ("count coin combinations") have sample outputs copied from the minimum-coins problem
-// (3 and -1 for coins 1,2,5 / amount 11 and coin 2 / amount 3), which contradict their own statement. They stay pending until the samples are corrected.
+// GOO-SWE-R3-001 and ZOH-SD-R3-004 ("count coin combinations") had sample outputs copied from the minimum-coins problem (3 and -1); corrected to 11 and 0.
 Object.assign(MAP, {
   "ADB-MTS-R1-001": "pairUnsorted", "ADB-MTS-R1-002": "groupAnagrams", "ADB-MTS-R1-003": "subarraySumK", "ADB-MTS-R1-004": "sort012", "ADB-MTS-R1-005": "reverseList",
   "ADB-MTS-R1-006": "treeDiameter", "ADB-MTS-R1-008": "binarySearch", "ADB-MTS-R5-001": "maxSubarray", "ADB-MTS-R5-002": "patternCount", "ADB-MTS-R4-001": "nextGreater",
@@ -272,6 +271,7 @@ Object.assign(MAP, {
   "QCM-SWE-R2-009": "missingNumber", "QCM-SWE-R3-003": "swapNibbles", "QCM-SWE-R3-004": "digitSum", "QCM-VAL-R1-004": "parityBits", "QCM-VAL-R3-001": "setBitRange",
   "SAP-AD-R3-002": "time12to24", "SAP-AD-R1-008": "reverseList", "SAP-AD-R1-009": "moveZeros", "SAP-AD-R3-004": "houseRobber",
   "ZOH-SD-R2-001": "armstrong", "ZOH-SD-R2-002": "perfectNumber", "ZOH-SD-R2-006": "charFrequency", "ZOH-SD-R2-007": "pyramid", "ZOH-SD-R2-010": "diagonalSums",
+  "GOO-SWE-R3-001": "coinWays", "ZOH-SD-R3-004": "coinWays",
 });
 // Armstrong is defined here for 1 <= n; the shared family also probes 0, which this question excludes.
 base.EXCLUDE["ZOH-SD-R2-001"] = ["0"];
