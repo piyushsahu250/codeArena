@@ -1,19 +1,22 @@
-// Approves research-imported PENDING drafts that are NOT coding questions, through the same promotion function the review screen uses
-// (approveDraftQuestion). Coding drafts are never touched (they need 5 hidden test cases first). DRY RUN by default.
+// Approves research-imported PENDING drafts through the same promotion function the review screen uses. Default: non-coding questions only; with --coding: coding questions only
+// (approveDraftQuestion). Coding drafts additionally pass that function's own gate (2 visible + 5 hidden test cases), so one without them fails and stays pending. DRY RUN by default.
 //   node scripts/approveResearchDrafts.js                                   list what would be approved
 //   node scripts/approveResearchDrafts.js --apply --confirm=APPROVE-NON-CODING-RESEARCH-DRAFTS
+//   node scripts/approveResearchDrafts.js --coding --apply --confirm=APPROVE-CODING-RESEARCH-DRAFTS
 // Approved questions are platform-owned (instituteId null); frequency/package labels stay empty (a human sets those).
 const prisma = require("../src/prisma");
 const { approveDraftQuestion } = require("../src/routes/interviewDrafts");
 
 (async () => {
   const apply = process.argv.includes("--apply");
-  if (apply && !process.argv.includes("--confirm=APPROVE-NON-CODING-RESEARCH-DRAFTS")) { console.error("--apply needs --confirm=APPROVE-NON-CODING-RESEARCH-DRAFTS"); process.exit(2); }
+  const coding = process.argv.includes("--coding");
+  const confirm = coding ? "APPROVE-CODING-RESEARCH-DRAFTS" : "APPROVE-NON-CODING-RESEARCH-DRAFTS";
+  if (apply && !process.argv.includes(`--confirm=${confirm}`)) { console.error(`--apply needs --confirm=${confirm}`); process.exit(2); }
   const owner = await prisma.user.findFirst({ where: { role: "SUPER_ADMIN" }, select: { id: true, name: true } });
-  const drafts = await prisma.interviewQuestionDraft.findMany({ where: { status: "PENDING", importKey: { not: null }, category: { not: "CODING" } }, orderBy: { importKey: "asc" } });
+  const drafts = await prisma.interviewQuestionDraft.findMany({ where: { status: "PENDING", importKey: { not: null }, category: coding ? "CODING" : { not: "CODING" } }, orderBy: { importKey: "asc" } });
   const byCat = {};
   for (const d of drafts) byCat[d.category] = (byCat[d.category] || 0) + 1;
-  console.log(`${apply ? "APPLY" : "DRY RUN"}: ${drafts.length} non-coding research drafts, reviewer ${owner.name}`, byCat);
+  console.log(`${apply ? "APPLY" : "DRY RUN"}: ${drafts.length} ${coding ? "coding" : "non-coding"} research drafts, reviewer ${owner.name}`, byCat);
   if (!apply) { await prisma.$disconnect(); return; }
   const req = { user: { id: owner.id, name: owner.name }, requesterInstituteId: null };
   let ok = 0; const failed = [];
