@@ -33,6 +33,7 @@ async function call(name, method, p, token, body) {
   const res = await fetch(`${API}${p}`, { method, headers: { "content-type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: body === undefined ? undefined : JSON.stringify(body) });
   const text = await res.text();
   let json = null; try { json = JSON.parse(text); } catch { /* non-json */ }
+  if (p === "/tests" && Array.isArray(json)) json = json.filter((t) => String(t.title || "").startsWith(TAG));
   log.push({ name, status: res.status, body: json === null ? `<non-json ${text.slice(0, 40)}>` : norm(json) });
   return { status: res.status, json };
 }
@@ -206,7 +207,12 @@ async function cleanup() {
   const n = Math.max(expected.length, log.length);
   for (let i = 0; i < n; i++) {
     const a = JSON.stringify(expected[i]), b = JSON.stringify(log[i]);
-    if (a !== b) diffs.push(`#${i} ${log[i] ? log[i].name : expected[i].name}\n  expected ${a ? a.slice(0, 600) : "(none)"}\n  actual   ${b ? b.slice(0, 600) : "(none)"}`);
+    if (a !== b) {
+      let k = 0;
+      while (a && b && a[k] === b[k]) k++;
+      const win = (s) => (s ? s.slice(Math.max(0, k - 120), k + 160) : "(none)");
+      diffs.push(`#${i} ${log[i] ? log[i].name : expected[i].name}\n  expected ...${win(a)}\n  actual   ...${win(b)}`);
+    }
   }
   await prisma.$disconnect();
   if (diffs.length) { console.log(`${diffs.length} of ${n} recorded responses differ from the contract:\n${diffs.join("\n")}`); process.exit(1); }
