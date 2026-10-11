@@ -31,7 +31,8 @@
                                          "The gamified cognitive games cannot be reproduced as text; the R1 items are conventional aptitude proxies.",
                                          "Spoken-response prompts are original practice prompts; the actual AI-evaluated prompts are not published.",
                                          "Evidence handling: practice questions cite no sources; where a source only supplied topic context it is named in the question notes. Practice and job-description-inferred questions are UNVERIFIED and capped at LOW confidence on import.",
-                                         "Review status: answers, samples and cited counts come from the researcher and were not independently re-run; spot checks only. Source titles and some dates are blank because the sources did not show them."
+                                         "Review status: answers, samples and cited counts come from the researcher and were not independently re-run; spot checks only. Source titles and some dates are blank because the sources did not show them.",
+                                         "Source pages on LeetCode Discuss and Glassdoor returned HTTP 403 to the CodeArena audit tool (2026-10-11), so the cited questions were not re-confirmed against those pages."
                                      ]
                  },
     "sources":  [
@@ -43,7 +44,7 @@
                         "publisher":  "freshershunt.in",
                         "published_on":  "",
                         "accessed_on":  "2026-10-09",
-                        "reliability_note":  "Aggregated list with counts; the page shows no publication date (it says it updates automatically) and is marked 2026. Counts checked on 2026-10-09."
+                        "reliability_note":  "Aggregated list with counts; the page shows no publication date (it says it updates automatically) and is marked 2026."
                     },
                     {
                         "source_id":  "S2",
@@ -690,14 +691,14 @@
                           "difficulty":  "MEDIUM",
                           "prompt":  "You are given an HTML page with a plain list of cards. Using only CSS, lay the cards out in a responsive three-column grid with equal gaps, and highlight a card on hover.",
                           "relevance_to_role":  "A 2026 candidate account lists a task of modifying a web UI with HTML/CSS in the coding stage.",
-                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "evidence_class":  "D_PRACTICE",
                           "source_ids":  [
-                                             "S2"
+
                                          ],
-                          "times_reported":  1,
+                          "times_reported":  0,
                           "verification_status":  "UNVERIFIED",
-                          "confidence":  "LOW",
-                          "originality_status":  "PARAPHRASED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
                           "expected_answer":  "Use a container with display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; add a media query to reduce columns on small screens; style .card:hover with a box-shadow or background change. Flexbox with wrap is an alternative.",
                           "rubric":  [
                                          {
@@ -730,7 +731,7 @@
                           "tags":  [
                                        "html-css"
                                    ],
-                          "notes":  "Task type reported by one candidate; the specific brief is an original example.",
+                          "notes":  "The topic is reported in candidate accounts or guides; this item is an original practice question. Topic context only (no candidate attribution): https://leetcode.com/discuss/post/8381531/accenture-interview-experience-2026-fres-wj1a/.",
                           "coding":  null,
                           "mcq":  null,
                           "behavioral":  null
@@ -744,14 +745,14 @@
                           "difficulty":  "MEDIUM",
                           "prompt":  "Tables: Students(id, name), Courses(id, title), Enrollments(student_id, course_id, grade). Write a query listing each student\u0027s name, the course title and grade for all enrollments.",
                           "relevance_to_role":  "A 2026 candidate account lists a SQL query joining three tables in the coding stage.",
-                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "evidence_class":  "D_PRACTICE",
                           "source_ids":  [
-                                             "S2"
+
                                          ],
-                          "times_reported":  1,
+                          "times_reported":  0,
                           "verification_status":  "UNVERIFIED",
-                          "confidence":  "LOW",
-                          "originality_status":  "PARAPHRASED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
                           "expected_answer":  "SELECT s.name, c.title, e.grade FROM Enrollments e JOIN Students s ON s.id = e.student_id JOIN Courses c ON c.id = e.course_id; Use LEFT JOIN from Students if students with no enrollment must also appear.",
                           "rubric":  [
                                          {
@@ -783,7 +784,7 @@
                                        "sql",
                                        "joins"
                                    ],
-                          "notes":  "Task type reported by one candidate; the schema is an original example.",
+                          "notes":  "The topic is reported in candidate accounts or guides; this item is an original practice question. Topic context only (no candidate attribution): https://leetcode.com/discuss/post/8381531/accenture-interview-experience-2026-fres-wj1a/.",
                           "coding":  null,
                           "mcq":  null,
                           "behavioral":  null
@@ -1021,14 +1022,14 @@
                           "difficulty":  "EASY",
                           "prompt":  "Write a short professional email to your manager reporting that your part of a project is delayed and proposing a revised plan.",
                           "relevance_to_role":  "Accounts describe an AI-assisted spoken and written communication assessment.",
-                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "evidence_class":  "D_PRACTICE",
                           "source_ids":  [
-                                             "S2"
+
                                          ],
-                          "times_reported":  1,
+                          "times_reported":  0,
                           "verification_status":  "UNVERIFIED",
-                          "confidence":  "LOW",
-                          "originality_status":  "PARAPHRASED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
                           "expected_answer":  "Subject line, greeting, one-line summary, reason without blame, impact, revised date and ask, polite close.",
                           "rubric":  [
                                          {
@@ -1060,7 +1061,7 @@
                           "tags":  [
                                        "hr"
                                    ],
-                          "notes":  "A written professional email is reported in the communication stage; the scenario is original.",
+                          "notes":  "The topic is reported in candidate accounts or guides; this item is an original practice question. Topic context only (no candidate attribution): https://leetcode.com/discuss/post/8381531/accenture-interview-experience-2026-fres-wj1a/.",
                           "coding":  null,
                           "mcq":  null,
                           "behavioral":  null
