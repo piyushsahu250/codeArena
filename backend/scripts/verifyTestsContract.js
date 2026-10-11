@@ -288,7 +288,7 @@ async function cleanup() {
   await call("my-result: the auto-submitted attempt", "GET", `/tests/${tLive.id}/my-result`, T.stuA);
   await call("start: a completed assessment cannot be started again", "POST", `/tests/${tLive.id}/start`, T.stuA);
   const hiddenAttempt = (await prisma.testAttempt.findFirst({ where: { testId: tHidden.id, studentId: stuA2.id }, select: { id: true } })).id;
-  await call("setup: the second student submits", "POST", `/submissions/finalize/${hiddenAttempt}`, sA2, {});
+  await fetch(`${API}/submissions/finalize/${hiddenAttempt}`, { method: "POST", headers: { "content-type": "application/json", Authorization: `Bearer ${sA2}` }, body: "{}" }); // setup only: its body carries environment-specific badge text
   await call("my-result: results hidden by the test", "GET", `/tests/${tHidden.id}/my-result`, sA2);
 
   // ---------- an unpublished test with a running attempt stays reachable for that student only ----------
