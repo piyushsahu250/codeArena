@@ -372,7 +372,7 @@
               "B"
             ],
             "points": 2,
-            "questionNumber": 1520,
+            "questionNumber": 1522,
             "questionType": "MCQ",
             "starterCode": null,
             "starterCodeByLanguage": null,
@@ -410,7 +410,7 @@
               "B"
             ],
             "points": 2,
-            "questionNumber": 1521,
+            "questionNumber": 1523,
             "questionType": "MCQ",
             "starterCode": null,
             "starterCodeByLanguage": null,
@@ -531,7 +531,7 @@
               "B"
             ],
             "points": 2,
-            "questionNumber": 1520,
+            "questionNumber": 1522,
             "questionType": "MCQ",
             "starterCode": null,
             "starterCodeByLanguage": null,
@@ -569,7 +569,7 @@
               "B"
             ],
             "points": 2,
-            "questionNumber": 1521,
+            "questionNumber": 1523,
             "questionType": "MCQ",
             "starterCode": null,
             "starterCodeByLanguage": null,
@@ -950,60 +950,6 @@
     "name": "list: institute admin sees the institute",
     "status": 200,
     "body": [
-      {
-        "_count": {
-          "attempts": 0,
-          "questions": 30
-        },
-        "academicGroups": [],
-        "attendanceMandatory": false,
-        "classes": [],
-        "code": "TPE-APTI-001",
-        "company": "Telawne Power Equipments Pvt. Ltd.",
-        "createdAt": "<time>",
-        "createdBy": {
-          "id": "<id>",
-          "name": "Piyush Sahu"
-        },
-        "createdById": "<id>",
-        "description": "Aptitude Test\n- Quantitative Aptitude\n- Logical Reasoning\n- Verbal Ability",
-        "difficultyDistribution": null,
-        "durationMin": 60,
-        "endTime": "<time>",
-        "id": "<id>",
-        "institute": null,
-        "instituteId": null,
-        "instructions": "Attempt All Questions\nThis sample aptitude questions refers the similar dificulty level as Telawne Power Equipments Pvt. Ltd. (GET) Aptitude (Round 1).",
-        "isPublished": false,
-        "passingMarks": 30,
-        "program": null,
-        "questionSelectionMode": "FIXED",
-        "randomBankFolderId": null,
-        "randomQuestionsPerStudent": null,
-        "requireFullscreen": true,
-        "requireMicrophone": false,
-        "requireWebcam": false,
-        "scheduledPublishAt": null,
-        "securityLevel": "STANDARD",
-        "securityPolicy": null,
-        "shares": [],
-        "showResults": true,
-        "shuffleOptions": true,
-        "shuffleQuestions": true,
-        "startTime": "<time>",
-        "subject": null,
-        "subjectId": null,
-        "talentPools": [
-          {
-            "poolId": "<id>"
-          }
-        ],
-        "title": "Telawne Power Equipments Pvt. Ltd. (GET) - Aptitude Preparation",
-        "unit": null,
-        "unitId": null,
-        "updatedAt": "<time>",
-        "version": 0
-      },
       {
         "_count": {
           "attempts": 0,
@@ -1782,7 +1728,7 @@
               "B"
             ],
             "points": 2,
-            "questionNumber": 1521,
+            "questionNumber": 1523,
             "questionType": "MCQ",
             "starterCode": null,
             "starterCodeByLanguage": null,
@@ -1820,7 +1766,7 @@
               "B"
             ],
             "points": 2,
-            "questionNumber": 1520,
+            "questionNumber": 1522,
             "questionType": "MCQ",
             "starterCode": null,
             "starterCodeByLanguage": null,
