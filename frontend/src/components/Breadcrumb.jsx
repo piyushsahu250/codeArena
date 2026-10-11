@@ -72,7 +72,12 @@ export default function Breadcrumb({ onBack }) {
   for (const seg of segments) {
     path += `/${seg}`;
     if (isOpaqueId(seg)) continue;
-    const label = SEGMENT_LABELS[seg] || seg.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+    // location.pathname keeps percent-encoding (a course slug with a space arrives as
+    // "Java%20Bootcamp"), so decode for display only — `path` above stays raw so the crumb's
+    // link still points at the real URL. A malformed escape ("%E0%A4%A") throws; fall back to raw.
+    let decoded = seg;
+    try { decoded = decodeURIComponent(seg); } catch {}
+    const label = SEGMENT_LABELS[decoded] || decoded.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
     crumbs.push({ label, to: path, linkable: !NO_LINK_SEGMENTS.has(seg) });
   }
 
