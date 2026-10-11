@@ -309,3 +309,87 @@ module.exports.orderForAttempt = orderForAttempt;
 module.exports.applyOptionOrder = applyOptionOrder;
 module.exports.startWindow = startWindow;
 module.exports.violationOutcome = violationOutcome;
+
+// ================= batch 3: results, export, question analytics, reattempt =================
+
+const RESULTS_CAP = 20000;
+const STATUS_LABEL = { IN_PROGRESS: "In progress", SUBMITTED: "Submitted", AUTO_SUBMITTED: "Auto-submitted" };
+
+// An institute-bound requester only ever sees attempts made by students of their OWN institute. A platform-wide test (no institute) can be attempted by
+// students of several institutes; without this filter one institute's staff would read other institutes' students' names, e-mails and scores.
+function studentInstituteWhere(requesterInstituteId) {
+  return requesterInstituteId ? { student: { instituteId: requesterInstituteId } } : {};
+}
+
+const isoSeconds = (d) => (d ? new Date(d).toISOString().replace("T", " ").slice(0, 19) + " UTC" : "");
+
+// One spreadsheet row per attempt, ranked over the (already institute-scoped, score-ordered) list; `roll` only narrows which rows are shown, not the ranks.
+function resultExportRows(attempts, bases, test, roll) {
+  const needle = String(roll || "").trim().toLowerCase();
+  return attempts
+    .map((a, idx) => ({ a, rank: idx + 1 }))
+    .filter(({ a }) => !needle || (a.student.rollNumber || "").toLowerCase().includes(needle))
+    .map(({ a, rank }) => {
+      const base = bases.get(a.id);
+      const max = base.maxScore;
+      const completed = a.status !== "IN_PROGRESS";
+      return {
+        Rank: rank,
+        "Roll No.": a.student.rollNumber || "",
+        Student: a.student.name || "",
+        "Registration No. (PRN)": a.student.registrationNumber || "",
+        Email: a.student.email || "",
+        Score: a.totalScore ?? 0,
+        "Max Score": max,
+        "Percentage (%)": max > 0 ? Math.round(((a.totalScore ?? 0) / max) * 1000) / 10 : "",
+        Result: !completed || test.passingMarks == null ? "" : (a.totalScore ?? 0) >= test.passingMarks ? "Pass" : "Fail",
+        Attempted: new Set(a.submissions.map((s) => s.questionId)).size,
+        "Total Questions": base.expectedCount,
+        Status: STATUS_LABEL[a.status] || a.status,
+        "Tab Switches / Violations": a.tabSwitchCount ?? 0,
+        "Started At": isoSeconds(a.startedAt),
+        "Submitted At": isoSeconds(a.submittedAt),
+      };
+    });
+}
+function exportFilename(title) {
+  return (title || "test-results").replace(/[^a-z0-9]+/gi, "-").replace(/^-+|-+$/g, "").slice(0, 80) || "test-results";
+}
+
+// Per-question breakdown, hardest first. "Fully correct" = score >= the question's points (type-agnostic). Counts distinct students (autosave can write
+// several submission rows per student per question) using each student's best score. reviewRecommended is a heuristic (under 20% correct with at least 5
+// attempts), never a claim that the question is broken.
+function questionAnalyticsRows(testQuestions, submissions) {
+  const byQuestion = new Map(testQuestions.map((tq) => [tq.questionId, []]));
+  for (const s of submissions) byQuestion.get(s.questionId)?.push(s);
+  const rows = testQuestions.map((tq) => {
+    const q = tq.question;
+    const byStudent = new Map();
+    for (const s of byQuestion.get(tq.questionId) || []) {
+      const prior = byStudent.get(s.studentId);
+      if (!prior || s.score > prior.score) byStudent.set(s.studentId, s);
+    }
+    const attempted = byStudent.size;
+    const scores = [...byStudent.values()].map((s) => s.score);
+    const fullyCorrect = q.points > 0 ? scores.filter((sc) => sc >= q.points).length : 0;
+    const correctRate = attempted > 0 ? fullyCorrect / attempted : null;
+    const avgScorePercent = attempted > 0 && q.points > 0 ? Math.round((scores.reduce((sum, sc) => sum + sc, 0) / attempted / q.points) * 100) : null;
+    return {
+      questionId: tq.questionId, questionNumber: q.questionNumber, title: q.title, questionType: q.questionType, points: q.points,
+      attempted, fullyCorrect, correctRate, avgScorePercent,
+      reviewRecommended: attempted >= 5 && correctRate !== null && correctRate < 0.2,
+    };
+  });
+  rows.sort((a, b) => (a.correctRate ?? -1) - (b.correctRate ?? -1));
+  return rows;
+}
+
+// A reattempt deletes the old attempt, so the audit entry keeps what was deleted (score, status, when) as the only record of it.
+function reattemptAuditDetails(student, test, attempt) {
+  return {
+    studentId: student.id, studentName: student.name, studentRollNumber: student.rollNumber, testId: test.id, testTitle: test.title,
+    previousAttemptStatus: attempt.status, previousAttemptScore: attempt.totalScore, previousAttemptSubmittedAt: attempt.submittedAt || null, previousTabSwitchCount: attempt.tabSwitchCount,
+  };
+}
+
+Object.assign(module.exports, { RESULTS_CAP, STATUS_LABEL, studentInstituteWhere, resultExportRows, exportFilename, questionAnalyticsRows, reattemptAuditDetails });

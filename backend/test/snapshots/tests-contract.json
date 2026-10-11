@@ -3992,6 +3992,892 @@
                  ]
     },
     {
+        "name":  "results: anonymous",
+        "status":  401,
+        "body":  {
+                     "authExpired":  true,
+                     "error":  "Missing or invalid Authorization header"
+                 }
+    },
+    {
+        "name":  "results: a student",
+        "status":  403,
+        "body":  {
+                     "error":  "Insufficient permissions"
+                 }
+    },
+    {
+        "name":  "results: unknown test",
+        "status":  404,
+        "body":  {
+                     "error":  "Test not found"
+                 }
+    },
+    {
+        "name":  "results: other staff (not owner, not shared)",
+        "status":  403,
+        "body":  {
+                     "error":  "You can only view results for tests you created or that were shared with you"
+                 }
+    },
+    {
+        "name":  "results: another institute\u0027s admin",
+        "status":  403,
+        "body":  {
+                     "error":  "You can only view results for tests under your own institute"
+                 }
+    },
+    {
+        "name":  "results: the owner, institute test",
+        "status":  200,
+        "body":  [
+                     {
+                         "expectedQuestionCount":  2,
+                         "id":  "\u003cid\u003e",
+                         "manifestVersion":  1,
+                         "optionOrder":  null,
+                         "questionOrder":  [
+                                               "\u003cid\u003e",
+                                               "\u003cid\u003e"
+                                           ],
+                         "sessionId":  "\u003csession\u003e",
+                         "startedAt":  "\u003ctime\u003e",
+                         "status":  "AUTO_SUBMITTED",
+                         "student":  {
+                                         "email":  "zz-tc-stuA-\u003cts\u003e@example.invalid",
+                                         "name":  "ZZ TC stuA",
+                                         "registrationNumber":  null,
+                                         "rollNumber":  null
+                                     },
+                         "studentId":  "\u003cid\u003e",
+                         "submissions":  [
+
+                                         ],
+                         "submittedAt":  "\u003ctime\u003e",
+                         "tabSwitchCount":  3,
+                         "testId":  "\u003cid\u003e",
+                         "totalScore":  0
+                     }
+                 ]
+    },
+    {
+        "name":  "results: institute admin, institute test",
+        "status":  200,
+        "body":  [
+                     {
+                         "expectedQuestionCount":  2,
+                         "id":  "\u003cid\u003e",
+                         "manifestVersion":  1,
+                         "optionOrder":  null,
+                         "questionOrder":  [
+                                               "\u003cid\u003e",
+                                               "\u003cid\u003e"
+                                           ],
+                         "sessionId":  "\u003csession\u003e",
+                         "startedAt":  "\u003ctime\u003e",
+                         "status":  "AUTO_SUBMITTED",
+                         "student":  {
+                                         "email":  "zz-tc-stuA-\u003cts\u003e@example.invalid",
+                                         "name":  "ZZ TC stuA",
+                                         "registrationNumber":  null,
+                                         "rollNumber":  null
+                                     },
+                         "studentId":  "\u003cid\u003e",
+                         "submissions":  [
+
+                                         ],
+                         "submittedAt":  "\u003ctime\u003e",
+                         "tabSwitchCount":  3,
+                         "testId":  "\u003cid\u003e",
+                         "totalScore":  0
+                     }
+                 ]
+    },
+    {
+        "name":  "results: platform admin, platform-wide test (every institute)",
+        "status":  200,
+        "body":  [
+                     {
+                         "expectedQuestionCount":  2,
+                         "id":  "\u003cid\u003e",
+                         "manifestVersion":  1,
+                         "optionOrder":  null,
+                         "questionOrder":  [
+                                               "\u003cid\u003e",
+                                               "\u003cid\u003e"
+                                           ],
+                         "sessionId":  "\u003csession\u003e",
+                         "startedAt":  "\u003ctime\u003e",
+                         "status":  "SUBMITTED",
+                         "student":  {
+                                         "email":  "zz-tc-stuA2-\u003cts\u003e@example.invalid",
+                                         "name":  "ZZ TC stuA2",
+                                         "registrationNumber":  null,
+                                         "rollNumber":  null
+                                     },
+                         "studentId":  "\u003cid\u003e",
+                         "submissions":  [
+                                             {
+                                                 "questionId":  "\u003cid\u003e"
+                                             }
+                                         ],
+                         "submittedAt":  "\u003ctime\u003e",
+                         "tabSwitchCount":  0,
+                         "testId":  "\u003cid\u003e",
+                         "totalScore":  7
+                     },
+                     {
+                         "expectedQuestionCount":  2,
+                         "id":  "\u003cid\u003e",
+                         "manifestVersion":  1,
+                         "optionOrder":  null,
+                         "questionOrder":  [
+                                               "\u003cid\u003e",
+                                               "\u003cid\u003e"
+                                           ],
+                         "sessionId":  "\u003csession\u003e",
+                         "startedAt":  "\u003ctime\u003e",
+                         "status":  "SUBMITTED",
+                         "student":  {
+                                         "email":  "zz-tc-stuA-\u003cts\u003e@example.invalid",
+                                         "name":  "ZZ TC stuA",
+                                         "registrationNumber":  null,
+                                         "rollNumber":  null
+                                     },
+                         "studentId":  "\u003cid\u003e",
+                         "submissions":  [
+                                             {
+                                                 "questionId":  "\u003cid\u003e"
+                                             }
+                                         ],
+                         "submittedAt":  "\u003ctime\u003e",
+                         "tabSwitchCount":  0,
+                         "testId":  "\u003cid\u003e",
+                         "totalScore":  5
+                     },
+                     {
+                         "expectedQuestionCount":  2,
+                         "id":  "\u003cid\u003e",
+                         "manifestVersion":  1,
+                         "optionOrder":  null,
+                         "questionOrder":  [
+                                               "\u003cid\u003e",
+                                               "\u003cid\u003e"
+                                           ],
+                         "sessionId":  "\u003csession\u003e",
+                         "startedAt":  "\u003ctime\u003e",
+                         "status":  "SUBMITTED",
+                         "student":  {
+                                         "email":  "zz-tc-stuB-\u003cts\u003e@example.invalid",
+                                         "name":  "ZZ TC stuB",
+                                         "registrationNumber":  null,
+                                         "rollNumber":  null
+                                     },
+                         "studentId":  "\u003cid\u003e",
+                         "submissions":  [
+                                             {
+                                                 "questionId":  "\u003cid\u003e"
+                                             }
+                                         ],
+                         "submittedAt":  "\u003ctime\u003e",
+                         "tabSwitchCount":  0,
+                         "testId":  "\u003cid\u003e",
+                         "totalScore":  3
+                     }
+                 ]
+    },
+    {
+        "name":  "results: institute A admin, platform-wide test",
+        "status":  200,
+        "body":  [
+                     {
+                         "expectedQuestionCount":  2,
+                         "id":  "\u003cid\u003e",
+                         "manifestVersion":  1,
+                         "optionOrder":  null,
+                         "questionOrder":  [
+                                               "\u003cid\u003e",
+                                               "\u003cid\u003e"
+                                           ],
+                         "sessionId":  "\u003csession\u003e",
+                         "startedAt":  "\u003ctime\u003e",
+                         "status":  "SUBMITTED",
+                         "student":  {
+                                         "email":  "zz-tc-stuA2-\u003cts\u003e@example.invalid",
+                                         "name":  "ZZ TC stuA2",
+                                         "registrationNumber":  null,
+                                         "rollNumber":  null
+                                     },
+                         "studentId":  "\u003cid\u003e",
+                         "submissions":  [
+                                             {
+                                                 "questionId":  "\u003cid\u003e"
+                                             }
+                                         ],
+                         "submittedAt":  "\u003ctime\u003e",
+                         "tabSwitchCount":  0,
+                         "testId":  "\u003cid\u003e",
+                         "totalScore":  7
+                     },
+                     {
+                         "expectedQuestionCount":  2,
+                         "id":  "\u003cid\u003e",
+                         "manifestVersion":  1,
+                         "optionOrder":  null,
+                         "questionOrder":  [
+                                               "\u003cid\u003e",
+                                               "\u003cid\u003e"
+                                           ],
+                         "sessionId":  "\u003csession\u003e",
+                         "startedAt":  "\u003ctime\u003e",
+                         "status":  "SUBMITTED",
+                         "student":  {
+                                         "email":  "zz-tc-stuA-\u003cts\u003e@example.invalid",
+                                         "name":  "ZZ TC stuA",
+                                         "registrationNumber":  null,
+                                         "rollNumber":  null
+                                     },
+                         "studentId":  "\u003cid\u003e",
+                         "submissions":  [
+                                             {
+                                                 "questionId":  "\u003cid\u003e"
+                                             }
+                                         ],
+                         "submittedAt":  "\u003ctime\u003e",
+                         "tabSwitchCount":  0,
+                         "testId":  "\u003cid\u003e",
+                         "totalScore":  5
+                     }
+                 ]
+    },
+    {
+        "name":  "results: institute B admin, platform-wide test",
+        "status":  200,
+        "body":  {
+                     "expectedQuestionCount":  2,
+                     "id":  "\u003cid\u003e",
+                     "manifestVersion":  1,
+                     "optionOrder":  null,
+                     "questionOrder":  [
+                                           "\u003cid\u003e",
+                                           "\u003cid\u003e"
+                                       ],
+                     "sessionId":  "\u003csession\u003e",
+                     "startedAt":  "\u003ctime\u003e",
+                     "status":  "SUBMITTED",
+                     "student":  {
+                                     "email":  "zz-tc-stuB-\u003cts\u003e@example.invalid",
+                                     "name":  "ZZ TC stuB",
+                                     "registrationNumber":  null,
+                                     "rollNumber":  null
+                                 },
+                     "studentId":  "\u003cid\u003e",
+                     "submissions":  [
+                                         {
+                                             "questionId":  "\u003cid\u003e"
+                                         }
+                                     ],
+                     "submittedAt":  "\u003ctime\u003e",
+                     "tabSwitchCount":  0,
+                     "testId":  "\u003cid\u003e",
+                     "totalScore":  3
+                 }
+    },
+    {
+        "name":  "results: the owner (institute A), platform-wide test",
+        "status":  200,
+        "body":  [
+                     {
+                         "expectedQuestionCount":  2,
+                         "id":  "\u003cid\u003e",
+                         "manifestVersion":  1,
+                         "optionOrder":  null,
+                         "questionOrder":  [
+                                               "\u003cid\u003e",
+                                               "\u003cid\u003e"
+                                           ],
+                         "sessionId":  "\u003csession\u003e",
+                         "startedAt":  "\u003ctime\u003e",
+                         "status":  "SUBMITTED",
+                         "student":  {
+                                         "email":  "zz-tc-stuA2-\u003cts\u003e@example.invalid",
+                                         "name":  "ZZ TC stuA2",
+                                         "registrationNumber":  null,
+                                         "rollNumber":  null
+                                     },
+                         "studentId":  "\u003cid\u003e",
+                         "submissions":  [
+                                             {
+                                                 "questionId":  "\u003cid\u003e"
+                                             }
+                                         ],
+                         "submittedAt":  "\u003ctime\u003e",
+                         "tabSwitchCount":  0,
+                         "testId":  "\u003cid\u003e",
+                         "totalScore":  7
+                     },
+                     {
+                         "expectedQuestionCount":  2,
+                         "id":  "\u003cid\u003e",
+                         "manifestVersion":  1,
+                         "optionOrder":  null,
+                         "questionOrder":  [
+                                               "\u003cid\u003e",
+                                               "\u003cid\u003e"
+                                           ],
+                         "sessionId":  "\u003csession\u003e",
+                         "startedAt":  "\u003ctime\u003e",
+                         "status":  "SUBMITTED",
+                         "student":  {
+                                         "email":  "zz-tc-stuA-\u003cts\u003e@example.invalid",
+                                         "name":  "ZZ TC stuA",
+                                         "registrationNumber":  null,
+                                         "rollNumber":  null
+                                     },
+                         "studentId":  "\u003cid\u003e",
+                         "submissions":  [
+                                             {
+                                                 "questionId":  "\u003cid\u003e"
+                                             }
+                                         ],
+                         "submittedAt":  "\u003ctime\u003e",
+                         "tabSwitchCount":  0,
+                         "testId":  "\u003cid\u003e",
+                         "totalScore":  5
+                     }
+                 ]
+    },
+    {
+        "name":  "results: staff of institute B who does not own it",
+        "status":  403,
+        "body":  {
+                     "error":  "You can only view results for tests you created or that were shared with you"
+                 }
+    },
+    {
+        "name":  "export: anonymous",
+        "status":  401,
+        "body":  {
+                     "authExpired":  true,
+                     "error":  "Missing or invalid Authorization header"
+                 }
+    },
+    {
+        "name":  "export: a student",
+        "status":  403,
+        "body":  {
+                     "error":  "Insufficient permissions"
+                 }
+    },
+    {
+        "name":  "export: unknown test",
+        "status":  404,
+        "body":  {
+                     "error":  "Test not found"
+                 }
+    },
+    {
+        "name":  "export: other staff",
+        "status":  403,
+        "body":  {
+                     "error":  "You can only export results for tests you created or that were shared with you"
+                 }
+    },
+    {
+        "name":  "export: another institute\u0027s admin",
+        "status":  403,
+        "body":  {
+                     "error":  "You can only export results for tests under your own institute"
+                 }
+    },
+    {
+        "name":  "export: the owner, institute test",
+        "status":  200,
+        "body":  "Rank,Roll No.,Student,Registration No. (PRN),Email,Score,Max Score,Percentage (%),Result,Attempted,Total Questions,Status,Tab Switches / Violations,Started At,Submitted At\n1,,ZZ TC stuA,,zz-tc-stuA-\u003cts\u003e@example.invalid,0,4,0,,0,2,Auto-submitted,3,\u003ctime\u003e,\u003ctime\u003e"
+    },
+    {
+        "name":  "export: platform admin, platform-wide test",
+        "status":  200,
+        "body":  "Rank,Roll No.,Student,Registration No. (PRN),Email,Score,Max Score,Percentage (%),Result,Attempted,Total Questions,Status,Tab Switches / Violations,Started At,Submitted At\n1,,ZZ TC stuA2,,zz-tc-stuA2-\u003cts\u003e@example.invalid,7,4,175,,1,2,Submitted,0,\u003ctime\u003e,\u003ctime\u003e\n2,,ZZ TC stuA,,zz-tc-stuA-\u003cts\u003e@example.invalid,5,4,125,,1,2,Submitted,0,\u003ctime\u003e,\u003ctime\u003e\n3,,ZZ TC stuB,,zz-tc-stuB-\u003cts\u003e@example.invalid,3,4,75,,1,2,Submitted,0,\u003ctime\u003e,\u003ctime\u003e"
+    },
+    {
+        "name":  "export: institute A admin, platform-wide test",
+        "status":  200,
+        "body":  "Rank,Roll No.,Student,Registration No. (PRN),Email,Score,Max Score,Percentage (%),Result,Attempted,Total Questions,Status,Tab Switches / Violations,Started At,Submitted At\n1,,ZZ TC stuA2,,zz-tc-stuA2-\u003cts\u003e@example.invalid,7,4,175,,1,2,Submitted,0,\u003ctime\u003e,\u003ctime\u003e\n2,,ZZ TC stuA,,zz-tc-stuA-\u003cts\u003e@example.invalid,5,4,125,,1,2,Submitted,0,\u003ctime\u003e,\u003ctime\u003e"
+    },
+    {
+        "name":  "export: institute B admin, platform-wide test",
+        "status":  200,
+        "body":  "Rank,Roll No.,Student,Registration No. (PRN),Email,Score,Max Score,Percentage (%),Result,Attempted,Total Questions,Status,Tab Switches / Violations,Started At,Submitted At\n1,,ZZ TC stuB,,zz-tc-stuB-\u003cts\u003e@example.invalid,3,4,75,,1,2,Submitted,0,\u003ctime\u003e,\u003ctime\u003e"
+    },
+    {
+        "name":  "export: a roll-number filter that matches nobody",
+        "status":  200,
+        "body":  ""
+    },
+    {
+        "name":  "default export is a spreadsheet file",
+        "db":  {
+                   "status":  200,
+                   "type":  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                   "zip":  "PK"
+               }
+    },
+    {
+        "name":  "analytics: anonymous",
+        "status":  401,
+        "body":  {
+                     "authExpired":  true,
+                     "error":  "Missing or invalid Authorization header"
+                 }
+    },
+    {
+        "name":  "analytics: a student",
+        "status":  403,
+        "body":  {
+                     "error":  "Insufficient permissions"
+                 }
+    },
+    {
+        "name":  "analytics: unknown test",
+        "status":  404,
+        "body":  {
+                     "error":  "Test not found"
+                 }
+    },
+    {
+        "name":  "analytics: other staff",
+        "status":  403,
+        "body":  {
+                     "error":  "You can only view analytics for tests you created or that were shared with you"
+                 }
+    },
+    {
+        "name":  "analytics: another institute\u0027s admin",
+        "status":  403,
+        "body":  {
+                     "error":  "You can only view analytics for tests under your own institute"
+                 }
+    },
+    {
+        "name":  "analytics: the owner, institute test",
+        "status":  200,
+        "body":  [
+                     {
+                         "attempted":  0,
+                         "avgScorePercent":  null,
+                         "correctRate":  null,
+                         "fullyCorrect":  0,
+                         "points":  2,
+                         "questionId":  "\u003cid\u003e",
+                         "questionNumber":  "\u003cn\u003e",
+                         "questionType":  "MCQ",
+                         "reviewRecommended":  false,
+                         "title":  "ZZ TC q1"
+                     },
+                     {
+                         "attempted":  0,
+                         "avgScorePercent":  null,
+                         "correctRate":  null,
+                         "fullyCorrect":  0,
+                         "points":  2,
+                         "questionId":  "\u003cid\u003e",
+                         "questionNumber":  "\u003cn\u003e",
+                         "questionType":  "MCQ",
+                         "reviewRecommended":  false,
+                         "title":  "ZZ TC q2"
+                     }
+                 ]
+    },
+    {
+        "name":  "analytics: platform admin, platform-wide test",
+        "status":  200,
+        "body":  [
+                     {
+                         "attempted":  0,
+                         "avgScorePercent":  null,
+                         "correctRate":  null,
+                         "fullyCorrect":  0,
+                         "points":  2,
+                         "questionId":  "\u003cid\u003e",
+                         "questionNumber":  "\u003cn\u003e",
+                         "questionType":  "MCQ",
+                         "reviewRecommended":  false,
+                         "title":  "ZZ TC q2"
+                     },
+                     {
+                         "attempted":  3,
+                         "avgScorePercent":  67,
+                         "correctRate":  0.6666666666666666,
+                         "fullyCorrect":  2,
+                         "points":  2,
+                         "questionId":  "\u003cid\u003e",
+                         "questionNumber":  "\u003cn\u003e",
+                         "questionType":  "MCQ",
+                         "reviewRecommended":  false,
+                         "title":  "ZZ TC q1"
+                     }
+                 ]
+    },
+    {
+        "name":  "analytics: institute A admin, platform-wide test",
+        "status":  200,
+        "body":  [
+                     {
+                         "attempted":  0,
+                         "avgScorePercent":  null,
+                         "correctRate":  null,
+                         "fullyCorrect":  0,
+                         "points":  2,
+                         "questionId":  "\u003cid\u003e",
+                         "questionNumber":  "\u003cn\u003e",
+                         "questionType":  "MCQ",
+                         "reviewRecommended":  false,
+                         "title":  "ZZ TC q2"
+                     },
+                     {
+                         "attempted":  2,
+                         "avgScorePercent":  100,
+                         "correctRate":  1,
+                         "fullyCorrect":  2,
+                         "points":  2,
+                         "questionId":  "\u003cid\u003e",
+                         "questionNumber":  "\u003cn\u003e",
+                         "questionType":  "MCQ",
+                         "reviewRecommended":  false,
+                         "title":  "ZZ TC q1"
+                     }
+                 ]
+    },
+    {
+        "name":  "analytics: institute B admin, platform-wide test",
+        "status":  200,
+        "body":  [
+                     {
+                         "attempted":  0,
+                         "avgScorePercent":  null,
+                         "correctRate":  null,
+                         "fullyCorrect":  0,
+                         "points":  2,
+                         "questionId":  "\u003cid\u003e",
+                         "questionNumber":  "\u003cn\u003e",
+                         "questionType":  "MCQ",
+                         "reviewRecommended":  false,
+                         "title":  "ZZ TC q2"
+                     },
+                     {
+                         "attempted":  1,
+                         "avgScorePercent":  0,
+                         "correctRate":  0,
+                         "fullyCorrect":  0,
+                         "points":  2,
+                         "questionId":  "\u003cid\u003e",
+                         "questionNumber":  "\u003cn\u003e",
+                         "questionType":  "MCQ",
+                         "reviewRecommended":  false,
+                         "title":  "ZZ TC q1"
+                     }
+                 ]
+    },
+    {
+        "name":  "reattempt: anonymous",
+        "status":  401,
+        "body":  {
+                     "authExpired":  true,
+                     "error":  "Missing or invalid Authorization header"
+                 }
+    },
+    {
+        "name":  "reattempt: a student",
+        "status":  403,
+        "body":  {
+                     "error":  "Insufficient permissions"
+                 }
+    },
+    {
+        "name":  "reattempt: unknown test",
+        "status":  404,
+        "body":  {
+                     "error":  "Test not found"
+                 }
+    },
+    {
+        "name":  "reattempt: unknown student",
+        "status":  404,
+        "body":  {
+                     "error":  "Student not found"
+                 }
+    },
+    {
+        "name":  "reattempt: a student of another institute",
+        "status":  403,
+        "body":  {
+                     "error":  "You can only manage students under your own institute"
+                 }
+    },
+    {
+        "name":  "reattempt: other staff (not owner, not shared)",
+        "status":  403,
+        "body":  {
+                     "error":  "You can only manage reattempts for tests you created or that were shared with you"
+                 }
+    },
+    {
+        "name":  "reattempt: the student never attempted it",
+        "status":  404,
+        "body":  {
+                     "error":  "This student has not attempted this test"
+                 }
+    },
+    {
+        "name":  "reattempt: the attempt is still running",
+        "status":  400,
+        "body":  {
+                     "error":  "This student\u0027s attempt is still in progress — nothing to reset"
+                 }
+    },
+    {
+        "name":  "reattempt: the owner resets a finished attempt",
+        "status":  200,
+        "body":  {
+                     "success":  true
+                 }
+    },
+    {
+        "name":  "the old attempt is gone and a grant exists",
+        "db":  {
+                   "attemptsLeft":  0,
+                   "grants":  1
+               }
+    },
+    {
+        "name":  "start: the student can begin again",
+        "status":  200,
+        "body":  {
+                     "expectedQuestionCount":  2,
+                     "id":  "\u003cid\u003e",
+                     "manifestVersion":  1,
+                     "optionOrder":  null,
+                     "questionOrder":  [
+                                           "\u003cid\u003e",
+                                           "\u003cid\u003e"
+                                       ],
+                     "security":  {
+                                      "blockContextMenu":  true,
+                                      "blockCopy":  true,
+                                      "blockCut":  true,
+                                      "blockDrag":  true,
+                                      "blockPaste":  true,
+                                      "exitAction":  "WARNING",
+                                      "graceSec":  120,
+                                      "insertionCharThreshold":  400,
+                                      "insertionLineThreshold":  25,
+                                      "level":  "STANDARD",
+                                      "mobileAllowed":  true,
+                                      "multiSession":  "FLAG",
+                                      "requireFullscreen":  false,
+                                      "requireScreenShare":  false,
+                                      "requiredCapabilities":  [
+
+                                                               ],
+                                      "secureBrowserRequired":  false
+                                  },
+                     "serverTime":  "\u003cn\u003e",
+                     "sessionId":  "\u003csession\u003e",
+                     "startedAt":  "\u003ctime\u003e",
+                     "status":  "IN_PROGRESS",
+                     "studentId":  "\u003cid\u003e",
+                     "submissions":  [
+
+                                     ],
+                     "submittedAt":  null,
+                     "tabSwitchCount":  0,
+                     "testId":  "\u003cid\u003e",
+                     "totalScore":  0
+                 }
+    },
+    {
+        "name":  "reattempt: an institute admin resets an attempt on a closed test",
+        "status":  200,
+        "body":  {
+                     "success":  true
+                 }
+    },
+    {
+        "name":  "start: the grant lets the student in after the window closed",
+        "status":  200,
+        "body":  {
+                     "expectedQuestionCount":  2,
+                     "id":  "\u003cid\u003e",
+                     "manifestVersion":  1,
+                     "optionOrder":  null,
+                     "questionOrder":  [
+                                           "\u003cid\u003e",
+                                           "\u003cid\u003e"
+                                       ],
+                     "security":  {
+                                      "blockContextMenu":  true,
+                                      "blockCopy":  true,
+                                      "blockCut":  true,
+                                      "blockDrag":  true,
+                                      "blockPaste":  true,
+                                      "exitAction":  "WARNING",
+                                      "graceSec":  120,
+                                      "insertionCharThreshold":  400,
+                                      "insertionLineThreshold":  25,
+                                      "level":  "STANDARD",
+                                      "mobileAllowed":  true,
+                                      "multiSession":  "FLAG",
+                                      "requireFullscreen":  false,
+                                      "requireScreenShare":  false,
+                                      "requiredCapabilities":  [
+
+                                                               ],
+                                      "secureBrowserRequired":  false
+                                  },
+                     "serverTime":  "\u003cn\u003e",
+                     "sessionId":  "\u003csession\u003e",
+                     "startedAt":  "\u003ctime\u003e",
+                     "status":  "IN_PROGRESS",
+                     "studentId":  "\u003cid\u003e",
+                     "submissions":  [
+
+                                     ],
+                     "submittedAt":  null,
+                     "tabSwitchCount":  0,
+                     "testId":  "\u003cid\u003e",
+                     "totalScore":  0
+                 }
+    },
+    {
+        "name":  "the grant was used up",
+        "db":  0
+    },
+    {
+        "name":  "start: without a grant a closed window still refuses",
+        "status":  403,
+        "body":  {
+                     "error":  "Test window has closed"
+                 }
+    },
+    {
+        "name":  "audit rows for reattempts and exports",
+        "db":  [
+                   {
+                       "action":  "DATA_EXPORTED",
+                       "detailKeys":  [
+                                          "entity",
+                                          "format",
+                                          "rollFilter",
+                                          "rows",
+                                          "testId"
+                                      ],
+                       "institute":  "set",
+                       "role":  "STAFF",
+                       "student":  null
+                   },
+                   {
+                       "action":  "DATA_EXPORTED",
+                       "detailKeys":  [
+                                          "entity",
+                                          "format",
+                                          "rollFilter",
+                                          "rows",
+                                          "testId"
+                                      ],
+                       "institute":  null,
+                       "role":  "ADMIN",
+                       "student":  null
+                   },
+                   {
+                       "action":  "DATA_EXPORTED",
+                       "detailKeys":  [
+                                          "entity",
+                                          "format",
+                                          "rollFilter",
+                                          "rows",
+                                          "testId"
+                                      ],
+                       "institute":  "set",
+                       "role":  "INSTITUTE_ADMIN",
+                       "student":  null
+                   },
+                   {
+                       "action":  "DATA_EXPORTED",
+                       "detailKeys":  [
+                                          "entity",
+                                          "format",
+                                          "rollFilter",
+                                          "rows",
+                                          "testId"
+                                      ],
+                       "institute":  "set",
+                       "role":  "INSTITUTE_ADMIN",
+                       "student":  null
+                   },
+                   {
+                       "action":  "DATA_EXPORTED",
+                       "detailKeys":  [
+                                          "entity",
+                                          "format",
+                                          "rollFilter",
+                                          "rows",
+                                          "testId"
+                                      ],
+                       "institute":  null,
+                       "role":  "ADMIN",
+                       "student":  null
+                   },
+                   {
+                       "action":  "DATA_EXPORTED",
+                       "detailKeys":  [
+                                          "entity",
+                                          "format",
+                                          "rollFilter",
+                                          "rows",
+                                          "testId"
+                                      ],
+                       "institute":  null,
+                       "role":  "ADMIN",
+                       "student":  null
+                   },
+                   {
+                       "action":  "REATTEMPT_GRANTED",
+                       "detailKeys":  [
+                                          "previousAttemptScore",
+                                          "previousAttemptStatus",
+                                          "previousAttemptSubmittedAt",
+                                          "previousTabSwitchCount",
+                                          "studentId",
+                                          "studentName",
+                                          "studentRollNumber",
+                                          "testId",
+                                          "testTitle"
+                                      ],
+                       "institute":  "set",
+                       "role":  "STAFF",
+                       "student":  "set"
+                   },
+                   {
+                       "action":  "REATTEMPT_GRANTED",
+                       "detailKeys":  [
+                                          "previousAttemptScore",
+                                          "previousAttemptStatus",
+                                          "previousAttemptSubmittedAt",
+                                          "previousTabSwitchCount",
+                                          "studentId",
+                                          "studentName",
+                                          "studentRollNumber",
+                                          "testId",
+                                          "testTitle"
+                                      ],
+                       "institute":  "set",
+                       "role":  "INSTITUTE_ADMIN",
+                       "student":  "set"
+                   }
+               ]
+    },
+    {
         "name":  "audit actions recorded",
         "db":  [
                    "TEST_CREATED:STAFF",

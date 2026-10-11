@@ -65,3 +65,25 @@ async function aiAssist(req, res) {
 }
 
 Object.assign(module.exports, { list, getOne, start, violation, violationLog, myResult, aiAssist });
+
+// ---- batch 3: results, export, question analytics, reattempt ----
+const XLSX = require("xlsx");
+const { sendTable } = require("../../utils/spreadsheetSafe");
+const results = require("./tests.results.service");
+
+const leaderboard = handler("Failed to load results", (req) => results.leaderboard(actor(req), req.params.id));
+const questionAnalytics = handler("Failed to load question analytics", (req) => results.questionAnalytics(actor(req), req.params.id));
+const reattempt = handler("Failed to grant reattempt", (req) => results.grantReattempt(actor(req), req.params.testId, req.params.studentId));
+// The export streams a file, so it answers itself rather than through the JSON handler.
+async function exportResults(req, res) {
+  try {
+    const out = await results.exportResults(actor(req), req.params.id, req.query);
+    return sendTable(res, XLSX, { rows: out.rows, sheetName: "Results", filename: out.filename, format: out.format, colWidths: [6, 14, 24, 22, 30, 8, 10, 14, 8, 10, 15, 14, 24, 24, 24] });
+  } catch (err) {
+    if (err instanceof ServiceError) return res.status(err.status).json({ error: err.message, ...(err.extra || {}) });
+    console.error(err);
+    res.status(500).json({ error: "Failed to export results" });
+  }
+}
+
+Object.assign(module.exports, { leaderboard, questionAnalytics, reattempt, exportResults });
