@@ -3755,66 +3755,6 @@
                  }
     },
     {
-        "name":  "setup: the second student submits",
-        "status":  200,
-        "body":  {
-                     "expectedQuestionCount":  2,
-                     "gamification":  {
-                                          "level":  {
-                                                        "currentLevelXp":  40,
-                                                        "level":  1,
-                                                        "name":  "Beginner",
-                                                        "nextLevelName":  "Learner",
-                                                        "progressPercent":  40,
-                                                        "totalXp":  40,
-                                                        "xpForNextLevel":  100,
-                                                        "xpToNext":  60
-                                                    },
-                                          "leveledUp":  false,
-                                          "newBadges":  [
-                                                            {
-                                                                "category":  "ASSESSMENT",
-                                                                "code":  "FIRST_TEST",
-                                                                "description":  "Complete your first assessment.",
-                                                                "earnedAt":  "\u003ctime\u003e",
-                                                                "icon":  "📝",
-                                                                "name":  "First Test Completed"
-                                                            },
-                                                            {
-                                                                "category":  "SPECIAL",
-                                                                "code":  "TOP_10_CLASS",
-                                                                "description":  "Rank in the top 10 of your class.",
-                                                                "earnedAt":  "\u003ctime\u003e",
-                                                                "icon":  "🏆",
-                                                                "name":  "Top 10 in Class"
-                                                            }
-                                                        ],
-                                          "streak":  {
-                                                         "current":  1,
-                                                         "isNewDay":  true,
-                                                         "longest":  1
-                                                     },
-                                          "totalXp":  40,
-                                          "xpAwarded":  40
-                                      },
-                     "id":  "\u003cid\u003e",
-                     "manifestVersion":  1,
-                     "optionOrder":  null,
-                     "questionOrder":  [
-                                           "\u003cid\u003e",
-                                           "\u003cid\u003e"
-                                       ],
-                     "sessionId":  "\u003csession\u003e",
-                     "startedAt":  "\u003ctime\u003e",
-                     "status":  "SUBMITTED",
-                     "studentId":  "\u003cid\u003e",
-                     "submittedAt":  "\u003ctime\u003e",
-                     "tabSwitchCount":  0,
-                     "testId":  "\u003cid\u003e",
-                     "totalScore":  0
-                 }
-    },
-    {
         "name":  "my-result: results hidden by the test",
         "status":  200,
         "body":  {
