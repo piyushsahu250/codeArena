@@ -310,6 +310,11 @@ export default function InterviewSession() {
         const msg = `Notice: ${VIOLATION_LABEL[type] || type} was detected. This didn't count this time, but repeating it will.`;
         setSuspiciousNotice(msg);
         setTimeout(() => setSuspiciousNotice((m) => (m === msg ? null : m)), 5000);
+      } else if (type === "SCREEN_OVERLAY_DETECTED") {
+        // INTERRUPTION on the server (never counted), but the candidate must still be told it was recorded.
+        const msg = "Notice: part of the interview screen was covered by another layer (for example a search or assistant overlay). This is recorded for review and did not count as a strike. Close it and continue.";
+        setSuspiciousNotice(msg);
+        setTimeout(() => setSuspiciousNotice((m) => (m === msg ? null : m)), 7000);
       }
     } catch {
       // best-effort

@@ -219,6 +219,12 @@ export default function ModuleCodingAssessment() {
         const msg = `Notice: ${VIOLATION_LABEL[type] || type} was detected. This didn't count this time, but repeating it will.`;
         setSuspiciousNotice(msg);
         setTimeout(() => setSuspiciousNotice((m) => (m === msg ? null : m)), 5000);
+      } else if (type === "SCREEN_OVERLAY_DETECTED") {
+        // Server classifies this as INTERRUPTION (never counted: an on-screen keyboard or system UI can look the same), but the student must still be told it was
+        // recorded -- silence here is what made a search overlay look like it went unnoticed.
+        const msg = "Notice: part of the assessment screen was covered by another layer (for example a search or assistant overlay). This is recorded for review and did not count as a strike. Close it and continue.";
+        setSuspiciousNotice(msg);
+        setTimeout(() => setSuspiciousNotice((m) => (m === msg ? null : m)), 7000);
       }
     } catch {
       // best-effort

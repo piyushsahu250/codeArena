@@ -842,6 +842,12 @@ export default function TestTaking() {
           setSuspiciousNotice(message);
           clearTimeout(suspiciousNoticeTimeoutRef.current);
           suspiciousNoticeTimeoutRef.current = setTimeout(() => setSuspiciousNotice(null), 5000);
+        } else if (type === "SCREEN_OVERLAY_DETECTED") {
+          // INTERRUPTION on the server (never counted: an on-screen keyboard or system UI can look the same), but the student must still be told it was recorded.
+          // Silence here is what made a search/assistant overlay look as if it went unnoticed.
+          setSuspiciousNotice("Notice: part of the test screen was covered by another layer (for example a search or assistant overlay). This is recorded for review and did not count as a strike. Close it and continue.");
+          clearTimeout(suspiciousNoticeTimeoutRef.current);
+          suspiciousNoticeTimeoutRef.current = setTimeout(() => setSuspiciousNotice(null), 7000);
         }
       })
       // Previously silent -- a violation that failed to even reach the server (network blip,
