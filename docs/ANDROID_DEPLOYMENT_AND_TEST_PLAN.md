@@ -40,7 +40,7 @@ Automated tests added: `backend/test/secureAndroidClient.test.js` (unit, runs in
 verification loop with a CI-only `SECURE_BROWSER_SECRET`). The latter covers: opt-out (a STANDARD web exam still starts and its payload is unchanged), no opt-in (a default LOCKDOWN exam refuses phones and Android sessions),
 opt-in (phone without a session refused; Electron session refused; forged kind refused; missing capability refused; another student's session refused; verified Android session starts the exam; plain browser cannot continue; hidden
 tests absent), server-assigned event severity, an invented "Gemini detected" event dropped, lock-task regression refused until restored, and rollback by policy.
-CI result: all 27 checks of `verifySecureAndroid` PASS in the integration job on the disposable CI database (run for branch commit `c8a0c69`). That is the only pre-production validation available; there is no separate staging environment.
+CI result: all checks of `verifySecureAndroid` PASS in the integration job on the disposable CI database (run for branch commit `c8a0c69`). That is the only pre-production validation available; there is no separate staging environment.
 
 ## 3. Deployment checklist (production NOT touched; needs your explicit go-ahead for this exact deployment)
 
