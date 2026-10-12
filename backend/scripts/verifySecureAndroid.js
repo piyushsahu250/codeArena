@@ -55,7 +55,7 @@ async function cleanup() {
   const s1 = await mk("Alice", "STUDENT", instituteId), s2 = await mk("Bob", "STUDENT", instituteId);
   const instAdmin = await mk("Inst Admin", "INSTITUTE_ADMIN", instituteId);
   // Own fixtures, no dependence on seeded courses: Course > Module > completed Lesson > coding test > one question.
-  const course = await prisma.course.create({ data: { slug: `verify-sa-${ts}`, name: "Verify Android Course", status: "DRAFT" } });
+  const course = await prisma.course.create({ data: { slug: `verify-sa-${ts}`, name: "Verify Android Course", status: "PUBLISHED" } });
   const mod = await prisma.courseModule.create({ data: { courseId: course.id, title: "Verify Android Module" } });
   const lesson = await prisma.lesson.create({ data: { moduleId: mod.id, title: "Verify Android Lesson", content: "x", order: 0 } });
   for (const s of [s1, s2]) await prisma.lessonProgress.create({ data: { studentId: s.id, lessonId: lesson.id, status: "COMPLETED", completedAt: new Date() } });
@@ -71,7 +71,7 @@ async function cleanup() {
     // ---- opt-out: an ordinary web exam is untouched
     await setLevel({ securityLevel: "STANDARD", securityPolicy: null });
     const web = await start(null, DESKTOP_UA, T2);
-    check("opt-out: a STANDARD web exam starts in a plain desktop browser, no secure session needed", web.status === 200 && !!web.body.attemptId);
+    check("opt-out: a STANDARD web exam starts in a plain desktop browser, no secure session needed", web.status === 200 && !!web.body.attemptId, `${web.status} ${JSON.stringify(web.body).slice(0, 200)}`);
     check("opt-out: the client policy payload is unchanged (no Android fields leak into it)", web.body.security && !("allowedClientKinds" in web.body.security));
 
     // ---- register the device
