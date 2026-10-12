@@ -28,7 +28,8 @@ function norm(v, keepMasked) {
   if (typeof v === "object") { const o = {}; for (const k of Object.keys(v).sort()) o[k] = k === "token" ? (v[k] ? "<token>" : null) : !keepMasked && MASKED.has(k) && v[k] ? "<masked>" : norm(v[k], keepMasked); return o; }
   return v;
 }
-const shapeOf = (v) => (v === null ? "null" : Array.isArray(v) ? (v.length ? [shapeOf(v[0])] : []) : typeof v === "object" ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, shapeOf(v[k])])) : typeof v);
+// Structure only (keys, nesting), never values or types: platform-wide reads return real production rows whose nulls and strings the snapshot must not depend on.
+const shapeOf = (v) => (Array.isArray(v) ? (v.length ? [shapeOf(v[0])] : []) : v && typeof v === "object" ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, shapeOf(v[k])])) : ".");
 let ipSeq = 0;
 const nextIp = () => `203.0.113.${100 + ++ipSeq}`;
 // opts: shape = record keys and types only; headers = response headers to keep; bool = replace these body keys by their type (mail results differ by environment)
@@ -59,7 +60,7 @@ async function cleanup() {
   const users = await prisma.user.findMany({ where: { email: { startsWith: "zz-uc-" } }, select: { id: true } });
   const uids = users.map((u) => u.id);
   await prisma.auditLog.deleteMany({ where: { OR: [{ adminId: { in: uids } }, { studentId: { in: uids } }, { instituteId: { in: ids } }] } });
-  await prisma.emailLog.deleteMany({ where: { OR: [{ studentId: { in: uids } }, { recipientEmail: { startsWith: "zz-uc-" } }] } });
+  await prisma.emailLog.deleteMany({ where: { OR: [{ studentId: { in: uids } }, { recipientEmail: { contains: "zz-uc-" } }] } });
   await prisma.rateLimitHit.deleteMany({ where: { OR: [{ key: { contains: "203.0.113." } }, { key: { contains: "zz-uc-" } }, ...uids.map((u) => ({ key: `email-change:${u}` }))] } });
   await prisma.test.deleteMany({ where: { OR: [{ instituteId: { in: ids } }, { createdById: { in: uids } }] } });
   await prisma.testAttempt.deleteMany({ where: { studentId: { in: uids } } });
@@ -148,7 +149,7 @@ async function cleanup() {
   await call("me patch: password and e-mail together", "PATCH", "/users/me", T.m4, { currentPassword: pw.m4, newPassword: `Nn8#${crypto.randomBytes(8).toString("base64url")}`, newEmail: `zz-uc-both-${ts}@example.invalid` }, { bool: mailKeys });
   await settle();
   note("me patch: audit rows", (await prisma.auditLog.findMany({ where: { adminId: { in: [me.m1.id, me.m2.id, me.m3.id, me.m4.id] }, action: "PASSWORD_CHANGED" }, select: { adminRole: true, instituteId: true, studentId: true, details: true } })).map((a) => `${a.adminRole}:${a.instituteId ? "inst" : "-"}:${a.studentId ? "student" : "-"}:${JSON.stringify({ ...a.details, verificationEmailSent: typeof a.details.verificationEmailSent })}`).sort());
-  note("me patch: e-mails queued", (await prisma.emailLog.findMany({ where: { OR: [{ studentId: { in: [me.m2.id, me.m3.id, me.m4.id] } }, { recipientEmail: { contains: "zz-uc-" } }], emailType: { in: ["LOGIN_ALERT", "EMAIL_VERIFICATION"] } }, select: { emailType: true, recipientEmail: true } })).map((m) => `${m.emailType}:${m.recipientEmail.startsWith("new-") || m.recipientEmail.includes("both") ? "to-new-address" : "to-current"}`).sort());
+  note("me patch: e-mails queued", (await prisma.emailLog.findMany({ where: { recipientEmail: { in: [me.m2.email, me.m3.email, me.m4.email, `new-${me.m3.email}`, `zz-uc-both-${ts}@example.invalid`] }, emailType: { in: ["LOGIN_ALERT", "EMAIL_VERIFICATION"] } }, select: { emailType: true, recipientEmail: true } })).map((m) => `${m.emailType}:${m.recipientEmail.startsWith("new-") || m.recipientEmail.includes("both") ? "to-new-address" : "to-current"}`).sort());
   const lim = me.m5;
   await clearLimit(lim);
   for (let i = 1; i <= 3; i++) await call(`me patch limit: request ${i}`, "PATCH", "/users/me", T.m5, { currentPassword: "Wrong1!pass", newPassword: "Aa1!aaaa" });
