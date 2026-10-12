@@ -147,3 +147,39 @@ Object.assign(module.exports, {
   questionsInFolders, questionsInFolder, questionsByIds, testAttachedQuestionIds, testCasesForQuestions, moveQuestions, classifyQuestions, setQuestionStatus, copyQuestion, mergeFolders,
   listShares, staffInInstitute, createShares, deleteShare,
 });
+
+// ================= import and export =================
+const { buildWhere } = require("./questions.domain");
+
+// The subject, unit and topic lookups the importer resolves spreadsheet text through. The two subject calls take the Prisma arguments directly: the caller builds
+// the institute scope, and which subjects it may use is decided by the subject-access helpers, not here.
+const findSubjectsByName = (args) => prisma.subject.findMany(args);
+const listSubjectNames = (args) => prisma.subject.findMany(args);
+const findUnitByName = (subjectId, name) => prisma.unit.findFirst({ where: { subjectId, name: { equals: name, mode: "insensitive" } } });
+const listUnits = (subjectId) => prisma.unit.findMany({ where: { subjectId } });
+const createUnit = (subjectId, name) => prisma.unit.create({ data: { subjectId, name } });
+const findTopicByName = (unitId, name) => prisma.topic.findFirst({ where: { unitId, name: { equals: name, mode: "insensitive" } } });
+const createTopic = (unitId, name) => prisma.topic.create({ data: { unitId, name } });
+
+// What already exists in the same folder, subject and unit, for the duplicate check.
+const existingDescriptionRows = (req, { folderId, subjectId, unitId }) => prisma.question.findMany({
+  where: { folderId: folderId || null, subjectId: subjectId || null, unitId: unitId || null, ...questionVisibilityWhere(req) },
+  select: { description: true },
+});
+const existingTitleRows = (req, { folderId, subjectId, unitId }) => prisma.question.findMany({
+  where: { folderId: folderId || null, subjectId: subjectId || null, unitId: unitId || null, questionType: "CODING", ...questionVisibilityWhere(req) },
+  select: { title: true },
+});
+const findVisibleFolderByName = (req, name) => prisma.questionFolder.findFirst({ where: { name: { equals: name, mode: "insensitive" }, ...questionFolderVisibilityWhere(req) } });
+// The importer's rows are returned as they were created, without the test cases (unlike createQuestion, which includes them).
+const createQuestionBare = (data) => prisma.question.create({ data });
+const updateQuestionBare = (id, data) => prisma.question.update({ where: { id }, data });
+
+const EXPORT_INCLUDE = { subjectRef: { select: { name: true } }, unitRef: { select: { name: true } } };
+const exportByIds = (req, ids) => prisma.question.findMany({ where: { id: { in: ids }, ...questionVisibilityWhere(req) }, include: EXPORT_INCLUDE, orderBy: { questionNumber: "asc" } });
+const exportByFilter = (req) => prisma.question.findMany({ where: buildWhere(req.query, req), include: EXPORT_INCLUDE, orderBy: { questionNumber: "asc" } });
+
+Object.assign(module.exports, {
+  findSubjectsByName, listSubjectNames, findUnitByName, listUnits, createUnit, findTopicByName, createTopic, existingDescriptionRows, existingTitleRows, findVisibleFolderByName,
+  createQuestionBare, updateQuestionBare, exportByIds, exportByFilter,
+});

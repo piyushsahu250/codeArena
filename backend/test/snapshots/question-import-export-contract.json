@@ -1,0 +1,4232 @@
+[
+  {
+    "name": "template: anonymous",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "Missing or invalid Authorization header"
+    }
+  },
+  {
+    "name": "template: student refused",
+    "status": 403,
+    "body": {
+      "error": "Insufficient permissions"
+    }
+  },
+  {
+    "name": "template: quiz",
+    "status": 200,
+    "headers": {
+      "content-type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "content-disposition": "attachment; filename=question-bank-template.xlsx"
+    },
+    "workbook": [
+      {
+        "sheet": "Instructions",
+        "header": [
+          "Instructions"
+        ],
+        "rowCount": 8,
+        "rows": [
+          [
+            "1. Do not change column names."
+          ],
+          [
+            "2. One question per row."
+          ],
+          [
+            "3. Correct Option must be A, B, C, or D (or A,B for Multiple Select)."
+          ]
+        ]
+      },
+      {
+        "sheet": "MCQ",
+        "header": [
+          "Question Text",
+          "Option A",
+          "Option B",
+          "Option C",
+          "Option D",
+          "Correct Option",
+          "Explanation",
+          "Difficulty Level",
+          "Subject",
+          "Unit",
+          "Topic",
+          "Question Type",
+          "Marks",
+          "BTL",
+          "Question Name",
+          "Image File Name"
+        ],
+        "rowCount": 4,
+        "rows": [
+          [
+            "DELETE THESE 3 EXAMPLE ROWS BEFORE UPLOADING — they're here only to show the format",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            ""
+          ],
+          [
+            "What is 2 + 3?",
+            "4",
+            "5",
+            "6",
+            "7",
+            "B",
+            "2 + 3 = 5.",
+            "Easy",
+            "Java",
+            "Java Basics",
+            "Operators",
+            "",
+            "",
+            "",
+            "",
+            ""
+          ],
+          [
+            "Water boils at 100°C at sea level.",
+            "True",
+            "False",
+            "",
+            "",
+            "A",
+            "",
+            "Easy",
+            "Science",
+            "Unit 1",
+            "Physics",
+            "",
+            "",
+            "",
+            "",
+            ""
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "name": "template: coding",
+    "status": 200,
+    "headers": {
+      "content-type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "content-disposition": "attachment; filename=coding-question-template.xlsx"
+    },
+    "workbook": [
+      {
+        "sheet": "Instructions",
+        "header": [
+          "Instructions"
+        ],
+        "rowCount": 8,
+        "rows": [
+          [
+            "1. Do not change column names."
+          ],
+          [
+            "2. One question per row."
+          ],
+          [
+            "3. Difficulty must be Easy, Medium, or Hard."
+          ]
+        ]
+      },
+      {
+        "sheet": "CODING",
+        "header": [
+          "Question Title",
+          "Subject",
+          "Unit",
+          "Topic",
+          "Subtopic",
+          "Problem Statement",
+          "Difficulty",
+          "BTL",
+          "Programming Languages",
+          "Time Limit (seconds)",
+          "Memory Limit (MB)",
+          "Marks",
+          "Constraints",
+          "Input Format",
+          "Output Format",
+          "Sample Input 1",
+          "Sample Output 1",
+          "Sample Explanation 1",
+          "Sample Input 2",
+          "Sample Output 2",
+          "Sample Explanation 2",
+          "Hidden Test Cases (input->output pairs, separated by ||)",
+          "Evaluation Mode (STDIO or Function)",
+          "Function Name",
+          "Return Type",
+          "Parameters (name:type, comma separated)",
+          "Starter Code (Java)",
+          "Starter Code (Python)",
+          "Starter Code (Cpp)",
+          "Starter Code (C)",
+          "Tags",
+          "Question Bank",
+          "Image File Name"
+        ],
+        "rowCount": 2,
+        "rows": [
+          [
+            "Sum of Two Numbers",
+            "Java",
+            "Unit 1",
+            "Math",
+            "Addition",
+            "Read two integers and print their sum.",
+            "Easy",
+            "BTL-3",
+            "Java, Python, C++, C",
+            2,
+            256,
+            10,
+            "1 <= a, b <= 10^9",
+            "Two space-separated integers a and b on one line",
+            "A single integer: a + b",
+            "2 3",
+            "5",
+            "2 + 3 = 5",
+            "10 20",
+            "30",
+            "",
+            "4 6->10||100 200->300||-5 5->0||0 0->0||1000000000 1000000000->2000000000",
+            "STDIO",
+            "",
+            "",
+            "",
+            "import java.util.*;\npublic class Main {\n  public static void main(String[] args) {\n    Scanner sc = new Scanner(System.in);\n    int a = sc.nextInt(), b = sc.nextInt();\n    System.out.println(a + b);\n  }\n}",
+            "a, b = map(int, input().split())\nprint(a + b)",
+            "#include <iostream>\nusing namespace std;\nint main() {\n  int a, b; cin >> a >> b;\n  cout << a + b;\n}",
+            "#include <stdio.h>\nint main() {\n  int a, b; scanf(\"%d %d\", &a, &b);\n  printf(\"%d\", a + b);\n}",
+            "Math, Basics",
+            "Java Coding Bank",
+            ""
+          ],
+          [
+            "Add Two Numbers (Function)",
+            "Java",
+            "Unit 1",
+            "Math",
+            "Implement a function that returns the sum of two integers.",
+            "Easy",
+            "BTL-3",
+            "Java, Python, C++",
+            2,
+            256,
+            10,
+            "1 <= a, b <= 10^9",
+            "N/A — function parameters, not stdin",
+            "N/A — return value, not stdout",
+            "2\n3",
+            "5",
+            "2 + 3 = 5",
+            "10\n20",
+            "30",
+            "",
+            "4\n6->10||100\n200->300||-5\n5->0||0\n0->0||1000000000\n1000000000->2000000000",
+            "Function",
+            "add",
+            "int",
+            "a:int, b:int",
+            "",
+            "",
+            "",
+            "",
+            "Math, Basics",
+            "Java Coding Bank",
+            "",
+            ""
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "name": "template: combined",
+    "status": 200,
+    "headers": {
+      "content-type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "content-disposition": "attachment; filename=CodeArena_Question_Upload_Template.xlsx"
+    },
+    "workbook": [
+      {
+        "sheet": "Instructions",
+        "header": [
+          "Instructions"
+        ],
+        "rowCount": 8,
+        "rows": [
+          [
+            "1. Do not change column names."
+          ],
+          [
+            "2. One question per row."
+          ],
+          [
+            "3. MCQ sheet: Correct Option must be A/B/C/D. Coding sheet: Difficulty must be Easy/Medium/Hard."
+          ]
+        ]
+      },
+      {
+        "sheet": "MCQ",
+        "header": [
+          "Question Text",
+          "Option A",
+          "Option B",
+          "Option C",
+          "Option D",
+          "Correct Option",
+          "Explanation",
+          "Difficulty Level",
+          "Subject",
+          "Unit",
+          "Topic",
+          "Question Type",
+          "Marks",
+          "BTL",
+          "Question Name",
+          "Image File Name"
+        ],
+        "rowCount": 4,
+        "rows": [
+          [
+            "DELETE THESE 3 EXAMPLE ROWS BEFORE UPLOADING — they're here only to show the format",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            ""
+          ],
+          [
+            "What is 2 + 3?",
+            "4",
+            "5",
+            "6",
+            "7",
+            "B",
+            "2 + 3 = 5.",
+            "Easy",
+            "Java",
+            "Java Basics",
+            "Operators",
+            "",
+            "",
+            "",
+            "",
+            ""
+          ],
+          [
+            "Water boils at 100°C at sea level.",
+            "True",
+            "False",
+            "",
+            "",
+            "A",
+            "",
+            "Easy",
+            "Science",
+            "Unit 1",
+            "Physics",
+            "",
+            "",
+            "",
+            "",
+            ""
+          ]
+        ]
+      },
+      {
+        "sheet": "CODING",
+        "header": [
+          "Question Title",
+          "Subject",
+          "Unit",
+          "Topic",
+          "Subtopic",
+          "Problem Statement",
+          "Difficulty",
+          "BTL",
+          "Programming Languages",
+          "Time Limit (seconds)",
+          "Memory Limit (MB)",
+          "Marks",
+          "Constraints",
+          "Input Format",
+          "Output Format",
+          "Sample Input 1",
+          "Sample Output 1",
+          "Sample Explanation 1",
+          "Sample Input 2",
+          "Sample Output 2",
+          "Sample Explanation 2",
+          "Hidden Test Cases (input->output pairs, separated by ||)",
+          "Evaluation Mode (STDIO or Function)",
+          "Function Name",
+          "Return Type",
+          "Parameters (name:type, comma separated)",
+          "Starter Code (Java)",
+          "Starter Code (Python)",
+          "Starter Code (Cpp)",
+          "Starter Code (C)",
+          "Tags",
+          "Question Bank",
+          "Image File Name"
+        ],
+        "rowCount": 2,
+        "rows": [
+          [
+            "Sum of Two Numbers",
+            "Java",
+            "Unit 1",
+            "Math",
+            "Addition",
+            "Read two integers and print their sum.",
+            "Easy",
+            "BTL-3",
+            "Java, Python, C++, C",
+            2,
+            256,
+            10,
+            "1 <= a, b <= 10^9",
+            "Two space-separated integers a and b on one line",
+            "A single integer: a + b",
+            "2 3",
+            "5",
+            "2 + 3 = 5",
+            "10 20",
+            "30",
+            "",
+            "4 6->10||100 200->300||-5 5->0||0 0->0||1000000000 1000000000->2000000000",
+            "STDIO",
+            "",
+            "",
+            "",
+            "import java.util.*;\npublic class Main {\n  public static void main(String[] args) {\n    Scanner sc = new Scanner(System.in);\n    int a = sc.nextInt(), b = sc.nextInt();\n    System.out.println(a + b);\n  }\n}",
+            "a, b = map(int, input().split())\nprint(a + b)",
+            "#include <iostream>\nusing namespace std;\nint main() {\n  int a, b; cin >> a >> b;\n  cout << a + b;\n}",
+            "#include <stdio.h>\nint main() {\n  int a, b; scanf(\"%d %d\", &a, &b);\n  printf(\"%d\", a + b);\n}",
+            "Math, Basics",
+            "Java Coding Bank",
+            ""
+          ],
+          [
+            "Add Two Numbers (Function)",
+            "Java",
+            "Unit 1",
+            "Math",
+            "Implement a function that returns the sum of two integers.",
+            "Easy",
+            "BTL-3",
+            "Java, Python, C++",
+            2,
+            256,
+            10,
+            "1 <= a, b <= 10^9",
+            "N/A — function parameters, not stdin",
+            "N/A — return value, not stdout",
+            "2\n3",
+            "5",
+            "2 + 3 = 5",
+            "10\n20",
+            "30",
+            "",
+            "4\n6->10||100\n200->300||-5\n5->0||0\n0->0||1000000000\n1000000000->2000000000",
+            "Function",
+            "add",
+            "int",
+            "a:int, b:int",
+            "",
+            "",
+            "",
+            "",
+            "Math, Basics",
+            "Java Coding Bank",
+            "",
+            ""
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "name": "template: quiz as text",
+    "status": 200,
+    "headers": {
+      "content-type": "text/plain; charset=utf-8",
+      "content-disposition": "attachment; filename=question-bank-template.txt"
+    },
+    "text": {
+      "sha1": "0984918209d7373780533032db81e09c4ee43554",
+      "bytes": 1171,
+      "firstLine": "Notepad Question Upload — Multiple Choice / True-False / Multiple Select"
+    }
+  },
+  {
+    "name": "template: coding as text",
+    "status": 200,
+    "headers": {
+      "content-type": "text/plain; charset=utf-8",
+      "content-disposition": "attachment; filename=coding-question-template.txt"
+    },
+    "text": {
+      "sha1": "23c80f13d1ca9009f4a4ec7980956c4652cf3504",
+      "bytes": 1032,
+      "firstLine": "Notepad Question Upload — Coding"
+    }
+  },
+  {
+    "name": "quiz preview: anonymous",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "Missing or invalid Authorization header"
+    }
+  },
+  {
+    "name": "quiz preview: student refused",
+    "status": 403,
+    "body": {
+      "error": "Insufficient permissions"
+    }
+  },
+  {
+    "name": "quiz preview: no file",
+    "status": 400,
+    "body": {
+      "error": "No file uploaded"
+    }
+  },
+  {
+    "name": "quiz preview: file that is not a spreadsheet",
+    "status": 400,
+    "body": {
+      "error": "No file uploaded"
+    }
+  },
+  {
+    "name": "quiz preview: no data rows",
+    "status": 400,
+    "body": {
+      "error": "The uploaded file has no data rows."
+    }
+  },
+  {
+    "name": "quiz preview: the question text column is missing",
+    "status": 400,
+    "body": {
+      "error": "Missing required column. The file must include Question Text."
+    }
+  },
+  {
+    "name": "quiz preview: folder of another institute",
+    "status": 403,
+    "body": {
+      "error": "That folder isn't in your institute's question bank"
+    }
+  },
+  {
+    "name": "quiz preview: a mixed file",
+    "status": 200,
+    "body": {
+      "autoFixed": [
+        {
+          "after": "2",
+          "before": "B",
+          "field": "Correct Option(s)",
+          "row": 2
+        },
+        {
+          "after": "1,3",
+          "before": "A, C",
+          "field": "Correct Option(s)",
+          "row": 3
+        },
+        {
+          "after": "1",
+          "before": "(a)",
+          "field": "Correct Option(s)",
+          "row": 4
+        },
+        {
+          "after": "2",
+          "before": "B",
+          "field": "Correct Option(s)",
+          "row": 5
+        },
+        {
+          "after": "2",
+          "before": "B",
+          "field": "Correct Option(s)",
+          "row": 7
+        },
+        {
+          "after": "2",
+          "before": "B",
+          "field": "Correct Option(s)",
+          "row": 8
+        },
+        {
+          "after": "Medium (unrecognized value)",
+          "before": "Confusing",
+          "field": "Difficulty",
+          "row": 9
+        },
+        {
+          "after": "1,2",
+          "before": "A,B",
+          "field": "Correct Option(s)",
+          "row": 10
+        },
+        {
+          "after": "2",
+          "before": "B",
+          "field": "Correct Option(s)",
+          "row": 11
+        },
+        {
+          "after": "2",
+          "before": "B",
+          "field": "Correct Option(s)",
+          "row": 12
+        },
+        {
+          "after": "2",
+          "before": "B",
+          "field": "Correct Option(s)",
+          "row": 13
+        },
+        {
+          "after": "2",
+          "before": "B",
+          "field": "Correct Option(s)",
+          "row": 14
+        },
+        {
+          "after": "2",
+          "before": "B",
+          "field": "Correct Option(s)",
+          "row": 15
+        },
+        {
+          "after": "2",
+          "before": "B",
+          "field": "Correct Option(s)",
+          "row": 17
+        }
+      ],
+      "autoFixedCount": 14,
+      "created": [
+        {
+          "btlLevel": null,
+          "description": "ZZ QX quiz 1",
+          "difficulty": "MEDIUM",
+          "hasImage": false,
+          "questionType": "MCQ",
+          "row": 2,
+          "title": null
+        },
+        {
+          "btlLevel": null,
+          "description": "ZZ QX quiz 2 multi",
+          "difficulty": "MEDIUM",
+          "hasImage": false,
+          "questionType": "MULTISELECT",
+          "row": 3,
+          "title": null
+        },
+        {
+          "btlLevel": null,
+          "description": "ZZ QX quiz 3",
+          "difficulty": "MEDIUM",
+          "hasImage": false,
+          "questionType": "TRUE_FALSE",
+          "row": 4,
+          "title": null
+        },
+        {
+          "btlLevel": null,
+          "description": "ZZ QX quiz 8",
+          "difficulty": "MEDIUM",
+          "hasImage": false,
+          "questionType": "MULTISELECT",
+          "row": 10,
+          "title": null
+        },
+        {
+          "btlLevel": null,
+          "description": "ZZ QX quiz 10",
+          "difficulty": "MEDIUM",
+          "hasImage": false,
+          "questionType": "MCQ",
+          "row": 12,
+          "title": null
+        },
+        {
+          "btlLevel": 3,
+          "description": "ZZ QX quiz 12",
+          "difficulty": "MEDIUM",
+          "hasImage": false,
+          "questionType": "MCQ",
+          "row": 14,
+          "title": "named"
+        },
+        {
+          "btlLevel": null,
+          "description": "ZZ QX quiz 14",
+          "difficulty": "MEDIUM",
+          "hasImage": false,
+          "questionType": "MCQ",
+          "row": 17,
+          "title": null
+        }
+      ],
+      "createdCount": 7,
+      "errorCount": 6,
+      "errors": [
+        {
+          "reason": "Unrecognized Question Type \"Poem\" — expected MCQ, True/False, or Multiple Select",
+          "row": 7
+        },
+        {
+          "reason": "Subject \"No Such Subject\" not found or you're not authorized to use it. Subjects available to you: <list>",
+          "row": 8
+        },
+        {
+          "reason": "Select at least one correct answer",
+          "row": 9
+        },
+        {
+          "reason": "Options must be unique — this question has a duplicate option",
+          "row": 11
+        },
+        {
+          "reason": "Image \"figure.png\" was referenced but no images ZIP was uploaded alongside this file",
+          "row": 13
+        },
+        {
+          "reason": "Invalid BTL \"high\" — use 1-6 (or BTL-1 .. BTL-6)",
+          "row": 15
+        }
+      ],
+      "imagesValidatedCount": 0,
+      "skipped": [
+        {
+          "reason": "Duplicate question text within this file",
+          "row": 5
+        }
+      ],
+      "skippedCount": 1,
+      "structureHint": null,
+      "total": 16,
+      "unknownColumns": [
+        "Teacher Notes"
+      ],
+      "validRows": [
+        {
+          "BTL": "",
+          "Correct Option": "B",
+          "Difficulty Level": "Medium",
+          "Explanation": "because",
+          "Image File Name": "",
+          "Marks": "",
+          "Option A": "Red",
+          "Option B": "Green",
+          "Option C": "Blue",
+          "Option D": "Pink",
+          "Question Name": "",
+          "Question Text": "ZZ QX quiz 1",
+          "Question Type": "",
+          "Subject": "ZZ QX Subject A <ts>",
+          "Teacher Notes": "",
+          "Topic": "Colours",
+          "Unit": "Unit 1"
+        },
+        {
+          "BTL": "",
+          "Correct Option": "A, C",
+          "Difficulty Level": "Medium",
+          "Explanation": "because",
+          "Image File Name": "",
+          "Marks": "",
+          "Option A": "Red",
+          "Option B": "Green",
+          "Option C": "Blue",
+          "Option D": "Pink",
+          "Question Name": "",
+          "Question Text": "ZZ QX quiz 2 multi",
+          "Question Type": "",
+          "Subject": "ZZ QX Subject A <ts>",
+          "Teacher Notes": "",
+          "Topic": "New topic",
+          "Unit": "Unit 4"
+        },
+        {
+          "BTL": "",
+          "Correct Option": "(a)",
+          "Difficulty Level": "Medium",
+          "Explanation": "because",
+          "Image File Name": "",
+          "Marks": "",
+          "Option A": "True",
+          "Option B": "False",
+          "Option C": "",
+          "Option D": "",
+          "Question Name": "",
+          "Question Text": "ZZ QX quiz 3",
+          "Question Type": "",
+          "Subject": "ZZ QX Subject A <ts>",
+          "Teacher Notes": "",
+          "Topic": "Colours",
+          "Unit": "Unit 1"
+        },
+        {
+          "BTL": "",
+          "Correct Option": "A,B",
+          "Difficulty Level": "Medium",
+          "Explanation": "because",
+          "Image File Name": "",
+          "Marks": "",
+          "Option A": "Red",
+          "Option B": "Green",
+          "Option C": "Blue",
+          "Option D": "Pink",
+          "Question Name": "",
+          "Question Text": "ZZ QX quiz 8",
+          "Question Type": "",
+          "Subject": "ZZ QX Subject A <ts>",
+          "Teacher Notes": "",
+          "Topic": "Colours",
+          "Unit": "Unit 1"
+        },
+        {
+          "BTL": "",
+          "Correct Option": "B",
+          "Difficulty Level": "Medium",
+          "Explanation": "because",
+          "Image File Name": "",
+          "Marks": "",
+          "Option A": "Red",
+          "Option B": "Green",
+          "Option C": "Blue",
+          "Option D": "Pink",
+          "Question Name": "",
+          "Question Text": "ZZ QX quiz 10",
+          "Question Type": "",
+          "Subject": "ZZ QX Subject A <ts>",
+          "Teacher Notes": "",
+          "Topic": "",
+          "Unit": "Brand New Unit"
+        },
+        {
+          "BTL": "BTL-3",
+          "Correct Option": "B",
+          "Difficulty Level": "Medium",
+          "Explanation": "because",
+          "Image File Name": "",
+          "Marks": 5,
+          "Option A": "Red",
+          "Option B": "Green",
+          "Option C": "Blue",
+          "Option D": "Pink",
+          "Question Name": "named",
+          "Question Text": "ZZ QX quiz 12",
+          "Question Type": "",
+          "Subject": "ZZ QX Subject A <ts>",
+          "Teacher Notes": "",
+          "Topic": "Colours",
+          "Unit": "Unit 1"
+        },
+        {
+          "BTL": "",
+          "Correct Option": "B",
+          "Difficulty Level": "Medium",
+          "Explanation": "because",
+          "Image File Name": "",
+          "Marks": "",
+          "Option A": "Red",
+          "Option B": "Green",
+          "Option C": "Blue",
+          "Option D": "Pink",
+          "Question Name": "",
+          "Question Text": "ZZ QX quiz 14",
+          "Question Type": "",
+          "Subject": "ZZ QX Subject A <ts>",
+          "Teacher Notes": "ignored column",
+          "Topic": "Colours",
+          "Unit": "Unit 1"
+        }
+      ]
+    }
+  },
+  {
+    "name": "quiz preview: nothing was stored, not even the units and topics it resolved",
+    "db": {
+      "questions": 0,
+      "topics": [],
+      "units": [
+        "Unit 1",
+        "Unit IV"
+      ]
+    }
+  },
+  {
+    "name": "quiz preview: staff without access to the subject",
+    "status": 200,
+    "body": {
+      "autoFixed": [
+        {
+          "after": "2",
+          "before": "B",
+          "field": "Correct Option(s)",
+          "row": 2
+        }
+      ],
+      "autoFixedCount": 1,
+      "created": [],
+      "createdCount": 0,
+      "errorCount": 1,
+      "errors": [
+        {
+          "reason": "Subject \"ZZ QX Subject A <ts>\" not found or you're not authorized to use it. Subjects available to you: <list>",
+          "row": 2
+        }
+      ],
+      "imagesValidatedCount": 0,
+      "skipped": [],
+      "skippedCount": 0,
+      "structureHint": null,
+      "total": 1,
+      "unknownColumns": [],
+      "validRows": []
+    }
+  },
+  {
+    "name": "quiz preview: a notepad text file",
+    "status": 200,
+    "body": {
+      "autoFixed": [],
+      "autoFixedCount": 0,
+      "created": [
+        {
+          "btlLevel": null,
+          "description": "ZZ QX quiz text 1",
+          "difficulty": "EASY",
+          "hasImage": false,
+          "questionType": "MCQ",
+          "row": 2,
+          "title": null
+        }
+      ],
+      "createdCount": 1,
+      "errorCount": 0,
+      "errors": [],
+      "imagesValidatedCount": 0,
+      "skipped": [],
+      "skippedCount": 0,
+      "structureHint": null,
+      "total": 1,
+      "unknownColumns": [],
+      "validRows": [
+        {
+          "BTL": "",
+          "Correct Answer": "2",
+          "Difficulty Level": "Easy",
+          "Explanation": "",
+          "Marks": "",
+          "Options": "One|Two",
+          "Question Name": "",
+          "Question Text": "ZZ QX quiz text 1",
+          "Question Type": "Multiple Choice",
+          "Subject": "ZZ QX Subject A <ts>",
+          "Topic": "Text",
+          "Unit": "Unit 1"
+        }
+      ]
+    }
+  },
+  {
+    "name": "quiz preview: every row has an unrecognized type",
+    "status": 200,
+    "body": {
+      "autoFixed": [
+        {
+          "after": "2",
+          "before": "B",
+          "field": "Correct Option(s)",
+          "row": 2
+        },
+        {
+          "after": "2",
+          "before": "B",
+          "field": "Correct Option(s)",
+          "row": 3
+        },
+        {
+          "after": "2",
+          "before": "B",
+          "field": "Correct Option(s)",
+          "row": 4
+        }
+      ],
+      "autoFixedCount": 3,
+      "created": [],
+      "createdCount": 0,
+      "errorCount": 3,
+      "errors": [
+        {
+          "reason": "Unrecognized Question Type \"x\" — expected MCQ, True/False, or Multiple Select",
+          "row": 2
+        },
+        {
+          "reason": "Unrecognized Question Type \"y\" — expected MCQ, True/False, or Multiple Select",
+          "row": 3
+        },
+        {
+          "reason": "Unrecognized Question Type \"z\" — expected MCQ, True/False, or Multiple Select",
+          "row": 4
+        }
+      ],
+      "imagesValidatedCount": 0,
+      "skipped": [],
+      "skippedCount": 0,
+      "structureHint": "Every row in this file has an unrecognized Question Type. This almost always means your spreadsheet's columns don't match our template's order (e.g. a column is missing, extra, or shifted) rather than 30 individual typos. Download the template below and copy your data into it column-by-column, or reorder your existing columns to match it exactly.",
+      "total": 3,
+      "unknownColumns": [],
+      "validRows": []
+    }
+  },
+  {
+    "name": "quiz preview: a coding row in the quiz file",
+    "status": 200,
+    "body": {
+      "autoFixed": [
+        {
+          "after": "2",
+          "before": "B",
+          "field": "Correct Option(s)",
+          "row": 2
+        }
+      ],
+      "autoFixedCount": 1,
+      "created": [],
+      "createdCount": 0,
+      "errorCount": 1,
+      "errors": [
+        {
+          "reason": "Coding questions use the separate coding-question bulk upload (different template/columns), not this one",
+          "row": 2
+        }
+      ],
+      "imagesValidatedCount": 0,
+      "skipped": [],
+      "skippedCount": 0,
+      "structureHint": null,
+      "total": 1,
+      "unknownColumns": [],
+      "validRows": []
+    }
+  },
+  {
+    "name": "quiz confirm: anonymous",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "Missing or invalid Authorization header"
+    }
+  },
+  {
+    "name": "quiz confirm: no rows",
+    "status": 400,
+    "body": {
+      "error": "No rows to import"
+    }
+  },
+  {
+    "name": "quiz confirm: invalid rows payload",
+    "status": 400,
+    "body": {
+      "error": "Invalid rows payload"
+    }
+  },
+  {
+    "name": "quiz confirm: folder of another institute",
+    "status": 403,
+    "body": {
+      "error": "That folder isn't in your institute's question bank"
+    }
+  },
+  {
+    "name": "quiz confirm: the previewed rows",
+    "status": 200,
+    "body": {
+      "autoFixed": [
+        {
+          "after": "2",
+          "before": "B",
+          "field": "Correct Option(s)",
+          "row": 2
+        },
+        {
+          "after": "1,3",
+          "before": "A, C",
+          "field": "Correct Option(s)",
+          "row": 3
+        },
+        {
+          "after": "1",
+          "before": "(a)",
+          "field": "Correct Option(s)",
+          "row": 4
+        },
+        {
+          "after": "1,2",
+          "before": "A,B",
+          "field": "Correct Option(s)",
+          "row": 5
+        },
+        {
+          "after": "2",
+          "before": "B",
+          "field": "Correct Option(s)",
+          "row": 6
+        },
+        {
+          "after": "2",
+          "before": "B",
+          "field": "Correct Option(s)",
+          "row": 7
+        },
+        {
+          "after": "2",
+          "before": "B",
+          "field": "Correct Option(s)",
+          "row": 8
+        }
+      ],
+      "autoFixedCount": 7,
+      "created": [
+        {
+          "aiGenerated": false,
+          "btlLevel": null,
+          "comparisonMode": "TRIM",
+          "constraints": null,
+          "correctAnswer": [
+            1
+          ],
+          "createdAt": "<time>",
+          "createdById": "<id>",
+          "description": "ZZ QX quiz 1",
+          "difficulty": "MEDIUM",
+          "edgeCases": null,
+          "editorial": null,
+          "estimatedTimeMin": null,
+          "evaluationType": "STDIO",
+          "explanation": "because",
+          "floatAbsoluteTolerance": 0.000001,
+          "floatRelativeTolerance": 0.000001,
+          "folderId": "<id>",
+          "functionSignature": null,
+          "hints": null,
+          "id": "<id>",
+          "imageKey": null,
+          "imageMimeType": null,
+          "inputFormat": null,
+          "instituteId": "<id>",
+          "memoryLimitKb": null,
+          "moduleCodingTestId": null,
+          "notes": null,
+          "numericAnswer": null,
+          "numericAnswerDisplay": null,
+          "numericTolerance": 0,
+          "options": [
+            "Red",
+            "Green",
+            "Blue",
+            "Pink"
+          ],
+          "outputFormat": null,
+          "points": 10,
+          "problemExplanation": null,
+          "questionNumber": "<masked>",
+          "questionStatus": "PUBLISHED",
+          "questionType": "MCQ",
+          "realWorldScenario": null,
+          "referenceSolution": null,
+          "similarQuestions": null,
+          "skillTested": null,
+          "spaceComplexity": null,
+          "sqlSchema": null,
+          "starterCode": null,
+          "starterCodeByLanguage": null,
+          "subject": "ZZ QX Subject A <ts>",
+          "subjectId": "<id>",
+          "subtopic": null,
+          "tags": null,
+          "timeComplexity": null,
+          "timeLimitMs": 2000,
+          "title": null,
+          "topic": "Colours",
+          "topicId": "<id>",
+          "unitId": "<id>",
+          "updatedAt": "<time>",
+          "updatedById": null
+        },
+        {
+          "aiGenerated": false,
+          "btlLevel": null,
+          "comparisonMode": "TRIM",
+          "constraints": null,
+          "correctAnswer": [
+            0,
+            2
+          ],
+          "createdAt": "<time>",
+          "createdById": "<id>",
+          "description": "ZZ QX quiz 2 multi",
+          "difficulty": "MEDIUM",
+          "edgeCases": null,
+          "editorial": null,
+          "estimatedTimeMin": null,
+          "evaluationType": "STDIO",
+          "explanation": "because",
+          "floatAbsoluteTolerance": 0.000001,
+          "floatRelativeTolerance": 0.000001,
+          "folderId": "<id>",
+          "functionSignature": null,
+          "hints": null,
+          "id": "<id>",
+          "imageKey": null,
+          "imageMimeType": null,
+          "inputFormat": null,
+          "instituteId": "<id>",
+          "memoryLimitKb": null,
+          "moduleCodingTestId": null,
+          "notes": null,
+          "numericAnswer": null,
+          "numericAnswerDisplay": null,
+          "numericTolerance": 0,
+          "options": [
+            "Red",
+            "Green",
+            "Blue",
+            "Pink"
+          ],
+          "outputFormat": null,
+          "points": 10,
+          "problemExplanation": null,
+          "questionNumber": "<masked>",
+          "questionStatus": "PUBLISHED",
+          "questionType": "MULTISELECT",
+          "realWorldScenario": null,
+          "referenceSolution": null,
+          "similarQuestions": null,
+          "skillTested": null,
+          "spaceComplexity": null,
+          "sqlSchema": null,
+          "starterCode": null,
+          "starterCodeByLanguage": null,
+          "subject": "ZZ QX Subject A <ts>",
+          "subjectId": "<id>",
+          "subtopic": null,
+          "tags": null,
+          "timeComplexity": null,
+          "timeLimitMs": 2000,
+          "title": null,
+          "topic": "New topic",
+          "topicId": "<id>",
+          "unitId": "<id>",
+          "updatedAt": "<time>",
+          "updatedById": null
+        },
+        {
+          "aiGenerated": false,
+          "btlLevel": null,
+          "comparisonMode": "TRIM",
+          "constraints": null,
+          "correctAnswer": [
+            0
+          ],
+          "createdAt": "<time>",
+          "createdById": "<id>",
+          "description": "ZZ QX quiz 3",
+          "difficulty": "MEDIUM",
+          "edgeCases": null,
+          "editorial": null,
+          "estimatedTimeMin": null,
+          "evaluationType": "STDIO",
+          "explanation": "because",
+          "floatAbsoluteTolerance": 0.000001,
+          "floatRelativeTolerance": 0.000001,
+          "folderId": "<id>",
+          "functionSignature": null,
+          "hints": null,
+          "id": "<id>",
+          "imageKey": null,
+          "imageMimeType": null,
+          "inputFormat": null,
+          "instituteId": "<id>",
+          "memoryLimitKb": null,
+          "moduleCodingTestId": null,
+          "notes": null,
+          "numericAnswer": null,
+          "numericAnswerDisplay": null,
+          "numericTolerance": 0,
+          "options": [
+            "True",
+            "False"
+          ],
+          "outputFormat": null,
+          "points": 10,
+          "problemExplanation": null,
+          "questionNumber": "<masked>",
+          "questionStatus": "PUBLISHED",
+          "questionType": "TRUE_FALSE",
+          "realWorldScenario": null,
+          "referenceSolution": null,
+          "similarQuestions": null,
+          "skillTested": null,
+          "spaceComplexity": null,
+          "sqlSchema": null,
+          "starterCode": null,
+          "starterCodeByLanguage": null,
+          "subject": "ZZ QX Subject A <ts>",
+          "subjectId": "<id>",
+          "subtopic": null,
+          "tags": null,
+          "timeComplexity": null,
+          "timeLimitMs": 2000,
+          "title": null,
+          "topic": "Colours",
+          "topicId": "<id>",
+          "unitId": "<id>",
+          "updatedAt": "<time>",
+          "updatedById": null
+        },
+        {
+          "aiGenerated": false,
+          "btlLevel": null,
+          "comparisonMode": "TRIM",
+          "constraints": null,
+          "correctAnswer": [
+            0,
+            1
+          ],
+          "createdAt": "<time>",
+          "createdById": "<id>",
+          "description": "ZZ QX quiz 8",
+          "difficulty": "MEDIUM",
+          "edgeCases": null,
+          "editorial": null,
+          "estimatedTimeMin": null,
+          "evaluationType": "STDIO",
+          "explanation": "because",
+          "floatAbsoluteTolerance": 0.000001,
+          "floatRelativeTolerance": 0.000001,
+          "folderId": "<id>",
+          "functionSignature": null,
+          "hints": null,
+          "id": "<id>",
+          "imageKey": null,
+          "imageMimeType": null,
+          "inputFormat": null,
+          "instituteId": "<id>",
+          "memoryLimitKb": null,
+          "moduleCodingTestId": null,
+          "notes": null,
+          "numericAnswer": null,
+          "numericAnswerDisplay": null,
+          "numericTolerance": 0,
+          "options": [
+            "Red",
+            "Green",
+            "Blue",
+            "Pink"
+          ],
+          "outputFormat": null,
+          "points": 10,
+          "problemExplanation": null,
+          "questionNumber": "<masked>",
+          "questionStatus": "PUBLISHED",
+          "questionType": "MULTISELECT",
+          "realWorldScenario": null,
+          "referenceSolution": null,
+          "similarQuestions": null,
+          "skillTested": null,
+          "spaceComplexity": null,
+          "sqlSchema": null,
+          "starterCode": null,
+          "starterCodeByLanguage": null,
+          "subject": "ZZ QX Subject A <ts>",
+          "subjectId": "<id>",
+          "subtopic": null,
+          "tags": null,
+          "timeComplexity": null,
+          "timeLimitMs": 2000,
+          "title": null,
+          "topic": "Colours",
+          "topicId": "<id>",
+          "unitId": "<id>",
+          "updatedAt": "<time>",
+          "updatedById": null
+        },
+        {
+          "aiGenerated": false,
+          "btlLevel": null,
+          "comparisonMode": "TRIM",
+          "constraints": null,
+          "correctAnswer": [
+            1
+          ],
+          "createdAt": "<time>",
+          "createdById": "<id>",
+          "description": "ZZ QX quiz 10",
+          "difficulty": "MEDIUM",
+          "edgeCases": null,
+          "editorial": null,
+          "estimatedTimeMin": null,
+          "evaluationType": "STDIO",
+          "explanation": "because",
+          "floatAbsoluteTolerance": 0.000001,
+          "floatRelativeTolerance": 0.000001,
+          "folderId": "<id>",
+          "functionSignature": null,
+          "hints": null,
+          "id": "<id>",
+          "imageKey": null,
+          "imageMimeType": null,
+          "inputFormat": null,
+          "instituteId": "<id>",
+          "memoryLimitKb": null,
+          "moduleCodingTestId": null,
+          "notes": null,
+          "numericAnswer": null,
+          "numericAnswerDisplay": null,
+          "numericTolerance": 0,
+          "options": [
+            "Red",
+            "Green",
+            "Blue",
+            "Pink"
+          ],
+          "outputFormat": null,
+          "points": 10,
+          "problemExplanation": null,
+          "questionNumber": "<masked>",
+          "questionStatus": "PUBLISHED",
+          "questionType": "MCQ",
+          "realWorldScenario": null,
+          "referenceSolution": null,
+          "similarQuestions": null,
+          "skillTested": null,
+          "spaceComplexity": null,
+          "sqlSchema": null,
+          "starterCode": null,
+          "starterCodeByLanguage": null,
+          "subject": "ZZ QX Subject A <ts>",
+          "subjectId": "<id>",
+          "subtopic": null,
+          "tags": null,
+          "timeComplexity": null,
+          "timeLimitMs": 2000,
+          "title": null,
+          "topic": null,
+          "topicId": null,
+          "unitId": "<id>",
+          "updatedAt": "<time>",
+          "updatedById": null
+        },
+        {
+          "aiGenerated": false,
+          "btlLevel": 3,
+          "comparisonMode": "TRIM",
+          "constraints": null,
+          "correctAnswer": [
+            1
+          ],
+          "createdAt": "<time>",
+          "createdById": "<id>",
+          "description": "ZZ QX quiz 12",
+          "difficulty": "MEDIUM",
+          "edgeCases": null,
+          "editorial": null,
+          "estimatedTimeMin": null,
+          "evaluationType": "STDIO",
+          "explanation": "because",
+          "floatAbsoluteTolerance": 0.000001,
+          "floatRelativeTolerance": 0.000001,
+          "folderId": "<id>",
+          "functionSignature": null,
+          "hints": null,
+          "id": "<id>",
+          "imageKey": null,
+          "imageMimeType": null,
+          "inputFormat": null,
+          "instituteId": "<id>",
+          "memoryLimitKb": null,
+          "moduleCodingTestId": null,
+          "notes": null,
+          "numericAnswer": null,
+          "numericAnswerDisplay": null,
+          "numericTolerance": 0,
+          "options": [
+            "Red",
+            "Green",
+            "Blue",
+            "Pink"
+          ],
+          "outputFormat": null,
+          "points": 5,
+          "problemExplanation": null,
+          "questionNumber": "<masked>",
+          "questionStatus": "PUBLISHED",
+          "questionType": "MCQ",
+          "realWorldScenario": null,
+          "referenceSolution": null,
+          "similarQuestions": null,
+          "skillTested": null,
+          "spaceComplexity": null,
+          "sqlSchema": null,
+          "starterCode": null,
+          "starterCodeByLanguage": null,
+          "subject": "ZZ QX Subject A <ts>",
+          "subjectId": "<id>",
+          "subtopic": null,
+          "tags": null,
+          "timeComplexity": null,
+          "timeLimitMs": 2000,
+          "title": "named",
+          "topic": "Colours",
+          "topicId": "<id>",
+          "unitId": "<id>",
+          "updatedAt": "<time>",
+          "updatedById": null
+        },
+        {
+          "aiGenerated": false,
+          "btlLevel": null,
+          "comparisonMode": "TRIM",
+          "constraints": null,
+          "correctAnswer": [
+            1
+          ],
+          "createdAt": "<time>",
+          "createdById": "<id>",
+          "description": "ZZ QX quiz 14",
+          "difficulty": "MEDIUM",
+          "edgeCases": null,
+          "editorial": null,
+          "estimatedTimeMin": null,
+          "evaluationType": "STDIO",
+          "explanation": "because",
+          "floatAbsoluteTolerance": 0.000001,
+          "floatRelativeTolerance": 0.000001,
+          "folderId": "<id>",
+          "functionSignature": null,
+          "hints": null,
+          "id": "<id>",
+          "imageKey": null,
+          "imageMimeType": null,
+          "inputFormat": null,
+          "instituteId": "<id>",
+          "memoryLimitKb": null,
+          "moduleCodingTestId": null,
+          "notes": null,
+          "numericAnswer": null,
+          "numericAnswerDisplay": null,
+          "numericTolerance": 0,
+          "options": [
+            "Red",
+            "Green",
+            "Blue",
+            "Pink"
+          ],
+          "outputFormat": null,
+          "points": 10,
+          "problemExplanation": null,
+          "questionNumber": "<masked>",
+          "questionStatus": "PUBLISHED",
+          "questionType": "MCQ",
+          "realWorldScenario": null,
+          "referenceSolution": null,
+          "similarQuestions": null,
+          "skillTested": null,
+          "spaceComplexity": null,
+          "sqlSchema": null,
+          "starterCode": null,
+          "starterCodeByLanguage": null,
+          "subject": "ZZ QX Subject A <ts>",
+          "subjectId": "<id>",
+          "subtopic": null,
+          "tags": null,
+          "timeComplexity": null,
+          "timeLimitMs": 2000,
+          "title": null,
+          "topic": "Colours",
+          "topicId": "<id>",
+          "unitId": "<id>",
+          "updatedAt": "<time>",
+          "updatedById": null
+        }
+      ],
+      "createdCount": 7,
+      "errorCount": 0,
+      "errors": [],
+      "imagesValidatedCount": 0,
+      "skipped": [],
+      "skippedCount": 0,
+      "structureHint": null,
+      "total": 7,
+      "unknownColumns": [
+        "Teacher Notes"
+      ]
+    }
+  },
+  {
+    "name": "quiz confirm: the same rows again are skipped as duplicates",
+    "status": 200,
+    "body": {
+      "autoFixed": [
+        {
+          "after": "2",
+          "before": "B",
+          "field": "Correct Option(s)",
+          "row": 2
+        },
+        {
+          "after": "1,3",
+          "before": "A, C",
+          "field": "Correct Option(s)",
+          "row": 3
+        },
+        {
+          "after": "1",
+          "before": "(a)",
+          "field": "Correct Option(s)",
+          "row": 4
+        },
+        {
+          "after": "1,2",
+          "before": "A,B",
+          "field": "Correct Option(s)",
+          "row": 5
+        },
+        {
+          "after": "2",
+          "before": "B",
+          "field": "Correct Option(s)",
+          "row": 6
+        },
+        {
+          "after": "2",
+          "before": "B",
+          "field": "Correct Option(s)",
+          "row": 7
+        },
+        {
+          "after": "2",
+          "before": "B",
+          "field": "Correct Option(s)",
+          "row": 8
+        }
+      ],
+      "autoFixedCount": 7,
+      "created": [],
+      "createdCount": 0,
+      "errorCount": 0,
+      "errors": [],
+      "imagesValidatedCount": 0,
+      "skipped": [
+        {
+          "reason": "A question with this text already exists under that Subject/Unit",
+          "row": 2
+        },
+        {
+          "reason": "A question with this text already exists under that Subject/Unit",
+          "row": 3
+        },
+        {
+          "reason": "A question with this text already exists under that Subject/Unit",
+          "row": 4
+        },
+        {
+          "reason": "A question with this text already exists under that Subject/Unit",
+          "row": 5
+        },
+        {
+          "reason": "A question with this text already exists under that Subject/Unit",
+          "row": 6
+        },
+        {
+          "reason": "A question with this text already exists under that Subject/Unit",
+          "row": 7
+        },
+        {
+          "reason": "A question with this text already exists under that Subject/Unit",
+          "row": 8
+        }
+      ],
+      "skippedCount": 7,
+      "structureHint": null,
+      "total": 7,
+      "unknownColumns": [
+        "Teacher Notes"
+      ]
+    }
+  },
+  {
+    "name": "quiz confirm: duplicates imported on request",
+    "status": 200,
+    "body": {
+      "autoFixed": [
+        {
+          "after": "2",
+          "before": "B",
+          "field": "Correct Option(s)",
+          "row": 2
+        }
+      ],
+      "autoFixedCount": 1,
+      "created": [
+        {
+          "aiGenerated": false,
+          "btlLevel": null,
+          "comparisonMode": "TRIM",
+          "constraints": null,
+          "correctAnswer": [
+            1
+          ],
+          "createdAt": "<time>",
+          "createdById": "<id>",
+          "description": "ZZ QX quiz 1",
+          "difficulty": "MEDIUM",
+          "edgeCases": null,
+          "editorial": null,
+          "estimatedTimeMin": null,
+          "evaluationType": "STDIO",
+          "explanation": "because",
+          "floatAbsoluteTolerance": 0.000001,
+          "floatRelativeTolerance": 0.000001,
+          "folderId": "<id>",
+          "functionSignature": null,
+          "hints": null,
+          "id": "<id>",
+          "imageKey": null,
+          "imageMimeType": null,
+          "inputFormat": null,
+          "instituteId": "<id>",
+          "memoryLimitKb": null,
+          "moduleCodingTestId": null,
+          "notes": null,
+          "numericAnswer": null,
+          "numericAnswerDisplay": null,
+          "numericTolerance": 0,
+          "options": [
+            "Red",
+            "Green",
+            "Blue",
+            "Pink"
+          ],
+          "outputFormat": null,
+          "points": 10,
+          "problemExplanation": null,
+          "questionNumber": "<masked>",
+          "questionStatus": "PUBLISHED",
+          "questionType": "MCQ",
+          "realWorldScenario": null,
+          "referenceSolution": null,
+          "similarQuestions": null,
+          "skillTested": null,
+          "spaceComplexity": null,
+          "sqlSchema": null,
+          "starterCode": null,
+          "starterCodeByLanguage": null,
+          "subject": "ZZ QX Subject A <ts>",
+          "subjectId": "<id>",
+          "subtopic": null,
+          "tags": null,
+          "timeComplexity": null,
+          "timeLimitMs": 2000,
+          "title": null,
+          "topic": "Colours",
+          "topicId": "<id>",
+          "unitId": "<id>",
+          "updatedAt": "<time>",
+          "updatedById": null
+        }
+      ],
+      "createdCount": 1,
+      "errorCount": 0,
+      "errors": [],
+      "imagesValidatedCount": 0,
+      "skipped": [],
+      "skippedCount": 0,
+      "structureHint": null,
+      "total": 1,
+      "unknownColumns": [
+        "Teacher Notes"
+      ]
+    }
+  },
+  {
+    "name": "quiz direct: anonymous",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "Missing or invalid Authorization header"
+    }
+  },
+  {
+    "name": "quiz direct: a file",
+    "status": 200,
+    "body": {
+      "autoFixed": [
+        {
+          "after": "2",
+          "before": "B",
+          "field": "Correct Option(s)",
+          "row": 2
+        },
+        {
+          "after": "4",
+          "before": "D",
+          "field": "Correct Option(s)",
+          "row": 3
+        }
+      ],
+      "autoFixedCount": 2,
+      "created": [
+        {
+          "aiGenerated": false,
+          "btlLevel": null,
+          "comparisonMode": "TRIM",
+          "constraints": null,
+          "correctAnswer": [
+            1
+          ],
+          "createdAt": "<time>",
+          "createdById": "<id>",
+          "description": "ZZ QX quiz 40",
+          "difficulty": "MEDIUM",
+          "edgeCases": null,
+          "editorial": null,
+          "estimatedTimeMin": null,
+          "evaluationType": "STDIO",
+          "explanation": "because",
+          "floatAbsoluteTolerance": 0.000001,
+          "floatRelativeTolerance": 0.000001,
+          "folderId": null,
+          "functionSignature": null,
+          "hints": null,
+          "id": "<id>",
+          "imageKey": null,
+          "imageMimeType": null,
+          "inputFormat": null,
+          "instituteId": "<id>",
+          "memoryLimitKb": null,
+          "moduleCodingTestId": null,
+          "notes": null,
+          "numericAnswer": null,
+          "numericAnswerDisplay": null,
+          "numericTolerance": 0,
+          "options": [
+            "Red",
+            "Green",
+            "Blue",
+            "Pink"
+          ],
+          "outputFormat": null,
+          "points": 10,
+          "problemExplanation": null,
+          "questionNumber": "<masked>",
+          "questionStatus": "PUBLISHED",
+          "questionType": "MCQ",
+          "realWorldScenario": null,
+          "referenceSolution": null,
+          "similarQuestions": null,
+          "skillTested": null,
+          "spaceComplexity": null,
+          "sqlSchema": null,
+          "starterCode": null,
+          "starterCodeByLanguage": null,
+          "subject": "ZZ QX Subject A <ts>",
+          "subjectId": "<id>",
+          "subtopic": null,
+          "tags": null,
+          "timeComplexity": null,
+          "timeLimitMs": 2000,
+          "title": null,
+          "topic": "Colours",
+          "topicId": "<id>",
+          "unitId": "<id>",
+          "updatedAt": "<time>",
+          "updatedById": null
+        },
+        {
+          "aiGenerated": false,
+          "btlLevel": null,
+          "comparisonMode": "TRIM",
+          "constraints": null,
+          "correctAnswer": [
+            3
+          ],
+          "createdAt": "<time>",
+          "createdById": "<id>",
+          "description": "ZZ QX quiz 41",
+          "difficulty": "MEDIUM",
+          "edgeCases": null,
+          "editorial": null,
+          "estimatedTimeMin": null,
+          "evaluationType": "STDIO",
+          "explanation": "because",
+          "floatAbsoluteTolerance": 0.000001,
+          "floatRelativeTolerance": 0.000001,
+          "folderId": null,
+          "functionSignature": null,
+          "hints": null,
+          "id": "<id>",
+          "imageKey": null,
+          "imageMimeType": null,
+          "inputFormat": null,
+          "instituteId": "<id>",
+          "memoryLimitKb": null,
+          "moduleCodingTestId": null,
+          "notes": null,
+          "numericAnswer": null,
+          "numericAnswerDisplay": null,
+          "numericTolerance": 0,
+          "options": [
+            "Red",
+            "Green",
+            "Blue",
+            "Pink"
+          ],
+          "outputFormat": null,
+          "points": 10,
+          "problemExplanation": null,
+          "questionNumber": "<masked>",
+          "questionStatus": "PUBLISHED",
+          "questionType": "MCQ",
+          "realWorldScenario": null,
+          "referenceSolution": null,
+          "similarQuestions": null,
+          "skillTested": null,
+          "spaceComplexity": null,
+          "sqlSchema": null,
+          "starterCode": null,
+          "starterCodeByLanguage": null,
+          "subject": "ZZ QX Subject A <ts>",
+          "subjectId": "<id>",
+          "subtopic": null,
+          "tags": null,
+          "timeComplexity": null,
+          "timeLimitMs": 2000,
+          "title": null,
+          "topic": "Colours",
+          "topicId": "<id>",
+          "unitId": "<id>",
+          "updatedAt": "<time>",
+          "updatedById": null
+        }
+      ],
+      "createdCount": 2,
+      "errorCount": 0,
+      "errors": [],
+      "imagesValidatedCount": 0,
+      "skipped": [],
+      "skippedCount": 0,
+      "structureHint": null,
+      "total": 2,
+      "unknownColumns": []
+    }
+  },
+  {
+    "name": "quiz direct: a notepad file",
+    "status": 200,
+    "body": {
+      "autoFixed": [],
+      "autoFixedCount": 0,
+      "created": [
+        {
+          "aiGenerated": false,
+          "btlLevel": null,
+          "comparisonMode": "TRIM",
+          "constraints": null,
+          "correctAnswer": [
+            0
+          ],
+          "createdAt": "<time>",
+          "createdById": "<id>",
+          "description": "ZZ QX quiz text 2",
+          "difficulty": "EASY",
+          "edgeCases": null,
+          "editorial": null,
+          "estimatedTimeMin": null,
+          "evaluationType": "STDIO",
+          "explanation": null,
+          "floatAbsoluteTolerance": 0.000001,
+          "floatRelativeTolerance": 0.000001,
+          "folderId": null,
+          "functionSignature": null,
+          "hints": null,
+          "id": "<id>",
+          "imageKey": null,
+          "imageMimeType": null,
+          "inputFormat": null,
+          "instituteId": "<id>",
+          "memoryLimitKb": null,
+          "moduleCodingTestId": null,
+          "notes": null,
+          "numericAnswer": null,
+          "numericAnswerDisplay": null,
+          "numericTolerance": 0,
+          "options": [
+            "One",
+            "Two"
+          ],
+          "outputFormat": null,
+          "points": 10,
+          "problemExplanation": null,
+          "questionNumber": "<masked>",
+          "questionStatus": "PUBLISHED",
+          "questionType": "MCQ",
+          "realWorldScenario": null,
+          "referenceSolution": null,
+          "similarQuestions": null,
+          "skillTested": null,
+          "spaceComplexity": null,
+          "sqlSchema": null,
+          "starterCode": null,
+          "starterCodeByLanguage": null,
+          "subject": "ZZ QX Subject A <ts>",
+          "subjectId": "<id>",
+          "subtopic": null,
+          "tags": null,
+          "timeComplexity": null,
+          "timeLimitMs": 2000,
+          "title": null,
+          "topic": null,
+          "topicId": null,
+          "unitId": "<id>",
+          "updatedAt": "<time>",
+          "updatedById": null
+        }
+      ],
+      "createdCount": 1,
+      "errorCount": 0,
+      "errors": [],
+      "imagesValidatedCount": 0,
+      "skipped": [],
+      "skippedCount": 0,
+      "structureHint": null,
+      "total": 1,
+      "unknownColumns": []
+    }
+  },
+  {
+    "name": "quiz direct: staff with access",
+    "status": 200,
+    "body": {
+      "autoFixed": [
+        {
+          "after": "2",
+          "before": "B",
+          "field": "Correct Option(s)",
+          "row": 2
+        }
+      ],
+      "autoFixedCount": 1,
+      "created": [
+        {
+          "aiGenerated": false,
+          "btlLevel": null,
+          "comparisonMode": "TRIM",
+          "constraints": null,
+          "correctAnswer": [
+            1
+          ],
+          "createdAt": "<time>",
+          "createdById": "<id>",
+          "description": "ZZ QX quiz 42",
+          "difficulty": "MEDIUM",
+          "edgeCases": null,
+          "editorial": null,
+          "estimatedTimeMin": null,
+          "evaluationType": "STDIO",
+          "explanation": "because",
+          "floatAbsoluteTolerance": 0.000001,
+          "floatRelativeTolerance": 0.000001,
+          "folderId": null,
+          "functionSignature": null,
+          "hints": null,
+          "id": "<id>",
+          "imageKey": null,
+          "imageMimeType": null,
+          "inputFormat": null,
+          "instituteId": "<id>",
+          "memoryLimitKb": null,
+          "moduleCodingTestId": null,
+          "notes": null,
+          "numericAnswer": null,
+          "numericAnswerDisplay": null,
+          "numericTolerance": 0,
+          "options": [
+            "Red",
+            "Green",
+            "Blue",
+            "Pink"
+          ],
+          "outputFormat": null,
+          "points": 10,
+          "problemExplanation": null,
+          "questionNumber": "<masked>",
+          "questionStatus": "PUBLISHED",
+          "questionType": "MCQ",
+          "realWorldScenario": null,
+          "referenceSolution": null,
+          "similarQuestions": null,
+          "skillTested": null,
+          "spaceComplexity": null,
+          "sqlSchema": null,
+          "starterCode": null,
+          "starterCodeByLanguage": null,
+          "subject": "ZZ QX Subject A <ts>",
+          "subjectId": "<id>",
+          "subtopic": null,
+          "tags": null,
+          "timeComplexity": null,
+          "timeLimitMs": 2000,
+          "title": null,
+          "topic": "Colours",
+          "topicId": "<id>",
+          "unitId": "<id>",
+          "updatedAt": "<time>",
+          "updatedById": null
+        }
+      ],
+      "createdCount": 1,
+      "errorCount": 0,
+      "errors": [],
+      "imagesValidatedCount": 0,
+      "skipped": [],
+      "skippedCount": 0,
+      "structureHint": null,
+      "total": 1,
+      "unknownColumns": []
+    }
+  },
+  {
+    "name": "quiz import: stored",
+    "db": [
+      {
+        "btlLevel": null,
+        "correctAnswer": [
+          1
+        ],
+        "createdById": "instA",
+        "description": "ZZ QX quiz 1",
+        "difficulty": "MEDIUM",
+        "folderId": "set",
+        "instituteId": "A",
+        "options": [
+          "Red",
+          "Green",
+          "Blue",
+          "Pink"
+        ],
+        "points": 10,
+        "questionStatus": "PUBLISHED",
+        "questionType": "MCQ",
+        "title": null,
+        "topicId": "set",
+        "unitId": "set"
+      },
+      {
+        "btlLevel": null,
+        "correctAnswer": [
+          1
+        ],
+        "createdById": "instA",
+        "description": "ZZ QX quiz 1",
+        "difficulty": "MEDIUM",
+        "folderId": "set",
+        "instituteId": "A",
+        "options": [
+          "Red",
+          "Green",
+          "Blue",
+          "Pink"
+        ],
+        "points": 10,
+        "questionStatus": "PUBLISHED",
+        "questionType": "MCQ",
+        "title": null,
+        "topicId": "set",
+        "unitId": "set"
+      },
+      {
+        "btlLevel": null,
+        "correctAnswer": [
+          1
+        ],
+        "createdById": "instA",
+        "description": "ZZ QX quiz 10",
+        "difficulty": "MEDIUM",
+        "folderId": "set",
+        "instituteId": "A",
+        "options": [
+          "Red",
+          "Green",
+          "Blue",
+          "Pink"
+        ],
+        "points": 10,
+        "questionStatus": "PUBLISHED",
+        "questionType": "MCQ",
+        "title": null,
+        "topicId": null,
+        "unitId": "set"
+      },
+      {
+        "btlLevel": 3,
+        "correctAnswer": [
+          1
+        ],
+        "createdById": "instA",
+        "description": "ZZ QX quiz 12",
+        "difficulty": "MEDIUM",
+        "folderId": "set",
+        "instituteId": "A",
+        "options": [
+          "Red",
+          "Green",
+          "Blue",
+          "Pink"
+        ],
+        "points": 5,
+        "questionStatus": "PUBLISHED",
+        "questionType": "MCQ",
+        "title": "named",
+        "topicId": "set",
+        "unitId": "set"
+      },
+      {
+        "btlLevel": null,
+        "correctAnswer": [
+          1
+        ],
+        "createdById": "instA",
+        "description": "ZZ QX quiz 14",
+        "difficulty": "MEDIUM",
+        "folderId": "set",
+        "instituteId": "A",
+        "options": [
+          "Red",
+          "Green",
+          "Blue",
+          "Pink"
+        ],
+        "points": 10,
+        "questionStatus": "PUBLISHED",
+        "questionType": "MCQ",
+        "title": null,
+        "topicId": "set",
+        "unitId": "set"
+      },
+      {
+        "btlLevel": null,
+        "correctAnswer": [
+          0,
+          2
+        ],
+        "createdById": "instA",
+        "description": "ZZ QX quiz 2 multi",
+        "difficulty": "MEDIUM",
+        "folderId": "set",
+        "instituteId": "A",
+        "options": [
+          "Red",
+          "Green",
+          "Blue",
+          "Pink"
+        ],
+        "points": 10,
+        "questionStatus": "PUBLISHED",
+        "questionType": "MULTISELECT",
+        "title": null,
+        "topicId": "set",
+        "unitId": "set"
+      },
+      {
+        "btlLevel": null,
+        "correctAnswer": [
+          0
+        ],
+        "createdById": "instA",
+        "description": "ZZ QX quiz 3",
+        "difficulty": "MEDIUM",
+        "folderId": "set",
+        "instituteId": "A",
+        "options": [
+          "True",
+          "False"
+        ],
+        "points": 10,
+        "questionStatus": "PUBLISHED",
+        "questionType": "TRUE_FALSE",
+        "title": null,
+        "topicId": "set",
+        "unitId": "set"
+      },
+      {
+        "btlLevel": null,
+        "correctAnswer": [
+          1
+        ],
+        "createdById": "instA",
+        "description": "ZZ QX quiz 40",
+        "difficulty": "MEDIUM",
+        "folderId": null,
+        "instituteId": "A",
+        "options": [
+          "Red",
+          "Green",
+          "Blue",
+          "Pink"
+        ],
+        "points": 10,
+        "questionStatus": "PUBLISHED",
+        "questionType": "MCQ",
+        "title": null,
+        "topicId": "set",
+        "unitId": "set"
+      },
+      {
+        "btlLevel": null,
+        "correctAnswer": [
+          3
+        ],
+        "createdById": "instA",
+        "description": "ZZ QX quiz 41",
+        "difficulty": "MEDIUM",
+        "folderId": null,
+        "instituteId": "A",
+        "options": [
+          "Red",
+          "Green",
+          "Blue",
+          "Pink"
+        ],
+        "points": 10,
+        "questionStatus": "PUBLISHED",
+        "questionType": "MCQ",
+        "title": null,
+        "topicId": "set",
+        "unitId": "set"
+      },
+      {
+        "btlLevel": null,
+        "correctAnswer": [
+          1
+        ],
+        "createdById": "staffA",
+        "description": "ZZ QX quiz 42",
+        "difficulty": "MEDIUM",
+        "folderId": null,
+        "instituteId": "A",
+        "options": [
+          "Red",
+          "Green",
+          "Blue",
+          "Pink"
+        ],
+        "points": 10,
+        "questionStatus": "PUBLISHED",
+        "questionType": "MCQ",
+        "title": null,
+        "topicId": "set",
+        "unitId": "set"
+      },
+      {
+        "btlLevel": null,
+        "correctAnswer": [
+          0,
+          1
+        ],
+        "createdById": "instA",
+        "description": "ZZ QX quiz 8",
+        "difficulty": "MEDIUM",
+        "folderId": "set",
+        "instituteId": "A",
+        "options": [
+          "Red",
+          "Green",
+          "Blue",
+          "Pink"
+        ],
+        "points": 10,
+        "questionStatus": "PUBLISHED",
+        "questionType": "MULTISELECT",
+        "title": null,
+        "topicId": "set",
+        "unitId": "set"
+      },
+      {
+        "btlLevel": null,
+        "correctAnswer": [
+          0
+        ],
+        "createdById": "instA",
+        "description": "ZZ QX quiz text 2",
+        "difficulty": "EASY",
+        "folderId": null,
+        "instituteId": "A",
+        "options": [
+          "One",
+          "Two"
+        ],
+        "points": 10,
+        "questionStatus": "PUBLISHED",
+        "questionType": "MCQ",
+        "title": null,
+        "topicId": null,
+        "unitId": "set"
+      }
+    ]
+  },
+  {
+    "name": "quiz import: units and topics after the imports",
+    "db": {
+      "topics": [
+        "Colours",
+        "New topic",
+        "Text"
+      ],
+      "units": [
+        "Brand New Unit",
+        "Unit 1",
+        "Unit IV"
+      ]
+    }
+  },
+  {
+    "name": "quiz import: audit rows",
+    "db": [
+      "QUESTION_IMPORTED|role:INSTITUTE_ADMIN|inst:set|keys:count,folderId",
+      "QUESTION_IMPORTED|role:INSTITUTE_ADMIN|inst:set|keys:count,folderId",
+      "QUESTION_IMPORTED|role:INSTITUTE_ADMIN|inst:set|keys:count,folderId",
+      "QUESTION_IMPORTED|role:INSTITUTE_ADMIN|inst:set|keys:count,folderId",
+      "QUESTION_IMPORTED|role:STAFF|inst:set|keys:count,folderId"
+    ]
+  },
+  {
+    "name": "coding preview: anonymous",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "Missing or invalid Authorization header"
+    }
+  },
+  {
+    "name": "coding preview: student refused",
+    "status": 403,
+    "body": {
+      "error": "Insufficient permissions"
+    }
+  },
+  {
+    "name": "coding preview: no file",
+    "status": 400,
+    "body": {
+      "error": "No file uploaded"
+    }
+  },
+  {
+    "name": "coding preview: required columns missing",
+    "status": 400,
+    "body": {
+      "error": "Missing required columns. The file must include Question Title and Problem Statement."
+    }
+  },
+  {
+    "name": "coding preview: folder of another institute",
+    "status": 403,
+    "body": {
+      "error": "That folder isn't in your institute's question bank"
+    }
+  },
+  {
+    "name": "coding preview: a mixed file",
+    "status": 200,
+    "body": {
+      "autoFixed": [
+        {
+          "after": "Medium (unrecognized value)",
+          "before": "Confusing",
+          "field": "Difficulty",
+          "row": 13
+        }
+      ],
+      "autoFixedCount": 1,
+      "created": [
+        {
+          "btlLevel": 2,
+          "description": "ZZ QX Print double of the input 1",
+          "difficulty": "EASY",
+          "hasImage": false,
+          "row": 2,
+          "title": "ZZ QX code 1"
+        },
+        {
+          "btlLevel": 2,
+          "description": "ZZ QX Print double of the input 2",
+          "difficulty": "EASY",
+          "hasImage": false,
+          "row": 3,
+          "title": "ZZ QX code 2"
+        },
+        {
+          "btlLevel": 2,
+          "description": "ZZ QX Print double of the input 14",
+          "difficulty": "EASY",
+          "hasImage": false,
+          "row": 16,
+          "title": "ZZ QX code 14"
+        },
+        {
+          "btlLevel": 2,
+          "description": "ZZ QX Print double of the input 15",
+          "difficulty": "EASY",
+          "hasImage": false,
+          "row": 17,
+          "title": "ZZ QX code 15"
+        }
+      ],
+      "createdCount": 4,
+      "errorCount": 11,
+      "errors": [
+        {
+          "reason": "Missing Question Title",
+          "row": 5
+        },
+        {
+          "reason": "Missing Problem Statement",
+          "row": 6
+        },
+        {
+          "reason": "Invalid Time Limit \"abc\"",
+          "row": 7
+        },
+        {
+          "reason": "Invalid Memory Limit \"-3\"",
+          "row": 8
+        },
+        {
+          "reason": "Unsupported language(s): brainfuck",
+          "row": 9
+        },
+        {
+          "reason": "Each coding question needs 2 complete sample test cases (input + output)",
+          "row": 10
+        },
+        {
+          "reason": "Needs at least 5 hidden test cases — found 4 (check the \"input->output||input->output\" format)",
+          "row": 11
+        },
+        {
+          "reason": "Subject \"No Such Subject\" not found or you're not authorized to use it. Subjects available to you: <list>",
+          "row": 12
+        },
+        {
+          "reason": "Invalid BTL \"9\" — use 1-6 (or BTL-1 .. BTL-6)",
+          "row": 13
+        },
+        {
+          "reason": "Method name must be a valid identifier (letters, numbers, underscore, not starting with a number)",
+          "row": 14
+        },
+        {
+          "reason": "Image \"figure.png\" was referenced but no images ZIP was uploaded alongside this file",
+          "row": 15
+        }
+      ],
+      "imagesValidatedCount": 0,
+      "skipped": [
+        {
+          "reason": "Duplicate title within this file: \"ZZ QX code 1\"",
+          "row": 4
+        }
+      ],
+      "skippedCount": 1,
+      "total": 16,
+      "unknownColumns": [],
+      "validRows": [
+        {
+          "BTL": "BTL-2",
+          "Constraints": "1 <= n",
+          "Difficulty": "Easy",
+          "Evaluation Mode (STDIO or Function)": "STDIO",
+          "Function Name": "",
+          "Hidden Test Cases (input->output pairs, separated by ||)": "10->20||11->22||12->24||13->26||14->28",
+          "Image File Name": "",
+          "Input Format": "n",
+          "Marks": 10,
+          "Memory Limit (MB)": 256,
+          "Output Format": "2n",
+          "Parameters (name:type, comma separated)": "",
+          "Problem Statement": "ZZ QX Print double of the input 1",
+          "Programming Languages": "Java, Python",
+          "Question Bank": "",
+          "Question Title": "ZZ QX code 1",
+          "Return Type": "",
+          "Sample Input 1": "1",
+          "Sample Input 2": "2",
+          "Sample Output 1": "2",
+          "Sample Output 2": "4",
+          "Starter Code (Cpp)": "int main(){}",
+          "Starter Code (Java)": "class Main {}",
+          "Starter Code (Python)": "pass",
+          "Subject": "ZZ QX Subject A <ts>",
+          "Subtopic": "",
+          "Tags": "a, b",
+          "Time Limit (seconds)": 2,
+          "Topic": "Loops",
+          "Unit": "Unit 1"
+        },
+        {
+          "BTL": "BTL-2",
+          "Constraints": "1 <= n",
+          "Difficulty": "Easy",
+          "Evaluation Mode (STDIO or Function)": "Function",
+          "Function Name": "twice",
+          "Hidden Test Cases (input->output pairs, separated by ||)": "10->20||11->22||12->24||13->26||14->28",
+          "Image File Name": "",
+          "Input Format": "n",
+          "Marks": 10,
+          "Memory Limit (MB)": 256,
+          "Output Format": "2n",
+          "Parameters (name:type, comma separated)": "n:int",
+          "Problem Statement": "ZZ QX Print double of the input 2",
+          "Programming Languages": "Java, Python",
+          "Question Bank": "ZZ QX new bank",
+          "Question Title": "ZZ QX code 2",
+          "Return Type": "int",
+          "Sample Input 1": "1",
+          "Sample Input 2": "2",
+          "Sample Output 1": "2",
+          "Sample Output 2": "4",
+          "Starter Code (Cpp)": "int main(){}",
+          "Starter Code (Java)": "class Main {}",
+          "Starter Code (Python)": "pass",
+          "Subject": "ZZ QX Subject A <ts>",
+          "Subtopic": "",
+          "Tags": "a, b",
+          "Time Limit (seconds)": 2,
+          "Topic": "Loops",
+          "Unit": "Unit 1"
+        },
+        {
+          "BTL": "BTL-2",
+          "Constraints": "1 <= n",
+          "Difficulty": "Easy",
+          "Evaluation Mode (STDIO or Function)": "STDIO",
+          "Function Name": "",
+          "Hidden Test Cases (input->output pairs, separated by ||)": "10->20||11->22||12->24||13->26||14->28",
+          "Image File Name": "",
+          "Input Format": "n",
+          "Marks": 10,
+          "Memory Limit (MB)": 256,
+          "Output Format": "2n",
+          "Parameters (name:type, comma separated)": "",
+          "Problem Statement": "ZZ QX Print double of the input 14",
+          "Programming Languages": "Python",
+          "Question Bank": "",
+          "Question Title": "ZZ QX code 14",
+          "Return Type": "",
+          "Sample Input 1": "1",
+          "Sample Input 2": "2",
+          "Sample Output 1": "2",
+          "Sample Output 2": "4",
+          "Starter Code (Cpp)": "int main(){}",
+          "Starter Code (Java)": "class Main {}",
+          "Starter Code (Python)": "pass",
+          "Subject": "ZZ QX Subject A <ts>",
+          "Subtopic": "",
+          "Tags": "",
+          "Time Limit (seconds)": 2,
+          "Topic": "Loops",
+          "Unit": "Unit 1"
+        },
+        {
+          "BTL": "BTL-2",
+          "Constraints": "1 <= n",
+          "Difficulty": "Easy",
+          "Evaluation Mode (STDIO or Function)": "STDIO",
+          "Function Name": "",
+          "Hidden Test Cases (input->output pairs, separated by ||)": "10->20||11->22||12->24||13->26||14->28",
+          "Image File Name": "",
+          "Input Format": "n",
+          "Marks": 7,
+          "Memory Limit (MB)": 256,
+          "Output Format": "2n",
+          "Parameters (name:type, comma separated)": "",
+          "Problem Statement": "ZZ QX Print double of the input 15",
+          "Programming Languages": "Java, Python",
+          "Question Bank": "",
+          "Question Title": "ZZ QX code 15",
+          "Return Type": "",
+          "Sample Input 1": "1",
+          "Sample Input 2": "2",
+          "Sample Output 1": "2",
+          "Sample Output 2": "4",
+          "Starter Code (Cpp)": "int main(){}",
+          "Starter Code (Java)": "class Main {}",
+          "Starter Code (Python)": "pass",
+          "Subject": "ZZ QX Subject A <ts>",
+          "Subtopic": "Doubling",
+          "Tags": "a, b",
+          "Time Limit (seconds)": 2,
+          "Topic": "Loops",
+          "Unit": "Unit 1"
+        }
+      ]
+    }
+  },
+  {
+    "name": "coding preview: nothing was stored, and no bank was created",
+    "db": {
+      "newBank": 0,
+      "questions": 0
+    }
+  },
+  {
+    "name": "coding confirm: anonymous",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "Missing or invalid Authorization header"
+    }
+  },
+  {
+    "name": "coding confirm: no rows",
+    "status": 400,
+    "body": {
+      "error": "No rows to import"
+    }
+  },
+  {
+    "name": "coding confirm: invalid rows payload",
+    "status": 400,
+    "body": {
+      "error": "Invalid rows payload"
+    }
+  },
+  {
+    "name": "coding confirm: the previewed rows",
+    "status": 200,
+    "body": {
+      "autoFixed": [],
+      "autoFixedCount": 0,
+      "created": [
+        {
+          "aiGenerated": false,
+          "btlLevel": 2,
+          "comparisonMode": "TRIM",
+          "constraints": "1 <= n",
+          "correctAnswer": null,
+          "createdAt": "<time>",
+          "createdById": "<id>",
+          "description": "ZZ QX Print double of the input 1",
+          "difficulty": "EASY",
+          "edgeCases": null,
+          "editorial": null,
+          "estimatedTimeMin": null,
+          "evaluationType": "STDIO",
+          "explanation": null,
+          "floatAbsoluteTolerance": 0.000001,
+          "floatRelativeTolerance": 0.000001,
+          "folderId": "<id>",
+          "functionSignature": null,
+          "hints": null,
+          "id": "<id>",
+          "imageKey": null,
+          "imageMimeType": null,
+          "inputFormat": "n",
+          "instituteId": "<id>",
+          "memoryLimitKb": 262144,
+          "moduleCodingTestId": null,
+          "notes": null,
+          "numericAnswer": null,
+          "numericAnswerDisplay": null,
+          "numericTolerance": 0,
+          "options": null,
+          "outputFormat": "2n",
+          "points": 10,
+          "problemExplanation": null,
+          "questionNumber": "<masked>",
+          "questionStatus": "PUBLISHED",
+          "questionType": "CODING",
+          "realWorldScenario": null,
+          "referenceSolution": null,
+          "similarQuestions": null,
+          "skillTested": null,
+          "spaceComplexity": null,
+          "sqlSchema": null,
+          "starterCode": "class Main {}",
+          "starterCodeByLanguage": {
+            "java": "class Main {}",
+            "python": "pass"
+          },
+          "subject": null,
+          "subjectId": "<id>",
+          "subtopic": null,
+          "tags": [
+            "a",
+            "b"
+          ],
+          "timeComplexity": null,
+          "timeLimitMs": 2000,
+          "title": "ZZ QX code 1",
+          "topic": "Loops",
+          "topicId": "<id>",
+          "unitId": "<id>",
+          "updatedAt": "<time>",
+          "updatedById": null
+        },
+        {
+          "aiGenerated": false,
+          "btlLevel": 2,
+          "comparisonMode": "TRIM",
+          "constraints": "1 <= n",
+          "correctAnswer": null,
+          "createdAt": "<time>",
+          "createdById": "<id>",
+          "description": "ZZ QX Print double of the input 2",
+          "difficulty": "EASY",
+          "edgeCases": null,
+          "editorial": null,
+          "estimatedTimeMin": null,
+          "evaluationType": "FUNCTION",
+          "explanation": null,
+          "floatAbsoluteTolerance": 0.000001,
+          "floatRelativeTolerance": 0.000001,
+          "folderId": "<id>",
+          "functionSignature": {
+            "methodName": "twice",
+            "params": [
+              {
+                "name": "n",
+                "type": "int"
+              }
+            ],
+            "returnType": "int"
+          },
+          "hints": null,
+          "id": "<id>",
+          "imageKey": null,
+          "imageMimeType": null,
+          "inputFormat": "n",
+          "instituteId": "<id>",
+          "memoryLimitKb": 262144,
+          "moduleCodingTestId": null,
+          "notes": null,
+          "numericAnswer": null,
+          "numericAnswerDisplay": null,
+          "numericTolerance": 0,
+          "options": null,
+          "outputFormat": "2n",
+          "points": 10,
+          "problemExplanation": null,
+          "questionNumber": "<masked>",
+          "questionStatus": "PUBLISHED",
+          "questionType": "CODING",
+          "realWorldScenario": null,
+          "referenceSolution": null,
+          "similarQuestions": null,
+          "skillTested": null,
+          "spaceComplexity": null,
+          "sqlSchema": null,
+          "starterCode": "import java.util.*;\n\nclass Solution {\n    public int twice(int n) {\n        // Write your code here\n        \n    }\n}\n",
+          "starterCodeByLanguage": {
+            "c": "#include <stdio.h>\n\nint twice(int n) {\n    // Write your code here\n    \n}\n",
+            "cpp": "#include <bits/stdc++.h>\nusing namespace std;\n\nclass Solution {\npublic:\n    int twice(int n) {\n        // Write your code here\n        \n    }\n};\n",
+            "java": "import java.util.*;\n\nclass Solution {\n    public int twice(int n) {\n        // Write your code here\n        \n    }\n}\n",
+            "javascript": "/**\n * @param {int} n\n * @return {int}\n */\nvar twice = function(n) {\n    // Write your code here\n    \n};\n",
+            "python": "class Solution:\n    def twice(self, n):\n        # Write your code here\n        pass\n"
+          },
+          "subject": null,
+          "subjectId": "<id>",
+          "subtopic": null,
+          "tags": [
+            "a",
+            "b"
+          ],
+          "timeComplexity": null,
+          "timeLimitMs": 2000,
+          "title": "ZZ QX code 2",
+          "topic": "Loops",
+          "topicId": "<id>",
+          "unitId": "<id>",
+          "updatedAt": "<time>",
+          "updatedById": null
+        },
+        {
+          "aiGenerated": false,
+          "btlLevel": 2,
+          "comparisonMode": "TRIM",
+          "constraints": "1 <= n",
+          "correctAnswer": null,
+          "createdAt": "<time>",
+          "createdById": "<id>",
+          "description": "ZZ QX Print double of the input 14",
+          "difficulty": "EASY",
+          "edgeCases": null,
+          "editorial": null,
+          "estimatedTimeMin": null,
+          "evaluationType": "STDIO",
+          "explanation": null,
+          "floatAbsoluteTolerance": 0.000001,
+          "floatRelativeTolerance": 0.000001,
+          "folderId": "<id>",
+          "functionSignature": null,
+          "hints": null,
+          "id": "<id>",
+          "imageKey": null,
+          "imageMimeType": null,
+          "inputFormat": "n",
+          "instituteId": "<id>",
+          "memoryLimitKb": 262144,
+          "moduleCodingTestId": null,
+          "notes": null,
+          "numericAnswer": null,
+          "numericAnswerDisplay": null,
+          "numericTolerance": 0,
+          "options": null,
+          "outputFormat": "2n",
+          "points": 10,
+          "problemExplanation": null,
+          "questionNumber": "<masked>",
+          "questionStatus": "PUBLISHED",
+          "questionType": "CODING",
+          "realWorldScenario": null,
+          "referenceSolution": null,
+          "similarQuestions": null,
+          "skillTested": null,
+          "spaceComplexity": null,
+          "sqlSchema": null,
+          "starterCode": "pass",
+          "starterCodeByLanguage": {
+            "python": "pass"
+          },
+          "subject": null,
+          "subjectId": "<id>",
+          "subtopic": null,
+          "tags": null,
+          "timeComplexity": null,
+          "timeLimitMs": 2000,
+          "title": "ZZ QX code 14",
+          "topic": "Loops",
+          "topicId": "<id>",
+          "unitId": "<id>",
+          "updatedAt": "<time>",
+          "updatedById": null
+        },
+        {
+          "aiGenerated": false,
+          "btlLevel": 2,
+          "comparisonMode": "TRIM",
+          "constraints": "1 <= n",
+          "correctAnswer": null,
+          "createdAt": "<time>",
+          "createdById": "<id>",
+          "description": "ZZ QX Print double of the input 15",
+          "difficulty": "EASY",
+          "edgeCases": null,
+          "editorial": null,
+          "estimatedTimeMin": null,
+          "evaluationType": "STDIO",
+          "explanation": null,
+          "floatAbsoluteTolerance": 0.000001,
+          "floatRelativeTolerance": 0.000001,
+          "folderId": "<id>",
+          "functionSignature": null,
+          "hints": null,
+          "id": "<id>",
+          "imageKey": null,
+          "imageMimeType": null,
+          "inputFormat": "n",
+          "instituteId": "<id>",
+          "memoryLimitKb": 262144,
+          "moduleCodingTestId": null,
+          "notes": null,
+          "numericAnswer": null,
+          "numericAnswerDisplay": null,
+          "numericTolerance": 0,
+          "options": null,
+          "outputFormat": "2n",
+          "points": 7,
+          "problemExplanation": null,
+          "questionNumber": "<masked>",
+          "questionStatus": "PUBLISHED",
+          "questionType": "CODING",
+          "realWorldScenario": null,
+          "referenceSolution": null,
+          "similarQuestions": null,
+          "skillTested": null,
+          "spaceComplexity": null,
+          "sqlSchema": null,
+          "starterCode": "class Main {}",
+          "starterCodeByLanguage": {
+            "java": "class Main {}",
+            "python": "pass"
+          },
+          "subject": null,
+          "subjectId": "<id>",
+          "subtopic": "Doubling",
+          "tags": [
+            "a",
+            "b"
+          ],
+          "timeComplexity": null,
+          "timeLimitMs": 2000,
+          "title": "ZZ QX code 15",
+          "topic": "Loops",
+          "topicId": "<id>",
+          "unitId": "<id>",
+          "updatedAt": "<time>",
+          "updatedById": null
+        }
+      ],
+      "createdCount": 4,
+      "errorCount": 0,
+      "errors": [],
+      "imagesValidatedCount": 0,
+      "skipped": [],
+      "skippedCount": 0,
+      "total": 4,
+      "unknownColumns": []
+    }
+  },
+  {
+    "name": "coding confirm: the same rows again are skipped",
+    "status": 200,
+    "body": {
+      "autoFixed": [],
+      "autoFixedCount": 0,
+      "created": [],
+      "createdCount": 0,
+      "errorCount": 0,
+      "errors": [],
+      "imagesValidatedCount": 0,
+      "skipped": [
+        {
+          "reason": "A question titled \"ZZ QX code 1\" already exists under that Subject/Unit",
+          "row": 2
+        },
+        {
+          "reason": "A question titled \"ZZ QX code 2\" already exists under that Subject/Unit",
+          "row": 3
+        },
+        {
+          "reason": "A question titled \"ZZ QX code 14\" already exists under that Subject/Unit",
+          "row": 4
+        },
+        {
+          "reason": "A question titled \"ZZ QX code 15\" already exists under that Subject/Unit",
+          "row": 5
+        }
+      ],
+      "skippedCount": 4,
+      "total": 4,
+      "unknownColumns": []
+    }
+  },
+  {
+    "name": "coding direct: a file",
+    "status": 200,
+    "body": {
+      "autoFixed": [],
+      "autoFixedCount": 0,
+      "created": [
+        {
+          "aiGenerated": false,
+          "btlLevel": 2,
+          "comparisonMode": "TRIM",
+          "constraints": "1 <= n",
+          "correctAnswer": null,
+          "createdAt": "<time>",
+          "createdById": "<id>",
+          "description": "ZZ QX Print double of the input 20",
+          "difficulty": "EASY",
+          "edgeCases": null,
+          "editorial": null,
+          "estimatedTimeMin": null,
+          "evaluationType": "STDIO",
+          "explanation": null,
+          "floatAbsoluteTolerance": 0.000001,
+          "floatRelativeTolerance": 0.000001,
+          "folderId": null,
+          "functionSignature": null,
+          "hints": null,
+          "id": "<id>",
+          "imageKey": null,
+          "imageMimeType": null,
+          "inputFormat": "n",
+          "instituteId": "<id>",
+          "memoryLimitKb": 262144,
+          "moduleCodingTestId": null,
+          "notes": null,
+          "numericAnswer": null,
+          "numericAnswerDisplay": null,
+          "numericTolerance": 0,
+          "options": null,
+          "outputFormat": "2n",
+          "points": 10,
+          "problemExplanation": null,
+          "questionNumber": "<masked>",
+          "questionStatus": "PUBLISHED",
+          "questionType": "CODING",
+          "realWorldScenario": null,
+          "referenceSolution": null,
+          "similarQuestions": null,
+          "skillTested": null,
+          "spaceComplexity": null,
+          "sqlSchema": null,
+          "starterCode": "class Main {}",
+          "starterCodeByLanguage": {
+            "java": "class Main {}",
+            "python": "pass"
+          },
+          "subject": null,
+          "subjectId": "<id>",
+          "subtopic": null,
+          "tags": [
+            "a",
+            "b"
+          ],
+          "timeComplexity": null,
+          "timeLimitMs": 2000,
+          "title": "ZZ QX code 20",
+          "topic": "Loops",
+          "topicId": "<id>",
+          "unitId": "<id>",
+          "updatedAt": "<time>",
+          "updatedById": null
+        },
+        {
+          "aiGenerated": false,
+          "btlLevel": 2,
+          "comparisonMode": "TRIM",
+          "constraints": "1 <= n",
+          "correctAnswer": null,
+          "createdAt": "<time>",
+          "createdById": "<id>",
+          "description": "ZZ QX Print double of the input 21",
+          "difficulty": "HARD",
+          "edgeCases": null,
+          "editorial": null,
+          "estimatedTimeMin": null,
+          "evaluationType": "STDIO",
+          "explanation": null,
+          "floatAbsoluteTolerance": 0.000001,
+          "floatRelativeTolerance": 0.000001,
+          "folderId": null,
+          "functionSignature": null,
+          "hints": null,
+          "id": "<id>",
+          "imageKey": null,
+          "imageMimeType": null,
+          "inputFormat": "n",
+          "instituteId": "<id>",
+          "memoryLimitKb": 262144,
+          "moduleCodingTestId": null,
+          "notes": null,
+          "numericAnswer": null,
+          "numericAnswerDisplay": null,
+          "numericTolerance": 0,
+          "options": null,
+          "outputFormat": "2n",
+          "points": 10,
+          "problemExplanation": null,
+          "questionNumber": "<masked>",
+          "questionStatus": "PUBLISHED",
+          "questionType": "CODING",
+          "realWorldScenario": null,
+          "referenceSolution": null,
+          "similarQuestions": null,
+          "skillTested": null,
+          "spaceComplexity": null,
+          "sqlSchema": null,
+          "starterCode": "class Main {}",
+          "starterCodeByLanguage": {
+            "java": "class Main {}",
+            "python": "pass"
+          },
+          "subject": null,
+          "subjectId": "<id>",
+          "subtopic": null,
+          "tags": [
+            "a",
+            "b"
+          ],
+          "timeComplexity": null,
+          "timeLimitMs": 2000,
+          "title": "ZZ QX code 21",
+          "topic": "Loops",
+          "topicId": "<id>",
+          "unitId": "<id>",
+          "updatedAt": "<time>",
+          "updatedById": null
+        }
+      ],
+      "createdCount": 2,
+      "errorCount": 0,
+      "errors": [],
+      "imagesValidatedCount": 0,
+      "skipped": [],
+      "skippedCount": 0,
+      "total": 2,
+      "unknownColumns": []
+    }
+  },
+  {
+    "name": "coding direct: a notepad file",
+    "status": 200,
+    "body": {
+      "autoFixed": [],
+      "autoFixedCount": 0,
+      "created": [
+        {
+          "aiGenerated": false,
+          "btlLevel": null,
+          "comparisonMode": "TRIM",
+          "constraints": null,
+          "correctAnswer": null,
+          "createdAt": "<time>",
+          "createdById": "<id>",
+          "description": "ZZ QX Notepad coding one",
+          "difficulty": "EASY",
+          "edgeCases": null,
+          "editorial": null,
+          "estimatedTimeMin": null,
+          "evaluationType": "STDIO",
+          "explanation": null,
+          "floatAbsoluteTolerance": 0.000001,
+          "floatRelativeTolerance": 0.000001,
+          "folderId": null,
+          "functionSignature": null,
+          "hints": null,
+          "id": "<id>",
+          "imageKey": null,
+          "imageMimeType": null,
+          "inputFormat": null,
+          "instituteId": "<id>",
+          "memoryLimitKb": null,
+          "moduleCodingTestId": null,
+          "notes": null,
+          "numericAnswer": null,
+          "numericAnswerDisplay": null,
+          "numericTolerance": 0,
+          "options": null,
+          "outputFormat": null,
+          "points": 10,
+          "problemExplanation": null,
+          "questionNumber": "<masked>",
+          "questionStatus": "PUBLISHED",
+          "questionType": "CODING",
+          "realWorldScenario": null,
+          "referenceSolution": null,
+          "similarQuestions": null,
+          "skillTested": null,
+          "spaceComplexity": null,
+          "sqlSchema": null,
+          "starterCode": "",
+          "starterCodeByLanguage": null,
+          "subject": null,
+          "subjectId": "<id>",
+          "subtopic": null,
+          "tags": null,
+          "timeComplexity": null,
+          "timeLimitMs": 2000,
+          "title": "ZZ QX Notepad coding one",
+          "topic": null,
+          "topicId": null,
+          "unitId": "<id>",
+          "updatedAt": "<time>",
+          "updatedById": null
+        }
+      ],
+      "createdCount": 1,
+      "errorCount": 0,
+      "errors": [],
+      "imagesValidatedCount": 0,
+      "skipped": [],
+      "skippedCount": 0,
+      "total": 1,
+      "unknownColumns": []
+    }
+  },
+  {
+    "name": "coding import: stored",
+    "db": [
+      {
+        "_count": null,
+        "btlLevel": 2,
+        "difficulty": "EASY",
+        "evaluationType": "STDIO",
+        "folderId": "set",
+        "functionSignature": null,
+        "instituteId": "A",
+        "memoryLimitKb": 262144,
+        "points": 10,
+        "starterCodeByLanguage": {
+          "java": "class Main {}",
+          "python": "pass"
+        },
+        "subtopic": null,
+        "tags": [
+          "a",
+          "b"
+        ],
+        "tests": 7,
+        "timeLimitMs": 2000,
+        "title": "ZZ QX code 1"
+      },
+      {
+        "_count": null,
+        "btlLevel": 2,
+        "difficulty": "EASY",
+        "evaluationType": "STDIO",
+        "folderId": "set",
+        "functionSignature": null,
+        "instituteId": "A",
+        "memoryLimitKb": 262144,
+        "points": 10,
+        "starterCodeByLanguage": {
+          "python": "pass"
+        },
+        "subtopic": null,
+        "tags": null,
+        "tests": 7,
+        "timeLimitMs": 2000,
+        "title": "ZZ QX code 14"
+      },
+      {
+        "_count": null,
+        "btlLevel": 2,
+        "difficulty": "EASY",
+        "evaluationType": "STDIO",
+        "folderId": "set",
+        "functionSignature": null,
+        "instituteId": "A",
+        "memoryLimitKb": 262144,
+        "points": 7,
+        "starterCodeByLanguage": {
+          "java": "class Main {}",
+          "python": "pass"
+        },
+        "subtopic": "Doubling",
+        "tags": [
+          "a",
+          "b"
+        ],
+        "tests": 7,
+        "timeLimitMs": 2000,
+        "title": "ZZ QX code 15"
+      },
+      {
+        "_count": null,
+        "btlLevel": 2,
+        "difficulty": "EASY",
+        "evaluationType": "FUNCTION",
+        "folderId": "set",
+        "functionSignature": {
+          "methodName": "twice",
+          "params": [
+            {
+              "name": "n",
+              "type": "int"
+            }
+          ],
+          "returnType": "int"
+        },
+        "instituteId": "A",
+        "memoryLimitKb": 262144,
+        "points": 10,
+        "starterCodeByLanguage": {
+          "c": "#include <stdio.h>\n\nint twice(int n) {\n    // Write your code here\n    \n}\n",
+          "cpp": "#include <bits/stdc++.h>\nusing namespace std;\n\nclass Solution {\npublic:\n    int twice(int n) {\n        // Write your code here\n        \n    }\n};\n",
+          "java": "import java.util.*;\n\nclass Solution {\n    public int twice(int n) {\n        // Write your code here\n        \n    }\n}\n",
+          "javascript": "/**\n * @param {int} n\n * @return {int}\n */\nvar twice = function(n) {\n    // Write your code here\n    \n};\n",
+          "python": "class Solution:\n    def twice(self, n):\n        # Write your code here\n        pass\n"
+        },
+        "subtopic": null,
+        "tags": [
+          "a",
+          "b"
+        ],
+        "tests": 7,
+        "timeLimitMs": 2000,
+        "title": "ZZ QX code 2"
+      },
+      {
+        "_count": null,
+        "btlLevel": 2,
+        "difficulty": "EASY",
+        "evaluationType": "STDIO",
+        "folderId": null,
+        "functionSignature": null,
+        "instituteId": "A",
+        "memoryLimitKb": 262144,
+        "points": 10,
+        "starterCodeByLanguage": {
+          "java": "class Main {}",
+          "python": "pass"
+        },
+        "subtopic": null,
+        "tags": [
+          "a",
+          "b"
+        ],
+        "tests": 7,
+        "timeLimitMs": 2000,
+        "title": "ZZ QX code 20"
+      },
+      {
+        "_count": null,
+        "btlLevel": 2,
+        "difficulty": "HARD",
+        "evaluationType": "STDIO",
+        "folderId": null,
+        "functionSignature": null,
+        "instituteId": "A",
+        "memoryLimitKb": 262144,
+        "points": 10,
+        "starterCodeByLanguage": {
+          "java": "class Main {}",
+          "python": "pass"
+        },
+        "subtopic": null,
+        "tags": [
+          "a",
+          "b"
+        ],
+        "tests": 7,
+        "timeLimitMs": 2000,
+        "title": "ZZ QX code 21"
+      },
+      {
+        "_count": null,
+        "btlLevel": null,
+        "difficulty": "EASY",
+        "evaluationType": "STDIO",
+        "folderId": null,
+        "functionSignature": null,
+        "instituteId": "A",
+        "memoryLimitKb": null,
+        "points": 10,
+        "starterCodeByLanguage": null,
+        "subtopic": null,
+        "tags": null,
+        "tests": 7,
+        "timeLimitMs": 2000,
+        "title": "ZZ QX Notepad coding one"
+      }
+    ]
+  },
+  {
+    "name": "coding import: the bank created by name",
+    "db": 1
+  },
+  {
+    "name": "coding import: audit rows",
+    "db": [
+      "QUESTION_IMPORTED|role:INSTITUTE_ADMIN|inst:set|keys:coding,count",
+      "QUESTION_IMPORTED|role:INSTITUTE_ADMIN|inst:set|keys:coding,count",
+      "QUESTION_IMPORTED|role:INSTITUTE_ADMIN|inst:set|keys:coding,count"
+    ]
+  },
+  {
+    "name": "combined preview: anonymous",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "Missing or invalid Authorization header"
+    }
+  },
+  {
+    "name": "combined preview: no file",
+    "status": 400,
+    "body": {
+      "error": "No file uploaded"
+    }
+  },
+  {
+    "name": "combined preview: a text file",
+    "status": 400,
+    "body": {
+      "error": "Combined import needs a spreadsheet file (.xlsx/.csv) with separate MCQ and CODING sheets — Notepad format only holds one question type per file. Use the Quiz or Coding option instead for a .txt upload."
+    }
+  },
+  {
+    "name": "combined preview: no recognised sheet",
+    "status": 400,
+    "body": {
+      "error": "Could not find an \"MCQ\" or \"CODING\" sheet in this file. Combined import expects the Combined Template's sheet names — download it below and copy your data in."
+    }
+  },
+  {
+    "name": "combined preview: both sheets empty",
+    "status": 400,
+    "body": {
+      "error": "The uploaded file has no data rows in either sheet."
+    }
+  },
+  {
+    "name": "combined preview: a column missing on the MCQ sheet",
+    "status": 400,
+    "body": {
+      "error": "MCQ sheet: Missing required column. The file must include Question Text."
+    }
+  },
+  {
+    "name": "combined preview: both sheets",
+    "status": 200,
+    "body": {
+      "autoFixed": [
+        {
+          "after": "2",
+          "before": "B",
+          "field": "[MCQ] Correct Option(s)",
+          "row": 2
+        }
+      ],
+      "autoFixedCount": 1,
+      "codingCount": 1,
+      "codingValidRows": [
+        {
+          "BTL": "BTL-2",
+          "Constraints": "1 <= n",
+          "Difficulty": "Easy",
+          "Evaluation Mode (STDIO or Function)": "STDIO",
+          "Hidden Test Cases (input->output pairs, separated by ||)": "10->20||11->22||12->24||13->26||14->28",
+          "Input Format": "n",
+          "Marks": 10,
+          "Memory Limit (MB)": 256,
+          "Output Format": "2n",
+          "Problem Statement": "ZZ QX Print double of the input 50",
+          "Programming Languages": "Java, Python",
+          "Question Title": "ZZ QX code 50",
+          "Sample Input 1": "1",
+          "Sample Input 2": "2",
+          "Sample Output 1": "2",
+          "Sample Output 2": "4",
+          "Starter Code (Cpp)": "int main(){}",
+          "Starter Code (Java)": "class Main {}",
+          "Starter Code (Python)": "pass",
+          "Subject": "ZZ QX Subject A <ts>",
+          "Tags": "a, b",
+          "Time Limit (seconds)": 2,
+          "Topic": "Loops",
+          "Unit": "Unit 1"
+        }
+      ],
+      "createdCount": 2,
+      "errorCount": 1,
+      "errors": [
+        {
+          "reason": "[Coding] Needs at least 5 hidden test cases — found 1 (check the \"input->output||input->output\" format)",
+          "row": 3
+        }
+      ],
+      "imagesValidatedCount": 0,
+      "mcqCount": 1,
+      "mcqValidRows": [
+        {
+          "Correct Option": "B",
+          "Difficulty Level": "Medium",
+          "Explanation": "because",
+          "Option A": "Red",
+          "Option B": "Green",
+          "Option C": "Blue",
+          "Option D": "Pink",
+          "Question Text": "ZZ QX quiz 50",
+          "Subject": "ZZ QX Subject A <ts>",
+          "Topic": "Colours",
+          "Unit": "Unit 1"
+        }
+      ],
+      "skipped": [],
+      "skippedCount": 0,
+      "structureHint": null,
+      "total": 4,
+      "unknownColumns": []
+    }
+  },
+  {
+    "name": "combined confirm: anonymous",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "Missing or invalid Authorization header"
+    }
+  },
+  {
+    "name": "combined confirm: no rows",
+    "status": 400,
+    "body": {
+      "error": "No rows to import"
+    }
+  },
+  {
+    "name": "combined confirm: invalid rows payload",
+    "status": 400,
+    "body": {
+      "error": "Invalid rows payload"
+    }
+  },
+  {
+    "name": "combined confirm: both halves",
+    "status": 200,
+    "body": {
+      "codingCount": 1,
+      "created": [
+        {
+          "aiGenerated": false,
+          "btlLevel": null,
+          "comparisonMode": "TRIM",
+          "constraints": null,
+          "correctAnswer": [
+            1
+          ],
+          "createdAt": "<time>",
+          "createdById": "<id>",
+          "description": "ZZ QX quiz 50",
+          "difficulty": "MEDIUM",
+          "edgeCases": null,
+          "editorial": null,
+          "estimatedTimeMin": null,
+          "evaluationType": "STDIO",
+          "explanation": "because",
+          "floatAbsoluteTolerance": 0.000001,
+          "floatRelativeTolerance": 0.000001,
+          "folderId": "<id>",
+          "functionSignature": null,
+          "hints": null,
+          "id": "<id>",
+          "imageKey": null,
+          "imageMimeType": null,
+          "inputFormat": null,
+          "instituteId": "<id>",
+          "memoryLimitKb": null,
+          "moduleCodingTestId": null,
+          "notes": null,
+          "numericAnswer": null,
+          "numericAnswerDisplay": null,
+          "numericTolerance": 0,
+          "options": [
+            "Red",
+            "Green",
+            "Blue",
+            "Pink"
+          ],
+          "outputFormat": null,
+          "points": 10,
+          "problemExplanation": null,
+          "questionNumber": "<masked>",
+          "questionStatus": "PUBLISHED",
+          "questionType": "MCQ",
+          "realWorldScenario": null,
+          "referenceSolution": null,
+          "similarQuestions": null,
+          "skillTested": null,
+          "spaceComplexity": null,
+          "sqlSchema": null,
+          "starterCode": null,
+          "starterCodeByLanguage": null,
+          "subject": "ZZ QX Subject A <ts>",
+          "subjectId": "<id>",
+          "subtopic": null,
+          "tags": null,
+          "timeComplexity": null,
+          "timeLimitMs": 2000,
+          "title": null,
+          "topic": "Colours",
+          "topicId": "<id>",
+          "unitId": "<id>",
+          "updatedAt": "<time>",
+          "updatedById": null
+        },
+        {
+          "aiGenerated": false,
+          "btlLevel": 2,
+          "comparisonMode": "TRIM",
+          "constraints": "1 <= n",
+          "correctAnswer": null,
+          "createdAt": "<time>",
+          "createdById": "<id>",
+          "description": "ZZ QX Print double of the input 50",
+          "difficulty": "EASY",
+          "edgeCases": null,
+          "editorial": null,
+          "estimatedTimeMin": null,
+          "evaluationType": "STDIO",
+          "explanation": null,
+          "floatAbsoluteTolerance": 0.000001,
+          "floatRelativeTolerance": 0.000001,
+          "folderId": "<id>",
+          "functionSignature": null,
+          "hints": null,
+          "id": "<id>",
+          "imageKey": null,
+          "imageMimeType": null,
+          "inputFormat": "n",
+          "instituteId": "<id>",
+          "memoryLimitKb": 262144,
+          "moduleCodingTestId": null,
+          "notes": null,
+          "numericAnswer": null,
+          "numericAnswerDisplay": null,
+          "numericTolerance": 0,
+          "options": null,
+          "outputFormat": "2n",
+          "points": 10,
+          "problemExplanation": null,
+          "questionNumber": "<masked>",
+          "questionStatus": "PUBLISHED",
+          "questionType": "CODING",
+          "realWorldScenario": null,
+          "referenceSolution": null,
+          "similarQuestions": null,
+          "skillTested": null,
+          "spaceComplexity": null,
+          "sqlSchema": null,
+          "starterCode": "class Main {}",
+          "starterCodeByLanguage": {
+            "java": "class Main {}",
+            "python": "pass"
+          },
+          "subject": null,
+          "subjectId": "<id>",
+          "subtopic": null,
+          "tags": [
+            "a",
+            "b"
+          ],
+          "timeComplexity": null,
+          "timeLimitMs": 2000,
+          "title": "ZZ QX code 50",
+          "topic": "Loops",
+          "topicId": "<id>",
+          "unitId": "<id>",
+          "updatedAt": "<time>",
+          "updatedById": null
+        }
+      ],
+      "createdCount": 2,
+      "errorCount": 0,
+      "errors": [],
+      "mcqCount": 1,
+      "skipped": [],
+      "skippedCount": 0,
+      "total": 2
+    }
+  },
+  {
+    "name": "combined confirm: the same rows again",
+    "status": 200,
+    "body": {
+      "codingCount": 0,
+      "created": [],
+      "createdCount": 0,
+      "errorCount": 0,
+      "errors": [],
+      "mcqCount": 0,
+      "skipped": [
+        {
+          "reason": "[MCQ] A question with this text already exists under that Subject/Unit",
+          "row": 2
+        },
+        {
+          "reason": "[Coding] A question titled \"ZZ QX code 50\" already exists under that Subject/Unit",
+          "row": 2
+        }
+      ],
+      "skippedCount": 2,
+      "total": 2
+    }
+  },
+  {
+    "name": "export: anonymous",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "Missing or invalid Authorization header"
+    }
+  },
+  {
+    "name": "export: student refused",
+    "status": 403,
+    "body": {
+      "error": "Insufficient permissions"
+    }
+  },
+  {
+    "name": "export: the institute's questions by text",
+    "status": 200,
+    "headers": {
+      "content-type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "content-disposition": "attachment; filename=question-bank-export.xlsx"
+    },
+    "workbook": [
+      {
+        "sheet": "Questions",
+        "header": [
+          "Question ID",
+          "Question Text",
+          "Option A",
+          "Option B",
+          "Option C",
+          "Option D",
+          "Correct Option",
+          "Explanation",
+          "Difficulty Level",
+          "Subject",
+          "Unit",
+          "Topic",
+          "Question Type",
+          "Marks",
+          "BTL",
+          "Question Name",
+          "Image File Name"
+        ],
+        "rowCount": 3,
+        "rows": [
+          [
+            "Q<n>",
+            "ZZ QX quiz 40",
+            "Red",
+            "Green",
+            "Blue",
+            "Pink",
+            "B",
+            "because",
+            "Medium",
+            "ZZ QX Subject A <ts>",
+            "Unit 1",
+            "Colours",
+            "Multiple Choice",
+            10,
+            "",
+            "",
+            ""
+          ],
+          [
+            "Q<n>",
+            "ZZ QX quiz 41",
+            "Red",
+            "Green",
+            "Blue",
+            "Pink",
+            "D",
+            "because",
+            "Medium",
+            "ZZ QX Subject A <ts>",
+            "Unit 1",
+            "Colours",
+            "Multiple Choice",
+            10,
+            "",
+            "",
+            ""
+          ],
+          [
+            "Q<n>",
+            "ZZ QX quiz 42",
+            "Red",
+            "Green",
+            "Blue",
+            "Pink",
+            "B",
+            "because",
+            "Medium",
+            "ZZ QX Subject A <ts>",
+            "Unit 1",
+            "Colours",
+            "Multiple Choice",
+            10,
+            "",
+            "",
+            ""
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "name": "export: by type",
+    "status": 200,
+    "headers": {
+      "content-type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "content-disposition": "attachment; filename=question-bank-export.xlsx"
+    },
+    "workbook": [
+      {
+        "sheet": "Questions",
+        "header": [
+          "Question ID",
+          "Question Text",
+          "Option A",
+          "Option B",
+          "Option C",
+          "Option D",
+          "Correct Option",
+          "Explanation",
+          "Difficulty Level",
+          "Subject",
+          "Unit",
+          "Topic",
+          "Question Type",
+          "Marks",
+          "BTL",
+          "Question Name",
+          "Image File Name"
+        ],
+        "rowCount": 5,
+        "rows": [
+          [
+            "Q<n>",
+            "ZZ QX quiz 1",
+            "Red",
+            "Green",
+            "Blue",
+            "Pink",
+            "B",
+            "because",
+            "Medium",
+            "ZZ QX Subject A <ts>",
+            "Unit 1",
+            "Colours",
+            "Multiple Choice",
+            10,
+            "",
+            "",
+            ""
+          ],
+          [
+            "Q<n>",
+            "ZZ QX quiz 10",
+            "Red",
+            "Green",
+            "Blue",
+            "Pink",
+            "B",
+            "because",
+            "Medium",
+            "ZZ QX Subject A <ts>",
+            "Brand New Unit",
+            "",
+            "Multiple Choice",
+            10,
+            "",
+            "",
+            ""
+          ],
+          [
+            "Q<n>",
+            "ZZ QX quiz 12",
+            "Red",
+            "Green",
+            "Blue",
+            "Pink",
+            "B",
+            "because",
+            "Medium",
+            "ZZ QX Subject A <ts>",
+            "Unit 1",
+            "Colours",
+            "Multiple Choice",
+            5,
+            3,
+            "named",
+            ""
+          ],
+          [
+            "Q<n>",
+            "ZZ QX quiz 14",
+            "Red",
+            "Green",
+            "Blue",
+            "Pink",
+            "B",
+            "because",
+            "Medium",
+            "ZZ QX Subject A <ts>",
+            "Unit 1",
+            "Colours",
+            "Multiple Choice",
+            10,
+            "",
+            "",
+            ""
+          ],
+          [
+            "Q<n>",
+            "ZZ QX quiz 1",
+            "Red",
+            "Green",
+            "Blue",
+            "Pink",
+            "B",
+            "because",
+            "Medium",
+            "ZZ QX Subject A <ts>",
+            "Unit 1",
+            "Colours",
+            "Multiple Choice",
+            10,
+            "",
+            "",
+            ""
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "name": "export: selected ids",
+    "status": 200,
+    "workbook": [
+      {
+        "sheet": "Questions",
+        "header": [
+          "Question ID",
+          "Question Text",
+          "Option A",
+          "Option B",
+          "Option C",
+          "Option D",
+          "Correct Option",
+          "Explanation",
+          "Difficulty Level",
+          "Subject",
+          "Unit",
+          "Topic",
+          "Question Type",
+          "Marks",
+          "BTL",
+          "Question Name",
+          "Image File Name"
+        ],
+        "rowCount": 3,
+        "rows": [
+          [
+            "Q<n>",
+            "ZZ QX Print double of the input 1",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "Easy",
+            "ZZ QX Subject A <ts>",
+            "Unit 1",
+            "Loops",
+            "Coding",
+            10,
+            2,
+            "ZZ QX code 1",
+            ""
+          ],
+          [
+            "Q<n>",
+            "ZZ QX Print double of the input 14",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "Easy",
+            "ZZ QX Subject A <ts>",
+            "Unit 1",
+            "Loops",
+            "Coding",
+            10,
+            2,
+            "ZZ QX code 14",
+            ""
+          ],
+          [
+            "Q<n>",
+            "ZZ QX Notepad coding one",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "Easy",
+            "ZZ QX Subject A <ts>",
+            "Unit 1",
+            "",
+            "Coding",
+            10,
+            "",
+            "ZZ QX Notepad coding one",
+            ""
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "name": "export: selected ids of another institute are left out",
+    "status": 200,
+    "workbook": [
+      {
+        "sheet": "Questions",
+        "header": [
+          "Question ID",
+          "Question Text",
+          "Option A",
+          "Option B",
+          "Option C",
+          "Option D",
+          "Correct Option",
+          "Explanation",
+          "Difficulty Level",
+          "Subject",
+          "Unit",
+          "Topic",
+          "Question Type",
+          "Marks",
+          "BTL",
+          "Question Name",
+          "Image File Name"
+        ],
+        "rowCount": 0,
+        "rows": []
+      }
+    ]
+  },
+  {
+    "name": "export: unknown ids",
+    "status": 200,
+    "workbook": [
+      {
+        "sheet": "Questions",
+        "header": [
+          "Question ID",
+          "Question Text",
+          "Option A",
+          "Option B",
+          "Option C",
+          "Option D",
+          "Correct Option",
+          "Explanation",
+          "Difficulty Level",
+          "Subject",
+          "Unit",
+          "Topic",
+          "Question Type",
+          "Marks",
+          "BTL",
+          "Question Name",
+          "Image File Name"
+        ],
+        "rowCount": 0,
+        "rows": []
+      }
+    ]
+  },
+  {
+    "name": "export: staff exports only their own",
+    "status": 200,
+    "workbook": [
+      {
+        "sheet": "Questions",
+        "header": [
+          "Question ID",
+          "Question Text",
+          "Option A",
+          "Option B",
+          "Option C",
+          "Option D",
+          "Correct Option",
+          "Explanation",
+          "Difficulty Level",
+          "Subject",
+          "Unit",
+          "Topic",
+          "Question Type",
+          "Marks",
+          "BTL",
+          "Question Name",
+          "Image File Name"
+        ],
+        "rowCount": 1,
+        "rows": [
+          [
+            "Q<n>",
+            "ZZ QX quiz 42",
+            "Red",
+            "Green",
+            "Blue",
+            "Pink",
+            "B",
+            "because",
+            "Medium",
+            "ZZ QX Subject A <ts>",
+            "Unit 1",
+            "Colours",
+            "Multiple Choice",
+            10,
+            "",
+            "",
+            ""
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "name": "export: audit rows",
+    "db": [
+      "QUESTION_EXPORTED|role:INSTITUTE_ADMIN|inst:set|keys:count",
+      "QUESTION_EXPORTED|role:INSTITUTE_ADMIN|inst:set|keys:count",
+      "QUESTION_EXPORTED|role:INSTITUTE_ADMIN|inst:set|keys:count",
+      "QUESTION_EXPORTED|role:INSTITUTE_ADMIN|inst:set|keys:count",
+      "QUESTION_EXPORTED|role:INSTITUTE_ADMIN|inst:set|keys:count",
+      "QUESTION_EXPORTED|role:STAFF|inst:set|keys:count"
+    ]
+  }
+]

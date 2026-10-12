@@ -10,6 +10,9 @@ const { safeErrorMessage } = require("../../utils/errors");
 const service = require("./questions.service");
 const folders = require("./questions.folders.service");
 const bulk = require("./questions.bulk.service");
+const importer = require("./questions.import.service");
+const exporter = require("./questions.export.service");
+const { templateWorkbook, templateText } = require("./questions.import.domain");
 
 const actor = (req) => ({ req, user: req.user, requesterInstituteId: req.requesterInstituteId });
 
@@ -77,7 +80,46 @@ const bulkStatus = handler((req) => bulk.changeStatus(actor(req), req.body), toE
 const bulkDelete = handler((req) => bulk.remove(actor(req), req.body), toErrorHandler);
 const bulkCopy = handler((req) => bulk.copy(actor(req), req.body), toErrorHandler);
 
+// ---- templates, export and bulk import ----
+// The import routes answer an unexpected error with a fixed 500 message per kind of request; a file or payload problem is a 400 and a folder outside the requester's
+// institute a 403. The export has no try/catch, so an unexpected error goes to the application's error handler.
+const XLSX_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+
+const template = (req, res) => {
+  if (req.query.format === "txt") {
+    const { body, filename } = templateText(req.query.type === "coding");
+    res.setHeader("Content-Type", "text/plain; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename=${filename}`);
+    return res.send(body);
+  }
+  const { buffer, filename } = templateWorkbook(req.query.type);
+  res.setHeader("Content-Type", XLSX_TYPE);
+  res.setHeader("Content-Disposition", `attachment; filename=${filename}`);
+  res.send(buffer);
+};
+
+const exportQuestions = async (req, res, next) => {
+  try {
+    const buffer = await exporter.exportQuestions(req);
+    res.setHeader("Content-Type", XLSX_TYPE);
+    res.setHeader("Content-Disposition", "attachment; filename=question-bank-export.xlsx");
+    res.send(buffer);
+  } catch (err) {
+    next(err);
+  }
+};
+
+const importQuiz = handler((req) => importer.importFile(req, { coding: false, commit: true }), logged500("Bulk import failed"));
+const previewQuiz = handler((req) => importer.importFile(req, { coding: false, commit: false }), logged500("Preview failed"));
+const confirmQuiz = handler((req) => importer.confirmRows(req, { coding: false }), logged500("Import failed"));
+const importCoding = handler((req) => importer.importFile(req, { coding: true, commit: true }), logged500("Bulk import failed"));
+const previewCoding = handler((req) => importer.importFile(req, { coding: true, commit: false }), logged500("Preview failed"));
+const confirmCoding = handler((req) => importer.confirmRows(req, { coding: true }), logged500("Import failed"));
+const previewCombined = handler((req) => importer.previewCombined(req), logged500("Preview failed"));
+const confirmCombined = handler((req) => importer.confirmCombined(req), logged500("Import failed"));
+
 module.exports = {
   create, edit, duplicate, uploadImage, removeImage, remove, list, filters, getOne, analytics, previewStarterCode, validateTestCases,
   listFolders, createFolder, editFolder, deletePreview, deleteFolder, clearFolder, mergeFolder, listShares, shareFolder, revokeShare, bulkMove, bulkAssignSubject, bulkStatus, bulkDelete, bulkCopy,
+  template, exportQuestions, importQuiz, previewQuiz, confirmQuiz, importCoding, previewCoding, confirmCoding, previewCombined, confirmCombined,
 };

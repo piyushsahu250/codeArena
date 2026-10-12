@@ -138,7 +138,7 @@ const auditRows = async (where) => (await prisma.auditLog.findMany({ where, sele
   await call("quiz preview: the question text column is missing", "POST", "/questions/bulk-import/preview", T.instA, form(wbBuffer({ MCQ: [{ Option: "x" }] }), "q.xlsx"));
   await call("quiz preview: folder of another institute", "POST", "/questions/bulk-import/preview", T.instA, form(quizFile, "q.xlsx", { folderId: folderB.id }));
   const quizPrev = await call("quiz preview: a mixed file", "POST", "/questions/bulk-import/preview", T.instA, form(quizFile, "q.xlsx", { folderId: folderA.id }));
-  note("quiz preview: nothing was stored, except the units and topics it resolved", {
+  note("quiz preview: nothing was stored, not even the units and topics it resolved", {
     questions: await prisma.question.count({ where: { description: { startsWith: `${TAG} quiz` } } }),
     units: (await prisma.unit.findMany({ where: { subjectId: subA.id }, select: { name: true }, orderBy: { name: "asc" } })).map((u) => u.name),
     topics: (await prisma.topic.findMany({ where: { unit: { subjectId: subA.id } }, select: { name: true }, orderBy: { name: "asc" } })).map((t) => t.name),
