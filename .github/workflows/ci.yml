@@ -139,15 +139,19 @@ jobs:
           npm run seed
       - name: Start the API
         working-directory: backend
+        env:
+          SECURE_BROWSER_SECRET: ci-only-secure-browser-secret-0123456789
         run: |
           nohup node src/index.js > ../api.log 2>&1 &
           for i in $(seq 1 60); do curl -fs http://localhost:4000/api/health >/dev/null && break; sleep 2; done
           curl -fs http://localhost:4000/api/health || { echo "::error::API did not start"; tail -40 ../api.log; exit 1; }
       - name: Backend verification scripts (database-backed)
         working-directory: backend
+        env:
+          SECURE_BROWSER_SECRET: ci-only-secure-browser-secret-0123456789
         run: |
           fail=0
-          for s in verifyPermissions verifyAsyncErrors verifyRouteMetrics verifyAttemptManifest verifySubmissionsContract verifyStaffAnalytics verifyTestsContract verifyAuthContract verifyUsersContract verifyUsersWriteContract verifyQuestionsContract verifyQuestionFoldersContract verifyQuestionImportExportContract; do
+          for s in verifyPermissions verifyAsyncErrors verifyRouteMetrics verifyAttemptManifest verifySubmissionsContract verifyStaffAnalytics verifyTestsContract verifyAuthContract verifyUsersContract verifyUsersWriteContract verifyQuestionsContract verifyQuestionFoldersContract verifyQuestionImportExportContract verifySecureAndroid; do
             echo "=== $s"
             code=0; node scripts/$s.js > "/tmp/$s.out" 2>&1 || code=$?
             cat "/tmp/$s.out"
