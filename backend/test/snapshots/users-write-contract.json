@@ -1,0 +1,2343 @@
+[
+  {
+    "name": "create: anonymous",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "Missing or invalid Authorization header"
+    }
+  },
+  {
+    "name": "create: student refused",
+    "status": 403,
+    "body": {
+      "error": "Insufficient permissions"
+    }
+  },
+  {
+    "name": "create: staff refused",
+    "status": 403,
+    "body": {
+      "error": "Insufficient permissions"
+    }
+  },
+  {
+    "name": "create: missing fields",
+    "status": 400,
+    "body": {
+      "error": "name, email, and role are required"
+    }
+  },
+  {
+    "name": "create: invalid e-mail",
+    "status": 400,
+    "body": {
+      "error": "Please enter a valid email address"
+    }
+  },
+  {
+    "name": "create: institute admin cannot create an admin",
+    "status": 400,
+    "body": {
+      "error": "role must be one of: STUDENT, STAFF, CLERK"
+    }
+  },
+  {
+    "name": "create: super admin role is never allowed",
+    "status": 400,
+    "body": {
+      "error": "role must be one of: STUDENT, STAFF, ADMIN, CLERK, INSTITUTE_ADMIN"
+    }
+  },
+  {
+    "name": "create: institute admin role needs an institute",
+    "status": 400,
+    "body": {
+      "error": "An institute is required to create an Institute Admin"
+    }
+  },
+  {
+    "name": "create: an institute is required",
+    "status": 400,
+    "body": {
+      "error": "An institute is required"
+    }
+  },
+  {
+    "name": "create: another institute refused for a bound admin",
+    "status": 403,
+    "body": {
+      "error": "You can only create accounts under your own institute"
+    }
+  },
+  {
+    "name": "create: student without mobile",
+    "status": 400,
+    "body": {
+      "error": "A mobile number is required for students"
+    }
+  },
+  {
+    "name": "create: student without batch",
+    "status": 400,
+    "body": {
+      "error": "A batch is required for students"
+    }
+  },
+  {
+    "name": "create: student without PRN",
+    "status": 400,
+    "body": {
+      "error": "A Registration Number (PRN) is required for students"
+    }
+  },
+  {
+    "name": "create: invalid mobile",
+    "status": 400,
+    "body": {
+      "error": "Invalid mobile number"
+    }
+  },
+  {
+    "name": "create: unknown institute",
+    "status": 404,
+    "body": {
+      "error": "Institute not found"
+    }
+  },
+  {
+    "name": "create: PRN of the wrong shape",
+    "status": 400,
+    "body": {
+      "error": "Registration Number (PRN) must be 9-12 alphanumeric characters"
+    }
+  },
+  {
+    "name": "create: roll number too long",
+    "status": 400,
+    "body": {
+      "error": "Roll Number cannot exceed 3 characters"
+    }
+  },
+  {
+    "name": "create: roll number not digits",
+    "status": 400,
+    "body": {
+      "error": "Roll Number must be exactly 3 digits"
+    }
+  },
+  {
+    "name": "create: student, roll number derived from the PRN",
+    "status": 200,
+    "body": {
+      "academicGroup": {
+        "batch": "2026",
+        "department": {
+          "id": "<id>",
+          "name": "ZZ UW Dept"
+        },
+        "id": "<id>",
+        "section": "Section A"
+      },
+      "accountStatus": "ACTIVE",
+      "batchYear": "2026",
+      "class": null,
+      "createdAt": "<time>",
+      "department": "ZZ UW Dept",
+      "designation": null,
+      "email": "zz-uw-new-s1-<ts>@example.invalid",
+      "emailError": "<masked>",
+      "emailSent": "<masked>",
+      "emailVerified": false,
+      "employeeId": null,
+      "gender": null,
+      "generatedPassword": "<masked>",
+      "id": "<id>",
+      "institute": {
+        "id": "<id>",
+        "name": "ZZ UW A <ts>"
+      },
+      "isActive": true,
+      "lastLoginAt": "<masked>",
+      "mobile": "9000000010",
+      "mustChangePassword": true,
+      "name": "ZZ UW student 1",
+      "pendingEmail": null,
+      "profilePhotoUrl": null,
+      "program": null,
+      "registrationNumber": "ZZUW00001",
+      "role": "STUDENT",
+      "rollNumber": "001",
+      "section": "Section A"
+    }
+  },
+  {
+    "name": "create: the same e-mail again",
+    "status": 409,
+    "body": {
+      "error": "Email already registered"
+    }
+  },
+  {
+    "name": "create: the same PRN again",
+    "status": 409,
+    "body": {
+      "error": "Registration Number \"ZZUW00001\" is already registered to another account"
+    }
+  },
+  {
+    "name": "create: student with a manual roll number",
+    "status": 200,
+    "body": {
+      "academicGroup": {
+        "batch": "2026",
+        "department": {
+          "id": "<id>",
+          "name": "ZZ UW Dept"
+        },
+        "id": "<id>",
+        "section": "Section A"
+      },
+      "accountStatus": "ACTIVE",
+      "batchYear": "2026",
+      "class": null,
+      "createdAt": "<time>",
+      "department": "ZZ UW Dept",
+      "designation": null,
+      "email": "zz-uw-new-s3-<ts>@example.invalid",
+      "emailError": "<masked>",
+      "emailSent": "<masked>",
+      "emailVerified": false,
+      "employeeId": null,
+      "gender": null,
+      "generatedPassword": "<masked>",
+      "id": "<id>",
+      "institute": {
+        "id": "<id>",
+        "name": "ZZ UW A <ts>"
+      },
+      "isActive": true,
+      "lastLoginAt": "<masked>",
+      "mobile": "9000000010",
+      "mustChangePassword": true,
+      "name": "ZZ UW student 3",
+      "pendingEmail": null,
+      "profilePhotoUrl": null,
+      "program": null,
+      "registrationNumber": "ZZUW00003",
+      "role": "STUDENT",
+      "rollNumber": "777",
+      "section": "Section A"
+    }
+  },
+  {
+    "name": "create: manual roll number already used in the group",
+    "status": 409,
+    "body": {
+      "error": "Roll Number \"777\" is already used by ZZ UW student 3 in this Batch/Department/Section — choose a different Roll Number."
+    }
+  },
+  {
+    "name": "create: PRN with an upper-case e-mail",
+    "status": 200,
+    "body": {
+      "academicGroup": {
+        "batch": "2026",
+        "department": {
+          "id": "<id>",
+          "name": "ZZ UW Dept"
+        },
+        "id": "<id>",
+        "section": "Section A"
+      },
+      "accountStatus": "ACTIVE",
+      "batchYear": "2026",
+      "class": null,
+      "createdAt": "<time>",
+      "department": "ZZ UW Dept",
+      "designation": null,
+      "email": "zz-uw-new-s5-<ts>@example.invalid",
+      "emailError": "<masked>",
+      "emailSent": "<masked>",
+      "emailVerified": false,
+      "employeeId": null,
+      "gender": null,
+      "generatedPassword": "<masked>",
+      "id": "<id>",
+      "institute": {
+        "id": "<id>",
+        "name": "ZZ UW A <ts>"
+      },
+      "isActive": true,
+      "lastLoginAt": "<masked>",
+      "mobile": "9000000010",
+      "mustChangePassword": true,
+      "name": "ZZ UW student 5",
+      "pendingEmail": null,
+      "profilePhotoUrl": null,
+      "program": null,
+      "registrationNumber": "ZZUW00005",
+      "role": "STUDENT",
+      "rollNumber": "005",
+      "section": "Section A"
+    }
+  },
+  {
+    "name": "create: staff with an employee id",
+    "status": 200,
+    "body": {
+      "academicGroup": null,
+      "accountStatus": "ACTIVE",
+      "batchYear": null,
+      "class": null,
+      "createdAt": "<time>",
+      "department": null,
+      "designation": "Lecturer",
+      "email": "zz-uw-new-st1-<ts>@example.invalid",
+      "emailError": "<masked>",
+      "emailSent": "<masked>",
+      "emailVerified": false,
+      "employeeId": "E-100",
+      "gender": null,
+      "generatedPassword": "<masked>",
+      "id": "<id>",
+      "institute": {
+        "id": "<id>",
+        "name": "ZZ UW A <ts>"
+      },
+      "isActive": true,
+      "lastLoginAt": "<masked>",
+      "mobile": null,
+      "mustChangePassword": true,
+      "name": "ZZ UW staff new",
+      "pendingEmail": null,
+      "profilePhotoUrl": null,
+      "program": null,
+      "registrationNumber": null,
+      "role": "STAFF",
+      "rollNumber": null,
+      "section": null
+    }
+  },
+  {
+    "name": "create: employee id already used at the institute",
+    "status": 409,
+    "body": {
+      "error": "Employee ID \"E-100\" is already in use at ZZ UW A <ts>"
+    }
+  },
+  {
+    "name": "create: clerk",
+    "status": 200,
+    "body": {
+      "academicGroup": null,
+      "accountStatus": "ACTIVE",
+      "batchYear": null,
+      "class": null,
+      "createdAt": "<time>",
+      "department": null,
+      "designation": null,
+      "email": "zz-uw-new-cl1-<ts>@example.invalid",
+      "emailError": "<masked>",
+      "emailSent": "<masked>",
+      "emailVerified": false,
+      "employeeId": null,
+      "gender": null,
+      "generatedPassword": "<masked>",
+      "id": "<id>",
+      "institute": {
+        "id": "<id>",
+        "name": "ZZ UW A <ts>"
+      },
+      "isActive": true,
+      "lastLoginAt": "<masked>",
+      "mobile": null,
+      "mustChangePassword": true,
+      "name": "ZZ UW clerk new",
+      "pendingEmail": null,
+      "profilePhotoUrl": null,
+      "program": null,
+      "registrationNumber": null,
+      "role": "CLERK",
+      "rollNumber": null,
+      "section": null
+    }
+  },
+  {
+    "name": "create: platform admin creates an institute admin",
+    "status": 200,
+    "body": {
+      "academicGroup": null,
+      "accountStatus": "ACTIVE",
+      "batchYear": null,
+      "class": null,
+      "createdAt": "<time>",
+      "department": null,
+      "designation": null,
+      "email": "zz-uw-new-ia1-<ts>@example.invalid",
+      "emailError": "<masked>",
+      "emailSent": "<masked>",
+      "emailVerified": false,
+      "employeeId": null,
+      "gender": null,
+      "generatedPassword": "<masked>",
+      "id": "<id>",
+      "institute": {
+        "id": "<id>",
+        "name": "ZZ UW B <ts>"
+      },
+      "isActive": true,
+      "lastLoginAt": "<masked>",
+      "mobile": null,
+      "mustChangePassword": true,
+      "name": "ZZ UW ia new",
+      "pendingEmail": null,
+      "profilePhotoUrl": null,
+      "program": null,
+      "registrationNumber": null,
+      "role": "INSTITUTE_ADMIN",
+      "rollNumber": null,
+      "section": null
+    }
+  },
+  {
+    "name": "create: platform admin creates a student in another institute",
+    "status": 200,
+    "body": {
+      "academicGroup": {
+        "batch": "2026",
+        "department": {
+          "id": "<id>",
+          "name": "ZZ UW Dept"
+        },
+        "id": "<id>",
+        "section": "Section A"
+      },
+      "accountStatus": "ACTIVE",
+      "batchYear": "2026",
+      "class": null,
+      "createdAt": "<time>",
+      "department": "ZZ UW Dept",
+      "designation": null,
+      "email": "zz-uw-new-s6-<ts>@example.invalid",
+      "emailError": "<masked>",
+      "emailSent": "<masked>",
+      "emailVerified": false,
+      "employeeId": null,
+      "gender": null,
+      "generatedPassword": "<masked>",
+      "id": "<id>",
+      "institute": {
+        "id": "<id>",
+        "name": "ZZ UW B <ts>"
+      },
+      "isActive": true,
+      "lastLoginAt": "<masked>",
+      "mobile": "9000000010",
+      "mustChangePassword": true,
+      "name": "ZZ UW student 6",
+      "pendingEmail": null,
+      "profilePhotoUrl": null,
+      "program": null,
+      "registrationNumber": "ZZUW00006",
+      "role": "STUDENT",
+      "rollNumber": "006",
+      "section": "Section A"
+    }
+  },
+  {
+    "name": "create: stored accounts",
+    "db": [
+      {
+        "academicGroupId": null,
+        "accountStatus": "ACTIVE",
+        "designation": null,
+        "email": "zz-uw-new-cl1-<ts>@example.invalid",
+        "employeeId": null,
+        "instituteId": "A",
+        "isActive": true,
+        "mustChangePassword": true,
+        "registrationNumber": null,
+        "role": "CLERK",
+        "rollNumber": null
+      },
+      {
+        "academicGroupId": null,
+        "accountStatus": "ACTIVE",
+        "designation": null,
+        "email": "zz-uw-new-ia1-<ts>@example.invalid",
+        "employeeId": null,
+        "instituteId": "B",
+        "isActive": true,
+        "mustChangePassword": true,
+        "registrationNumber": null,
+        "role": "INSTITUTE_ADMIN",
+        "rollNumber": null
+      },
+      {
+        "academicGroupId": "set",
+        "accountStatus": "ACTIVE",
+        "designation": null,
+        "email": "zz-uw-new-s1-<ts>@example.invalid",
+        "employeeId": null,
+        "instituteId": "A",
+        "isActive": true,
+        "mustChangePassword": true,
+        "registrationNumber": "ZZUW00001",
+        "role": "STUDENT",
+        "rollNumber": "001"
+      },
+      {
+        "academicGroupId": "set",
+        "accountStatus": "ACTIVE",
+        "designation": null,
+        "email": "zz-uw-new-s3-<ts>@example.invalid",
+        "employeeId": null,
+        "instituteId": "A",
+        "isActive": true,
+        "mustChangePassword": true,
+        "registrationNumber": "ZZUW00003",
+        "role": "STUDENT",
+        "rollNumber": "777"
+      },
+      {
+        "academicGroupId": "set",
+        "accountStatus": "ACTIVE",
+        "designation": null,
+        "email": "zz-uw-new-s5-<ts>@example.invalid",
+        "employeeId": null,
+        "instituteId": "A",
+        "isActive": true,
+        "mustChangePassword": true,
+        "registrationNumber": "ZZUW00005",
+        "role": "STUDENT",
+        "rollNumber": "005"
+      },
+      {
+        "academicGroupId": "set",
+        "accountStatus": "ACTIVE",
+        "designation": null,
+        "email": "zz-uw-new-s6-<ts>@example.invalid",
+        "employeeId": null,
+        "instituteId": "B",
+        "isActive": true,
+        "mustChangePassword": true,
+        "registrationNumber": "ZZUW00006",
+        "role": "STUDENT",
+        "rollNumber": "006"
+      },
+      {
+        "academicGroupId": null,
+        "accountStatus": "ACTIVE",
+        "designation": "Lecturer",
+        "email": "zz-uw-new-st1-<ts>@example.invalid",
+        "employeeId": "E-100",
+        "instituteId": "A",
+        "isActive": true,
+        "mustChangePassword": true,
+        "registrationNumber": null,
+        "role": "STAFF",
+        "rollNumber": null
+      }
+    ]
+  },
+  {
+    "name": "create: academic groups made",
+    "db": [
+      "A:2026:ZZ UW Dept:Section A",
+      "B:2026:ZZ UW Dept:Section A"
+    ]
+  },
+  {
+    "name": "create: audit rows",
+    "db": [
+      "ACCOUNT_CREATED|role:INSTITUTE_ADMIN|student:set|inst:set|keys:email,emailError,emailSent,method,role,studentName,userId",
+      "ACCOUNT_CREATED|role:INSTITUTE_ADMIN|student:set|inst:set|keys:email,emailError,emailSent,method,role,studentName,userId",
+      "ACCOUNT_CREATED|role:INSTITUTE_ADMIN|student:set|inst:set|keys:email,emailError,emailSent,method,role,studentName,userId",
+      "ACCOUNT_CREATED|role:INSTITUTE_ADMIN|student:-|inst:set|keys:email,emailError,emailSent,method,role,studentName,userId",
+      "ACCOUNT_CREATED|role:INSTITUTE_ADMIN|student:-|inst:set|keys:email,emailError,emailSent,method,role,studentName,userId",
+      "ACCOUNT_CREATED|role:ADMIN|student:-|inst:set|keys:email,emailError,emailSent,method,role,studentName,userId",
+      "ACCOUNT_CREATED|role:ADMIN|student:set|inst:set|keys:email,emailError,emailSent,method,role,studentName,userId"
+    ]
+  },
+  {
+    "name": "create: credential e-mails queued",
+    "db": [
+      "CREDENTIALS",
+      "CREDENTIALS",
+      "CREDENTIALS",
+      "CREDENTIALS",
+      "CREDENTIALS",
+      "CREDENTIALS",
+      "CREDENTIALS"
+    ]
+  },
+  {
+    "name": "edit: anonymous",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "Missing or invalid Authorization header"
+    }
+  },
+  {
+    "name": "edit: staff refused",
+    "status": 403,
+    "body": {
+      "error": "Insufficient permissions"
+    }
+  },
+  {
+    "name": "edit: unknown user",
+    "status": 404,
+    "body": {
+      "error": "User not found"
+    }
+  },
+  {
+    "name": "edit: user of another institute",
+    "status": 403,
+    "body": {
+      "error": "You can only edit users under your own institute"
+    }
+  },
+  {
+    "name": "edit: moving to another institute",
+    "status": 403,
+    "body": {
+      "error": "You cannot move a user to a different institute"
+    }
+  },
+  {
+    "name": "edit: invalid e-mail",
+    "status": 400,
+    "body": {
+      "error": "Please enter a valid email address"
+    }
+  },
+  {
+    "name": "edit: e-mail already used",
+    "status": 409,
+    "body": {
+      "error": "This email address is already associated with an account"
+    }
+  },
+  {
+    "name": "edit: invalid mobile",
+    "status": 400,
+    "body": {
+      "error": "Invalid mobile number"
+    }
+  },
+  {
+    "name": "edit: roll number too long",
+    "status": 400,
+    "body": {
+      "error": "Roll Number cannot exceed 3 characters"
+    }
+  },
+  {
+    "name": "edit: roll number not digits",
+    "status": 400,
+    "body": {
+      "error": "Roll Number must be exactly 3 digits"
+    }
+  },
+  {
+    "name": "edit: PRN of the wrong shape",
+    "status": 400,
+    "body": {
+      "error": "Registration Number (PRN) must be 9-12 alphanumeric characters"
+    }
+  },
+  {
+    "name": "edit: PRN already used",
+    "status": 409,
+    "body": {
+      "error": "That Registration Number (PRN) is already registered to another account"
+    }
+  },
+  {
+    "name": "edit: employee id already used",
+    "status": 200,
+    "body": {
+      "academicGroup": null,
+      "accountStatus": "ACTIVE",
+      "batchYear": null,
+      "class": null,
+      "createdAt": "<time>",
+      "department": null,
+      "designation": "Lecturer",
+      "email": "zz-uw-new-st1-<ts>@example.invalid",
+      "emailVerified": false,
+      "employeeId": "E-100",
+      "gender": null,
+      "id": "<id>",
+      "institute": {
+        "id": "<id>",
+        "name": "ZZ UW A <ts>"
+      },
+      "isActive": true,
+      "lastLoginAt": "<masked>",
+      "mobile": null,
+      "mustChangePassword": true,
+      "name": "ZZ UW staff renamed",
+      "pendingEmail": null,
+      "profilePhotoUrl": null,
+      "program": null,
+      "registrationNumber": null,
+      "role": "STAFF",
+      "rollNumber": null,
+      "section": null
+    }
+  },
+  {
+    "name": "edit: unknown institute for a platform admin",
+    "status": 404,
+    "body": {
+      "error": "Institute not found"
+    }
+  },
+  {
+    "name": "edit: roll number already used in the group",
+    "status": 409,
+    "body": {
+      "error": "Roll Number \"777\" is already used by ZZ UW student 3 in this Batch/Department/Section — choose a different Roll Number."
+    }
+  },
+  {
+    "name": "edit: name, mobile and e-mail change",
+    "status": 200,
+    "body": {
+      "academicGroup": {
+        "batch": "2026",
+        "department": {
+          "id": "<id>",
+          "name": "ZZ UW Dept"
+        },
+        "id": "<id>",
+        "section": "Section A"
+      },
+      "accountStatus": "ACTIVE",
+      "batchYear": "2026",
+      "class": null,
+      "createdAt": "<time>",
+      "department": "ZZ UW Dept",
+      "designation": null,
+      "email": "zz-uw-new-s1b-<ts>@example.invalid",
+      "emailVerified": false,
+      "employeeId": null,
+      "gender": null,
+      "id": "<id>",
+      "institute": {
+        "id": "<id>",
+        "name": "ZZ UW A <ts>"
+      },
+      "isActive": true,
+      "lastLoginAt": "<masked>",
+      "mobile": " 9111111111 ",
+      "mustChangePassword": true,
+      "name": "ZZ UW student renamed",
+      "pendingEmail": null,
+      "profilePhotoUrl": null,
+      "program": null,
+      "registrationNumber": "ZZUW00001",
+      "role": "STUDENT",
+      "rollNumber": "001",
+      "section": "Section A"
+    }
+  },
+  {
+    "name": "edit: e-mail change resets verification",
+    "db": {
+      "email": "zz-uw-new-s1b-<ts>@example.invalid",
+      "emailVerified": false,
+      "emailVerifiedAt": null
+    }
+  },
+  {
+    "name": "edit: the PRN changes, so the roll number is re-derived",
+    "status": 200,
+    "body": {
+      "academicGroup": {
+        "batch": "2026",
+        "department": {
+          "id": "<id>",
+          "name": "ZZ UW Dept"
+        },
+        "id": "<id>",
+        "section": "Section A"
+      },
+      "accountStatus": "ACTIVE",
+      "batchYear": "2026",
+      "class": null,
+      "createdAt": "<time>",
+      "department": "ZZ UW Dept",
+      "designation": null,
+      "email": "zz-uw-new-s1b-<ts>@example.invalid",
+      "emailVerified": false,
+      "employeeId": null,
+      "gender": null,
+      "id": "<id>",
+      "institute": {
+        "id": "<id>",
+        "name": "ZZ UW A <ts>"
+      },
+      "isActive": true,
+      "lastLoginAt": "<masked>",
+      "mobile": " 9111111111 ",
+      "mustChangePassword": true,
+      "name": "ZZ UW student renamed",
+      "pendingEmail": null,
+      "profilePhotoUrl": null,
+      "program": null,
+      "registrationNumber": "ZZUW00009",
+      "role": "STUDENT",
+      "rollNumber": "009",
+      "section": "Section A"
+    }
+  },
+  {
+    "name": "edit: moving to another batch re-resolves the group",
+    "status": 200,
+    "body": {
+      "academicGroup": {
+        "batch": "2027",
+        "department": {
+          "id": "<id>",
+          "name": "ZZ UW Dept"
+        },
+        "id": "<id>",
+        "section": "Section A"
+      },
+      "accountStatus": "ACTIVE",
+      "batchYear": "2027",
+      "class": null,
+      "createdAt": "<time>",
+      "department": "ZZ UW Dept",
+      "designation": null,
+      "email": "zz-uw-new-s1b-<ts>@example.invalid",
+      "emailVerified": false,
+      "employeeId": null,
+      "gender": null,
+      "id": "<id>",
+      "institute": {
+        "id": "<id>",
+        "name": "ZZ UW A <ts>"
+      },
+      "isActive": true,
+      "lastLoginAt": "<masked>",
+      "mobile": " 9111111111 ",
+      "mustChangePassword": true,
+      "name": "ZZ UW student renamed",
+      "pendingEmail": null,
+      "profilePhotoUrl": null,
+      "program": null,
+      "registrationNumber": "ZZUW00009",
+      "role": "STUDENT",
+      "rollNumber": "009",
+      "section": "Section A"
+    }
+  },
+  {
+    "name": "edit: groups after the move",
+    "db": [
+      "2026:ZZ UW Dept:Section A",
+      "2027:ZZ UW Dept:Section A"
+    ]
+  },
+  {
+    "name": "edit: a blank employee id is cleared",
+    "status": 200,
+    "body": {
+      "academicGroup": null,
+      "accountStatus": "ACTIVE",
+      "batchYear": null,
+      "class": null,
+      "createdAt": "<time>",
+      "department": null,
+      "designation": "Lecturer",
+      "email": "zz-uw-new-st1-<ts>@example.invalid",
+      "emailVerified": false,
+      "employeeId": null,
+      "gender": null,
+      "id": "<id>",
+      "institute": {
+        "id": "<id>",
+        "name": "ZZ UW A <ts>"
+      },
+      "isActive": true,
+      "lastLoginAt": "<masked>",
+      "mobile": null,
+      "mustChangePassword": true,
+      "name": "ZZ UW staff renamed",
+      "pendingEmail": null,
+      "profilePhotoUrl": null,
+      "program": null,
+      "registrationNumber": null,
+      "role": "STAFF",
+      "rollNumber": null,
+      "section": null
+    }
+  },
+  {
+    "name": "edit: nothing sent changes nothing",
+    "status": 200,
+    "body": {
+      "academicGroup": {
+        "batch": "2027",
+        "department": {
+          "id": "<id>",
+          "name": "ZZ UW Dept"
+        },
+        "id": "<id>",
+        "section": "Section A"
+      },
+      "accountStatus": "ACTIVE",
+      "batchYear": "2027",
+      "class": null,
+      "createdAt": "<time>",
+      "department": "ZZ UW Dept",
+      "designation": null,
+      "email": "zz-uw-new-s1b-<ts>@example.invalid",
+      "emailVerified": false,
+      "employeeId": null,
+      "gender": null,
+      "id": "<id>",
+      "institute": {
+        "id": "<id>",
+        "name": "ZZ UW A <ts>"
+      },
+      "isActive": true,
+      "lastLoginAt": "<masked>",
+      "mobile": " 9111111111 ",
+      "mustChangePassword": true,
+      "name": "ZZ UW student renamed",
+      "pendingEmail": null,
+      "profilePhotoUrl": null,
+      "program": null,
+      "registrationNumber": "ZZUW00009",
+      "role": "STUDENT",
+      "rollNumber": "009",
+      "section": "Section A"
+    }
+  },
+  {
+    "name": "edit: before deactivation the student's session works",
+    "status": 200,
+    "body": {
+      "permissions": [
+        "student.portal"
+      ],
+      "role": "STUDENT"
+    }
+  },
+  {
+    "name": "edit: deactivate",
+    "status": 200,
+    "body": {
+      "academicGroup": null,
+      "accountStatus": "ACTIVE",
+      "batchYear": null,
+      "class": null,
+      "createdAt": "<time>",
+      "department": null,
+      "designation": null,
+      "email": "zz-uw-stubase-<ts>@example.invalid",
+      "emailVerified": false,
+      "employeeId": null,
+      "gender": null,
+      "id": "<id>",
+      "institute": {
+        "id": "<id>",
+        "name": "ZZ UW A <ts>"
+      },
+      "isActive": false,
+      "lastLoginAt": "<masked>",
+      "mobile": null,
+      "mustChangePassword": false,
+      "name": "ZZ UW stuBase",
+      "pendingEmail": null,
+      "profilePhotoUrl": null,
+      "program": null,
+      "registrationNumber": null,
+      "role": "STUDENT",
+      "rollNumber": null,
+      "section": null
+    }
+  },
+  {
+    "name": "edit: the deactivated student's session is dead",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "This session has been signed out. Please log in again."
+    }
+  },
+  {
+    "name": "edit: deactivating again is not a toggle",
+    "status": 200,
+    "body": {
+      "academicGroup": null,
+      "accountStatus": "ACTIVE",
+      "batchYear": null,
+      "class": null,
+      "createdAt": "<time>",
+      "department": null,
+      "designation": null,
+      "email": "zz-uw-stubase-<ts>@example.invalid",
+      "emailVerified": false,
+      "employeeId": null,
+      "gender": null,
+      "id": "<id>",
+      "institute": {
+        "id": "<id>",
+        "name": "ZZ UW A <ts>"
+      },
+      "isActive": false,
+      "lastLoginAt": "<masked>",
+      "mobile": null,
+      "mustChangePassword": false,
+      "name": "ZZ UW stuBase",
+      "pendingEmail": null,
+      "profilePhotoUrl": null,
+      "program": null,
+      "registrationNumber": null,
+      "role": "STUDENT",
+      "rollNumber": null,
+      "section": null
+    }
+  },
+  {
+    "name": "edit: activate",
+    "status": 200,
+    "body": {
+      "academicGroup": null,
+      "accountStatus": "ACTIVE",
+      "batchYear": null,
+      "class": null,
+      "createdAt": "<time>",
+      "department": null,
+      "designation": null,
+      "email": "zz-uw-stubase-<ts>@example.invalid",
+      "emailVerified": false,
+      "employeeId": null,
+      "gender": null,
+      "id": "<id>",
+      "institute": {
+        "id": "<id>",
+        "name": "ZZ UW A <ts>"
+      },
+      "isActive": true,
+      "lastLoginAt": "<masked>",
+      "mobile": null,
+      "mustChangePassword": false,
+      "name": "ZZ UW stuBase",
+      "pendingEmail": null,
+      "profilePhotoUrl": null,
+      "program": null,
+      "registrationNumber": null,
+      "role": "STUDENT",
+      "rollNumber": null,
+      "section": null
+    }
+  },
+  {
+    "name": "edit: platform admin edits a student of any institute",
+    "status": 200,
+    "body": {
+      "academicGroup": null,
+      "accountStatus": "ACTIVE",
+      "batchYear": null,
+      "class": null,
+      "createdAt": "<time>",
+      "department": null,
+      "designation": "x",
+      "email": "zz-uw-stub-<ts>@example.invalid",
+      "emailVerified": false,
+      "employeeId": null,
+      "gender": null,
+      "id": "<id>",
+      "institute": {
+        "id": "<id>",
+        "name": "ZZ UW B <ts>"
+      },
+      "isActive": true,
+      "lastLoginAt": "<masked>",
+      "mobile": null,
+      "mustChangePassword": false,
+      "name": "ZZ UW stuB",
+      "pendingEmail": null,
+      "profilePhotoUrl": null,
+      "program": null,
+      "registrationNumber": "ZZUWB0001",
+      "role": "STUDENT",
+      "rollNumber": null,
+      "section": null
+    }
+  },
+  {
+    "name": "edit: audit rows",
+    "db": [
+      "USER_PROFILE_UPDATED|role:-|student:-|inst:-|keys:after,before,changedFields,studentId,studentName",
+      "STUDENT_PROFILE_UPDATED|role:-|student:-|inst:-|keys:after,before,changedFields,studentId,studentName",
+      "STUDENT_PROFILE_UPDATED|role:-|student:-|inst:-|keys:after,before,changedFields,studentId,studentName",
+      "STUDENT_PROFILE_UPDATED|role:-|student:-|inst:-|keys:after,before,changedFields,studentId,studentName",
+      "USER_PROFILE_UPDATED|role:-|student:-|inst:-|keys:after,before,changedFields,studentId,studentName",
+      "STUDENT_PROFILE_UPDATED|role:-|student:-|inst:-|keys:after,before,changedFields,studentId,studentName",
+      "ACCOUNT_DEACTIVATED|role:-|student:-|inst:-|keys:after,before,changedFields,studentId,studentName",
+      "STUDENT_PROFILE_UPDATED|role:-|student:-|inst:-|keys:after,before,changedFields,studentId,studentName",
+      "ACCOUNT_ACTIVATED|role:-|student:-|inst:-|keys:after,before,changedFields,studentId,studentName",
+      "STUDENT_PROFILE_UPDATED|role:-|student:-|inst:-|keys:after,before,changedFields,studentId,studentName"
+    ]
+  },
+  {
+    "name": "edit: first audit row content",
+    "db": {
+      "after": [
+        "email",
+        "mobile",
+        "name"
+      ],
+      "before": [
+        "email",
+        "mobile",
+        "name"
+      ],
+      "changedFields": [
+        "name",
+        "email",
+        "mobile"
+      ]
+    }
+  },
+  {
+    "name": "bulk preview: anonymous",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "Missing or invalid Authorization header"
+    }
+  },
+  {
+    "name": "bulk preview: staff refused",
+    "status": 403,
+    "body": {
+      "error": "Insufficient permissions"
+    }
+  },
+  {
+    "name": "bulk preview: no file",
+    "status": 400,
+    "body": {
+      "error": "No file uploaded"
+    }
+  },
+  {
+    "name": "bulk preview: wrong file type",
+    "status": 400,
+    "body": {
+      "error": "No file uploaded"
+    }
+  },
+  {
+    "name": "bulk preview: no data rows",
+    "status": 400,
+    "body": {
+      "error": "The uploaded file has no data rows."
+    }
+  },
+  {
+    "name": "bulk preview: required columns missing",
+    "status": 400,
+    "body": {
+      "error": "Missing required columns. The file must include Student Name, Registration Number (PRN), and Official Email ID. Roll Number is not a file column — it's auto-generated from the last 3 characters of the Registration Number."
+    }
+  },
+  {
+    "name": "bulk preview: institute and batch columns missing",
+    "status": 400,
+    "body": {
+      "error": "Missing required columns. The file must include Institute and Batch/Year."
+    }
+  },
+  {
+    "name": "bulk preview: a mixed file for an institute admin",
+    "status": 200,
+    "body": {
+      "duplicateCount": 3,
+      "invalidCount": 6,
+      "rows": [
+        {
+          "batchYear": "2026",
+          "department": "ZZ UW Dept",
+          "email": "zz-uw-new-b1-<ts>@example.invalid",
+          "gender": "Male",
+          "instituteName": "ZZ UW A <ts>",
+          "isActive": true,
+          "mobile": "9000000020",
+          "name": "ZZ UW bulk 1",
+          "program": "MCA",
+          "reason": null,
+          "registrationNumber": "ZZUW0000B1",
+          "rollNumberPreview": "0B1",
+          "row": 2,
+          "rowNum": 2,
+          "section": "Section A",
+          "status": "valid"
+        },
+        {
+          "batchYear": "2026",
+          "department": "ZZ UW Dept",
+          "email": "zz-uw-new-b2-<ts>@example.invalid",
+          "gender": "Male",
+          "instituteName": "ZZ UW A <ts>",
+          "isActive": true,
+          "mobile": "9000000020",
+          "name": "ZZ UW bulk 2",
+          "program": "MCA",
+          "reason": null,
+          "registrationNumber": "ZZUW0000B2",
+          "rollNumberPreview": "0B2",
+          "row": 3,
+          "rowNum": 3,
+          "section": "Section A",
+          "status": "valid"
+        },
+        {
+          "batchYear": "2026",
+          "department": "ZZ UW Dept",
+          "email": "zz-uw-new-b3-<ts>@example.invalid",
+          "gender": "Male",
+          "instituteName": "ZZ UW A <ts>",
+          "isActive": true,
+          "mobile": "9000000020",
+          "name": "ZZ UW bulk 3",
+          "program": "MCA",
+          "reason": "Duplicate PRN in uploaded file or already registered",
+          "registrationNumber": "ZZUW0000B1",
+          "rollNumberPreview": "0B1",
+          "row": 4,
+          "rowNum": 4,
+          "section": "Section A",
+          "status": "duplicate"
+        },
+        {
+          "batchYear": "2026",
+          "department": "ZZ UW Dept",
+          "email": "zz-uw-new-b2-<ts>@example.invalid",
+          "gender": "Male",
+          "instituteName": "ZZ UW A <ts>",
+          "isActive": true,
+          "mobile": "9000000020",
+          "name": "ZZ UW bulk 4",
+          "program": "MCA",
+          "reason": "Email already exists",
+          "registrationNumber": "ZZUW0000B4",
+          "rollNumberPreview": "0B4",
+          "row": 5,
+          "rowNum": 5,
+          "section": "Section A",
+          "status": "duplicate"
+        },
+        {
+          "batchYear": "2026",
+          "department": "ZZ UW Dept",
+          "email": "not-an-email",
+          "gender": "Male",
+          "instituteName": "ZZ UW A <ts>",
+          "isActive": true,
+          "mobile": "9000000020",
+          "name": "ZZ UW bulk 5",
+          "program": "MCA",
+          "reason": "Invalid email format",
+          "registrationNumber": "ZZUW0000B5",
+          "rollNumberPreview": "0B5",
+          "row": 6,
+          "rowNum": 6,
+          "section": "Section A",
+          "status": "error"
+        },
+        {
+          "batchYear": "2026",
+          "department": "ZZ UW Dept",
+          "email": "zz-uw-new-b6-<ts>@example.invalid",
+          "gender": "Male",
+          "instituteName": "ZZ UW A <ts>",
+          "isActive": true,
+          "mobile": "9000000020",
+          "name": "ZZ UW bulk 6",
+          "program": "MCA",
+          "reason": "Registration Number (PRN) must be 9-12 alphanumeric characters",
+          "registrationNumber": "AB",
+          "rollNumberPreview": "",
+          "row": 7,
+          "rowNum": 7,
+          "section": "Section A",
+          "status": "error"
+        },
+        {
+          "batchYear": "2026",
+          "department": "ZZ UW Dept",
+          "email": "zz-uw-new-b7-<ts>@example.invalid",
+          "gender": "Male",
+          "instituteName": "ZZ UW A <ts>",
+          "isActive": true,
+          "mobile": "12",
+          "name": "ZZ UW bulk 7",
+          "program": "MCA",
+          "reason": "Invalid mobile number",
+          "registrationNumber": "ZZUW0000B7",
+          "rollNumberPreview": "0B7",
+          "row": 8,
+          "rowNum": 8,
+          "section": "Section A",
+          "status": "error"
+        },
+        {
+          "batchYear": "2026",
+          "department": "ZZ UW Dept",
+          "email": "zz-uw-new-b8-<ts>@example.invalid",
+          "gender": "Male",
+          "instituteName": "No Such Institute",
+          "isActive": true,
+          "mobile": "9000000020",
+          "name": "ZZ UW bulk 8",
+          "program": "MCA",
+          "reason": "Institute \"No Such Institute\" was not found. Create it first in Institute Management.",
+          "registrationNumber": "ZZUW0000B8",
+          "rollNumberPreview": "0B8",
+          "row": 9,
+          "rowNum": 9,
+          "section": "Section A",
+          "status": "error"
+        },
+        {
+          "batchYear": "2026",
+          "department": "ZZ UW Dept",
+          "email": "zz-uw-new-b9-<ts>@example.invalid",
+          "gender": "Male",
+          "instituteName": "ZZ UW B <ts>",
+          "isActive": true,
+          "mobile": "9000000020",
+          "name": "ZZ UW bulk 9",
+          "program": "MCA",
+          "reason": "You can only upload students to your own institute",
+          "registrationNumber": "ZZUW0000B9",
+          "rollNumberPreview": "0B9",
+          "row": 10,
+          "rowNum": 10,
+          "section": "Section A",
+          "status": "error"
+        },
+        {
+          "batchYear": "2026",
+          "department": "ZZ UW Dept",
+          "email": "zz-uw-new-b10-<ts>@example.invalid",
+          "gender": "Male",
+          "instituteName": "ZZ UW A <ts>",
+          "isActive": true,
+          "mobile": "",
+          "name": "ZZ UW bulk 10",
+          "program": "MCA",
+          "reason": "Missing required field (name, registration number, email, mobile, institute, or batch/year)",
+          "registrationNumber": "ZZUW0000B10",
+          "rollNumberPreview": "B10",
+          "row": 11,
+          "rowNum": 11,
+          "section": "Section A",
+          "status": "error"
+        },
+        {
+          "batchYear": "2026",
+          "department": "ZZ UW Dept",
+          "email": "zz-uw-new-b11-<ts>@example.invalid",
+          "gender": "Male",
+          "instituteName": "ZZ UW A <ts>",
+          "isActive": true,
+          "mobile": "9000000020",
+          "name": "ZZ UW bulk 11",
+          "program": "MCA",
+          "reason": "Duplicate PRN in uploaded file or already registered",
+          "registrationNumber": "ZZUW00009",
+          "rollNumberPreview": "009",
+          "row": 12,
+          "rowNum": 12,
+          "section": "Section A",
+          "status": "duplicate"
+        },
+        {
+          "batchYear": "2026",
+          "department": "ZZ UW Dept",
+          "email": "zz-uw-new-b12-<ts>@example.invalid",
+          "gender": "Male",
+          "instituteName": "ZZ UW A <ts>",
+          "isActive": false,
+          "mobile": "9000000020",
+          "name": "ZZ UW bulk 12",
+          "program": "MCA",
+          "reason": null,
+          "registrationNumber": "ZZUW0000B12",
+          "rollNumberPreview": "B12",
+          "row": 13,
+          "rowNum": 13,
+          "section": "Section A",
+          "status": "valid"
+        }
+      ],
+      "totalRows": 12,
+      "validCount": 3
+    }
+  },
+  {
+    "name": "bulk preview: the same file for a platform admin",
+    "status": 200,
+    "body": {
+      "duplicateCount": 3,
+      "invalidCount": 5,
+      "rows": [
+        {
+          "batchYear": "2026",
+          "department": "ZZ UW Dept",
+          "email": "zz-uw-new-b1-<ts>@example.invalid",
+          "gender": "Male",
+          "instituteName": "ZZ UW A <ts>",
+          "isActive": true,
+          "mobile": "9000000020",
+          "name": "ZZ UW bulk 1",
+          "program": "MCA",
+          "reason": null,
+          "registrationNumber": "ZZUW0000B1",
+          "rollNumberPreview": "0B1",
+          "row": 2,
+          "rowNum": 2,
+          "section": "Section A",
+          "status": "valid"
+        },
+        {
+          "batchYear": "2026",
+          "department": "ZZ UW Dept",
+          "email": "zz-uw-new-b2-<ts>@example.invalid",
+          "gender": "Male",
+          "instituteName": "ZZ UW A <ts>",
+          "isActive": true,
+          "mobile": "9000000020",
+          "name": "ZZ UW bulk 2",
+          "program": "MCA",
+          "reason": null,
+          "registrationNumber": "ZZUW0000B2",
+          "rollNumberPreview": "0B2",
+          "row": 3,
+          "rowNum": 3,
+          "section": "Section A",
+          "status": "valid"
+        },
+        {
+          "batchYear": "2026",
+          "department": "ZZ UW Dept",
+          "email": "zz-uw-new-b3-<ts>@example.invalid",
+          "gender": "Male",
+          "instituteName": "ZZ UW A <ts>",
+          "isActive": true,
+          "mobile": "9000000020",
+          "name": "ZZ UW bulk 3",
+          "program": "MCA",
+          "reason": "Duplicate PRN in uploaded file or already registered",
+          "registrationNumber": "ZZUW0000B1",
+          "rollNumberPreview": "0B1",
+          "row": 4,
+          "rowNum": 4,
+          "section": "Section A",
+          "status": "duplicate"
+        },
+        {
+          "batchYear": "2026",
+          "department": "ZZ UW Dept",
+          "email": "zz-uw-new-b2-<ts>@example.invalid",
+          "gender": "Male",
+          "instituteName": "ZZ UW A <ts>",
+          "isActive": true,
+          "mobile": "9000000020",
+          "name": "ZZ UW bulk 4",
+          "program": "MCA",
+          "reason": "Email already exists",
+          "registrationNumber": "ZZUW0000B4",
+          "rollNumberPreview": "0B4",
+          "row": 5,
+          "rowNum": 5,
+          "section": "Section A",
+          "status": "duplicate"
+        },
+        {
+          "batchYear": "2026",
+          "department": "ZZ UW Dept",
+          "email": "not-an-email",
+          "gender": "Male",
+          "instituteName": "ZZ UW A <ts>",
+          "isActive": true,
+          "mobile": "9000000020",
+          "name": "ZZ UW bulk 5",
+          "program": "MCA",
+          "reason": "Invalid email format",
+          "registrationNumber": "ZZUW0000B5",
+          "rollNumberPreview": "0B5",
+          "row": 6,
+          "rowNum": 6,
+          "section": "Section A",
+          "status": "error"
+        },
+        {
+          "batchYear": "2026",
+          "department": "ZZ UW Dept",
+          "email": "zz-uw-new-b6-<ts>@example.invalid",
+          "gender": "Male",
+          "instituteName": "ZZ UW A <ts>",
+          "isActive": true,
+          "mobile": "9000000020",
+          "name": "ZZ UW bulk 6",
+          "program": "MCA",
+          "reason": "Registration Number (PRN) must be 9-12 alphanumeric characters",
+          "registrationNumber": "AB",
+          "rollNumberPreview": "",
+          "row": 7,
+          "rowNum": 7,
+          "section": "Section A",
+          "status": "error"
+        },
+        {
+          "batchYear": "2026",
+          "department": "ZZ UW Dept",
+          "email": "zz-uw-new-b7-<ts>@example.invalid",
+          "gender": "Male",
+          "instituteName": "ZZ UW A <ts>",
+          "isActive": true,
+          "mobile": "12",
+          "name": "ZZ UW bulk 7",
+          "program": "MCA",
+          "reason": "Invalid mobile number",
+          "registrationNumber": "ZZUW0000B7",
+          "rollNumberPreview": "0B7",
+          "row": 8,
+          "rowNum": 8,
+          "section": "Section A",
+          "status": "error"
+        },
+        {
+          "batchYear": "2026",
+          "department": "ZZ UW Dept",
+          "email": "zz-uw-new-b8-<ts>@example.invalid",
+          "gender": "Male",
+          "instituteName": "No Such Institute",
+          "isActive": true,
+          "mobile": "9000000020",
+          "name": "ZZ UW bulk 8",
+          "program": "MCA",
+          "reason": "Institute \"No Such Institute\" was not found. Create it first in Institute Management.",
+          "registrationNumber": "ZZUW0000B8",
+          "rollNumberPreview": "0B8",
+          "row": 9,
+          "rowNum": 9,
+          "section": "Section A",
+          "status": "error"
+        },
+        {
+          "batchYear": "2026",
+          "department": "ZZ UW Dept",
+          "email": "zz-uw-new-b9-<ts>@example.invalid",
+          "gender": "Male",
+          "instituteName": "ZZ UW B <ts>",
+          "isActive": true,
+          "mobile": "9000000020",
+          "name": "ZZ UW bulk 9",
+          "program": "MCA",
+          "reason": null,
+          "registrationNumber": "ZZUW0000B9",
+          "rollNumberPreview": "0B9",
+          "row": 10,
+          "rowNum": 10,
+          "section": "Section A",
+          "status": "valid"
+        },
+        {
+          "batchYear": "2026",
+          "department": "ZZ UW Dept",
+          "email": "zz-uw-new-b10-<ts>@example.invalid",
+          "gender": "Male",
+          "instituteName": "ZZ UW A <ts>",
+          "isActive": true,
+          "mobile": "",
+          "name": "ZZ UW bulk 10",
+          "program": "MCA",
+          "reason": "Missing required field (name, registration number, email, mobile, institute, or batch/year)",
+          "registrationNumber": "ZZUW0000B10",
+          "rollNumberPreview": "B10",
+          "row": 11,
+          "rowNum": 11,
+          "section": "Section A",
+          "status": "error"
+        },
+        {
+          "batchYear": "2026",
+          "department": "ZZ UW Dept",
+          "email": "zz-uw-new-b11-<ts>@example.invalid",
+          "gender": "Male",
+          "instituteName": "ZZ UW A <ts>",
+          "isActive": true,
+          "mobile": "9000000020",
+          "name": "ZZ UW bulk 11",
+          "program": "MCA",
+          "reason": "Duplicate PRN in uploaded file or already registered",
+          "registrationNumber": "ZZUW00009",
+          "rollNumberPreview": "009",
+          "row": 12,
+          "rowNum": 12,
+          "section": "Section A",
+          "status": "duplicate"
+        },
+        {
+          "batchYear": "2026",
+          "department": "ZZ UW Dept",
+          "email": "zz-uw-new-b12-<ts>@example.invalid",
+          "gender": "Male",
+          "instituteName": "ZZ UW A <ts>",
+          "isActive": false,
+          "mobile": "9000000020",
+          "name": "ZZ UW bulk 12",
+          "program": "MCA",
+          "reason": null,
+          "registrationNumber": "ZZUW0000B12",
+          "rollNumberPreview": "B12",
+          "row": 13,
+          "rowNum": 13,
+          "section": "Section A",
+          "status": "valid"
+        }
+      ],
+      "totalRows": 12,
+      "validCount": 4
+    }
+  },
+  {
+    "name": "bulk confirm: anonymous",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "Missing or invalid Authorization header"
+    }
+  },
+  {
+    "name": "bulk confirm: staff refused",
+    "status": 403,
+    "body": {
+      "error": "Insufficient permissions"
+    }
+  },
+  {
+    "name": "bulk confirm: nothing to import",
+    "status": 400,
+    "body": {
+      "error": "No rows to import"
+    }
+  },
+  {
+    "name": "bulk confirm: too many rows",
+    "status": 400,
+    "body": {
+      "error": "Too many rows in one confirm request"
+    }
+  },
+  {
+    "name": "bulk confirm: the previewed rows, no e-mail",
+    "status": 200,
+    "body": {
+      "batchId": null,
+      "created": [
+        {
+          "email": "zz-uw-new-b1-<ts>@example.invalid",
+          "generatedPassword": "<masked>",
+          "name": "ZZ UW bulk 1",
+          "registrationNumber": "ZZUW0000B1",
+          "rollNumber": "000"
+        },
+        {
+          "email": "zz-uw-new-b2-<ts>@example.invalid",
+          "generatedPassword": "<masked>",
+          "name": "ZZ UW bulk 2",
+          "registrationNumber": "ZZUW0000B2",
+          "rollNumber": "001"
+        },
+        {
+          "email": "zz-uw-new-b12-<ts>@example.invalid",
+          "generatedPassword": "<masked>",
+          "name": "ZZ UW bulk 12",
+          "registrationNumber": "ZZUW0000B12",
+          "rollNumber": "002"
+        }
+      ],
+      "createdCount": 3,
+      "duplicateCount": 3,
+      "duplicates": [
+        {
+          "email": "zz-uw-new-b3-<ts>@example.invalid",
+          "name": "ZZ UW bulk 3",
+          "reason": "Duplicate PRN in uploaded file or already registered",
+          "registrationNumber": "ZZUW0000B1",
+          "rollNumber": "0B1",
+          "row": 4
+        },
+        {
+          "email": "zz-uw-new-b2-<ts>@example.invalid",
+          "name": "ZZ UW bulk 4",
+          "reason": "Email already exists",
+          "registrationNumber": "ZZUW0000B4",
+          "rollNumber": "0B4",
+          "row": 5
+        },
+        {
+          "email": "zz-uw-new-b11-<ts>@example.invalid",
+          "name": "ZZ UW bulk 11",
+          "reason": "Duplicate PRN in uploaded file or already registered",
+          "registrationNumber": "ZZUW00009",
+          "rollNumber": "009",
+          "row": 12
+        }
+      ],
+      "emailsQueued": 0,
+      "errorCount": 6,
+      "errors": [
+        {
+          "email": "not-an-email",
+          "name": "ZZ UW bulk 5",
+          "reason": "Invalid email format",
+          "registrationNumber": "ZZUW0000B5",
+          "rollNumber": "0B5",
+          "row": 6
+        },
+        {
+          "email": "zz-uw-new-b6-<ts>@example.invalid",
+          "name": "ZZ UW bulk 6",
+          "reason": "Registration Number (PRN) must be 9-12 alphanumeric characters",
+          "registrationNumber": "AB",
+          "rollNumber": "",
+          "row": 7
+        },
+        {
+          "email": "zz-uw-new-b7-<ts>@example.invalid",
+          "name": "ZZ UW bulk 7",
+          "reason": "Invalid mobile number",
+          "registrationNumber": "ZZUW0000B7",
+          "rollNumber": "0B7",
+          "row": 8
+        },
+        {
+          "email": "zz-uw-new-b8-<ts>@example.invalid",
+          "name": "ZZ UW bulk 8",
+          "reason": "Institute \"No Such Institute\" was not found. Create it first in Institute Management.",
+          "registrationNumber": "ZZUW0000B8",
+          "rollNumber": "0B8",
+          "row": 9
+        },
+        {
+          "email": "zz-uw-new-b9-<ts>@example.invalid",
+          "name": "ZZ UW bulk 9",
+          "reason": "You can only upload students to your own institute",
+          "registrationNumber": "ZZUW0000B9",
+          "rollNumber": "0B9",
+          "row": 10
+        },
+        {
+          "email": "zz-uw-new-b10-<ts>@example.invalid",
+          "name": "ZZ UW bulk 10",
+          "reason": "Missing required field (name, registration number, email, mobile, institute, or batch/year)",
+          "registrationNumber": "ZZUW0000B10",
+          "rollNumber": "B10",
+          "row": 11
+        }
+      ],
+      "sendCredentials": false,
+      "total": 12
+    }
+  },
+  {
+    "name": "bulk confirm: the same rows again are duplicates",
+    "status": 200,
+    "body": {
+      "batchId": null,
+      "created": [],
+      "createdCount": 0,
+      "duplicateCount": 6,
+      "duplicates": [
+        {
+          "email": "zz-uw-new-b1-<ts>@example.invalid",
+          "name": "ZZ UW bulk 1",
+          "reason": "Email already exists",
+          "registrationNumber": "ZZUW0000B1",
+          "rollNumber": "0B1",
+          "row": 2
+        },
+        {
+          "email": "zz-uw-new-b2-<ts>@example.invalid",
+          "name": "ZZ UW bulk 2",
+          "reason": "Email already exists",
+          "registrationNumber": "ZZUW0000B2",
+          "rollNumber": "0B2",
+          "row": 3
+        },
+        {
+          "email": "zz-uw-new-b3-<ts>@example.invalid",
+          "name": "ZZ UW bulk 3",
+          "reason": "Duplicate PRN in uploaded file or already registered",
+          "registrationNumber": "ZZUW0000B1",
+          "rollNumber": "0B1",
+          "row": 4
+        },
+        {
+          "email": "zz-uw-new-b2-<ts>@example.invalid",
+          "name": "ZZ UW bulk 4",
+          "reason": "Email already exists",
+          "registrationNumber": "ZZUW0000B4",
+          "rollNumber": "0B4",
+          "row": 5
+        },
+        {
+          "email": "zz-uw-new-b11-<ts>@example.invalid",
+          "name": "ZZ UW bulk 11",
+          "reason": "Duplicate PRN in uploaded file or already registered",
+          "registrationNumber": "ZZUW00009",
+          "rollNumber": "009",
+          "row": 12
+        },
+        {
+          "email": "zz-uw-new-b12-<ts>@example.invalid",
+          "name": "ZZ UW bulk 12",
+          "reason": "Email already exists",
+          "registrationNumber": "ZZUW0000B12",
+          "rollNumber": "B12",
+          "row": 13
+        }
+      ],
+      "emailsQueued": 0,
+      "errorCount": 6,
+      "errors": [
+        {
+          "email": "not-an-email",
+          "name": "ZZ UW bulk 5",
+          "reason": "Invalid email format",
+          "registrationNumber": "ZZUW0000B5",
+          "rollNumber": "0B5",
+          "row": 6
+        },
+        {
+          "email": "zz-uw-new-b6-<ts>@example.invalid",
+          "name": "ZZ UW bulk 6",
+          "reason": "Registration Number (PRN) must be 9-12 alphanumeric characters",
+          "registrationNumber": "AB",
+          "rollNumber": "",
+          "row": 7
+        },
+        {
+          "email": "zz-uw-new-b7-<ts>@example.invalid",
+          "name": "ZZ UW bulk 7",
+          "reason": "Invalid mobile number",
+          "registrationNumber": "ZZUW0000B7",
+          "rollNumber": "0B7",
+          "row": 8
+        },
+        {
+          "email": "zz-uw-new-b8-<ts>@example.invalid",
+          "name": "ZZ UW bulk 8",
+          "reason": "Institute \"No Such Institute\" was not found. Create it first in Institute Management.",
+          "registrationNumber": "ZZUW0000B8",
+          "rollNumber": "0B8",
+          "row": 9
+        },
+        {
+          "email": "zz-uw-new-b9-<ts>@example.invalid",
+          "name": "ZZ UW bulk 9",
+          "reason": "You can only upload students to your own institute",
+          "registrationNumber": "ZZUW0000B9",
+          "rollNumber": "0B9",
+          "row": 10
+        },
+        {
+          "email": "zz-uw-new-b10-<ts>@example.invalid",
+          "name": "ZZ UW bulk 10",
+          "reason": "Missing required field (name, registration number, email, mobile, institute, or batch/year)",
+          "registrationNumber": "ZZUW0000B10",
+          "rollNumber": "B10",
+          "row": 11
+        }
+      ],
+      "sendCredentials": false,
+      "total": 12
+    }
+  },
+  {
+    "name": "bulk confirm: one row with credentials e-mail queued",
+    "status": 200,
+    "body": {
+      "batchId": "<id>",
+      "created": [
+        {
+          "email": "zz-uw-new-b20-<ts>@example.invalid",
+          "generatedPassword": "<masked>",
+          "name": "ZZ UW bulk 20",
+          "registrationNumber": "ZZUW0000B20",
+          "rollNumber": "003"
+        }
+      ],
+      "createdCount": 1,
+      "duplicateCount": 0,
+      "duplicates": [],
+      "emailsQueued": 1,
+      "errorCount": 0,
+      "errors": [],
+      "sendCredentials": true,
+      "total": 1
+    }
+  },
+  {
+    "name": "bulk: stored accounts",
+    "db": [
+      {
+        "academicGroupId": "set",
+        "accountStatus": "ACTIVE",
+        "email": "zz-uw-new-b1-<ts>@example.invalid",
+        "isActive": true,
+        "mustChangePassword": true,
+        "registrationNumber": "ZZUW0000B1",
+        "role": "STUDENT",
+        "rollNumber": "000"
+      },
+      {
+        "academicGroupId": "set",
+        "accountStatus": "INACTIVE",
+        "email": "zz-uw-new-b12-<ts>@example.invalid",
+        "isActive": false,
+        "mustChangePassword": true,
+        "registrationNumber": "ZZUW0000B12",
+        "role": "STUDENT",
+        "rollNumber": "002"
+      },
+      {
+        "academicGroupId": "set",
+        "accountStatus": "ACTIVE",
+        "email": "zz-uw-new-b20-<ts>@example.invalid",
+        "isActive": true,
+        "mustChangePassword": true,
+        "registrationNumber": "ZZUW0000B20",
+        "role": "STUDENT",
+        "rollNumber": "003"
+      },
+      {
+        "academicGroupId": "set",
+        "accountStatus": "ACTIVE",
+        "email": "zz-uw-new-b2-<ts>@example.invalid",
+        "isActive": true,
+        "mustChangePassword": true,
+        "registrationNumber": "ZZUW0000B2",
+        "role": "STUDENT",
+        "rollNumber": "001"
+      }
+    ]
+  },
+  {
+    "name": "bulk: audit rows",
+    "db": [
+      "ACCOUNT_CREATED|role:INSTITUTE_ADMIN|student:-|inst:set|keys:createdCount,duplicateCount,errorCount,method,totalRows",
+      "ACCOUNT_CREATED|role:INSTITUTE_ADMIN|student:-|inst:set|keys:createdCount,duplicateCount,errorCount,method,totalRows",
+      "ACCOUNT_CREATED|role:INSTITUTE_ADMIN|student:-|inst:set|keys:createdCount,duplicateCount,errorCount,method,totalRows"
+    ]
+  },
+  {
+    "name": "bulk: queued credential e-mails",
+    "db": [
+      "CREDENTIALS:batch"
+    ]
+  },
+  {
+    "name": "reset: anonymous",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "Missing or invalid Authorization header"
+    }
+  },
+  {
+    "name": "reset: student refused",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "This session has been signed out. Please log in again."
+    }
+  },
+  {
+    "name": "reset: clerk refused",
+    "status": 403,
+    "body": {
+      "error": "Insufficient permissions"
+    }
+  },
+  {
+    "name": "reset: unknown user",
+    "status": 404,
+    "body": {
+      "error": "User not found"
+    }
+  },
+  {
+    "name": "reset: user of another institute",
+    "status": 403,
+    "body": {
+      "error": "You can only reset passwords for students under your own institute"
+    }
+  },
+  {
+    "name": "reset: weak custom password",
+    "status": 400,
+    "body": {
+      "error": "Password must be at least 8 characters"
+    }
+  },
+  {
+    "name": "reset: custom password",
+    "status": 200,
+    "body": {
+      "defaultPassword": "<masked>",
+      "emailError": "<masked>",
+      "emailSent": "<masked>",
+      "success": true
+    }
+  },
+  {
+    "name": "reset: stored",
+    "db": {
+      "history": 1,
+      "loginWithCustom": 200,
+      "mustChange": true
+    }
+  },
+  {
+    "name": "reset: generated password by staff of the institute",
+    "status": 200,
+    "body": {
+      "defaultPassword": "<masked>",
+      "emailError": "<masked>",
+      "emailSent": "<masked>",
+      "success": true
+    }
+  },
+  {
+    "name": "reset: the account's open session is closed",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "This session has been signed out. Please log in again."
+    }
+  },
+  {
+    "name": "reset: generated password with e-mail",
+    "status": 200,
+    "body": {
+      "defaultPassword": "<masked>",
+      "emailError": "<masked>",
+      "emailSent": "<masked>",
+      "success": true
+    }
+  },
+  {
+    "name": "reset: staff resets an institute admin of the same institute",
+    "status": 200,
+    "body": {
+      "defaultPassword": "<masked>",
+      "emailError": "<masked>",
+      "emailSent": "<masked>",
+      "success": true
+    }
+  },
+  {
+    "name": "reset: staff resets a clerk of the same institute",
+    "status": 200,
+    "body": {
+      "defaultPassword": "<masked>",
+      "emailError": "<masked>",
+      "emailSent": "<masked>",
+      "success": true
+    }
+  },
+  {
+    "name": "reset: institute admin resets a staff member",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "This session has been signed out. Please log in again."
+    }
+  },
+  {
+    "name": "reset: platform admin resets a student of any institute",
+    "status": 200,
+    "body": {
+      "defaultPassword": "<masked>",
+      "emailError": "<masked>",
+      "emailSent": "<masked>",
+      "success": true
+    }
+  },
+  {
+    "name": "reset: audit rows",
+    "db": [
+      "PASSWORD_RESET|role:-|student:set|inst:set|keys:emailError,emailSent,studentId,studentName",
+      "PASSWORD_RESET|role:-|student:set|inst:set|keys:emailError,emailSent,studentId,studentName",
+      "PASSWORD_RESET|role:-|student:set|inst:set|keys:emailError,emailSent,studentId,studentName",
+      "PASSWORD_RESET|role:-|student:set|inst:set|keys:emailError,emailSent,studentId,studentName",
+      "PASSWORD_RESET|role:-|student:set|inst:set|keys:emailError,emailSent,studentId,studentName",
+      "PASSWORD_RESET|role:-|student:set|inst:set|keys:emailError,emailSent,studentId,studentName"
+    ]
+  },
+  {
+    "name": "bulk reset: anonymous",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "Missing or invalid Authorization header"
+    }
+  },
+  {
+    "name": "bulk reset: staff refused",
+    "status": 403,
+    "body": {
+      "error": "Insufficient permissions"
+    }
+  },
+  {
+    "name": "bulk reset: nobody selected",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "This session has been signed out. Please log in again."
+    }
+  },
+  {
+    "name": "bulk reset: own, foreign and unknown ids",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "This session has been signed out. Please log in again."
+    }
+  },
+  {
+    "name": "bulk reset: a non-student account in the list",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "This session has been signed out. Please log in again."
+    }
+  },
+  {
+    "name": "bulk reset: platform admin, one student, with e-mail",
+    "status": 200,
+    "body": {
+      "batchId": "<id>",
+      "emailsQueued": 1,
+      "failedIds": [],
+      "results": [
+        {
+          "email": "zz-uw-stub-<ts>@example.invalid",
+          "generatedPassword": "<masked>",
+          "id": "<id>",
+          "name": "ZZ UW stuB",
+          "rollNumber": null
+        }
+      ]
+    }
+  },
+  {
+    "name": "bulk reset: audit rows",
+    "db": [
+      "PASSWORD_RESET|role:-|student:-|inst:-|keys:bulk,count,sendEmail,studentIds"
+    ]
+  },
+  {
+    "name": "bulk status: anonymous",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "Missing or invalid Authorization header"
+    }
+  },
+  {
+    "name": "bulk status: staff refused",
+    "status": 403,
+    "body": {
+      "error": "Insufficient permissions"
+    }
+  },
+  {
+    "name": "bulk status: nobody selected",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "This session has been signed out. Please log in again."
+    }
+  },
+  {
+    "name": "bulk status: deactivate own, foreign, unknown and staff ids",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "This session has been signed out. Please log in again."
+    }
+  },
+  {
+    "name": "bulk status: stored",
+    "db": [
+      {
+        "email": "zz-uw-new-b1-<ts>@example.invalid",
+        "isActive": true
+      },
+      {
+        "email": "zz-uw-new-b2-<ts>@example.invalid",
+        "isActive": true
+      },
+      {
+        "email": "zz-uw-staffa-<ts>@example.invalid",
+        "isActive": true
+      },
+      {
+        "email": "zz-uw-stub-<ts>@example.invalid",
+        "isActive": true
+      }
+    ]
+  },
+  {
+    "name": "bulk status: deactivating again skips them",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "This session has been signed out. Please log in again."
+    }
+  },
+  {
+    "name": "bulk status: activate",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "This session has been signed out. Please log in again."
+    }
+  },
+  {
+    "name": "bulk status: platform admin, any institute",
+    "status": 200,
+    "body": {
+      "failedIds": [],
+      "skipped": 0,
+      "updated": 1
+    }
+  },
+  {
+    "name": "bulk status: audit rows",
+    "db": [
+      "ACCOUNT_DEACTIVATED|role:-|student:-|inst:-|keys:after,before,bulk,studentId,studentName"
+    ]
+  },
+  {
+    "name": "delete: anonymous",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "Missing or invalid Authorization header"
+    }
+  },
+  {
+    "name": "delete: staff refused",
+    "status": 403,
+    "body": {
+      "error": "Insufficient permissions"
+    }
+  },
+  {
+    "name": "delete: one's own account",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "This session has been signed out. Please log in again."
+    }
+  },
+  {
+    "name": "delete: unknown user",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "This session has been signed out. Please log in again."
+    }
+  },
+  {
+    "name": "delete: user of another institute",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "This session has been signed out. Please log in again."
+    }
+  },
+  {
+    "name": "delete: a student with a test attempt",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "This session has been signed out. Please log in again."
+    }
+  },
+  {
+    "name": "delete: an account that created a test",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "This session has been signed out. Please log in again."
+    }
+  },
+  {
+    "name": "delete: a student with nothing on record",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "This session has been signed out. Please log in again."
+    }
+  },
+  {
+    "name": "delete: the same student again",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "This session has been signed out. Please log in again."
+    }
+  },
+  {
+    "name": "delete: a staff member with nothing on record",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "This session has been signed out. Please log in again."
+    }
+  },
+  {
+    "name": "delete: platform admin deletes a student of another institute",
+    "status": 200,
+    "body": {
+      "success": true
+    }
+  },
+  {
+    "name": "delete: audit rows",
+    "db": [
+      "USER_DELETED|role:ADMIN|student:set|inst:set|keys:deletedUserName,deletedUserRole"
+    ]
+  },
+  {
+    "name": "delete: gone",
+    "db": {
+      "free": false,
+      "kept": true,
+      "staff": false
+    }
+  }
+]

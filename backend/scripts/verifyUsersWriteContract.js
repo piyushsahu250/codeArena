@@ -81,9 +81,14 @@ const auditRows = async (where) => (await prisma.auditLog.findMany({ where, sele
   const staffB = await mk("staffB", "STAFF", B.id);
   const clerkA = await mk("clerkA", "CLERK", A.id);
   const stuBase = await mk("stuBase", "STUDENT", A.id);
+  const stuLive = await mk("stuLive", "STUDENT", A.id);
+  const tgtInst = await mk("tgtInst", "INSTITUTE_ADMIN", A.id);
+  const tgtClerk = await mk("tgtClerk", "CLERK", A.id);
+  const tgtStaff = await mk("tgtStaff", "STAFF", A.id);
+  const staff2 = await mk("staff2", "STAFF", A.id);
   const stuB = await mk("stuB", "STUDENT", B.id, { registrationNumber: "ZZUWB0001" });
   const login = async (u, k) => (await (await fetch(`${API}/auth/login`, { method: "POST", headers: { "content-type": "application/json", "x-forwarded-for": nextIp() }, body: JSON.stringify({ email: u.email, password: pw[k] }) })).json()).token;
-  const T = { platform: await login(platform, "platform"), instA: await login(instA, "instA"), instB: await login(instB, "instB"), staffA: await login(staffA, "staffA"), staffB: await login(staffB, "staffB"), clerkA: await login(clerkA, "clerkA"), stuBase: await login(stuBase, "stuBase") };
+  const T = { platform: await login(platform, "platform"), instA: await login(instA, "instA"), instB: await login(instB, "instB"), staffA: await login(staffA, "staffA"), staffB: await login(staffB, "staffB"), clerkA: await login(clerkA, "clerkA"), stuBase: await login(stuBase, "stuBase"), stuLive: await login(stuLive, "stuLive") };
   const bogus = crypto.randomUUID();
   const prn = (n) => `ZZUW0000${n}`; // 9-12 alphanumeric characters, fixed so the derived roll numbers are the same in every run
   const em = (n) => `zz-uw-new-${n}-${ts}@example.invalid`;
@@ -143,7 +148,7 @@ const auditRows = async (where) => (await prisma.auditLog.findMany({ where, sele
   await call("edit: roll number not digits", "PATCH", `/users/${studentId}`, T.instA, { rollNumber: "x12" });
   await call("edit: PRN of the wrong shape", "PATCH", `/users/${studentId}`, T.instA, { registrationNumber: "A" });
   await call("edit: PRN already used", "PATCH", `/users/${studentId}`, T.instA, { registrationNumber: prn(3) });
-  await call("edit: employee id already used", "PATCH", `/users/${staffNewId}`, T.instA, { employeeId: "E-100", name: "ZZ UW staff renamed" });
+  await call("edit: employee id already used", "PATCH", `/users/${staff2.id}`, T.instA, { employeeId: " E-100 " });
   await call("edit: unknown institute for a platform admin", "PATCH", `/users/${studentId}`, T.platform, { instituteId: bogus });
   await call("edit: roll number already used in the group", "PATCH", `/users/${studentId}`, T.instA, { rollNumber: "777" });
   await call("edit: name, mobile and e-mail change", "PATCH", `/users/${studentId}`, T.instA, { name: "ZZ UW student renamed", mobile: " 9111111111 ", email: em("s1b").toUpperCase() });
@@ -205,7 +210,7 @@ const auditRows = async (where) => (await prisma.auditLog.findMany({ where, sele
   // ---------- reset password ----------
   const victim = await prisma.user.findFirst({ where: { email: em("b1") } });
   await call("reset: anonymous", "POST", `/users/${victim.id}/reset-password`, null, {});
-  await call("reset: student refused", "POST", `/users/${victim.id}/reset-password`, T.stuBase, {});
+  await call("reset: student refused", "POST", `/users/${victim.id}/reset-password`, T.stuLive, {});
   await call("reset: clerk refused", "POST", `/users/${victim.id}/reset-password`, T.clerkA, {});
   await call("reset: unknown user", "POST", `/users/${bogus}/reset-password`, T.instA, {});
   await call("reset: user of another institute", "POST", `/users/${stuB.id}/reset-password`, T.staffA, {});
@@ -216,9 +221,9 @@ const auditRows = async (where) => (await prisma.auditLog.findMany({ where, sele
   await call("reset: generated password by staff of the institute", "POST", `/users/${victim.id}/reset-password`, T.staffA, {});
   await call("reset: the account's open session is closed", "GET", "/auth/permissions", vTok);
   await call("reset: generated password with e-mail", "POST", `/users/${victim.id}/reset-password`, T.instA, { sendEmail: true });
-  await call("reset: staff resets an institute admin of the same institute", "POST", `/users/${instA.id}/reset-password`, T.staffA, {});
-  await call("reset: staff resets a clerk of the same institute", "POST", `/users/${clerkA.id}/reset-password`, T.staffA, {});
-  await call("reset: institute admin resets a staff member", "POST", `/users/${staffA.id}/reset-password`, T.instA, {});
+  await call("reset: staff resets an institute admin of the same institute", "POST", `/users/${tgtInst.id}/reset-password`, T.staffA, {});
+  await call("reset: staff resets a clerk of the same institute", "POST", `/users/${tgtClerk.id}/reset-password`, T.staffA, {});
+  await call("reset: institute admin resets a staff member", "POST", `/users/${tgtStaff.id}/reset-password`, T.instA, {});
   await call("reset: platform admin resets a student of any institute", "POST", `/users/${stuB.id}/reset-password`, T.platform, {});
   await settle();
   note("reset: audit rows", await auditRows({ action: "PASSWORD_RESET", adminId: { in: [instA.id, staffA.id, platform.id] } }));
