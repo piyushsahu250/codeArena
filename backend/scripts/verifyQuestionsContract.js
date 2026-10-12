@@ -220,10 +220,12 @@ const auditRows = async (where) => (await prisma.auditLog.findMany({ where, sele
   await call("edit: coding, unknown comparison mode", "PATCH", `/questions/${c1Id}`, T.instA, { comparisonMode: "FUZZY" });
   await call("edit: coding, a float tolerance and a time limit", "PATCH", `/questions/${c1Id}`, T.instA, { comparisonMode: "FLOAT_TOLERANCE", floatAbsoluteTolerance: 0.01, timeLimitMs: 2500, tags: [] });
   await call("edit: coding verified, structurally ready", "PATCH", `/questions/${c1Id}`, T.instA, { questionStatus: "VERIFIED" });
-  await call("edit: coding verified after the tests were cut down", "PATCH", `/questions/${c1Id}`, T.instA, { questionStatus: "VERIFIED", description: "" });
+  await call("edit: coding verified again with other points", "PATCH", `/questions/${c1Id}`, T.instA, { questionStatus: "VERIFIED", points: 12 });
   await call("edit: coding becomes SQL without setup", "PATCH", `/questions/${c1Id}`, T.instA, { questionType: "SQL", testCases: cases(1, 5) });
   await call("edit: coding becomes SQL", "PATCH", `/questions/${c1Id}`, T.instA, { questionType: "SQL", sqlSchema: "create table t(a int);", testCases: cases(1, 5) });
   await call("edit: SQL with too few hidden cases", "PATCH", `/questions/${c1Id}`, T.instA, { testCases: cases(1, 3) });
+  const blankQ = await prisma.question.create({ data: { description: `${TAG} blank target`, questionType: "MCQ", options: ["a", "b"], correctAnswer: [0], instituteId: A.id, createdById: instA.id } });
+  await call("edit: a blank question text", "PATCH", `/questions/${blankQ.id}`, T.instA, { description: "" });
   await call("edit: staff edits their own question", "PATCH", `/questions/${sOwnId}`, T.staffA, { title: "staff edited", points: 7 });
   await settle();
   note("edit: stored", (await prisma.question.findMany({ where: { id: { in: [m1Id, c1Id, sOwnId] } }, select: { description: true, title: true, questionType: true, questionStatus: true, difficulty: true, points: true, btlLevel: true, folderId: true, unitId: true, updatedById: true, options: true, correctAnswer: true, numericAnswer: true, numericTolerance: true, sqlSchema: true, comparisonMode: true, timeLimitMs: true, evaluationType: true, tags: true, _count: { select: { testCases: true } } }, orderBy: { description: "asc" } }))
