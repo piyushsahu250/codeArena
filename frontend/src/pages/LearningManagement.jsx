@@ -1512,6 +1512,8 @@ function CodingQuestionsPanel({ testId, questions, onRefresh }) {
   const { user } = useAuth();
   const isAdmin = ["ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"].includes(user?.role);
   const [adding, setAdding] = useState(false);
+  // The id of the question being edited, or null while the form adds a new one. Editing reuses the add form, prefilled.
+  const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(EMPTY_CODING_Q);
   const [saving, setSaving] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
@@ -1568,6 +1570,42 @@ function CodingQuestionsPanel({ testId, questions, onRefresh }) {
     URL.revokeObjectURL(url);
   }
 
+  // Opens the question form prefilled with an existing question. Every field the form edits is loaded from the stored question, so saving without a change
+  // leaves it as it was.
+  function startEdit(q) {
+    setForm({
+      ...EMPTY_CODING_Q,
+      title: q.title || "",
+      description: q.description || "",
+      difficulty: q.difficulty || "EASY",
+      starterCodeByLanguage: { ...(q.starterCodeByLanguage || {}) },
+      timeLimitMs: q.timeLimitMs ?? EMPTY_CODING_Q.timeLimitMs,
+      testCases: (q.testCases || []).map((tc) => ({ input: tc.input ?? "", expected: tc.expected ?? "", isHidden: !!tc.isHidden, explanation: tc.explanation || "" })),
+      tags: Array.isArray(q.tags) ? q.tags.join(", ") : "",
+      estimatedTimeMin: q.estimatedTimeMin ?? null,
+      realWorldScenario: q.realWorldScenario || "",
+      constraints: q.constraints || "",
+      inputFormat: q.inputFormat || "",
+      outputFormat: q.outputFormat || "",
+      notes: q.notes || "",
+      edgeCases: q.edgeCases || "",
+      problemExplanation: q.problemExplanation || "",
+      hints: Array.isArray(q.hints) ? q.hints : undefined,
+      editorial: q.editorial || undefined,
+      similarQuestions: Array.isArray(q.similarQuestions) ? q.similarQuestions : undefined,
+    });
+    setEditingId(q.id);
+    setAdding(true);
+    setBankOpen(false);
+    setBulkOpen(false);
+  }
+
+  function closeForm() {
+    setForm(EMPTY_CODING_Q);
+    setEditingId(null);
+    setAdding(false);
+  }
+
   async function create(e) {
     e.preventDefault();
     setSaving(true);
@@ -1582,12 +1620,16 @@ function CodingQuestionsPanel({ testId, questions, onRefresh }) {
         starterCodeByLanguage: entries.length > 0 ? Object.fromEntries(entries) : undefined,
         tags: form.tags ? form.tags.split(",").map((t) => t.trim()).filter(Boolean) : undefined,
       };
-      await api.post(`/module-coding/admin/tests/${testId}/questions`, payload);
-      setForm(EMPTY_CODING_Q);
-      setAdding(false);
+      if (editingId) {
+        // An edit sends the cleared values too (no templates, no tags), so removing them takes effect instead of being silently kept.
+        await api.patch(`/module-coding/admin/questions/${editingId}`, { ...payload, starterCodeByLanguage: entries.length > 0 ? Object.fromEntries(entries) : {}, tags: payload.tags || [] });
+      } else {
+        await api.post(`/module-coding/admin/tests/${testId}/questions`, payload);
+      }
+      closeForm();
       onRefresh();
     } catch (err) {
-      alert(err.response?.data?.error || "Failed to add question");
+      alert(err.response?.data?.error || (editingId ? "Failed to save question" : "Failed to add question"));
     } finally {
       setSaving(false);
     }
@@ -1638,7 +1680,7 @@ function CodingQuestionsPanel({ testId, questions, onRefresh }) {
           <div style={{ display: "flex", gap: 8 }}>
             <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => setBankOpen((b) => !b)}>{bankOpen ? "Cancel" : "🔍 Add from Question Bank"}</button>
             <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => setBulkOpen((b) => !b)}>{bulkOpen ? "Cancel" : "⬆ Bulk upload"}</button>
-            <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => setAdding((a) => !a)}>{adding ? "Cancel" : "+ Add question"}</button>
+            <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => (adding ? closeForm() : setAdding(true))}>{adding ? "Cancel" : "+ Add question"}</button>
           </div>
         )}
       </div>
@@ -1728,7 +1770,10 @@ function CodingQuestionsPanel({ testId, questions, onRefresh }) {
             <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
               <PublishControls entity="question" id={q.id} row={q} canEdit={isAdmin} onChanged={onRefresh} compact />
               {isAdmin && (
-                <button style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12 }} onClick={() => remove(q)}>Delete</button>
+                <>
+                  <button style={{ background: "none", border: "none", color: "var(--accent, var(--ink))", fontSize: 12 }} onClick={() => startEdit(q)}>Edit</button>
+                  <button style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12 }} onClick={() => remove(q)}>Delete</button>
+                </>
               )}
             </div>
           </div>
@@ -1738,6 +1783,7 @@ function CodingQuestionsPanel({ testId, questions, onRefresh }) {
 
       {adding && (
         <form onSubmit={create} style={{ marginTop: 16, borderTop: "1px solid var(--line)", paddingTop: 16 }}>
+          <h4 style={{ fontSize: 14, marginBottom: 8 }}>{editingId ? "Edit question" : "New question"}</h4>
           <label style={labelStyle} htmlFor="coding-question-title">Title</label>
           <input id="coding-question-title" style={inputStyle} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
           <label style={labelStyle} htmlFor="coding-question-description">Description / prompt</label>
@@ -1772,7 +1818,7 @@ function CodingQuestionsPanel({ testId, questions, onRefresh }) {
               }}
             />
           </div>
-          <button className="btn btn-primary" style={{ width: "100%", marginTop: 14 }} disabled={saving}>{saving ? "Adding…" : "Add question"}</button>
+          <button className="btn btn-primary" style={{ width: "100%", marginTop: 14 }} disabled={saving}>{saving ? (editingId ? "Saving…" : "Adding…") : (editingId ? "Save changes" : "Add question")}</button>
         </form>
       )}
     </div>

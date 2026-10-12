@@ -4,6 +4,7 @@ const multer = require("multer");
 const XLSX = require("xlsx");
 const { sendTable } = require("../utils/spreadsheetSafe");
 const prisma = require("../prisma");
+const { Prisma } = require("@prisma/client");
 const { authenticate, requireRole } = require("../middleware/auth");
 const { judgeSubmission } = require("../utils/judgeGateway");
 const { runQueued } = require("../utils/queue");
@@ -1292,13 +1293,17 @@ router.patch("/admin/questions/:id", authenticate, requireRole("ADMIN", "SUPER_A
       edgeCases, problemExplanation, tags, hints, timeComplexity, spaceComplexity, editorial, similarQuestions,
     } = req.body;
     const data = {};
+    // A blank text would leave a question students cannot read, and an unknown difficulty would be stored as it is.
+    if (description !== undefined && !String(description || "").trim()) return res.status(400).json({ error: "Question text is required" });
+    if (difficulty !== undefined && !["EASY", "MEDIUM", "HARD"].includes(difficulty)) return res.status(400).json({ error: "Difficulty must be EASY, MEDIUM or HARD" });
     if (title !== undefined) data.title = title;
     if (description !== undefined) data.description = description;
     if (difficulty !== undefined) data.difficulty = difficulty;
     if (timeLimitMs !== undefined) data.timeLimitMs = Number(timeLimitMs);
     if (starterCode !== undefined) data.starterCode = starterCode;
-    if (starterCodeByLanguage !== undefined) data.starterCodeByLanguage = starterCodeByLanguage;
-    if (tags !== undefined) data.tags = Array.isArray(tags) && tags.length > 0 ? tags : null;
+    // Clearing a JSON column needs Prisma.DbNull: a plain null is rejected, which made removing every template or tag fail with a 500.
+    if (starterCodeByLanguage !== undefined) data.starterCodeByLanguage = starterCodeByLanguage && Object.keys(starterCodeByLanguage).length > 0 ? starterCodeByLanguage : Prisma.DbNull;
+    if (tags !== undefined) data.tags = Array.isArray(tags) && tags.length > 0 ? tags : Prisma.DbNull;
     if (estimatedTimeMin !== undefined) data.estimatedTimeMin = estimatedTimeMin;
     if (realWorldScenario !== undefined) data.realWorldScenario = realWorldScenario;
     if (constraints !== undefined) data.constraints = constraints;
