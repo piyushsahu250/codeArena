@@ -1276,14 +1276,14 @@
       {
         "_count": null,
         "aiGenerated": false,
-        "btlLevel": null,
+        "btlLevel": 2,
         "comparisonMode": "TRIM",
         "correctAnswer": [
           1
         ],
         "createdById": "set",
         "description": "ZZ QC mcq 1",
-        "difficulty": "EASY",
+        "difficulty": "MEDIUM",
         "evaluationType": "STDIO",
         "folderId": "set",
         "instituteId": "A",
@@ -1294,7 +1294,7 @@
           "Green",
           "Blue"
         ],
-        "points": 10,
+        "points": 3,
         "questionStatus": "PUBLISHED",
         "questionType": "MCQ",
         "subjectId": "A",
@@ -1336,14 +1336,14 @@
       {
         "_count": null,
         "aiGenerated": false,
-        "btlLevel": 2,
+        "btlLevel": null,
         "comparisonMode": "TRIM",
         "correctAnswer": [
           1
         ],
         "createdById": "set",
         "description": "ZZ QC mcq 1",
-        "difficulty": "MEDIUM",
+        "difficulty": "EASY",
         "evaluationType": "STDIO",
         "folderId": "set",
         "instituteId": "A",
@@ -1354,7 +1354,7 @@
           "Green",
           "Blue"
         ],
-        "points": 3,
+        "points": 10,
         "questionStatus": "PUBLISHED",
         "questionType": "MCQ",
         "subjectId": "A",
@@ -5975,9 +5975,7 @@
           "btlLevel": ".",
           "comparisonMode": ".",
           "constraints": ".",
-          "correctAnswer": [
-            "."
-          ],
+          "correctAnswer": "list",
           "createdAt": ".",
           "createdBy": {
             "id": ".",
@@ -6008,9 +6006,7 @@
           "numericAnswer": ".",
           "numericAnswerDisplay": ".",
           "numericTolerance": ".",
-          "options": [
-            "."
-          ],
+          "options": "list",
           "outputFormat": ".",
           "points": ".",
           "problemExplanation": ".",
@@ -6079,27 +6075,19 @@
       ],
       "needsClassificationCount": ".",
       "noSubjectCount": ".",
-      "subjects": [
-        "."
-      ],
-      "topics": [
-        "."
-      ]
+      "subjects": "list",
+      "topics": "list"
     }
   },
   {
     "name": "filters: staff does not see creators",
     "status": 200,
     "body": {
-      "creators": [],
+      "creators": "list",
       "needsClassificationCount": ".",
       "noSubjectCount": ".",
-      "subjects": [
-        "."
-      ],
-      "topics": [
-        "."
-      ]
+      "subjects": "list",
+      "topics": "list"
     }
   },
   {
@@ -6114,12 +6102,8 @@
       ],
       "needsClassificationCount": ".",
       "noSubjectCount": ".",
-      "subjects": [
-        "."
-      ],
-      "topics": [
-        "."
-      ]
+      "subjects": "list",
+      "topics": "list"
     }
   },
   {
@@ -8114,7 +8098,6 @@
       "QUESTION_UPDATED|role:INSTITUTE_ADMIN|student:-|inst:set|keys:questionId,title",
       "QUESTION_UPDATED|role:INSTITUTE_ADMIN|student:-|inst:set|keys:questionId,title",
       "QUESTION_UPDATED|role:INSTITUTE_ADMIN|student:-|inst:set|keys:questionId,title",
-      "QUESTION_UPDATED|role:INSTITUTE_ADMIN|student:-|inst:set|keys:questionId,title",
       "QUESTION_UPDATED|role:STAFF|student:-|inst:set|keys:questionId,title"
     ]
   },
@@ -8495,9 +8478,9 @@
         "questionsAttempted": ".",
         "totalAttempts": "."
       },
-      "mostAttempted": [],
-      "mostDifficult": [],
-      "mostTrivial": [],
+      "mostAttempted": "list",
+      "mostDifficult": "list",
+      "mostTrivial": "list",
       "neverAttempted": {
         "count": ".",
         "sample": [
@@ -8541,9 +8524,9 @@
         "questionsAttempted": ".",
         "totalAttempts": "."
       },
-      "mostAttempted": [],
-      "mostDifficult": [],
-      "mostTrivial": [],
+      "mostAttempted": "list",
+      "mostDifficult": "list",
+      "mostTrivial": "list",
       "neverAttempted": {
         "count": ".",
         "sample": [
