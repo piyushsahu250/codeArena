@@ -1,0 +1,4049 @@
+[
+  {
+    "name": "me patch: anonymous",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "Missing or invalid Authorization header"
+    }
+  },
+  {
+    "name": "me patch: no current password",
+    "status": 400,
+    "body": {
+      "error": "currentPassword is required"
+    }
+  },
+  {
+    "name": "me patch: nothing to change",
+    "status": 400,
+    "body": {
+      "error": "Provide newEmail and/or newPassword"
+    }
+  },
+  {
+    "name": "me patch: wrong current password",
+    "status": 401,
+    "body": {
+      "error": "Current password is incorrect"
+    }
+  },
+  {
+    "name": "me patch: invalid new email",
+    "status": 400,
+    "body": {
+      "error": "Please enter a valid email address"
+    }
+  },
+  {
+    "name": "me patch: email already in use",
+    "status": 409,
+    "body": {
+      "error": "This email address is already associated with an account"
+    }
+  },
+  {
+    "name": "me patch: weak new password",
+    "status": 400,
+    "body": {
+      "error": "Password must be at least 8 characters"
+    }
+  },
+  {
+    "name": "me patch: new password equals current",
+    "status": 400,
+    "body": {
+      "error": "New password cannot be the same as your current password"
+    }
+  },
+  {
+    "name": "me patch: password used recently",
+    "status": 400,
+    "body": {
+      "error": "You've used this password recently. Choose a password you haven't used in your last 3 passwords."
+    }
+  },
+  {
+    "name": "me patch: same email as the current one changes nothing",
+    "status": 200,
+    "body": {
+      "message": "<masked>",
+      "token": "<token>",
+      "user": {
+        "academicGroup": null,
+        "accountStatus": "ACTIVE",
+        "batchYear": null,
+        "class": null,
+        "createdAt": "<time>",
+        "department": null,
+        "designation": null,
+        "email": "zz-uc-m1-<ts>@example.invalid",
+        "emailVerified": false,
+        "employeeId": null,
+        "gender": null,
+        "id": "<id>",
+        "institute": {
+          "id": "<id>",
+          "name": "ZZ UC A <ts>"
+        },
+        "isActive": true,
+        "lastLoginAt": "<masked>",
+        "mobile": null,
+        "mustChangePassword": false,
+        "name": "ZZ UC m1",
+        "pendingEmail": null,
+        "profilePhotoUrl": null,
+        "program": null,
+        "registrationNumber": null,
+        "role": "STAFF",
+        "rollNumber": null,
+        "section": null
+      },
+      "verificationEmailSent": "object"
+    }
+  },
+  {
+    "name": "me patch: password changed",
+    "status": 200,
+    "body": {
+      "message": "<masked>",
+      "token": "<token>",
+      "user": {
+        "academicGroup": null,
+        "accountStatus": "ACTIVE",
+        "batchYear": null,
+        "class": null,
+        "createdAt": "<time>",
+        "department": null,
+        "designation": null,
+        "email": "zz-uc-m2-<ts>@example.invalid",
+        "emailVerified": false,
+        "employeeId": null,
+        "gender": null,
+        "id": "<id>",
+        "institute": {
+          "id": "<id>",
+          "name": "ZZ UC A <ts>"
+        },
+        "isActive": true,
+        "lastLoginAt": "<masked>",
+        "mobile": null,
+        "mustChangePassword": false,
+        "name": "ZZ UC m2",
+        "pendingEmail": null,
+        "profilePhotoUrl": null,
+        "program": null,
+        "registrationNumber": null,
+        "role": "STAFF",
+        "rollNumber": null,
+        "section": null
+      },
+      "verificationEmailSent": "object"
+    }
+  },
+  {
+    "name": "me patch: password stored",
+    "db": {
+      "flag": false,
+      "historyRows": 1,
+      "loginWithNew": 200
+    }
+  },
+  {
+    "name": "me patch: the session that changed the password still works",
+    "status": 200,
+    "body": [
+      {
+        "browser": "string",
+        "device": "string",
+        "id": "string",
+        "ip": "string",
+        "isActive": "boolean",
+        "isCurrent": "boolean",
+        "loginAt": "string",
+        "logoutAt": "null",
+        "os": "string"
+      }
+    ]
+  },
+  {
+    "name": "me patch: a new sign-in address is held as pending",
+    "status": 200,
+    "body": {
+      "message": "<masked>",
+      "token": "<token>",
+      "user": {
+        "academicGroup": null,
+        "accountStatus": "ACTIVE",
+        "batchYear": null,
+        "class": null,
+        "createdAt": "<time>",
+        "department": null,
+        "designation": null,
+        "email": "zz-uc-m3-<ts>@example.invalid",
+        "emailVerified": false,
+        "employeeId": null,
+        "gender": null,
+        "id": "<id>",
+        "institute": {
+          "id": "<id>",
+          "name": "ZZ UC A <ts>"
+        },
+        "isActive": true,
+        "lastLoginAt": "<masked>",
+        "mobile": null,
+        "mustChangePassword": false,
+        "name": "ZZ UC m3",
+        "pendingEmail": "new-zz-uc-m3-<ts>@example.invalid",
+        "profilePhotoUrl": null,
+        "program": null,
+        "registrationNumber": null,
+        "role": "STAFF",
+        "rollNumber": null,
+        "section": null
+      },
+      "verificationEmailSent": "boolean"
+    }
+  },
+  {
+    "name": "me patch: pending state",
+    "db": {
+      "email": "zz-uc-m3-<ts>@example.invalid",
+      "pendingEmail": "new-zz-uc-m3-<ts>@example.invalid",
+      "tokenStored": true,
+      "verified": false
+    }
+  },
+  {
+    "name": "me patch: pending token",
+    "db": {
+      "hashed": true,
+      "hoursValid": 24
+    }
+  },
+  {
+    "name": "me patch: password and e-mail together",
+    "status": 200,
+    "body": {
+      "message": "<masked>",
+      "token": "<token>",
+      "user": {
+        "academicGroup": null,
+        "accountStatus": "ACTIVE",
+        "batchYear": null,
+        "class": null,
+        "createdAt": "<time>",
+        "department": null,
+        "designation": null,
+        "email": "zz-uc-m4-<ts>@example.invalid",
+        "emailVerified": false,
+        "employeeId": null,
+        "gender": null,
+        "id": "<id>",
+        "institute": {
+          "id": "<id>",
+          "name": "ZZ UC A <ts>"
+        },
+        "isActive": true,
+        "lastLoginAt": "<masked>",
+        "mobile": null,
+        "mustChangePassword": false,
+        "name": "ZZ UC m4",
+        "pendingEmail": "zz-uc-both-<ts>@example.invalid",
+        "profilePhotoUrl": null,
+        "program": null,
+        "registrationNumber": null,
+        "role": "STAFF",
+        "rollNumber": null,
+        "section": null
+      },
+      "verificationEmailSent": "boolean"
+    }
+  },
+  {
+    "name": "me patch: audit rows",
+    "db": [
+      "STAFF:inst:-:{\"self\":true,\"passwordChanged\":false,\"emailChangeRequested\":false,\"verificationEmailSent\":\"object\"}",
+      "STAFF:inst:-:{\"self\":true,\"passwordChanged\":false,\"emailChangeRequested\":true,\"verificationEmailSent\":\"boolean\"}",
+      "STAFF:inst:-:{\"self\":true,\"passwordChanged\":true,\"emailChangeRequested\":false,\"verificationEmailSent\":\"object\"}",
+      "STAFF:inst:-:{\"self\":true,\"passwordChanged\":true,\"emailChangeRequested\":true,\"verificationEmailSent\":\"boolean\"}"
+    ]
+  },
+  {
+    "name": "me patch: e-mails queued",
+    "db": [
+      "EMAIL_VERIFICATION:to-new-address",
+      "EMAIL_VERIFICATION:to-new-address",
+      "EMAIL_VERIFICATION:to-new-address",
+      "EMAIL_VERIFICATION:to-new-address",
+      "EMAIL_VERIFICATION:to-new-address",
+      "EMAIL_VERIFICATION:to-new-address",
+      "LOGIN_ALERT:to-current",
+      "LOGIN_ALERT:to-current",
+      "LOGIN_ALERT:to-current",
+      "LOGIN_ALERT:to-current",
+      "LOGIN_ALERT:to-current",
+      "LOGIN_ALERT:to-current",
+      "LOGIN_ALERT:to-current",
+      "LOGIN_ALERT:to-current",
+      "LOGIN_ALERT:to-current",
+      "LOGIN_ALERT:to-current",
+      "LOGIN_ALERT:to-current",
+      "LOGIN_ALERT:to-current",
+      "LOGIN_ALERT:to-current",
+      "LOGIN_ALERT:to-current",
+      "LOGIN_ALERT:to-current",
+      "LOGIN_ALERT:to-current"
+    ]
+  },
+  {
+    "name": "me patch limit: request 1",
+    "status": 401,
+    "body": {
+      "error": "Current password is incorrect"
+    }
+  },
+  {
+    "name": "me patch limit: request 2",
+    "status": 401,
+    "body": {
+      "error": "Current password is incorrect"
+    }
+  },
+  {
+    "name": "me patch limit: request 3",
+    "status": 401,
+    "body": {
+      "error": "Current password is incorrect"
+    }
+  },
+  {
+    "name": "me patch limit: fourth request",
+    "status": 429,
+    "body": {
+      "error": "Too many email change requests. Please try again later."
+    }
+  },
+  {
+    "name": "me patch limit: resend shares the same budget",
+    "status": 429,
+    "body": {
+      "error": "Too many email change requests. Please try again later."
+    }
+  },
+  {
+    "name": "resend: anonymous",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "Missing or invalid Authorization header"
+    }
+  },
+  {
+    "name": "resend: no change pending",
+    "status": 400,
+    "body": {
+      "error": "No email change is pending"
+    }
+  },
+  {
+    "name": "resend: pending change",
+    "status": 200,
+    "body": {
+      "message": "<masked>",
+      "verificationEmailSent": "boolean"
+    }
+  },
+  {
+    "name": "resend: token replaced",
+    "db": {
+      "replaced": true
+    }
+  },
+  {
+    "name": "sessions: anonymous",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "Missing or invalid Authorization header"
+    }
+  },
+  {
+    "name": "sessions: list",
+    "status": 200,
+    "body": [
+      {
+        "browser": "Unknown browser",
+        "device": "Desktop",
+        "id": "<id>",
+        "ip": "<masked>",
+        "isActive": true,
+        "isCurrent": false,
+        "loginAt": "<time>",
+        "logoutAt": null,
+        "os": "Unknown OS"
+      },
+      {
+        "browser": "Unknown browser",
+        "device": "Desktop",
+        "id": "<id>",
+        "ip": "<masked>",
+        "isActive": true,
+        "isCurrent": true,
+        "loginAt": "<time>",
+        "logoutAt": null,
+        "os": "Unknown OS"
+      }
+    ]
+  },
+  {
+    "name": "sessions: end with no token",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "Missing or invalid Authorization header"
+    }
+  },
+  {
+    "name": "sessions: unknown session",
+    "status": 404,
+    "body": {
+      "error": "Session not found"
+    }
+  },
+  {
+    "name": "sessions: another user's session",
+    "status": 404,
+    "body": {
+      "error": "Session not found"
+    }
+  },
+  {
+    "name": "sessions: the current session",
+    "status": 400,
+    "body": {
+      "error": "Use Sign Out to end your current session"
+    }
+  },
+  {
+    "name": "sessions: another of one's own sessions",
+    "status": 200,
+    "body": {
+      "message": "<masked>"
+    }
+  },
+  {
+    "name": "sessions: stored state",
+    "db": {
+      "active": 1,
+      "stamped": true
+    }
+  },
+  {
+    "name": "sessions: the revoked session's token is dead",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "This session has been signed out. Please log in again."
+    }
+  },
+  {
+    "name": "sessions: list afterwards",
+    "status": 200,
+    "body": [
+      {
+        "browser": "Unknown browser",
+        "device": "Desktop",
+        "id": "<id>",
+        "ip": "<masked>",
+        "isActive": true,
+        "isCurrent": true,
+        "loginAt": "<time>",
+        "logoutAt": null,
+        "os": "Unknown OS"
+      },
+      {
+        "browser": "Unknown browser",
+        "device": "Desktop",
+        "id": "<id>",
+        "ip": "<masked>",
+        "isActive": false,
+        "isCurrent": false,
+        "loginAt": "<time>",
+        "logoutAt": "<time>",
+        "os": "Unknown OS"
+      }
+    ]
+  },
+  {
+    "name": "sessions: audit rows",
+    "db": [
+      "STAFF:-:student:device,revokedSessionId"
+    ]
+  },
+  {
+    "name": "list: anonymous",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "Missing or invalid Authorization header"
+    }
+  },
+  {
+    "name": "list: student refused",
+    "status": 403,
+    "body": {
+      "error": "Insufficient permissions"
+    }
+  },
+  {
+    "name": "list: staff refused",
+    "status": 403,
+    "body": {
+      "error": "Insufficient permissions"
+    }
+  },
+  {
+    "name": "list: institute admin sees only the own institute",
+    "status": 200,
+    "body": {
+      "page": 1,
+      "pageSize": 200,
+      "rows": [
+        {
+          "academicGroup": null,
+          "accountStatus": "ACTIVE",
+          "batchYear": null,
+          "class": null,
+          "createdAt": "<time>",
+          "department": null,
+          "designation": null,
+          "email": "zz-uc-m6-<ts>@example.invalid",
+          "emailVerified": false,
+          "employeeId": null,
+          "gender": null,
+          "id": "<id>",
+          "institute": {
+            "id": "<id>",
+            "name": "ZZ UC A <ts>"
+          },
+          "isActive": true,
+          "lastLoginAt": "<masked>",
+          "mobile": null,
+          "mustChangePassword": false,
+          "name": "ZZ UC m6",
+          "pendingEmail": null,
+          "profilePhotoUrl": null,
+          "program": null,
+          "registrationNumber": null,
+          "role": "STAFF",
+          "rollNumber": null,
+          "section": null
+        },
+        {
+          "academicGroup": null,
+          "accountStatus": "ACTIVE",
+          "batchYear": null,
+          "class": null,
+          "createdAt": "<time>",
+          "department": null,
+          "designation": null,
+          "email": "zz-uc-m5-<ts>@example.invalid",
+          "emailVerified": false,
+          "employeeId": null,
+          "gender": null,
+          "id": "<id>",
+          "institute": {
+            "id": "<id>",
+            "name": "ZZ UC A <ts>"
+          },
+          "isActive": true,
+          "lastLoginAt": "<masked>",
+          "mobile": null,
+          "mustChangePassword": false,
+          "name": "ZZ UC m5",
+          "pendingEmail": null,
+          "profilePhotoUrl": null,
+          "program": null,
+          "registrationNumber": null,
+          "role": "STAFF",
+          "rollNumber": null,
+          "section": null
+        },
+        {
+          "academicGroup": null,
+          "accountStatus": "ACTIVE",
+          "batchYear": null,
+          "class": null,
+          "createdAt": "<time>",
+          "department": null,
+          "designation": null,
+          "email": "zz-uc-m4-<ts>@example.invalid",
+          "emailVerified": false,
+          "employeeId": null,
+          "gender": null,
+          "id": "<id>",
+          "institute": {
+            "id": "<id>",
+            "name": "ZZ UC A <ts>"
+          },
+          "isActive": true,
+          "lastLoginAt": "<masked>",
+          "mobile": null,
+          "mustChangePassword": false,
+          "name": "ZZ UC m4",
+          "pendingEmail": "zz-uc-both-<ts>@example.invalid",
+          "profilePhotoUrl": null,
+          "program": null,
+          "registrationNumber": null,
+          "role": "STAFF",
+          "rollNumber": null,
+          "section": null
+        },
+        {
+          "academicGroup": null,
+          "accountStatus": "ACTIVE",
+          "batchYear": null,
+          "class": null,
+          "createdAt": "<time>",
+          "department": null,
+          "designation": null,
+          "email": "zz-uc-m3-<ts>@example.invalid",
+          "emailVerified": false,
+          "employeeId": null,
+          "gender": null,
+          "id": "<id>",
+          "institute": {
+            "id": "<id>",
+            "name": "ZZ UC A <ts>"
+          },
+          "isActive": true,
+          "lastLoginAt": "<masked>",
+          "mobile": null,
+          "mustChangePassword": false,
+          "name": "ZZ UC m3",
+          "pendingEmail": "new-zz-uc-m3-<ts>@example.invalid",
+          "profilePhotoUrl": null,
+          "program": null,
+          "registrationNumber": null,
+          "role": "STAFF",
+          "rollNumber": null,
+          "section": null
+        },
+        {
+          "academicGroup": null,
+          "accountStatus": "ACTIVE",
+          "batchYear": null,
+          "class": null,
+          "createdAt": "<time>",
+          "department": null,
+          "designation": null,
+          "email": "zz-uc-m2-<ts>@example.invalid",
+          "emailVerified": false,
+          "employeeId": null,
+          "gender": null,
+          "id": "<id>",
+          "institute": {
+            "id": "<id>",
+            "name": "ZZ UC A <ts>"
+          },
+          "isActive": true,
+          "lastLoginAt": "<masked>",
+          "mobile": null,
+          "mustChangePassword": false,
+          "name": "ZZ UC m2",
+          "pendingEmail": null,
+          "profilePhotoUrl": null,
+          "program": null,
+          "registrationNumber": null,
+          "role": "STAFF",
+          "rollNumber": null,
+          "section": null
+        },
+        {
+          "academicGroup": null,
+          "accountStatus": "ACTIVE",
+          "batchYear": null,
+          "class": null,
+          "createdAt": "<time>",
+          "department": null,
+          "designation": null,
+          "email": "zz-uc-m1-<ts>@example.invalid",
+          "emailVerified": false,
+          "employeeId": null,
+          "gender": null,
+          "id": "<id>",
+          "institute": {
+            "id": "<id>",
+            "name": "ZZ UC A <ts>"
+          },
+          "isActive": true,
+          "lastLoginAt": "<masked>",
+          "mobile": null,
+          "mustChangePassword": false,
+          "name": "ZZ UC m1",
+          "pendingEmail": null,
+          "profilePhotoUrl": null,
+          "program": null,
+          "registrationNumber": null,
+          "role": "STAFF",
+          "rollNumber": null,
+          "section": null
+        },
+        {
+          "academicGroup": {
+            "batch": "2026",
+            "department": {
+              "id": "<id>",
+              "name": "ZZ UC Dept A"
+            },
+            "id": "<id>",
+            "section": "Section B"
+          },
+          "accountStatus": "ACTIVE",
+          "batchYear": null,
+          "class": null,
+          "createdAt": "<time>",
+          "department": null,
+          "designation": null,
+          "email": "zz-uc-cf2-<ts>@example.invalid",
+          "emailVerified": false,
+          "employeeId": null,
+          "gender": null,
+          "id": "<id>",
+          "institute": {
+            "id": "<id>",
+            "name": "ZZ UC A <ts>"
+          },
+          "isActive": true,
+          "lastLoginAt": null,
+          "mobile": null,
+          "mustChangePassword": false,
+          "name": "ZZ UC cf2",
+          "pendingEmail": null,
+          "profilePhotoUrl": null,
+          "program": null,
+          "registrationNumber": "ZZUC-<ts>-C2",
+          "role": "STUDENT",
+          "rollNumber": "005",
+          "section": null
+        },
+        {
+          "academicGroup": {
+            "batch": "2026",
+            "department": {
+              "id": "<id>",
+              "name": "ZZ UC Dept A"
+            },
+            "id": "<id>",
+            "section": "Section B"
+          },
+          "accountStatus": "ACTIVE",
+          "batchYear": null,
+          "class": null,
+          "createdAt": "<time>",
+          "department": null,
+          "designation": null,
+          "email": "zz-uc-cf1-<ts>@example.invalid",
+          "emailVerified": false,
+          "employeeId": null,
+          "gender": null,
+          "id": "<id>",
+          "institute": {
+            "id": "<id>",
+            "name": "ZZ UC A <ts>"
+          },
+          "isActive": true,
+          "lastLoginAt": null,
+          "mobile": null,
+          "mustChangePassword": false,
+          "name": "ZZ UC cf1",
+          "pendingEmail": null,
+          "profilePhotoUrl": null,
+          "program": null,
+          "registrationNumber": "ZZUC-<ts>-C1",
+          "role": "STUDENT",
+          "rollNumber": "005",
+          "section": null
+        },
+        {
+          "academicGroup": {
+            "batch": "2026",
+            "department": {
+              "id": "<id>",
+              "name": "ZZ UC Dept A"
+            },
+            "id": "<id>",
+            "section": "Section A"
+          },
+          "accountStatus": "ACTIVE",
+          "batchYear": null,
+          "class": null,
+          "createdAt": "<time>",
+          "department": null,
+          "designation": null,
+          "email": "zz-uc-stu3-<ts>@example.invalid",
+          "emailVerified": false,
+          "employeeId": null,
+          "gender": null,
+          "id": "<id>",
+          "institute": {
+            "id": "<id>",
+            "name": "ZZ UC A <ts>"
+          },
+          "isActive": true,
+          "lastLoginAt": null,
+          "mobile": null,
+          "mustChangePassword": false,
+          "name": "ZZ UC stu3",
+          "pendingEmail": null,
+          "profilePhotoUrl": null,
+          "program": null,
+          "registrationNumber": "ZZUC-<ts>-3",
+          "role": "STUDENT",
+          "rollNumber": "010",
+          "section": null
+        },
+        {
+          "academicGroup": {
+            "batch": "2026",
+            "department": {
+              "id": "<id>",
+              "name": "ZZ UC Dept A"
+            },
+            "id": "<id>",
+            "section": "Section A"
+          },
+          "accountStatus": "ACTIVE",
+          "batchYear": null,
+          "class": null,
+          "createdAt": "<time>",
+          "department": null,
+          "designation": null,
+          "email": "zz-uc-stu2-<ts>@example.invalid",
+          "emailVerified": false,
+          "employeeId": null,
+          "gender": null,
+          "id": "<id>",
+          "institute": {
+            "id": "<id>",
+            "name": "ZZ UC A <ts>"
+          },
+          "isActive": true,
+          "lastLoginAt": null,
+          "mobile": "9000000002",
+          "mustChangePassword": false,
+          "name": "ZZ UC stu2",
+          "pendingEmail": null,
+          "profilePhotoUrl": null,
+          "program": null,
+          "registrationNumber": "ZZUC-<ts>-2",
+          "role": "STUDENT",
+          "rollNumber": "002",
+          "section": null
+        },
+        {
+          "academicGroup": {
+            "batch": "2026",
+            "department": {
+              "id": "<id>",
+              "name": "ZZ UC Dept A"
+            },
+            "id": "<id>",
+            "section": "Section A"
+          },
+          "accountStatus": "ACTIVE",
+          "batchYear": null,
+          "class": null,
+          "createdAt": "<time>",
+          "department": null,
+          "designation": null,
+          "email": "zz-uc-stu1-<ts>@example.invalid",
+          "emailVerified": false,
+          "employeeId": null,
+          "gender": "Male",
+          "id": "<id>",
+          "institute": {
+            "id": "<id>",
+            "name": "ZZ UC A <ts>"
+          },
+          "isActive": true,
+          "lastLoginAt": "<masked>",
+          "mobile": "9000000001",
+          "mustChangePassword": false,
+          "name": "ZZ UC stu1",
+          "pendingEmail": null,
+          "profilePhotoUrl": null,
+          "program": null,
+          "registrationNumber": "ZZUC-<ts>-1",
+          "role": "STUDENT",
+          "rollNumber": "001",
+          "section": null
+        },
+        {
+          "academicGroup": null,
+          "accountStatus": "ACTIVE",
+          "batchYear": null,
+          "class": null,
+          "createdAt": "<time>",
+          "department": null,
+          "designation": null,
+          "email": "zz-uc-clerka-<ts>@example.invalid",
+          "emailVerified": false,
+          "employeeId": null,
+          "gender": null,
+          "id": "<id>",
+          "institute": {
+            "id": "<id>",
+            "name": "ZZ UC A <ts>"
+          },
+          "isActive": true,
+          "lastLoginAt": "<masked>",
+          "mobile": null,
+          "mustChangePassword": false,
+          "name": "ZZ UC clerkA",
+          "pendingEmail": null,
+          "profilePhotoUrl": null,
+          "program": null,
+          "registrationNumber": null,
+          "role": "CLERK",
+          "rollNumber": null,
+          "section": null
+        },
+        {
+          "academicGroup": null,
+          "accountStatus": "ACTIVE",
+          "batchYear": null,
+          "class": null,
+          "createdAt": "<time>",
+          "department": null,
+          "designation": null,
+          "email": "zz-uc-staffa-<ts>@example.invalid",
+          "emailVerified": false,
+          "employeeId": null,
+          "gender": null,
+          "id": "<id>",
+          "institute": {
+            "id": "<id>",
+            "name": "ZZ UC A <ts>"
+          },
+          "isActive": true,
+          "lastLoginAt": "<masked>",
+          "mobile": null,
+          "mustChangePassword": false,
+          "name": "ZZ UC staffA",
+          "pendingEmail": null,
+          "profilePhotoUrl": null,
+          "program": null,
+          "registrationNumber": null,
+          "role": "STAFF",
+          "rollNumber": null,
+          "section": null
+        },
+        {
+          "academicGroup": null,
+          "accountStatus": "ACTIVE",
+          "batchYear": null,
+          "class": null,
+          "createdAt": "<time>",
+          "department": null,
+          "designation": null,
+          "email": "zz-uc-insta-<ts>@example.invalid",
+          "emailVerified": false,
+          "employeeId": null,
+          "gender": null,
+          "id": "<id>",
+          "institute": {
+            "id": "<id>",
+            "name": "ZZ UC A <ts>"
+          },
+          "isActive": true,
+          "lastLoginAt": "<masked>",
+          "mobile": null,
+          "mustChangePassword": false,
+          "name": "ZZ UC instA",
+          "pendingEmail": null,
+          "profilePhotoUrl": null,
+          "program": null,
+          "registrationNumber": null,
+          "role": "INSTITUTE_ADMIN",
+          "rollNumber": null,
+          "section": null
+        }
+      ],
+      "total": 14,
+      "totalPages": 1
+    }
+  },
+  {
+    "name": "list: second page of two",
+    "status": 200,
+    "body": {
+      "page": 2,
+      "pageSize": 2,
+      "rows": [
+        {
+          "academicGroup": null,
+          "accountStatus": "ACTIVE",
+          "batchYear": null,
+          "class": null,
+          "createdAt": "<time>",
+          "department": null,
+          "designation": null,
+          "email": "zz-uc-m4-<ts>@example.invalid",
+          "emailVerified": false,
+          "employeeId": null,
+          "gender": null,
+          "id": "<id>",
+          "institute": {
+            "id": "<id>",
+            "name": "ZZ UC A <ts>"
+          },
+          "isActive": true,
+          "lastLoginAt": "<masked>",
+          "mobile": null,
+          "mustChangePassword": false,
+          "name": "ZZ UC m4",
+          "pendingEmail": "zz-uc-both-<ts>@example.invalid",
+          "profilePhotoUrl": null,
+          "program": null,
+          "registrationNumber": null,
+          "role": "STAFF",
+          "rollNumber": null,
+          "section": null
+        },
+        {
+          "academicGroup": null,
+          "accountStatus": "ACTIVE",
+          "batchYear": null,
+          "class": null,
+          "createdAt": "<time>",
+          "department": null,
+          "designation": null,
+          "email": "zz-uc-m3-<ts>@example.invalid",
+          "emailVerified": false,
+          "employeeId": null,
+          "gender": null,
+          "id": "<id>",
+          "institute": {
+            "id": "<id>",
+            "name": "ZZ UC A <ts>"
+          },
+          "isActive": true,
+          "lastLoginAt": "<masked>",
+          "mobile": null,
+          "mustChangePassword": false,
+          "name": "ZZ UC m3",
+          "pendingEmail": "new-zz-uc-m3-<ts>@example.invalid",
+          "profilePhotoUrl": null,
+          "program": null,
+          "registrationNumber": null,
+          "role": "STAFF",
+          "rollNumber": null,
+          "section": null
+        }
+      ],
+      "total": 14,
+      "totalPages": 7
+    }
+  },
+  {
+    "name": "list: page size is capped and floored",
+    "status": 200,
+    "body": {
+      "page": 1,
+      "pageSize": 500,
+      "rows": [
+        {
+          "academicGroup": {
+            "batch": "2026",
+            "department": {
+              "id": "<id>",
+              "name": "ZZ UC Dept B"
+            },
+            "id": "<id>",
+            "section": "Section B"
+          },
+          "accountStatus": "ACTIVE",
+          "batchYear": null,
+          "class": null,
+          "createdAt": "<time>",
+          "department": null,
+          "designation": null,
+          "email": "zz-uc-stub-<ts>@example.invalid",
+          "emailVerified": false,
+          "employeeId": null,
+          "gender": null,
+          "id": "<id>",
+          "institute": {
+            "id": "<id>",
+            "name": "ZZ UC B <ts>"
+          },
+          "isActive": true,
+          "lastLoginAt": "<masked>",
+          "mobile": null,
+          "mustChangePassword": false,
+          "name": "ZZ UC stuB",
+          "pendingEmail": null,
+          "profilePhotoUrl": null,
+          "program": null,
+          "registrationNumber": "ZZUC-<ts>-B",
+          "role": "STUDENT",
+          "rollNumber": "001",
+          "section": null
+        },
+        {
+          "academicGroup": null,
+          "accountStatus": "ACTIVE",
+          "batchYear": null,
+          "class": null,
+          "createdAt": "<time>",
+          "department": null,
+          "designation": null,
+          "email": "zz-uc-staffb-<ts>@example.invalid",
+          "emailVerified": false,
+          "employeeId": null,
+          "gender": null,
+          "id": "<id>",
+          "institute": {
+            "id": "<id>",
+            "name": "ZZ UC B <ts>"
+          },
+          "isActive": true,
+          "lastLoginAt": "<masked>",
+          "mobile": null,
+          "mustChangePassword": false,
+          "name": "ZZ UC staffB",
+          "pendingEmail": null,
+          "profilePhotoUrl": null,
+          "program": null,
+          "registrationNumber": null,
+          "role": "STAFF",
+          "rollNumber": null,
+          "section": null
+        },
+        {
+          "academicGroup": null,
+          "accountStatus": "ACTIVE",
+          "batchYear": null,
+          "class": null,
+          "createdAt": "<time>",
+          "department": null,
+          "designation": null,
+          "email": "zz-uc-instb-<ts>@example.invalid",
+          "emailVerified": false,
+          "employeeId": null,
+          "gender": null,
+          "id": "<id>",
+          "institute": {
+            "id": "<id>",
+            "name": "ZZ UC B <ts>"
+          },
+          "isActive": true,
+          "lastLoginAt": "<masked>",
+          "mobile": null,
+          "mustChangePassword": false,
+          "name": "ZZ UC instB",
+          "pendingEmail": null,
+          "profilePhotoUrl": null,
+          "program": null,
+          "registrationNumber": null,
+          "role": "INSTITUTE_ADMIN",
+          "rollNumber": null,
+          "section": null
+        }
+      ],
+      "total": 3,
+      "totalPages": 1
+    }
+  },
+  {
+    "name": "list: platform admin sees everyone (shape)",
+    "status": 200,
+    "body": {
+      "page": "number",
+      "pageSize": "number",
+      "rows": [
+        {
+          "academicGroup": "null",
+          "accountStatus": "string",
+          "batchYear": "null",
+          "class": "null",
+          "createdAt": "string",
+          "department": "null",
+          "designation": "null",
+          "email": "string",
+          "emailVerified": "boolean",
+          "employeeId": "null",
+          "gender": "null",
+          "id": "string",
+          "institute": {
+            "id": "string",
+            "name": "string"
+          },
+          "isActive": "boolean",
+          "lastLoginAt": "string",
+          "mobile": "null",
+          "mustChangePassword": "boolean",
+          "name": "string",
+          "pendingEmail": "null",
+          "profilePhotoUrl": "null",
+          "program": "null",
+          "registrationNumber": "null",
+          "role": "string",
+          "rollNumber": "null",
+          "section": "null"
+        }
+      ],
+      "total": "number",
+      "totalPages": "number"
+    }
+  },
+  {
+    "name": "template: anonymous",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "Missing or invalid Authorization header"
+    }
+  },
+  {
+    "name": "template: staff refused",
+    "status": 403,
+    "body": {
+      "error": "Insufficient permissions"
+    }
+  },
+  {
+    "name": "template: institute admin",
+    "status": 200,
+    "headers": {
+      "content-type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "content-disposition": "attachment; filename=student-upload-template.xlsx"
+    },
+    "body": "<non-json bytes>"
+  },
+  {
+    "name": "one: anonymous",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "Missing or invalid Authorization header"
+    }
+  },
+  {
+    "name": "one: staff refused",
+    "status": 403,
+    "body": {
+      "error": "Insufficient permissions"
+    }
+  },
+  {
+    "name": "one: own institute",
+    "status": 200,
+    "body": {
+      "academicGroup": {
+        "batch": "2026",
+        "department": {
+          "id": "<id>",
+          "name": "ZZ UC Dept A"
+        },
+        "id": "<id>",
+        "section": "Section A"
+      },
+      "accountStatus": "ACTIVE",
+      "batchYear": null,
+      "class": null,
+      "createdAt": "<time>",
+      "department": null,
+      "designation": null,
+      "email": "zz-uc-stu1-<ts>@example.invalid",
+      "emailVerified": false,
+      "employeeId": null,
+      "gender": "Male",
+      "id": "<id>",
+      "institute": {
+        "id": "<id>",
+        "name": "ZZ UC A <ts>"
+      },
+      "isActive": true,
+      "lastLoginAt": "<masked>",
+      "mobile": "9000000001",
+      "mustChangePassword": false,
+      "name": "ZZ UC stu1",
+      "pendingEmail": null,
+      "profilePhotoUrl": null,
+      "program": null,
+      "registrationNumber": "ZZUC-<ts>-1",
+      "role": "STUDENT",
+      "rollNumber": "001",
+      "section": null
+    }
+  },
+  {
+    "name": "one: another institute refused",
+    "status": 403,
+    "body": {
+      "error": "You can only view users under your own institute"
+    }
+  },
+  {
+    "name": "one: platform admin",
+    "status": 200,
+    "body": {
+      "academicGroup": {
+        "batch": "2026",
+        "department": {
+          "id": "<id>",
+          "name": "ZZ UC Dept A"
+        },
+        "id": "<id>",
+        "section": "Section A"
+      },
+      "accountStatus": "ACTIVE",
+      "batchYear": null,
+      "class": null,
+      "createdAt": "<time>",
+      "department": null,
+      "designation": null,
+      "email": "zz-uc-stu1-<ts>@example.invalid",
+      "emailVerified": false,
+      "employeeId": null,
+      "gender": "Male",
+      "id": "<id>",
+      "institute": {
+        "id": "<id>",
+        "name": "ZZ UC A <ts>"
+      },
+      "isActive": true,
+      "lastLoginAt": "<masked>",
+      "mobile": "9000000001",
+      "mustChangePassword": false,
+      "name": "ZZ UC stu1",
+      "pendingEmail": null,
+      "profilePhotoUrl": null,
+      "program": null,
+      "registrationNumber": "ZZUC-<ts>-1",
+      "role": "STUDENT",
+      "rollNumber": "001",
+      "section": null
+    }
+  },
+  {
+    "name": "one: unknown id",
+    "status": 404,
+    "body": {
+      "error": "User not found"
+    }
+  },
+  {
+    "name": "one: id that is not a uuid",
+    "status": 404,
+    "body": {
+      "error": "User not found"
+    }
+  },
+  {
+    "name": "lookup: anonymous",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "Missing or invalid Authorization header"
+    }
+  },
+  {
+    "name": "lookup: staff refused",
+    "status": 403,
+    "body": {
+      "error": "Insufficient permissions"
+    }
+  },
+  {
+    "name": "lookup: by registration number",
+    "status": 200,
+    "body": {
+      "attempts": [
+        {
+          "startedAt": "<time>",
+          "status": "SUBMITTED",
+          "submittedAt": "<time>",
+          "tabSwitchCount": 0,
+          "test": {
+            "id": "<id>",
+            "isPublished": true,
+            "title": "ZZ UC test <ts>"
+          },
+          "totalScore": 0
+        }
+      ],
+      "email": "zz-uc-stu1-<ts>@example.invalid",
+      "id": "<id>",
+      "name": "ZZ UC stu1",
+      "registrationNumber": "ZZUC-<ts>-1",
+      "rollNumber": "001"
+    }
+  },
+  {
+    "name": "lookup: by e-mail",
+    "status": 200,
+    "body": {
+      "attempts": [
+        {
+          "startedAt": "<time>",
+          "status": "SUBMITTED",
+          "submittedAt": "<time>",
+          "tabSwitchCount": 0,
+          "test": {
+            "id": "<id>",
+            "isPublished": true,
+            "title": "ZZ UC test <ts>"
+          },
+          "totalScore": 0
+        }
+      ],
+      "email": "zz-uc-stu1-<ts>@example.invalid",
+      "id": "<id>",
+      "name": "ZZ UC stu1",
+      "registrationNumber": "ZZUC-<ts>-1",
+      "rollNumber": "001"
+    }
+  },
+  {
+    "name": "lookup: by id",
+    "status": 200,
+    "body": {
+      "attempts": [
+        {
+          "startedAt": "<time>",
+          "status": "SUBMITTED",
+          "submittedAt": "<time>",
+          "tabSwitchCount": 0,
+          "test": {
+            "id": "<id>",
+            "isPublished": true,
+            "title": "ZZ UC test <ts>"
+          },
+          "totalScore": 0
+        }
+      ],
+      "email": "zz-uc-stu1-<ts>@example.invalid",
+      "id": "<id>",
+      "name": "ZZ UC stu1",
+      "registrationNumber": "ZZUC-<ts>-1",
+      "rollNumber": "001"
+    }
+  },
+  {
+    "name": "lookup: by roll number (first match)",
+    "status": 200,
+    "body": {
+      "attempts": [],
+      "email": "zz-uc-stu3-<ts>@example.invalid",
+      "id": "<id>",
+      "name": "ZZ UC stu3",
+      "registrationNumber": "ZZUC-<ts>-3",
+      "rollNumber": "010"
+    }
+  },
+  {
+    "name": "lookup: a student of another institute",
+    "status": 404,
+    "body": {
+      "error": "No student found with that registration number, roll number, email, or ID"
+    }
+  },
+  {
+    "name": "lookup: platform admin",
+    "status": 200,
+    "body": {
+      "attempts": [
+        {
+          "startedAt": "<time>",
+          "status": "SUBMITTED",
+          "submittedAt": "<time>",
+          "tabSwitchCount": 0,
+          "test": {
+            "id": "<id>",
+            "isPublished": true,
+            "title": "ZZ UC test <ts>"
+          },
+          "totalScore": 0
+        }
+      ],
+      "email": "zz-uc-stu1-<ts>@example.invalid",
+      "id": "<id>",
+      "name": "ZZ UC stu1",
+      "registrationNumber": "ZZUC-<ts>-1",
+      "rollNumber": "001"
+    }
+  },
+  {
+    "name": "lookup: a staff member is not a student",
+    "status": 404,
+    "body": {
+      "error": "No student found with that registration number, roll number, email, or ID"
+    }
+  },
+  {
+    "name": "lookup: unknown",
+    "status": 404,
+    "body": {
+      "error": "No student found with that registration number, roll number, email, or ID"
+    }
+  },
+  {
+    "name": "search: anonymous",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "Missing or invalid Authorization header"
+    }
+  },
+  {
+    "name": "search: student refused",
+    "status": 403,
+    "body": {
+      "error": "Insufficient permissions"
+    }
+  },
+  {
+    "name": "search: empty query",
+    "status": 200,
+    "body": {
+      "page": 1,
+      "pageSize": 20,
+      "rows": [],
+      "total": 0,
+      "totalPages": 0
+    }
+  },
+  {
+    "name": "search: by name, staff",
+    "status": 200,
+    "body": {
+      "page": 1,
+      "pageSize": 20,
+      "rows": [
+        {
+          "academicGroup": {
+            "batch": "2026",
+            "department": {
+              "name": "ZZ UC Dept A"
+            },
+            "section": "Section A"
+          },
+          "accountStatus": "ACTIVE",
+          "class": null,
+          "email": "zz-uc-stu1-<ts>@example.invalid",
+          "employeeId": null,
+          "id": "<id>",
+          "institute": {
+            "name": "ZZ UC A <ts>"
+          },
+          "isActive": true,
+          "mobile": "9000000001",
+          "name": "ZZ UC stu1",
+          "registrationNumber": "ZZUC-<ts>-1",
+          "role": "STUDENT",
+          "rollNumber": "001"
+        },
+        {
+          "academicGroup": {
+            "batch": "2026",
+            "department": {
+              "name": "ZZ UC Dept A"
+            },
+            "section": "Section A"
+          },
+          "accountStatus": "ACTIVE",
+          "class": null,
+          "email": "zz-uc-stu2-<ts>@example.invalid",
+          "employeeId": null,
+          "id": "<id>",
+          "institute": {
+            "name": "ZZ UC A <ts>"
+          },
+          "isActive": true,
+          "mobile": "9000000002",
+          "name": "ZZ UC stu2",
+          "registrationNumber": "ZZUC-<ts>-2",
+          "role": "STUDENT",
+          "rollNumber": "002"
+        },
+        {
+          "academicGroup": {
+            "batch": "2026",
+            "department": {
+              "name": "ZZ UC Dept A"
+            },
+            "section": "Section A"
+          },
+          "accountStatus": "ACTIVE",
+          "class": null,
+          "email": "zz-uc-stu3-<ts>@example.invalid",
+          "employeeId": null,
+          "id": "<id>",
+          "institute": {
+            "name": "ZZ UC A <ts>"
+          },
+          "isActive": true,
+          "mobile": null,
+          "name": "ZZ UC stu3",
+          "registrationNumber": "ZZUC-<ts>-3",
+          "role": "STUDENT",
+          "rollNumber": "010"
+        }
+      ],
+      "total": 3,
+      "totalPages": 1
+    }
+  },
+  {
+    "name": "search: by name, clerk",
+    "status": 200,
+    "body": {
+      "page": 1,
+      "pageSize": 20,
+      "rows": [
+        {
+          "academicGroup": {
+            "batch": "2026",
+            "department": {
+              "name": "ZZ UC Dept A"
+            },
+            "section": "Section A"
+          },
+          "accountStatus": "ACTIVE",
+          "class": null,
+          "email": "zz-uc-stu1-<ts>@example.invalid",
+          "employeeId": null,
+          "id": "<id>",
+          "institute": {
+            "name": "ZZ UC A <ts>"
+          },
+          "isActive": true,
+          "mobile": "9000000001",
+          "name": "ZZ UC stu1",
+          "registrationNumber": "ZZUC-<ts>-1",
+          "role": "STUDENT",
+          "rollNumber": "001"
+        },
+        {
+          "academicGroup": {
+            "batch": "2026",
+            "department": {
+              "name": "ZZ UC Dept A"
+            },
+            "section": "Section A"
+          },
+          "accountStatus": "ACTIVE",
+          "class": null,
+          "email": "zz-uc-stu2-<ts>@example.invalid",
+          "employeeId": null,
+          "id": "<id>",
+          "institute": {
+            "name": "ZZ UC A <ts>"
+          },
+          "isActive": true,
+          "mobile": "9000000002",
+          "name": "ZZ UC stu2",
+          "registrationNumber": "ZZUC-<ts>-2",
+          "role": "STUDENT",
+          "rollNumber": "002"
+        },
+        {
+          "academicGroup": {
+            "batch": "2026",
+            "department": {
+              "name": "ZZ UC Dept A"
+            },
+            "section": "Section A"
+          },
+          "accountStatus": "ACTIVE",
+          "class": null,
+          "email": "zz-uc-stu3-<ts>@example.invalid",
+          "employeeId": null,
+          "id": "<id>",
+          "institute": {
+            "name": "ZZ UC A <ts>"
+          },
+          "isActive": true,
+          "mobile": null,
+          "name": "ZZ UC stu3",
+          "registrationNumber": "ZZUC-<ts>-3",
+          "role": "STUDENT",
+          "rollNumber": "010"
+        }
+      ],
+      "total": 3,
+      "totalPages": 1
+    }
+  },
+  {
+    "name": "search: by e-mail fragment, institute admin",
+    "status": 200,
+    "body": {
+      "page": 1,
+      "pageSize": 20,
+      "rows": [
+        {
+          "academicGroup": {
+            "batch": "2026",
+            "department": {
+              "name": "ZZ UC Dept A"
+            },
+            "section": "Section A"
+          },
+          "accountStatus": "ACTIVE",
+          "class": null,
+          "email": "zz-uc-stu1-<ts>@example.invalid",
+          "employeeId": null,
+          "id": "<id>",
+          "institute": {
+            "name": "ZZ UC A <ts>"
+          },
+          "isActive": true,
+          "mobile": "9000000001",
+          "name": "ZZ UC stu1",
+          "registrationNumber": "ZZUC-<ts>-1",
+          "role": "STUDENT",
+          "rollNumber": "001"
+        }
+      ],
+      "total": 1,
+      "totalPages": 1
+    }
+  },
+  {
+    "name": "search: by mobile",
+    "status": 200,
+    "body": {
+      "page": 1,
+      "pageSize": 20,
+      "rows": [
+        {
+          "academicGroup": {
+            "batch": "2026",
+            "department": {
+              "name": "ZZ UC Dept A"
+            },
+            "section": "Section A"
+          },
+          "accountStatus": "ACTIVE",
+          "class": null,
+          "email": "zz-uc-stu2-<ts>@example.invalid",
+          "employeeId": null,
+          "id": "<id>",
+          "institute": {
+            "name": "ZZ UC A <ts>"
+          },
+          "isActive": true,
+          "mobile": "9000000002",
+          "name": "ZZ UC stu2",
+          "registrationNumber": "ZZUC-<ts>-2",
+          "role": "STUDENT",
+          "rollNumber": "002"
+        }
+      ],
+      "total": 1,
+      "totalPages": 1
+    }
+  },
+  {
+    "name": "search: by exact id",
+    "status": 200,
+    "body": {
+      "page": 1,
+      "pageSize": 20,
+      "rows": [
+        {
+          "academicGroup": {
+            "batch": "2026",
+            "department": {
+              "name": "ZZ UC Dept A"
+            },
+            "section": "Section A"
+          },
+          "accountStatus": "ACTIVE",
+          "class": null,
+          "email": "zz-uc-stu2-<ts>@example.invalid",
+          "employeeId": null,
+          "id": "<id>",
+          "institute": {
+            "name": "ZZ UC A <ts>"
+          },
+          "isActive": true,
+          "mobile": "9000000002",
+          "name": "ZZ UC stu2",
+          "registrationNumber": "ZZUC-<ts>-2",
+          "role": "STUDENT",
+          "rollNumber": "002"
+        }
+      ],
+      "total": 1,
+      "totalPages": 1
+    }
+  },
+  {
+    "name": "search: role filter",
+    "status": 200,
+    "body": {
+      "page": 1,
+      "pageSize": 20,
+      "rows": [
+        {
+          "academicGroup": null,
+          "accountStatus": "ACTIVE",
+          "class": null,
+          "email": "zz-uc-clerka-<ts>@example.invalid",
+          "employeeId": null,
+          "id": "<id>",
+          "institute": {
+            "name": "ZZ UC A <ts>"
+          },
+          "isActive": true,
+          "mobile": null,
+          "name": "ZZ UC clerkA",
+          "registrationNumber": null,
+          "role": "CLERK",
+          "rollNumber": null
+        }
+      ],
+      "total": 1,
+      "totalPages": 1
+    }
+  },
+  {
+    "name": "search: unknown role filter is ignored",
+    "status": 200,
+    "body": {
+      "page": 1,
+      "pageSize": 20,
+      "rows": [
+        {
+          "academicGroup": {
+            "batch": "2026",
+            "department": {
+              "name": "ZZ UC Dept A"
+            },
+            "section": "Section A"
+          },
+          "accountStatus": "ACTIVE",
+          "class": null,
+          "email": "zz-uc-stu1-<ts>@example.invalid",
+          "employeeId": null,
+          "id": "<id>",
+          "institute": {
+            "name": "ZZ UC A <ts>"
+          },
+          "isActive": true,
+          "mobile": "9000000001",
+          "name": "ZZ UC stu1",
+          "registrationNumber": "ZZUC-<ts>-1",
+          "role": "STUDENT",
+          "rollNumber": "001"
+        },
+        {
+          "academicGroup": {
+            "batch": "2026",
+            "department": {
+              "name": "ZZ UC Dept A"
+            },
+            "section": "Section A"
+          },
+          "accountStatus": "ACTIVE",
+          "class": null,
+          "email": "zz-uc-stu2-<ts>@example.invalid",
+          "employeeId": null,
+          "id": "<id>",
+          "institute": {
+            "name": "ZZ UC A <ts>"
+          },
+          "isActive": true,
+          "mobile": "9000000002",
+          "name": "ZZ UC stu2",
+          "registrationNumber": "ZZUC-<ts>-2",
+          "role": "STUDENT",
+          "rollNumber": "002"
+        },
+        {
+          "academicGroup": {
+            "batch": "2026",
+            "department": {
+              "name": "ZZ UC Dept A"
+            },
+            "section": "Section A"
+          },
+          "accountStatus": "ACTIVE",
+          "class": null,
+          "email": "zz-uc-stu3-<ts>@example.invalid",
+          "employeeId": null,
+          "id": "<id>",
+          "institute": {
+            "name": "ZZ UC A <ts>"
+          },
+          "isActive": true,
+          "mobile": null,
+          "name": "ZZ UC stu3",
+          "registrationNumber": "ZZUC-<ts>-3",
+          "role": "STUDENT",
+          "rollNumber": "010"
+        }
+      ],
+      "total": 3,
+      "totalPages": 1
+    }
+  },
+  {
+    "name": "search: institute isolation",
+    "status": 200,
+    "body": {
+      "page": 1,
+      "pageSize": 20,
+      "rows": [
+        {
+          "academicGroup": {
+            "batch": "2026",
+            "department": {
+              "name": "ZZ UC Dept B"
+            },
+            "section": "Section B"
+          },
+          "accountStatus": "ACTIVE",
+          "class": null,
+          "email": "zz-uc-stub-<ts>@example.invalid",
+          "employeeId": null,
+          "id": "<id>",
+          "institute": {
+            "name": "ZZ UC B <ts>"
+          },
+          "isActive": true,
+          "mobile": null,
+          "name": "ZZ UC stuB",
+          "registrationNumber": "ZZUC-<ts>-B",
+          "role": "STUDENT",
+          "rollNumber": "001"
+        }
+      ],
+      "total": 1,
+      "totalPages": 1
+    }
+  },
+  {
+    "name": "search: platform admin sees both institutes",
+    "status": 200,
+    "body": {
+      "page": 1,
+      "pageSize": 100,
+      "rows": [
+        {
+          "academicGroup": {
+            "batch": "2026",
+            "department": {
+              "name": "ZZ UC Dept A"
+            },
+            "section": "Section A"
+          },
+          "accountStatus": "ACTIVE",
+          "class": null,
+          "email": "zz-uc-stu1-<ts>@example.invalid",
+          "employeeId": null,
+          "id": "<id>",
+          "institute": {
+            "name": "ZZ UC A <ts>"
+          },
+          "isActive": true,
+          "mobile": "9000000001",
+          "name": "ZZ UC stu1",
+          "registrationNumber": "ZZUC-<ts>-1",
+          "role": "STUDENT",
+          "rollNumber": "001"
+        },
+        {
+          "academicGroup": {
+            "batch": "2026",
+            "department": {
+              "name": "ZZ UC Dept A"
+            },
+            "section": "Section A"
+          },
+          "accountStatus": "ACTIVE",
+          "class": null,
+          "email": "zz-uc-stu2-<ts>@example.invalid",
+          "employeeId": null,
+          "id": "<id>",
+          "institute": {
+            "name": "ZZ UC A <ts>"
+          },
+          "isActive": true,
+          "mobile": "9000000002",
+          "name": "ZZ UC stu2",
+          "registrationNumber": "ZZUC-<ts>-2",
+          "role": "STUDENT",
+          "rollNumber": "002"
+        },
+        {
+          "academicGroup": {
+            "batch": "2026",
+            "department": {
+              "name": "ZZ UC Dept A"
+            },
+            "section": "Section A"
+          },
+          "accountStatus": "ACTIVE",
+          "class": null,
+          "email": "zz-uc-stu3-<ts>@example.invalid",
+          "employeeId": null,
+          "id": "<id>",
+          "institute": {
+            "name": "ZZ UC A <ts>"
+          },
+          "isActive": true,
+          "mobile": null,
+          "name": "ZZ UC stu3",
+          "registrationNumber": "ZZUC-<ts>-3",
+          "role": "STUDENT",
+          "rollNumber": "010"
+        },
+        {
+          "academicGroup": {
+            "batch": "2026",
+            "department": {
+              "name": "ZZ UC Dept B"
+            },
+            "section": "Section B"
+          },
+          "accountStatus": "ACTIVE",
+          "class": null,
+          "email": "zz-uc-stub-<ts>@example.invalid",
+          "employeeId": null,
+          "id": "<id>",
+          "institute": {
+            "name": "ZZ UC B <ts>"
+          },
+          "isActive": true,
+          "mobile": null,
+          "name": "ZZ UC stuB",
+          "registrationNumber": "ZZUC-<ts>-B",
+          "role": "STUDENT",
+          "rollNumber": "001"
+        }
+      ],
+      "total": 4,
+      "totalPages": 1
+    }
+  },
+  {
+    "name": "search: paging",
+    "status": 200,
+    "body": {
+      "page": 2,
+      "pageSize": 2,
+      "rows": [
+        {
+          "academicGroup": {
+            "batch": "2026",
+            "department": {
+              "name": "ZZ UC Dept A"
+            },
+            "section": "Section A"
+          },
+          "accountStatus": "ACTIVE",
+          "class": null,
+          "email": "zz-uc-stu3-<ts>@example.invalid",
+          "employeeId": null,
+          "id": "<id>",
+          "institute": {
+            "name": "ZZ UC A <ts>"
+          },
+          "isActive": true,
+          "mobile": null,
+          "name": "ZZ UC stu3",
+          "registrationNumber": "ZZUC-<ts>-3",
+          "role": "STUDENT",
+          "rollNumber": "010"
+        }
+      ],
+      "total": 3,
+      "totalPages": 2
+    }
+  },
+  {
+    "name": "search: document filter with no documents",
+    "status": 200,
+    "body": {
+      "page": 1,
+      "pageSize": 20,
+      "rows": [],
+      "total": 0,
+      "totalPages": 1
+    }
+  },
+  {
+    "name": "browse: anonymous",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "Missing or invalid Authorization header"
+    }
+  },
+  {
+    "name": "browse: student refused",
+    "status": 403,
+    "body": {
+      "error": "Insufficient permissions"
+    }
+  },
+  {
+    "name": "browse: no department",
+    "status": 400,
+    "body": {
+      "error": "Department and Section are required"
+    }
+  },
+  {
+    "name": "browse: platform admin without an institute",
+    "status": 400,
+    "body": {
+      "error": "Institute is required"
+    }
+  },
+  {
+    "name": "browse: platform admin with an institute",
+    "status": 200,
+    "body": {
+      "page": 1,
+      "pageSize": 50,
+      "rows": [
+        {
+          "academicGroup": {
+            "batch": "2026",
+            "department": {
+              "name": "ZZ UC Dept A"
+            },
+            "section": "Section A"
+          },
+          "class": null,
+          "email": "zz-uc-stu1-<ts>@example.invalid",
+          "id": "<id>",
+          "institute": {
+            "name": "ZZ UC A <ts>"
+          },
+          "isActive": true,
+          "name": "ZZ UC stu1",
+          "registrationNumber": "ZZUC-<ts>-1",
+          "rollNumber": "001"
+        },
+        {
+          "academicGroup": {
+            "batch": "2026",
+            "department": {
+              "name": "ZZ UC Dept A"
+            },
+            "section": "Section A"
+          },
+          "class": null,
+          "email": "zz-uc-stu2-<ts>@example.invalid",
+          "id": "<id>",
+          "institute": {
+            "name": "ZZ UC A <ts>"
+          },
+          "isActive": true,
+          "name": "ZZ UC stu2",
+          "registrationNumber": "ZZUC-<ts>-2",
+          "rollNumber": "002"
+        },
+        {
+          "academicGroup": {
+            "batch": "2026",
+            "department": {
+              "name": "ZZ UC Dept A"
+            },
+            "section": "Section A"
+          },
+          "class": null,
+          "email": "zz-uc-stu3-<ts>@example.invalid",
+          "id": "<id>",
+          "institute": {
+            "name": "ZZ UC A <ts>"
+          },
+          "isActive": true,
+          "name": "ZZ UC stu3",
+          "registrationNumber": "ZZUC-<ts>-3",
+          "rollNumber": "010"
+        }
+      ],
+      "total": 3,
+      "totalPages": 1
+    }
+  },
+  {
+    "name": "browse: staff, ordered by roll number",
+    "status": 200,
+    "body": {
+      "page": 1,
+      "pageSize": 50,
+      "rows": [
+        {
+          "academicGroup": {
+            "batch": "2026",
+            "department": {
+              "name": "ZZ UC Dept A"
+            },
+            "section": "Section A"
+          },
+          "class": null,
+          "email": "zz-uc-stu1-<ts>@example.invalid",
+          "id": "<id>",
+          "institute": {
+            "name": "ZZ UC A <ts>"
+          },
+          "isActive": true,
+          "name": "ZZ UC stu1",
+          "registrationNumber": "ZZUC-<ts>-1",
+          "rollNumber": "001"
+        },
+        {
+          "academicGroup": {
+            "batch": "2026",
+            "department": {
+              "name": "ZZ UC Dept A"
+            },
+            "section": "Section A"
+          },
+          "class": null,
+          "email": "zz-uc-stu2-<ts>@example.invalid",
+          "id": "<id>",
+          "institute": {
+            "name": "ZZ UC A <ts>"
+          },
+          "isActive": true,
+          "name": "ZZ UC stu2",
+          "registrationNumber": "ZZUC-<ts>-2",
+          "rollNumber": "002"
+        },
+        {
+          "academicGroup": {
+            "batch": "2026",
+            "department": {
+              "name": "ZZ UC Dept A"
+            },
+            "section": "Section A"
+          },
+          "class": null,
+          "email": "zz-uc-stu3-<ts>@example.invalid",
+          "id": "<id>",
+          "institute": {
+            "name": "ZZ UC A <ts>"
+          },
+          "isActive": true,
+          "name": "ZZ UC stu3",
+          "registrationNumber": "ZZUC-<ts>-3",
+          "rollNumber": "010"
+        }
+      ],
+      "total": 3,
+      "totalPages": 1
+    }
+  },
+  {
+    "name": "browse: with the batch",
+    "status": 200,
+    "body": {
+      "page": 1,
+      "pageSize": 50,
+      "rows": [
+        {
+          "academicGroup": {
+            "batch": "2026",
+            "department": {
+              "name": "ZZ UC Dept A"
+            },
+            "section": "Section A"
+          },
+          "class": null,
+          "email": "zz-uc-stu1-<ts>@example.invalid",
+          "id": "<id>",
+          "institute": {
+            "name": "ZZ UC A <ts>"
+          },
+          "isActive": true,
+          "name": "ZZ UC stu1",
+          "registrationNumber": "ZZUC-<ts>-1",
+          "rollNumber": "001"
+        },
+        {
+          "academicGroup": {
+            "batch": "2026",
+            "department": {
+              "name": "ZZ UC Dept A"
+            },
+            "section": "Section A"
+          },
+          "class": null,
+          "email": "zz-uc-stu2-<ts>@example.invalid",
+          "id": "<id>",
+          "institute": {
+            "name": "ZZ UC A <ts>"
+          },
+          "isActive": true,
+          "name": "ZZ UC stu2",
+          "registrationNumber": "ZZUC-<ts>-2",
+          "rollNumber": "002"
+        },
+        {
+          "academicGroup": {
+            "batch": "2026",
+            "department": {
+              "name": "ZZ UC Dept A"
+            },
+            "section": "Section A"
+          },
+          "class": null,
+          "email": "zz-uc-stu3-<ts>@example.invalid",
+          "id": "<id>",
+          "institute": {
+            "name": "ZZ UC A <ts>"
+          },
+          "isActive": true,
+          "name": "ZZ UC stu3",
+          "registrationNumber": "ZZUC-<ts>-3",
+          "rollNumber": "010"
+        }
+      ],
+      "total": 3,
+      "totalPages": 1
+    }
+  },
+  {
+    "name": "browse: paging",
+    "status": 200,
+    "body": {
+      "page": 2,
+      "pageSize": 2,
+      "rows": [
+        {
+          "academicGroup": {
+            "batch": "2026",
+            "department": {
+              "name": "ZZ UC Dept A"
+            },
+            "section": "Section A"
+          },
+          "class": null,
+          "email": "zz-uc-stu3-<ts>@example.invalid",
+          "id": "<id>",
+          "institute": {
+            "name": "ZZ UC A <ts>"
+          },
+          "isActive": true,
+          "name": "ZZ UC stu3",
+          "registrationNumber": "ZZUC-<ts>-3",
+          "rollNumber": "010"
+        }
+      ],
+      "total": 3,
+      "totalPages": 2
+    }
+  },
+  {
+    "name": "browse: no such group",
+    "status": 200,
+    "body": {
+      "page": 1,
+      "pageSize": 50,
+      "rows": [],
+      "total": 0,
+      "totalPages": 0
+    }
+  },
+  {
+    "name": "browse: another institute's department",
+    "status": 200,
+    "body": {
+      "page": 1,
+      "pageSize": 50,
+      "rows": [],
+      "total": 0,
+      "totalPages": 0
+    }
+  },
+  {
+    "name": "browse: placement filter",
+    "status": 200,
+    "body": {
+      "page": 1,
+      "pageSize": 50,
+      "rows": [],
+      "total": 0,
+      "totalPages": 0
+    }
+  },
+  {
+    "name": "history: anonymous",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "Missing or invalid Authorization header"
+    }
+  },
+  {
+    "name": "history: clerk refused",
+    "status": 403,
+    "body": {
+      "error": "Insufficient permissions"
+    }
+  },
+  {
+    "name": "history: staff sees the own institute",
+    "status": 200,
+    "body": [
+      {
+        "createdAt": "<time>",
+        "emailSent": false,
+        "id": "<id>",
+        "resetBy": "ZZ UC staffA",
+        "studentId": "<id>",
+        "studentName": "ZZ UC stu2"
+      },
+      {
+        "createdAt": "<time>",
+        "emailSent": true,
+        "id": "<id>",
+        "resetBy": "ZZ UC instA",
+        "studentId": "<id>",
+        "studentName": "ZZ UC stu1"
+      }
+    ]
+  },
+  {
+    "name": "history: other institute",
+    "status": 200,
+    "body": [
+      {
+        "createdAt": "<time>",
+        "emailSent": true,
+        "id": "<id>",
+        "resetBy": "ZZ UC instB",
+        "studentId": "<id>",
+        "studentName": "ZZ UC stuB"
+      }
+    ]
+  },
+  {
+    "name": "history: platform admin (shape)",
+    "status": 200,
+    "body": [
+      {
+        "createdAt": "string",
+        "emailSent": "null",
+        "id": "string",
+        "resetBy": "string",
+        "studentId": "string",
+        "studentName": "null"
+      }
+    ]
+  },
+  {
+    "name": "conflicts: anonymous",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "Missing or invalid Authorization header"
+    }
+  },
+  {
+    "name": "conflicts: staff refused",
+    "status": 403,
+    "body": {
+      "error": "Insufficient permissions"
+    }
+  },
+  {
+    "name": "conflicts: institute admin",
+    "status": 200,
+    "body": {
+      "conflicts": [
+        {
+          "academicGroupId": "<id>",
+          "batch": "2026",
+          "branch": "ZZ UC Dept A",
+          "institute": {
+            "id": "<id>",
+            "name": "ZZ UC A <ts>"
+          },
+          "rollNumber": "005",
+          "section": "Section B",
+          "students": [
+            {
+              "academicGroupId": "<id>",
+              "batchYear": null,
+              "createdAt": "<time>",
+              "department": null,
+              "email": "zz-uc-cf1-<ts>@example.invalid",
+              "id": "<id>",
+              "instituteId": "<id>",
+              "isActive": true,
+              "mobile": null,
+              "name": "ZZ UC cf1",
+              "registrationNumber": "ZZUC-<ts>-C1",
+              "rollNumber": "005",
+              "section": null
+            },
+            {
+              "academicGroupId": "<id>",
+              "batchYear": null,
+              "createdAt": "<time>",
+              "department": null,
+              "email": "zz-uc-cf2-<ts>@example.invalid",
+              "id": "<id>",
+              "instituteId": "<id>",
+              "isActive": true,
+              "mobile": null,
+              "name": "ZZ UC cf2",
+              "registrationNumber": "ZZUC-<ts>-C2",
+              "rollNumber": "005",
+              "section": null
+            }
+          ]
+        }
+      ],
+      "page": 1,
+      "pageSize": 20,
+      "total": 1,
+      "totalPages": 1
+    }
+  },
+  {
+    "name": "conflicts: other institute has none",
+    "status": 200,
+    "body": {
+      "conflicts": [],
+      "page": 1,
+      "pageSize": 20,
+      "total": 0,
+      "totalPages": 1
+    }
+  },
+  {
+    "name": "conflicts: paging",
+    "status": 200,
+    "body": {
+      "conflicts": [],
+      "page": 2,
+      "pageSize": 1,
+      "total": 1,
+      "totalPages": 1
+    }
+  },
+  {
+    "name": "conflicts: platform admin (shape)",
+    "status": 200,
+    "body": {
+      "conflicts": [
+        {
+          "academicGroupId": "string",
+          "batch": "string",
+          "branch": "string",
+          "institute": {
+            "id": "string",
+            "name": "string"
+          },
+          "rollNumber": "string",
+          "section": "string",
+          "students": [
+            {
+              "academicGroupId": "string",
+              "batchYear": "string",
+              "createdAt": "string",
+              "department": "string",
+              "email": "string",
+              "id": "string",
+              "instituteId": "string",
+              "isActive": "boolean",
+              "mobile": "string",
+              "name": "string",
+              "registrationNumber": "string",
+              "rollNumber": "string",
+              "section": "string"
+            }
+          ]
+        }
+      ],
+      "page": "number",
+      "pageSize": "number",
+      "total": "number",
+      "totalPages": "number"
+    }
+  },
+  {
+    "name": "audit: anonymous",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "Missing or invalid Authorization header"
+    }
+  },
+  {
+    "name": "audit: student refused",
+    "status": 403,
+    "body": {
+      "error": "Insufficient permissions"
+    }
+  },
+  {
+    "name": "audit: institute admin, time window",
+    "status": 200,
+    "body": {
+      "page": 1,
+      "pageSize": 50,
+      "rows": [
+        {
+          "action": "TEST_CREATED",
+          "adminId": "<id>",
+          "adminName": "ZZ UC staffA",
+          "adminRole": "STAFF",
+          "createdAt": "<time>",
+          "details": {
+            "title": "x"
+          },
+          "deviceInfo": "<masked>",
+          "id": "<id>",
+          "instituteId": "<id>",
+          "ipAddress": "<masked>",
+          "studentId": null
+        },
+        {
+          "action": "PASSWORD_RESET",
+          "adminId": "<id>",
+          "adminName": "ZZ UC staffA",
+          "adminRole": "STAFF",
+          "createdAt": "<time>",
+          "details": {
+            "emailSent": false,
+            "studentName": "ZZ UC stu2"
+          },
+          "deviceInfo": "<masked>",
+          "id": "<id>",
+          "instituteId": "<id>",
+          "ipAddress": "<masked>",
+          "studentId": "<id>"
+        },
+        {
+          "action": "PASSWORD_RESET",
+          "adminId": "<id>",
+          "adminName": "ZZ UC instA",
+          "adminRole": "INSTITUTE_ADMIN",
+          "createdAt": "<time>",
+          "details": {
+            "emailSent": true,
+            "studentName": "ZZ UC stu1"
+          },
+          "deviceInfo": "<masked>",
+          "id": "<id>",
+          "instituteId": "<id>",
+          "ipAddress": "<masked>",
+          "studentId": "<id>"
+        },
+        {
+          "action": "DOCUMENT_VERIFIED",
+          "adminId": "<id>",
+          "adminName": "ZZ UC clerkA",
+          "adminRole": "CLERK",
+          "createdAt": "<time>",
+          "details": {
+            "documentType": "AADHAAR"
+          },
+          "deviceInfo": "<masked>",
+          "id": "<id>",
+          "instituteId": "<id>",
+          "ipAddress": "<masked>",
+          "studentId": "<id>"
+        },
+        {
+          "action": "DOCUMENT_UPLOADED",
+          "adminId": "<id>",
+          "adminName": "ZZ UC stu2",
+          "adminRole": "STUDENT",
+          "createdAt": "<time>",
+          "details": {
+            "documentType": "PAN"
+          },
+          "deviceInfo": "<masked>",
+          "id": "<id>",
+          "instituteId": "<id>",
+          "ipAddress": "<masked>",
+          "studentId": "<id>"
+        },
+        {
+          "action": "DOCUMENT_UPLOADED",
+          "adminId": "<id>",
+          "adminName": "ZZ UC stu1",
+          "adminRole": "STUDENT",
+          "createdAt": "<time>",
+          "details": {
+            "documentType": "AADHAAR"
+          },
+          "deviceInfo": "<masked>",
+          "id": "<id>",
+          "instituteId": "<id>",
+          "ipAddress": "<masked>",
+          "studentId": "<id>"
+        }
+      ],
+      "total": 6,
+      "totalPages": 1
+    }
+  },
+  {
+    "name": "audit: one action",
+    "status": 200,
+    "body": {
+      "page": 1,
+      "pageSize": 50,
+      "rows": [
+        {
+          "action": "PASSWORD_RESET",
+          "adminId": "<id>",
+          "adminName": "ZZ UC staffA",
+          "adminRole": "STAFF",
+          "createdAt": "<time>",
+          "details": {
+            "emailSent": false,
+            "studentName": "ZZ UC stu2"
+          },
+          "deviceInfo": "<masked>",
+          "id": "<id>",
+          "instituteId": "<id>",
+          "ipAddress": "<masked>",
+          "studentId": "<id>"
+        },
+        {
+          "action": "PASSWORD_RESET",
+          "adminId": "<id>",
+          "adminName": "ZZ UC instA",
+          "adminRole": "INSTITUTE_ADMIN",
+          "createdAt": "<time>",
+          "details": {
+            "emailSent": true,
+            "studentName": "ZZ UC stu1"
+          },
+          "deviceInfo": "<masked>",
+          "id": "<id>",
+          "instituteId": "<id>",
+          "ipAddress": "<masked>",
+          "studentId": "<id>"
+        }
+      ],
+      "total": 2,
+      "totalPages": 1
+    }
+  },
+  {
+    "name": "audit: one student",
+    "status": 200,
+    "body": {
+      "page": 1,
+      "pageSize": 50,
+      "rows": [
+        {
+          "action": "PASSWORD_RESET",
+          "adminId": "<id>",
+          "adminName": "ZZ UC instA",
+          "adminRole": "INSTITUTE_ADMIN",
+          "createdAt": "<time>",
+          "details": {
+            "emailSent": true,
+            "studentName": "ZZ UC stu1"
+          },
+          "deviceInfo": "<masked>",
+          "id": "<id>",
+          "instituteId": "<id>",
+          "ipAddress": "<masked>",
+          "studentId": "<id>"
+        },
+        {
+          "action": "DOCUMENT_VERIFIED",
+          "adminId": "<id>",
+          "adminName": "ZZ UC clerkA",
+          "adminRole": "CLERK",
+          "createdAt": "<time>",
+          "details": {
+            "documentType": "AADHAAR"
+          },
+          "deviceInfo": "<masked>",
+          "id": "<id>",
+          "instituteId": "<id>",
+          "ipAddress": "<masked>",
+          "studentId": "<id>"
+        },
+        {
+          "action": "DOCUMENT_UPLOADED",
+          "adminId": "<id>",
+          "adminName": "ZZ UC stu1",
+          "adminRole": "STUDENT",
+          "createdAt": "<time>",
+          "details": {
+            "documentType": "AADHAAR"
+          },
+          "deviceInfo": "<masked>",
+          "id": "<id>",
+          "instituteId": "<id>",
+          "ipAddress": "<masked>",
+          "studentId": "<id>"
+        }
+      ],
+      "total": 3,
+      "totalPages": 1
+    }
+  },
+  {
+    "name": "audit: clerk sees only the document actions",
+    "status": 200,
+    "body": {
+      "page": 1,
+      "pageSize": 50,
+      "rows": [
+        {
+          "action": "DOCUMENT_VERIFIED",
+          "adminId": "<id>",
+          "adminName": "ZZ UC clerkA",
+          "adminRole": "CLERK",
+          "createdAt": "<time>",
+          "details": {
+            "documentType": "AADHAAR"
+          },
+          "deviceInfo": "<masked>",
+          "id": "<id>",
+          "instituteId": "<id>",
+          "ipAddress": "<masked>",
+          "studentId": "<id>"
+        },
+        {
+          "action": "DOCUMENT_UPLOADED",
+          "adminId": "<id>",
+          "adminName": "ZZ UC stu2",
+          "adminRole": "STUDENT",
+          "createdAt": "<time>",
+          "details": {
+            "documentType": "PAN"
+          },
+          "deviceInfo": "<masked>",
+          "id": "<id>",
+          "instituteId": "<id>",
+          "ipAddress": "<masked>",
+          "studentId": "<id>"
+        },
+        {
+          "action": "DOCUMENT_UPLOADED",
+          "adminId": "<id>",
+          "adminName": "ZZ UC stu1",
+          "adminRole": "STUDENT",
+          "createdAt": "<time>",
+          "details": {
+            "documentType": "AADHAAR"
+          },
+          "deviceInfo": "<masked>",
+          "id": "<id>",
+          "instituteId": "<id>",
+          "ipAddress": "<masked>",
+          "studentId": "<id>"
+        }
+      ],
+      "total": 3,
+      "totalPages": 1
+    }
+  },
+  {
+    "name": "audit: clerk asking for an action outside the allowlist",
+    "status": 200,
+    "body": {
+      "page": 1,
+      "pageSize": 50,
+      "rows": [
+        {
+          "action": "DOCUMENT_VERIFIED",
+          "adminId": "<id>",
+          "adminName": "ZZ UC clerkA",
+          "adminRole": "CLERK",
+          "createdAt": "<time>",
+          "details": {
+            "documentType": "AADHAAR"
+          },
+          "deviceInfo": "<masked>",
+          "id": "<id>",
+          "instituteId": "<id>",
+          "ipAddress": "<masked>",
+          "studentId": "<id>"
+        },
+        {
+          "action": "DOCUMENT_UPLOADED",
+          "adminId": "<id>",
+          "adminName": "ZZ UC stu2",
+          "adminRole": "STUDENT",
+          "createdAt": "<time>",
+          "details": {
+            "documentType": "PAN"
+          },
+          "deviceInfo": "<masked>",
+          "id": "<id>",
+          "instituteId": "<id>",
+          "ipAddress": "<masked>",
+          "studentId": "<id>"
+        },
+        {
+          "action": "DOCUMENT_UPLOADED",
+          "adminId": "<id>",
+          "adminName": "ZZ UC stu1",
+          "adminRole": "STUDENT",
+          "createdAt": "<time>",
+          "details": {
+            "documentType": "AADHAAR"
+          },
+          "deviceInfo": "<masked>",
+          "id": "<id>",
+          "instituteId": "<id>",
+          "ipAddress": "<masked>",
+          "studentId": "<id>"
+        }
+      ],
+      "total": 3,
+      "totalPages": 1
+    }
+  },
+  {
+    "name": "audit: clerk asking for an allowed action",
+    "status": 200,
+    "body": {
+      "page": 1,
+      "pageSize": 50,
+      "rows": [
+        {
+          "action": "DOCUMENT_VERIFIED",
+          "adminId": "<id>",
+          "adminName": "ZZ UC clerkA",
+          "adminRole": "CLERK",
+          "createdAt": "<time>",
+          "details": {
+            "documentType": "AADHAAR"
+          },
+          "deviceInfo": "<masked>",
+          "id": "<id>",
+          "instituteId": "<id>",
+          "ipAddress": "<masked>",
+          "studentId": "<id>"
+        }
+      ],
+      "total": 1,
+      "totalPages": 1
+    }
+  },
+  {
+    "name": "audit: paging",
+    "status": 200,
+    "body": {
+      "page": 2,
+      "pageSize": 2,
+      "rows": [
+        {
+          "action": "PASSWORD_RESET",
+          "adminId": "<id>",
+          "adminName": "ZZ UC instA",
+          "adminRole": "INSTITUTE_ADMIN",
+          "createdAt": "<time>",
+          "details": {
+            "emailSent": true,
+            "studentName": "ZZ UC stu1"
+          },
+          "deviceInfo": "<masked>",
+          "id": "<id>",
+          "instituteId": "<id>",
+          "ipAddress": "<masked>",
+          "studentId": "<id>"
+        },
+        {
+          "action": "DOCUMENT_VERIFIED",
+          "adminId": "<id>",
+          "adminName": "ZZ UC clerkA",
+          "adminRole": "CLERK",
+          "createdAt": "<time>",
+          "details": {
+            "documentType": "AADHAAR"
+          },
+          "deviceInfo": "<masked>",
+          "id": "<id>",
+          "instituteId": "<id>",
+          "ipAddress": "<masked>",
+          "studentId": "<id>"
+        }
+      ],
+      "total": 6,
+      "totalPages": 3
+    }
+  },
+  {
+    "name": "audit: other institute",
+    "status": 200,
+    "body": {
+      "page": 1,
+      "pageSize": 50,
+      "rows": [
+        {
+          "action": "PASSWORD_RESET",
+          "adminId": "<id>",
+          "adminName": "ZZ UC instB",
+          "adminRole": "INSTITUTE_ADMIN",
+          "createdAt": "<time>",
+          "details": {
+            "emailSent": true,
+            "studentName": "ZZ UC stuB"
+          },
+          "deviceInfo": "<masked>",
+          "id": "<id>",
+          "instituteId": "<id>",
+          "ipAddress": "<masked>",
+          "studentId": "<id>"
+        }
+      ],
+      "total": 1,
+      "totalPages": 1
+    }
+  },
+  {
+    "name": "audit: csv export",
+    "status": 200,
+    "headers": {
+      "content-type": "text/csv; charset=utf-8",
+      "content-disposition": "attachment; filename=audit-log.csv"
+    },
+    "body": "Timestamp,Action,Actor,Role,IP Address,Device,Student ID,Institute ID,Details\n\"<time>\",\"TEST_CREATED\",\"ZZ UC staffA\",\"STAFF\",\"10.0.0.1\",\"Seed\",\"\",\"<id>\",\"{\"\"\"\"title\"\"\"\":\"\"\"\"x\"\"\"\"}\"\n\"<time>\",\"PASSWORD_RESET\",\"ZZ UC staffA\",\"STAFF\",\"10.0.0.1\",\"Seed\",\"<id>\",\"<id>\",\"{\"\"\"\"emailSent\"\"\"\":false,\"\"\"\"studentName\"\"\"\":\"\"\"\"ZZ UC stu2\"\"\"\"}\"\n\"<time>\",\"PASSWORD_RESET\",\"ZZ UC instA\",\"INSTITUTE_ADMIN\",\"10.0.0.1\",\"Seed\",\"<id>\",\"<id>\",\"{\"\"\"\"emailSent\"\"\"\":true,\"\"\"\"studentName\"\"\"\":\"\"\"\"ZZ UC stu1\"\"\"\"}\"\n\"<time>\",\"DOCUMENT_VERIFIED\",\"ZZ UC clerkA\",\"CLERK\",\"10.0.0.1\",\"Seed\",\"<id>\",\"<id>\",\"{\"\"\"\"documentType\"\"\"\":\"\"\"\"AADHAAR\"\"\"\"}\"\n\"<time>\",\"DOCUMENT_UPLOADED\",\"ZZ UC stu2\",\"STUDENT\",\"10.0.0.1\",\"Seed\",\"<id>\",\"<id>\",\"{\"\"\"\"documentType\"\"\"\":\"\"\"\"PAN\"\"\"\"}\"\n\"<time>\",\"DOCUMENT_UPLOADED\",\"ZZ UC stu1\",\"STUDENT\",\"10.0.0.1\",\"Seed\",\"<id>\",\"<id>\",\"{\"\"\"\"documentType\"\"\"\":\"\"\"\"AADHAAR\"\"\"\"}\""
+  },
+  {
+    "name": "audit actions: anonymous",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "Missing or invalid Authorization header"
+    }
+  },
+  {
+    "name": "audit actions: student refused",
+    "status": 403,
+    "body": {
+      "error": "Insufficient permissions"
+    }
+  },
+  {
+    "name": "audit actions: institute B",
+    "status": 200,
+    "body": [
+      "string"
+    ]
+  },
+  {
+    "name": "audit actions: platform admin (shape)",
+    "status": 200,
+    "body": [
+      "string"
+    ]
+  },
+  {
+    "name": "migration status: anonymous",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "Missing or invalid Authorization header"
+    }
+  },
+  {
+    "name": "migration status: institute admin refused",
+    "status": 403,
+    "body": {
+      "error": "Insufficient permissions"
+    }
+  },
+  {
+    "name": "migration status: platform admin (shape)",
+    "status": 200,
+    "body": {
+      "academicGroupsTotal": "number",
+      "classesTotal": "number",
+      "studentsUnlinked": "number",
+      "studentsWithClassId": "number",
+      "studentsWithGroupId": "number",
+      "zeroDataLossGatePassed": "boolean"
+    }
+  },
+  {
+    "name": "performance: anonymous",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "Missing or invalid Authorization header"
+    }
+  },
+  {
+    "name": "performance: the student itself",
+    "status": 200,
+    "body": {
+      "analytics": {
+        "codingVsMcq": {
+          "coding": {
+            "attempted": 0,
+            "percentage": 0,
+            "solved": 0
+          },
+          "mcq": {
+            "attempted": 0,
+            "correct": 0,
+            "percentage": 0
+          }
+        },
+        "monthly": [
+          {
+            "averagePercentage": 0,
+            "month": "2026-10",
+            "testsCount": 1
+          }
+        ],
+        "scoreTrend": [
+          {
+            "date": "<time>",
+            "percentage": 0,
+            "testName": "ZZ UC test <ts>"
+          }
+        ],
+        "subjectWise": []
+      },
+      "student": {
+        "academicGroup": {
+          "batch": "2026",
+          "department": {
+            "name": "ZZ UC Dept A"
+          },
+          "id": "<id>",
+          "section": "Section A"
+        },
+        "batchYear": null,
+        "class": null,
+        "department": null,
+        "email": "zz-uc-stu1-<ts>@example.invalid",
+        "id": "<id>",
+        "institute": {
+          "id": "<id>",
+          "name": "ZZ UC A <ts>"
+        },
+        "isActive": true,
+        "mobile": "9000000001",
+        "name": "ZZ UC stu1",
+        "profilePhotoUrl": null,
+        "program": null,
+        "registrationNumber": "ZZUC-<ts>-1",
+        "rollNumber": "001",
+        "section": null
+      },
+      "summary": {
+        "averageScorePercent": 0,
+        "highest": {
+          "date": "<time>",
+          "maxScore": 0,
+          "percentage": 0,
+          "resultsPending": false,
+          "score": 0,
+          "status": "SUBMITTED",
+          "testId": "<id>",
+          "testName": "ZZ UC test <ts>",
+          "timeTakenMin": 14
+        },
+        "lastAttemptDate": "<time>",
+        "lowest": {
+          "date": "<time>",
+          "maxScore": 0,
+          "percentage": 0,
+          "resultsPending": false,
+          "score": 0,
+          "status": "SUBMITTED",
+          "testId": "<id>",
+          "testName": "ZZ UC test <ts>",
+          "timeTakenMin": 14
+        },
+        "overallPercentage": 0,
+        "totalCodingAttempted": 0,
+        "totalCodingSolved": 0,
+        "totalMcqAttempted": 0,
+        "totalMcqCorrect": 0,
+        "totalTestsAssigned": 1,
+        "totalTestsAttempted": 1,
+        "totalTestsCompleted": 1,
+        "totalTestsPending": 0,
+        "totalTimeSpentMin": 14
+      },
+      "testHistory": [
+        {
+          "date": "<time>",
+          "maxScore": 0,
+          "percentage": 0,
+          "resultsPending": false,
+          "score": 0,
+          "status": "SUBMITTED",
+          "testId": "<id>",
+          "testName": "ZZ UC test <ts>",
+          "timeTakenMin": 14
+        }
+      ]
+    }
+  },
+  {
+    "name": "performance: a student asking for another",
+    "status": 403,
+    "body": {
+      "error": "You can only view your own performance dashboard"
+    }
+  },
+  {
+    "name": "performance: staff of the institute",
+    "status": 200,
+    "body": {
+      "analytics": {
+        "codingVsMcq": {
+          "coding": {
+            "attempted": 0,
+            "percentage": 0,
+            "solved": 0
+          },
+          "mcq": {
+            "attempted": 0,
+            "correct": 0,
+            "percentage": 0
+          }
+        },
+        "monthly": [
+          {
+            "averagePercentage": 0,
+            "month": "2026-10",
+            "testsCount": 1
+          }
+        ],
+        "scoreTrend": [
+          {
+            "date": "<time>",
+            "percentage": 0,
+            "testName": "ZZ UC test <ts>"
+          }
+        ],
+        "subjectWise": []
+      },
+      "student": {
+        "academicGroup": {
+          "batch": "2026",
+          "department": {
+            "name": "ZZ UC Dept A"
+          },
+          "id": "<id>",
+          "section": "Section A"
+        },
+        "batchYear": null,
+        "class": null,
+        "department": null,
+        "email": "zz-uc-stu1-<ts>@example.invalid",
+        "id": "<id>",
+        "institute": {
+          "id": "<id>",
+          "name": "ZZ UC A <ts>"
+        },
+        "isActive": true,
+        "mobile": "9000000001",
+        "name": "ZZ UC stu1",
+        "profilePhotoUrl": null,
+        "program": null,
+        "registrationNumber": "ZZUC-<ts>-1",
+        "rollNumber": "001",
+        "section": null
+      },
+      "summary": {
+        "averageScorePercent": 0,
+        "highest": {
+          "date": "<time>",
+          "maxScore": 0,
+          "percentage": 0,
+          "resultsPending": false,
+          "score": 0,
+          "status": "SUBMITTED",
+          "testId": "<id>",
+          "testName": "ZZ UC test <ts>",
+          "timeTakenMin": 14
+        },
+        "lastAttemptDate": "<time>",
+        "lowest": {
+          "date": "<time>",
+          "maxScore": 0,
+          "percentage": 0,
+          "resultsPending": false,
+          "score": 0,
+          "status": "SUBMITTED",
+          "testId": "<id>",
+          "testName": "ZZ UC test <ts>",
+          "timeTakenMin": 14
+        },
+        "overallPercentage": 0,
+        "totalCodingAttempted": 0,
+        "totalCodingSolved": 0,
+        "totalMcqAttempted": 0,
+        "totalMcqCorrect": 0,
+        "totalTestsAssigned": 1,
+        "totalTestsAttempted": 1,
+        "totalTestsCompleted": 1,
+        "totalTestsPending": 0,
+        "totalTimeSpentMin": 14
+      },
+      "testHistory": [
+        {
+          "date": "<time>",
+          "maxScore": 0,
+          "percentage": 0,
+          "resultsPending": false,
+          "score": 0,
+          "status": "SUBMITTED",
+          "testId": "<id>",
+          "testName": "ZZ UC test <ts>",
+          "timeTakenMin": 14
+        }
+      ]
+    }
+  },
+  {
+    "name": "performance: clerk of the institute",
+    "status": 200,
+    "body": {
+      "analytics": {
+        "codingVsMcq": {
+          "coding": {
+            "attempted": 0,
+            "percentage": 0,
+            "solved": 0
+          },
+          "mcq": {
+            "attempted": 0,
+            "correct": 0,
+            "percentage": 0
+          }
+        },
+        "monthly": [
+          {
+            "averagePercentage": 0,
+            "month": "2026-10",
+            "testsCount": 1
+          }
+        ],
+        "scoreTrend": [
+          {
+            "date": "<time>",
+            "percentage": 0,
+            "testName": "ZZ UC test <ts>"
+          }
+        ],
+        "subjectWise": []
+      },
+      "student": {
+        "academicGroup": {
+          "batch": "2026",
+          "department": {
+            "name": "ZZ UC Dept A"
+          },
+          "id": "<id>",
+          "section": "Section A"
+        },
+        "batchYear": null,
+        "class": null,
+        "department": null,
+        "email": "zz-uc-stu1-<ts>@example.invalid",
+        "id": "<id>",
+        "institute": {
+          "id": "<id>",
+          "name": "ZZ UC A <ts>"
+        },
+        "isActive": true,
+        "mobile": "9000000001",
+        "name": "ZZ UC stu1",
+        "profilePhotoUrl": null,
+        "program": null,
+        "registrationNumber": "ZZUC-<ts>-1",
+        "rollNumber": "001",
+        "section": null
+      },
+      "summary": {
+        "averageScorePercent": 0,
+        "highest": {
+          "date": "<time>",
+          "maxScore": 0,
+          "percentage": 0,
+          "resultsPending": false,
+          "score": 0,
+          "status": "SUBMITTED",
+          "testId": "<id>",
+          "testName": "ZZ UC test <ts>",
+          "timeTakenMin": 14
+        },
+        "lastAttemptDate": "<time>",
+        "lowest": {
+          "date": "<time>",
+          "maxScore": 0,
+          "percentage": 0,
+          "resultsPending": false,
+          "score": 0,
+          "status": "SUBMITTED",
+          "testId": "<id>",
+          "testName": "ZZ UC test <ts>",
+          "timeTakenMin": 14
+        },
+        "overallPercentage": 0,
+        "totalCodingAttempted": 0,
+        "totalCodingSolved": 0,
+        "totalMcqAttempted": 0,
+        "totalMcqCorrect": 0,
+        "totalTestsAssigned": 1,
+        "totalTestsAttempted": 1,
+        "totalTestsCompleted": 1,
+        "totalTestsPending": 0,
+        "totalTimeSpentMin": 14
+      },
+      "testHistory": [
+        {
+          "date": "<time>",
+          "maxScore": 0,
+          "percentage": 0,
+          "resultsPending": false,
+          "score": 0,
+          "status": "SUBMITTED",
+          "testId": "<id>",
+          "testName": "ZZ UC test <ts>",
+          "timeTakenMin": 14
+        }
+      ]
+    }
+  },
+  {
+    "name": "performance: staff of another institute",
+    "status": 403,
+    "body": {
+      "error": "You can only view students under your own institute"
+    }
+  },
+  {
+    "name": "performance: institute admin of another institute",
+    "status": 403,
+    "body": {
+      "error": "You can only view students under your own institute"
+    }
+  },
+  {
+    "name": "performance: platform admin",
+    "status": 200,
+    "body": {
+      "analytics": {
+        "codingVsMcq": {
+          "coding": {
+            "attempted": 0,
+            "percentage": 0,
+            "solved": 0
+          },
+          "mcq": {
+            "attempted": 0,
+            "correct": 0,
+            "percentage": 0
+          }
+        },
+        "monthly": [
+          {
+            "averagePercentage": 0,
+            "month": "2026-10",
+            "testsCount": 1
+          }
+        ],
+        "scoreTrend": [
+          {
+            "date": "<time>",
+            "percentage": 0,
+            "testName": "ZZ UC test <ts>"
+          }
+        ],
+        "subjectWise": []
+      },
+      "student": {
+        "academicGroup": {
+          "batch": "2026",
+          "department": {
+            "name": "ZZ UC Dept A"
+          },
+          "id": "<id>",
+          "section": "Section A"
+        },
+        "batchYear": null,
+        "class": null,
+        "department": null,
+        "email": "zz-uc-stu1-<ts>@example.invalid",
+        "id": "<id>",
+        "institute": {
+          "id": "<id>",
+          "name": "ZZ UC A <ts>"
+        },
+        "isActive": true,
+        "mobile": "9000000001",
+        "name": "ZZ UC stu1",
+        "profilePhotoUrl": null,
+        "program": null,
+        "registrationNumber": "ZZUC-<ts>-1",
+        "rollNumber": "001",
+        "section": null
+      },
+      "summary": {
+        "averageScorePercent": 0,
+        "highest": {
+          "date": "<time>",
+          "maxScore": 0,
+          "percentage": 0,
+          "resultsPending": false,
+          "score": 0,
+          "status": "SUBMITTED",
+          "testId": "<id>",
+          "testName": "ZZ UC test <ts>",
+          "timeTakenMin": 14
+        },
+        "lastAttemptDate": "<time>",
+        "lowest": {
+          "date": "<time>",
+          "maxScore": 0,
+          "percentage": 0,
+          "resultsPending": false,
+          "score": 0,
+          "status": "SUBMITTED",
+          "testId": "<id>",
+          "testName": "ZZ UC test <ts>",
+          "timeTakenMin": 14
+        },
+        "overallPercentage": 0,
+        "totalCodingAttempted": 0,
+        "totalCodingSolved": 0,
+        "totalMcqAttempted": 0,
+        "totalMcqCorrect": 0,
+        "totalTestsAssigned": 1,
+        "totalTestsAttempted": 1,
+        "totalTestsCompleted": 1,
+        "totalTestsPending": 0,
+        "totalTimeSpentMin": 14
+      },
+      "testHistory": [
+        {
+          "date": "<time>",
+          "maxScore": 0,
+          "percentage": 0,
+          "resultsPending": false,
+          "score": 0,
+          "status": "SUBMITTED",
+          "testId": "<id>",
+          "testName": "ZZ UC test <ts>",
+          "timeTakenMin": 14
+        }
+      ]
+    }
+  },
+  {
+    "name": "performance: unknown student",
+    "status": 404,
+    "body": {
+      "error": "Student not found"
+    }
+  },
+  {
+    "name": "performance: target is not a student",
+    "status": 404,
+    "body": {
+      "error": "Student not found"
+    }
+  },
+  {
+    "name": "readiness: anonymous",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "Missing or invalid Authorization header"
+    }
+  },
+  {
+    "name": "readiness: the student itself",
+    "status": 200,
+    "body": {
+      "components": [
+        {
+          "dataPoints": 0,
+          "included": false,
+          "key": "coding",
+          "label": "Coding",
+          "score": 0,
+          "weight": 0.3
+        },
+        {
+          "dataPoints": 0,
+          "included": false,
+          "key": "aptitude",
+          "label": "Aptitude (test MCQs)",
+          "score": 0,
+          "weight": 0.15
+        },
+        {
+          "dataPoints": 1,
+          "included": true,
+          "key": "academic",
+          "label": "Academic (formal tests)",
+          "score": 0,
+          "weight": 0.15
+        },
+        {
+          "dataPoints": 0,
+          "included": false,
+          "key": "resume",
+          "label": "Resume / ATS",
+          "score": null,
+          "weight": 0.15
+        },
+        {
+          "dataPoints": 0,
+          "included": false,
+          "key": "interview",
+          "label": "Mock Interviews",
+          "score": null,
+          "weight": 0.2
+        },
+        {
+          "dataPoints": 0,
+          "included": false,
+          "key": "certifications",
+          "label": "Certifications",
+          "score": 0,
+          "weight": 0.05
+        }
+      ],
+      "dataCompleteness": "1 of 6 signals available",
+      "disclaimer": "An internal readiness indicator only -- not a guaranteed placement outcome or prediction.",
+      "overallScore": 0
+    }
+  },
+  {
+    "name": "readiness: a student asking for another",
+    "status": 403,
+    "body": {
+      "error": "You can only view your own performance dashboard"
+    }
+  },
+  {
+    "name": "readiness: staff of the institute",
+    "status": 200,
+    "body": {
+      "components": [
+        {
+          "dataPoints": 0,
+          "included": false,
+          "key": "coding",
+          "label": "Coding",
+          "score": 0,
+          "weight": 0.3
+        },
+        {
+          "dataPoints": 0,
+          "included": false,
+          "key": "aptitude",
+          "label": "Aptitude (test MCQs)",
+          "score": 0,
+          "weight": 0.15
+        },
+        {
+          "dataPoints": 1,
+          "included": true,
+          "key": "academic",
+          "label": "Academic (formal tests)",
+          "score": 0,
+          "weight": 0.15
+        },
+        {
+          "dataPoints": 0,
+          "included": false,
+          "key": "resume",
+          "label": "Resume / ATS",
+          "score": null,
+          "weight": 0.15
+        },
+        {
+          "dataPoints": 0,
+          "included": false,
+          "key": "interview",
+          "label": "Mock Interviews",
+          "score": null,
+          "weight": 0.2
+        },
+        {
+          "dataPoints": 0,
+          "included": false,
+          "key": "certifications",
+          "label": "Certifications",
+          "score": 0,
+          "weight": 0.05
+        }
+      ],
+      "dataCompleteness": "1 of 6 signals available",
+      "disclaimer": "An internal readiness indicator only -- not a guaranteed placement outcome or prediction.",
+      "overallScore": 0
+    }
+  },
+  {
+    "name": "readiness: clerk of the institute",
+    "status": 200,
+    "body": {
+      "components": [
+        {
+          "dataPoints": 0,
+          "included": false,
+          "key": "coding",
+          "label": "Coding",
+          "score": 0,
+          "weight": 0.3
+        },
+        {
+          "dataPoints": 0,
+          "included": false,
+          "key": "aptitude",
+          "label": "Aptitude (test MCQs)",
+          "score": 0,
+          "weight": 0.15
+        },
+        {
+          "dataPoints": 1,
+          "included": true,
+          "key": "academic",
+          "label": "Academic (formal tests)",
+          "score": 0,
+          "weight": 0.15
+        },
+        {
+          "dataPoints": 0,
+          "included": false,
+          "key": "resume",
+          "label": "Resume / ATS",
+          "score": null,
+          "weight": 0.15
+        },
+        {
+          "dataPoints": 0,
+          "included": false,
+          "key": "interview",
+          "label": "Mock Interviews",
+          "score": null,
+          "weight": 0.2
+        },
+        {
+          "dataPoints": 0,
+          "included": false,
+          "key": "certifications",
+          "label": "Certifications",
+          "score": 0,
+          "weight": 0.05
+        }
+      ],
+      "dataCompleteness": "1 of 6 signals available",
+      "disclaimer": "An internal readiness indicator only -- not a guaranteed placement outcome or prediction.",
+      "overallScore": 0
+    }
+  },
+  {
+    "name": "readiness: staff of another institute",
+    "status": 403,
+    "body": {
+      "error": "You can only view students under your own institute"
+    }
+  },
+  {
+    "name": "readiness: institute admin of another institute",
+    "status": 403,
+    "body": {
+      "error": "You can only view students under your own institute"
+    }
+  },
+  {
+    "name": "readiness: platform admin",
+    "status": 200,
+    "body": {
+      "components": [
+        {
+          "dataPoints": 0,
+          "included": false,
+          "key": "coding",
+          "label": "Coding",
+          "score": 0,
+          "weight": 0.3
+        },
+        {
+          "dataPoints": 0,
+          "included": false,
+          "key": "aptitude",
+          "label": "Aptitude (test MCQs)",
+          "score": 0,
+          "weight": 0.15
+        },
+        {
+          "dataPoints": 1,
+          "included": true,
+          "key": "academic",
+          "label": "Academic (formal tests)",
+          "score": 0,
+          "weight": 0.15
+        },
+        {
+          "dataPoints": 0,
+          "included": false,
+          "key": "resume",
+          "label": "Resume / ATS",
+          "score": null,
+          "weight": 0.15
+        },
+        {
+          "dataPoints": 0,
+          "included": false,
+          "key": "interview",
+          "label": "Mock Interviews",
+          "score": null,
+          "weight": 0.2
+        },
+        {
+          "dataPoints": 0,
+          "included": false,
+          "key": "certifications",
+          "label": "Certifications",
+          "score": 0,
+          "weight": 0.05
+        }
+      ],
+      "dataCompleteness": "1 of 6 signals available",
+      "disclaimer": "An internal readiness indicator only -- not a guaranteed placement outcome or prediction.",
+      "overallScore": 0
+    }
+  },
+  {
+    "name": "readiness: unknown student",
+    "status": 404,
+    "body": {
+      "error": "Student not found"
+    }
+  },
+  {
+    "name": "readiness: target is not a student",
+    "status": 404,
+    "body": {
+      "error": "Student not found"
+    }
+  },
+  {
+    "name": "excel: anonymous",
+    "status": 401,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "content-disposition": null
+    },
+    "body": {
+      "authExpired": true,
+      "error": "Missing or invalid Authorization header"
+    }
+  },
+  {
+    "name": "excel: the student itself",
+    "status": 200,
+    "headers": {
+      "content-type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "content-disposition": "attachment; filename=\"001-performance-report.xlsx\""
+    },
+    "body": "<non-json bytes>"
+  },
+  {
+    "name": "excel: a student asking for another",
+    "status": 403,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "content-disposition": null
+    },
+    "body": {
+      "error": "You can only view your own performance dashboard"
+    }
+  },
+  {
+    "name": "excel: staff of the institute",
+    "status": 200,
+    "headers": {
+      "content-type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "content-disposition": "attachment; filename=\"001-performance-report.xlsx\""
+    },
+    "body": "<non-json bytes>"
+  },
+  {
+    "name": "excel: clerk of the institute",
+    "status": 200,
+    "headers": {
+      "content-type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "content-disposition": "attachment; filename=\"001-performance-report.xlsx\""
+    },
+    "body": "<non-json bytes>"
+  },
+  {
+    "name": "excel: staff of another institute",
+    "status": 403,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "content-disposition": null
+    },
+    "body": {
+      "error": "You can only view students under your own institute"
+    }
+  },
+  {
+    "name": "excel: institute admin of another institute",
+    "status": 403,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "content-disposition": null
+    },
+    "body": {
+      "error": "You can only view students under your own institute"
+    }
+  },
+  {
+    "name": "excel: platform admin",
+    "status": 200,
+    "headers": {
+      "content-type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "content-disposition": "attachment; filename=\"001-performance-report.xlsx\""
+    },
+    "body": "<non-json bytes>"
+  },
+  {
+    "name": "excel: unknown student",
+    "status": 404,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "content-disposition": null
+    },
+    "body": {
+      "error": "Student not found"
+    }
+  },
+  {
+    "name": "excel: target is not a student",
+    "status": 404,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "content-disposition": null
+    },
+    "body": {
+      "error": "Student not found"
+    }
+  },
+  {
+    "name": "pdf: anonymous",
+    "status": 401,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "content-disposition": null
+    },
+    "body": {
+      "authExpired": true,
+      "error": "Missing or invalid Authorization header"
+    }
+  },
+  {
+    "name": "pdf: the student itself",
+    "status": 200,
+    "headers": {
+      "content-type": "application/pdf",
+      "content-disposition": "attachment; filename=\"001-performance-report.pdf\""
+    },
+    "body": "<non-json bytes>"
+  },
+  {
+    "name": "pdf: a student asking for another",
+    "status": 403,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "content-disposition": null
+    },
+    "body": {
+      "error": "You can only view your own performance dashboard"
+    }
+  },
+  {
+    "name": "pdf: staff of the institute",
+    "status": 200,
+    "headers": {
+      "content-type": "application/pdf",
+      "content-disposition": "attachment; filename=\"001-performance-report.pdf\""
+    },
+    "body": "<non-json bytes>"
+  },
+  {
+    "name": "pdf: clerk of the institute",
+    "status": 200,
+    "headers": {
+      "content-type": "application/pdf",
+      "content-disposition": "attachment; filename=\"001-performance-report.pdf\""
+    },
+    "body": "<non-json bytes>"
+  },
+  {
+    "name": "pdf: staff of another institute",
+    "status": 403,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "content-disposition": null
+    },
+    "body": {
+      "error": "You can only view students under your own institute"
+    }
+  },
+  {
+    "name": "pdf: institute admin of another institute",
+    "status": 403,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "content-disposition": null
+    },
+    "body": {
+      "error": "You can only view students under your own institute"
+    }
+  },
+  {
+    "name": "pdf: platform admin",
+    "status": 200,
+    "headers": {
+      "content-type": "application/pdf",
+      "content-disposition": "attachment; filename=\"001-performance-report.pdf\""
+    },
+    "body": "<non-json bytes>"
+  },
+  {
+    "name": "pdf: unknown student",
+    "status": 404,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "content-disposition": null
+    },
+    "body": {
+      "error": "Student not found"
+    }
+  },
+  {
+    "name": "pdf: target is not a student",
+    "status": 404,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "content-disposition": null
+    },
+    "body": {
+      "error": "Student not found"
+    }
+  }
+]
