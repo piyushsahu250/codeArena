@@ -980,6 +980,7 @@
     "name": "delete: audit rows",
     "db": [
       "QUESTION_DELETED|role:INSTITUTE_ADMIN|student:-|inst:set|keys:bulk,count,folderId",
+      "QUESTION_DELETED|role:INSTITUTE_ADMIN|student:-|inst:set|keys:bulk,count,folderId",
       "QUESTION_DELETED|role:INSTITUTE_ADMIN|student:-|inst:set|keys:bulk,count"
     ]
   },
