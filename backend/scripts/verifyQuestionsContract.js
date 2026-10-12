@@ -95,7 +95,7 @@ const auditRows = async (where) => (await prisma.auditLog.findMany({ where, sele
   const unitA2 = await prisma.unit.create({ data: { subjectId: subA.id, name: "Unit 2" } });
   const unitB1 = await prisma.unit.create({ data: { subjectId: subB.id, name: "Unit 1" } });
   const topicA1 = await prisma.topic.create({ data: { unitId: unitA1.id, name: "Topic 1" } });
-  await prisma.staffSubjectAssignment.create({ data: { staffId: staffA.id, subjectId: subA.id } });
+  await prisma.staffSubjectAssignment.create({ data: { staffId: staffA.id, subjectId: subA.id, assignedById: instA.id } });
   const folderA = await prisma.questionFolder.create({ data: { name: "ZZ QC folder A", instituteId: A.id, createdById: instA.id } });
   const folderB = await prisma.questionFolder.create({ data: { name: "ZZ QC folder B", instituteId: B.id, createdById: instB.id } });
   const folderShared = await prisma.questionFolder.create({ data: { name: "ZZ QC shared", instituteId: A.id, createdById: instA.id } });
