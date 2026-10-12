@@ -57,7 +57,7 @@ async function cleanup() {
   // Own fixtures, no dependence on seeded courses: Course > Module > completed Lesson > coding test > one question.
   const course = await prisma.course.create({ data: { slug: `verify-sa-${ts}`, name: "Verify Android Course", status: "PUBLISHED" } });
   const mod = await prisma.courseModule.create({ data: { courseId: course.id, title: "Verify Android Module", isActive: true } });
-  const lesson = await prisma.lesson.create({ data: { moduleId: mod.id, title: "Verify Android Lesson", content: "x", order: 0 } });
+  const lesson = await prisma.lesson.create({ data: { moduleId: mod.id, title: "Verify Android Lesson", content: "x", order: 0, isActive: true } });
   for (const s of [s1, s2]) await prisma.lessonProgress.create({ data: { studentId: s.id, lessonId: lesson.id, status: "COMPLETED", completedAt: new Date() } });
   const question = await prisma.question.create({ data: { title: "Verify Android Question", description: "Return the sum of two integers.", questionType: "CODING", difficulty: "EASY", points: 10, testCases: { create: [{ input: "2 3", expected: "5", isHidden: false }, { input: "10 20", expected: "30", isHidden: true }] } } });
   const level = await prisma.moduleCodingTest.create({ data: { moduleId: mod.id, title: "Verify Android Test", isActive: true, questionCount: 1, timeLimitMin: 30, passingPercent: 50, maxAttempts: null, requireFullscreen: false, allowedLanguages: ["java"] } });
