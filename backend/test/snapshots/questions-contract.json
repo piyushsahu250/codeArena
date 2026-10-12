@@ -1276,36 +1276,6 @@
       {
         "_count": null,
         "aiGenerated": false,
-        "btlLevel": 2,
-        "comparisonMode": "TRIM",
-        "correctAnswer": [
-          1
-        ],
-        "createdById": "set",
-        "description": "ZZ QC mcq 1",
-        "difficulty": "MEDIUM",
-        "evaluationType": "STDIO",
-        "folderId": "set",
-        "instituteId": "A",
-        "numericAnswer": null,
-        "numericTolerance": 0,
-        "options": [
-          "Red",
-          "Green",
-          "Blue"
-        ],
-        "points": 3,
-        "questionStatus": "PUBLISHED",
-        "questionType": "MCQ",
-        "subjectId": "A",
-        "tags": null,
-        "tests": 0,
-        "timeLimitMs": 2000,
-        "topicId": null
-      },
-      {
-        "_count": null,
-        "aiGenerated": false,
         "btlLevel": null,
         "comparisonMode": "TRIM",
         "correctAnswer": [
@@ -1355,6 +1325,36 @@
           "Blue"
         ],
         "points": 10,
+        "questionStatus": "PUBLISHED",
+        "questionType": "MCQ",
+        "subjectId": "A",
+        "tags": null,
+        "tests": 0,
+        "timeLimitMs": 2000,
+        "topicId": null
+      },
+      {
+        "_count": null,
+        "aiGenerated": false,
+        "btlLevel": 2,
+        "comparisonMode": "TRIM",
+        "correctAnswer": [
+          1
+        ],
+        "createdById": "set",
+        "description": "ZZ QC mcq 1",
+        "difficulty": "MEDIUM",
+        "evaluationType": "STDIO",
+        "folderId": "set",
+        "instituteId": "A",
+        "numericAnswer": null,
+        "numericTolerance": 0,
+        "options": [
+          "Red",
+          "Green",
+          "Blue"
+        ],
+        "points": 3,
         "questionStatus": "PUBLISHED",
         "questionType": "MCQ",
         "subjectId": "A",
@@ -7670,7 +7670,7 @@
     }
   },
   {
-    "name": "edit: coding verified after the tests were cut down",
+    "name": "edit: coding verified again with other points",
     "status": 200,
     "body": {
       "aiGenerated": false,
@@ -7680,7 +7680,7 @@
       "correctAnswer": null,
       "createdAt": "<time>",
       "createdById": "<id>",
-      "description": "",
+      "description": "ZZ QC coding 1",
       "difficulty": "EASY",
       "edgeCases": null,
       "editorial": null,
@@ -7706,7 +7706,7 @@
       "numericTolerance": 0,
       "options": null,
       "outputFormat": null,
-      "points": 10,
+      "points": 12,
       "problemExplanation": null,
       "questionNumber": "<masked>",
       "questionStatus": "VERIFIED",
@@ -7828,7 +7828,7 @@
       "correctAnswer": null,
       "createdAt": "<time>",
       "createdById": "<id>",
-      "description": "",
+      "description": "ZZ QC coding 1",
       "difficulty": "EASY",
       "edgeCases": null,
       "editorial": null,
@@ -7854,7 +7854,7 @@
       "numericTolerance": 0,
       "options": null,
       "outputFormat": null,
-      "points": 10,
+      "points": 12,
       "problemExplanation": null,
       "questionNumber": "<masked>",
       "questionStatus": "VERIFIED",
@@ -7939,6 +7939,13 @@
     }
   },
   {
+    "name": "edit: a blank question text",
+    "status": 400,
+    "body": {
+      "error": "Question text is required"
+    }
+  },
+  {
     "name": "edit: staff edits their own question",
     "status": 200,
     "body": {
@@ -8017,14 +8024,14 @@
         "btlLevel": null,
         "comparisonMode": "FLOAT_TOLERANCE",
         "correctAnswer": null,
-        "description": "",
+        "description": "ZZ QC coding 1",
         "difficulty": "EASY",
         "evaluationType": "STDIO",
         "folderId": null,
         "numericAnswer": null,
         "numericTolerance": 0,
         "options": null,
-        "points": 10,
+        "points": 12,
         "questionStatus": "VERIFIED",
         "questionType": "SQL",
         "sqlSchema": "create table t(a int);",
@@ -8107,6 +8114,7 @@
       "QUESTION_UPDATED|role:INSTITUTE_ADMIN|student:-|inst:set|keys:questionId,title",
       "QUESTION_UPDATED|role:INSTITUTE_ADMIN|student:-|inst:set|keys:questionId,title",
       "QUESTION_UPDATED|role:INSTITUTE_ADMIN|student:-|inst:set|keys:questionId,title",
+      "QUESTION_UPDATED|role:INSTITUTE_ADMIN|student:-|inst:set|keys:questionId,title",
       "QUESTION_UPDATED|role:STAFF|student:-|inst:set|keys:questionId,title"
     ]
   },
@@ -8150,7 +8158,7 @@
       "correctAnswer": null,
       "createdAt": "<time>",
       "createdById": "<id>",
-      "description": "",
+      "description": "ZZ QC coding 1",
       "difficulty": "EASY",
       "edgeCases": null,
       "editorial": null,
@@ -8175,7 +8183,7 @@
       "numericTolerance": 0,
       "options": null,
       "outputFormat": null,
-      "points": 10,
+      "points": 12,
       "problemExplanation": null,
       "questionNumber": "<masked>",
       "questionStatus": "DRAFT",
@@ -8370,9 +8378,9 @@
   },
   {
     "name": "delete: used in a test",
-    "status": 500,
+    "status": 409,
     "body": {
-      "error": "Failed to delete question"
+      "error": "This question is used in one or more tests and can't be deleted."
     }
   },
   {
