@@ -29,7 +29,9 @@ function norm(v) {
   if (typeof v === "object") { const o = {}; for (const k of Object.keys(v).sort()) o[k] = MASKED.has(k) ? "<masked>" : k === "token" ? (v[k] ? "<token>" : null) : norm(v[k]); return o; }
   return v;
 }
-const shapeOf = (v) => (Array.isArray(v) ? (v.length ? [shapeOf(v[0])] : []) : v && typeof v === "object" ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, shapeOf(v[k])])) : ".");
+// Structure only. A list is recorded as one element shape when its elements are objects and as "list" otherwise (empty or of plain values), because production holds
+// real rows the snapshot must not depend on.
+const shapeOf = (v) => (Array.isArray(v) ? (v.length && v[0] && typeof v[0] === "object" ? [shapeOf(v[0])] : "list") : v && typeof v === "object" ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, shapeOf(v[k])])) : ".");
 let ipSeq = 0;
 const nextIp = () => `203.0.113.${200 + ++ipSeq}`;
 async function call(name, method, p, token, body, opts = {}) {
@@ -147,7 +149,7 @@ const auditRows = async (where) => (await prisma.auditLog.findMany({ where, sele
   await call("create: by the platform admin has no institute", "POST", "/questions", T.platform, mcq(7));
   const mB = await call("create: another institute", "POST", "/questions", T.instB, { description: `${TAG} mcq B`, questionType: "MCQ", options: ["a", "b"], correctAnswer: [0], subjectId: subB.id, unitId: unitB1.id });
   await settle();
-  note("create: stored", (await prisma.question.findMany({ where: { description: { startsWith: TAG } }, select: { description: true, questionType: true, questionStatus: true, difficulty: true, points: true, btlLevel: true, instituteId: true, folderId: true, subjectId: true, topicId: true, createdById: true, comparisonMode: true, timeLimitMs: true, evaluationType: true, aiGenerated: true, options: true, correctAnswer: true, numericAnswer: true, numericTolerance: true, tags: true, _count: { select: { testCases: true } } }, orderBy: { description: "asc" } }))
+  note("create: stored", (await prisma.question.findMany({ where: { description: { startsWith: TAG } }, select: { description: true, questionType: true, questionStatus: true, difficulty: true, points: true, btlLevel: true, instituteId: true, folderId: true, subjectId: true, topicId: true, createdById: true, comparisonMode: true, timeLimitMs: true, evaluationType: true, aiGenerated: true, options: true, correctAnswer: true, numericAnswer: true, numericTolerance: true, tags: true, _count: { select: { testCases: true } } }, orderBy: [{ description: "asc" }, { createdAt: "asc" }] }))
     .map((q) => ({ ...q, instituteId: q.instituteId === A.id ? "A" : q.instituteId === B.id ? "B" : null, folderId: q.folderId ? "set" : null, subjectId: q.subjectId === subA.id ? "A" : q.subjectId === subB.id ? "B" : null, topicId: q.topicId ? "set" : null, createdById: q.createdById ? "set" : null, tests: q._count.testCases, _count: undefined })));
   note("create: audit rows", await auditRows({ action: "QUESTION_CREATED", adminId: { in: [instA.id, staffA.id, platform.id, instB.id] } }));
   const m1Id = m1.json && m1.json.id;
@@ -228,7 +230,7 @@ const auditRows = async (where) => (await prisma.auditLog.findMany({ where, sele
   await call("edit: a blank question text", "PATCH", `/questions/${blankQ.id}`, T.instA, { description: "" });
   await call("edit: staff edits their own question", "PATCH", `/questions/${sOwnId}`, T.staffA, { title: "staff edited", points: 7 });
   await settle();
-  note("edit: stored", (await prisma.question.findMany({ where: { id: { in: [m1Id, c1Id, sOwnId] } }, select: { description: true, title: true, questionType: true, questionStatus: true, difficulty: true, points: true, btlLevel: true, folderId: true, unitId: true, updatedById: true, options: true, correctAnswer: true, numericAnswer: true, numericTolerance: true, sqlSchema: true, comparisonMode: true, timeLimitMs: true, evaluationType: true, tags: true, _count: { select: { testCases: true } } }, orderBy: { description: "asc" } }))
+  note("edit: stored", (await prisma.question.findMany({ where: { id: { in: [m1Id, c1Id, sOwnId] } }, select: { description: true, title: true, questionType: true, questionStatus: true, difficulty: true, points: true, btlLevel: true, folderId: true, unitId: true, updatedById: true, options: true, correctAnswer: true, numericAnswer: true, numericTolerance: true, sqlSchema: true, comparisonMode: true, timeLimitMs: true, evaluationType: true, tags: true, _count: { select: { testCases: true } } }, orderBy: [{ description: "asc" }, { createdAt: "asc" }] }))
     .map((q) => ({ ...q, folderId: q.folderId ? "set" : null, unitId: q.unitId === unitA2.id ? "A2" : q.unitId === unitA1.id ? "A1" : null, updatedById: q.updatedById ? "set" : null, tests: q._count.testCases, _count: undefined })));
   note("edit: audit rows", await auditRows({ action: "QUESTION_UPDATED", adminId: { in: [instA.id, staffA.id] } }));
 
