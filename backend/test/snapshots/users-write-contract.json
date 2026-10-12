@@ -1052,15 +1052,15 @@
   {
     "name": "edit: audit rows",
     "db": [
-      "STUDENT_PROFILE_UPDATED|role:-|student:-|inst:-|keys:after,before,changedFields,studentId,studentName",
-      "STUDENT_PROFILE_UPDATED|role:-|student:-|inst:-|keys:after,before,changedFields,studentId,studentName",
-      "STUDENT_PROFILE_UPDATED|role:-|student:-|inst:-|keys:after,before,changedFields,studentId,studentName",
-      "USER_PROFILE_UPDATED|role:-|student:-|inst:-|keys:after,before,changedFields,studentId,studentName",
-      "STUDENT_PROFILE_UPDATED|role:-|student:-|inst:-|keys:after,before,changedFields,studentId,studentName",
-      "ACCOUNT_DEACTIVATED|role:-|student:-|inst:-|keys:after,before,changedFields,studentId,studentName",
-      "STUDENT_PROFILE_UPDATED|role:-|student:-|inst:-|keys:after,before,changedFields,studentId,studentName",
-      "ACCOUNT_ACTIVATED|role:-|student:-|inst:-|keys:after,before,changedFields,studentId,studentName",
-      "STUDENT_PROFILE_UPDATED|role:-|student:-|inst:-|keys:after,before,changedFields,studentId,studentName"
+      "STUDENT_PROFILE_UPDATED|role:INSTITUTE_ADMIN|student:set|inst:set|keys:after,before,changedFields,studentId,studentName",
+      "STUDENT_PROFILE_UPDATED|role:INSTITUTE_ADMIN|student:set|inst:set|keys:after,before,changedFields,studentId,studentName",
+      "STUDENT_PROFILE_UPDATED|role:INSTITUTE_ADMIN|student:set|inst:set|keys:after,before,changedFields,studentId,studentName",
+      "USER_PROFILE_UPDATED|role:INSTITUTE_ADMIN|student:set|inst:set|keys:after,before,changedFields,studentId,studentName",
+      "STUDENT_PROFILE_UPDATED|role:INSTITUTE_ADMIN|student:set|inst:set|keys:after,before,changedFields,studentId,studentName",
+      "ACCOUNT_DEACTIVATED|role:INSTITUTE_ADMIN|student:set|inst:set|keys:after,before,changedFields,studentId,studentName",
+      "STUDENT_PROFILE_UPDATED|role:INSTITUTE_ADMIN|student:set|inst:set|keys:after,before,changedFields,studentId,studentName",
+      "ACCOUNT_ACTIVATED|role:INSTITUTE_ADMIN|student:set|inst:set|keys:after,before,changedFields,studentId,studentName",
+      "STUDENT_PROFILE_UPDATED|role:ADMIN|student:set|inst:set|keys:after,before,changedFields,studentId,studentName"
     ]
   },
   {
@@ -2018,22 +2018,16 @@
   },
   {
     "name": "reset: staff resets an institute admin of the same institute",
-    "status": 200,
+    "status": 403,
     "body": {
-      "defaultPassword": "<masked>",
-      "emailError": "<masked>",
-      "emailSent": "<masked>",
-      "success": true
+      "error": "Staff can reset passwords for students only"
     }
   },
   {
     "name": "reset: staff resets a clerk of the same institute",
-    "status": 200,
+    "status": 403,
     "body": {
-      "defaultPassword": "<masked>",
-      "emailError": "<masked>",
-      "emailSent": "<masked>",
-      "success": true
+      "error": "Staff can reset passwords for students only"
     }
   },
   {
@@ -2059,8 +2053,6 @@
   {
     "name": "reset: audit rows",
     "db": [
-      "PASSWORD_RESET|role:-|student:set|inst:set|keys:emailError,emailSent,studentId,studentName",
-      "PASSWORD_RESET|role:-|student:set|inst:set|keys:emailError,emailSent,studentId,studentName",
       "PASSWORD_RESET|role:-|student:set|inst:set|keys:emailError,emailSent,studentId,studentName",
       "PASSWORD_RESET|role:-|student:set|inst:set|keys:emailError,emailSent,studentId,studentName",
       "PASSWORD_RESET|role:-|student:set|inst:set|keys:emailError,emailSent,studentId,studentName",
@@ -2172,10 +2164,9 @@
   },
   {
     "name": "bulk status: staff refused",
-    "status": 401,
+    "status": 403,
     "body": {
-      "authExpired": true,
-      "error": "This session has been signed out. Please log in again."
+      "error": "Insufficient permissions"
     }
   },
   {
@@ -2249,11 +2240,11 @@
   {
     "name": "bulk status: audit rows",
     "db": [
-      "ACCOUNT_DEACTIVATED|role:-|student:-|inst:-|keys:after,before,bulk,studentId,studentName",
-      "ACCOUNT_DEACTIVATED|role:-|student:-|inst:-|keys:after,before,bulk,studentId,studentName",
-      "ACCOUNT_ACTIVATED|role:-|student:-|inst:-|keys:after,before,bulk,studentId,studentName",
-      "ACCOUNT_ACTIVATED|role:-|student:-|inst:-|keys:after,before,bulk,studentId,studentName",
-      "ACCOUNT_DEACTIVATED|role:-|student:-|inst:-|keys:after,before,bulk,studentId,studentName"
+      "ACCOUNT_DEACTIVATED|role:INSTITUTE_ADMIN|student:set|inst:set|keys:after,before,bulk,studentId,studentName",
+      "ACCOUNT_DEACTIVATED|role:INSTITUTE_ADMIN|student:set|inst:set|keys:after,before,bulk,studentId,studentName",
+      "ACCOUNT_ACTIVATED|role:INSTITUTE_ADMIN|student:set|inst:set|keys:after,before,bulk,studentId,studentName",
+      "ACCOUNT_ACTIVATED|role:INSTITUTE_ADMIN|student:set|inst:set|keys:after,before,bulk,studentId,studentName",
+      "ACCOUNT_DEACTIVATED|role:ADMIN|student:set|inst:set|keys:after,before,bulk,studentId,studentName"
     ]
   },
   {
@@ -2266,10 +2257,9 @@
   },
   {
     "name": "delete: staff refused",
-    "status": 401,
+    "status": 403,
     "body": {
-      "authExpired": true,
-      "error": "This session has been signed out. Please log in again."
+      "error": "Insufficient permissions"
     }
   },
   {

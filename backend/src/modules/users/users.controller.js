@@ -8,6 +8,10 @@ const account = require("./users.account.service");
 const directory = require("./users.directory.service");
 const audit = require("./users.audit.service");
 const performance = require("./users.performance.service");
+const accounts = require("./users.accounts.service");
+const bulk = require("./users.bulk.service");
+const passwords = require("./users.passwords.service");
+const { uniqueViolation } = require("./users.accounts.domain");
 
 const refuse = (res, err) => res.status(err.status).json({ error: err.message, ...(err.extra || {}) });
 
@@ -90,3 +94,35 @@ module.exports = {
   updateOwnAccount, resendVerification, mySessions, endMySession, listUsers, getUser, lookup, search, browse, migrationStatus, template,
   resetHistory, conflicts, auditLog, auditActions, dashboard, readiness, excelReport, pdfReport,
 };
+
+// ---- writes: create, edit, delete, bulk upload, password resets, bulk status ----
+// Same failure style as the routes this replaced: an unexpected fault is logged and answered with a fixed message; where noted, a unique-constraint collision that
+// the pre-checks missed (a race between two requests) is a clean 409. A result may carry work to run AFTER the response (the background e-mail batch).
+const actor = (req) => ({ req, user: req.user, requesterInstituteId: req.requesterInstituteId });
+
+function writer(fallback, fn, { p2002 = false, log = (err) => console.error(err) } = {}) {
+  return async (req, res) => {
+    try {
+      const out = await fn(req);
+      res.json(out);
+      if (out && out[bulk.AFTER]) { try { out[bulk.AFTER](); } catch (afterErr) { console.error("[users] background work failed:", afterErr); } }
+    } catch (err) {
+      if (err instanceof ServiceError) return refuse(res, err);
+      log(err);
+      if (p2002 && err.code === "P2002") return res.status(409).json({ error: uniqueViolation(err) });
+      res.status(500).json({ error: fallback });
+    }
+  };
+}
+
+const createAccount = writer("Failed to create user. Please try again, and contact support if the issue persists.", (req) => accounts.createAccount(actor(req), req.body),
+  { p2002: true, log: (err) => console.error("[users.create] failed:", { message: err.message, code: err.code, meta: err.meta }) });
+const editAccount = writer("Failed to update user", (req) => accounts.editAccount(actor(req), req.params.id, req.body), { p2002: true });
+const deleteAccount = writer("Failed to delete account", (req) => accounts.deleteAccount(actor(req), req.params.id));
+const bulkPreview = writer("Failed to validate file", (req) => bulk.preview(req.requesterInstituteId, req.file), { log: (err) => console.error("[users.bulk-upload.preview] failed:", err) });
+const bulkConfirm = writer("Bulk import failed", (req) => bulk.confirm(actor(req), req.body), { log: (err) => console.error("[users.bulk-upload.confirm] failed:", err) });
+const resetPassword = writer("Failed to reset password", (req) => passwords.resetPassword(actor(req), req.params.id, req.body));
+const bulkRegenerate = writer("Failed to regenerate passwords", (req) => passwords.bulkRegenerate(actor(req), req.body));
+const bulkStatus = writer("Failed to update student status", (req) => passwords.bulkStatus(actor(req), req.body));
+
+Object.assign(module.exports, { createAccount, editAccount, deleteAccount, bulkPreview, bulkConfirm, resetPassword, bulkRegenerate, bulkStatus });
