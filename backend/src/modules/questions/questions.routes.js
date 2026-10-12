@@ -31,6 +31,7 @@ router.use((req, res, next) => {
     };
   }
   next();
+});
 const staffOnly = [authenticate, requirePermission("staff.console"), requireFeature("question_bank")];
 const staffInstitute = [authenticate, requirePermission("staff.console"), attachRequesterInstitute, requireFeature("question_bank")];
 

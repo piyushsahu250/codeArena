@@ -100,7 +100,7 @@ const auditRows = async (where) => (await prisma.auditLog.findMany({ where, sele
   const unitA1 = await prisma.unit.create({ data: { subjectId: subA.id, name: "Unit 1" } });
   await prisma.unit.create({ data: { subjectId: subA.id, name: "Unit IV" } }); // a Roman-numeral unit, matched by "Unit 4"
   await prisma.staffSubjectAssignment.create({ data: { staffId: staffA.id, subjectId: subA.id, assignedById: instA.id } });
-  const subB = await prisma.subject.create({ data: { name: `${TAG} Subject B ${ts}`, instituteId: B.id, createdById: instB.id } });
+  await prisma.subject.create({ data: { name: `${TAG} Subject B ${ts}`, instituteId: B.id, createdById: instB.id } });
   const folderA = await prisma.questionFolder.create({ data: { name: `${TAG} folder A`, instituteId: A.id, createdById: instA.id } });
   const folderB = await prisma.questionFolder.create({ data: { name: `${TAG} folder B`, instituteId: B.id, createdById: instB.id } });
   const sA = subA.name;
