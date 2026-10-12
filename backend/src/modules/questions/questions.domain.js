@@ -304,3 +304,44 @@ module.exports = {
   isReferencedByRestrict, buildWhere, parseBtlLevel, label, countVisible, countHidden, testCaseRows,
   createBase, createCoding, createSql, createNumerical, createQuiz, editBase, editCoding, editSql, editNumerical, editQuiz,
 };
+
+// ---- folders and bulk operations ----
+// Whether filing `folderId` under `newParentId` would put a folder inside itself or inside one of its own sub-banks. `parentOf(id)` resolves a folder's parent id. A
+// folder loop makes the recursive delete and delete-preview walk forever, so it must never be stored.
+async function wouldCreateFolderLoop(folderId, newParentId, parentOf) {
+  const seen = new Set();
+  let current = newParentId;
+  while (current) {
+    if (current === folderId || seen.has(current)) return true;
+    seen.add(current);
+    current = await parentOf(current);
+  }
+  return false;
+}
+
+const BLOCKED_BY_HISTORY = "Has student submissions - archive instead";
+const BLOCKED_BY_TEST = "Used in one or more tests";
+const blockedEntry = (q, reason) => ({ id: q.id, title: q.title || q.description.slice(0, 60), reason });
+
+// The row for a copy of `q` in another bank. The image columns are excluded: only the database row is copied, so a copy that kept the same imageKey would delete
+// the original's image from storage when its own image was removed or the copy deleted.
+function copiedQuestionData(q, actor, folderId) {
+  const { id, questionNumber, createdAt, testCases, folderId: _f, instituteId: _i, createdById: _c, imageKey: _ik, imageMimeType: _imt, ...rest } = q;
+  return {
+    ...rest,
+    instituteId: actor.requesterInstituteId,
+    folderId,
+    createdById: actor.user.id,
+    testCases: { create: testCases.map((tc) => ({ input: tc.input, expected: tc.expected, isHidden: tc.isHidden, explanation: tc.explanation })) },
+  };
+}
+
+// Visibility of a folder's sharing to the requester: an institute-bound requester only manages their own institute's banks, and a STAFF requester only the ones
+// they created. Returns the refusal message, or null.
+function sharingRefusal(actor, folder, staffMessage) {
+  if (actor.requesterInstituteId && folder.instituteId && folder.instituteId !== actor.requesterInstituteId) return "You can only manage question banks under your own institute";
+  if (actor.user.role === "STAFF" && folder.createdById !== actor.user.id) return staffMessage;
+  return null;
+}
+
+Object.assign(module.exports, { wouldCreateFolderLoop, BLOCKED_BY_HISTORY, BLOCKED_BY_TEST, blockedEntry, copiedQuestionData, sharingRefusal });

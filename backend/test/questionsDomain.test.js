@@ -152,3 +152,40 @@ test("labels fall back to the start of the question text", () => {
   assert.equal(d.label({ title: "T", description: "long" }), "T");
   assert.equal(d.label({ title: null, description: "x".repeat(100) }).length, 60);
 });
+
+test("a folder loop is detected before it can be stored", async () => {
+  const parents = { a: null, b: "a", c: "b", x: null, loop1: "loop2", loop2: "loop1" };
+  const parentOf = async (id) => parents[id] ?? null;
+  assert.equal(await d.wouldCreateFolderLoop("a", "c", parentOf), true, "under one of its own sub-banks");
+  assert.equal(await d.wouldCreateFolderLoop("a", "a", parentOf), true, "under itself");
+  assert.equal(await d.wouldCreateFolderLoop("c", "a", parentOf), false, "up the tree is fine");
+  assert.equal(await d.wouldCreateFolderLoop("a", "x", parentOf), false, "under an unrelated folder");
+  assert.equal(await d.wouldCreateFolderLoop("a", null, parentOf), false, "to the top level");
+  assert.equal(await d.wouldCreateFolderLoop("a", "loop1", parentOf), true, "an existing loop is never walked forever");
+});
+
+test("a copy of a question carries the test cases but never the image reference", () => {
+  const actor = { requesterInstituteId: "i2", user: { id: "u2" } };
+  const q = { id: "q1", questionNumber: 7, createdAt: "t", folderId: "f1", instituteId: "i1", createdById: "u1", imageKey: "key", imageMimeType: "image/png", title: "T", testCases: [{ input: "1", expected: "2", isHidden: true, explanation: "e" }] };
+  const out = d.copiedQuestionData(q, actor, "f2");
+  assert.equal(out.folderId, "f2");
+  assert.equal(out.instituteId, "i2");
+  assert.equal(out.createdById, "u2");
+  assert.ok(!("imageKey" in out) && !("imageMimeType" in out) && !("id" in out) && !("questionNumber" in out));
+  assert.equal(out.testCases.create.length, 1);
+  assert.equal(out.title, "T");
+});
+
+test("sharing is refused outside the institute and, for staff, outside their own banks", () => {
+  const folder = { instituteId: "i1", createdById: "u1" };
+  assert.equal(d.sharingRefusal({ requesterInstituteId: "i2", user: { role: "INSTITUTE_ADMIN", id: "a" } }, folder, "x"), "You can only manage question banks under your own institute");
+  assert.equal(d.sharingRefusal({ requesterInstituteId: "i1", user: { role: "STAFF", id: "u2" } }, folder, "creator only"), "creator only");
+  assert.equal(d.sharingRefusal({ requesterInstituteId: "i1", user: { role: "STAFF", id: "u1" } }, folder, "x"), null);
+  assert.equal(d.sharingRefusal({ requesterInstituteId: "i1", user: { role: "INSTITUTE_ADMIN", id: "a" } }, folder, "x"), null);
+  assert.equal(d.sharingRefusal({ requesterInstituteId: "i2", user: { role: "INSTITUTE_ADMIN", id: "a" } }, { instituteId: null, createdById: "u1" }, "x"), null, "a platform-level folder");
+});
+
+test("blocked entries name the question and the reason", () => {
+  assert.deepEqual(d.blockedEntry({ id: "1", title: null, description: "d".repeat(80) }, d.BLOCKED_BY_TEST), { id: "1", title: "d".repeat(60), reason: "Used in one or more tests" });
+  assert.equal(d.blockedEntry({ id: "1", title: "T", description: "x" }, d.BLOCKED_BY_HISTORY).reason, "Has student submissions - archive instead");
+});

@@ -8,6 +8,8 @@
 const { ServiceError } = require("../../utils/serviceError");
 const { safeErrorMessage } = require("../../utils/errors");
 const service = require("./questions.service");
+const folders = require("./questions.folders.service");
+const bulk = require("./questions.bulk.service");
 
 const actor = (req) => ({ req, user: req.user, requesterInstituteId: req.requesterInstituteId });
 
@@ -48,4 +50,34 @@ const validateTestCases = handler((req) => service.validateTestCases(req.body), 
   res.status(400).json({ error: safeErrorMessage(err, "Could not validate test cases") });
 });
 
-module.exports = { create, edit, duplicate, uploadImage, removeImage, remove, list, filters, getOne, analytics, previewStarterCode, validateTestCases };
+// ---- folders and bulk operations ----
+// Folder list, create, rename, share and revoke answer an unexpected error with a fixed 500 message (create and rename also turn a unique-name collision into a
+// 409); preview, recursive delete, clear, merge, share list and every bulk route had no try/catch and hand an unexpected error to the application's error handler.
+const nameTaken = (err, res) => err.code === "P2002" && res.status(409).json({ error: "A folder with this name already exists" });
+const logged500 = (fallback, { p2002 = false } = {}) => (err, res) => {
+  if (p2002 && nameTaken(err, res)) return;
+  console.error(err);
+  res.status(500).json({ error: fallback });
+};
+
+const listFolders = handler((req) => folders.listFolders(actor(req)), logged500("Failed to load folders"));
+const createFolder = handler((req) => folders.createFolder(actor(req), req.body), logged500("Failed to create folder", { p2002: true }));
+const editFolder = handler((req) => folders.editFolder(actor(req), req.params.id, req.body), logged500("Failed to update folder", { p2002: true }));
+const deletePreview = handler((req) => folders.deletePreview(actor(req), req.params.id), toErrorHandler);
+const deleteFolder = handler((req) => folders.deleteFolderTree(actor(req), req.params.id), toErrorHandler);
+const clearFolder = handler((req) => folders.clearFolder(actor(req), req.params.id), toErrorHandler);
+const mergeFolder = handler((req) => folders.mergeFolder(actor(req), req.params.id, req.body.targetId), toErrorHandler);
+const listShares = handler((req) => folders.listShares(actor(req), req.params.id), toErrorHandler);
+const shareFolder = handler((req) => folders.shareFolder(actor(req), req.params.id, req.body), logged500("Failed to share question bank"));
+const revokeShare = handler((req) => folders.revokeShare(actor(req), req.params.id, req.params.staffId), logged500("Failed to revoke access"));
+
+const bulkMove = handler((req) => bulk.move(actor(req), req.body), toErrorHandler);
+const bulkAssignSubject = handler((req) => bulk.assignSubject(actor(req), req.body), toErrorHandler);
+const bulkStatus = handler((req) => bulk.changeStatus(actor(req), req.body), toErrorHandler);
+const bulkDelete = handler((req) => bulk.remove(actor(req), req.body), toErrorHandler);
+const bulkCopy = handler((req) => bulk.copy(actor(req), req.body), toErrorHandler);
+
+module.exports = {
+  create, edit, duplicate, uploadImage, removeImage, remove, list, filters, getOne, analytics, previewStarterCode, validateTestCases,
+  listFolders, createFolder, editFolder, deletePreview, deleteFolder, clearFolder, mergeFolder, listShares, shareFolder, revokeShare, bulkMove, bulkAssignSubject, bulkStatus, bulkDelete, bulkCopy,
+};
