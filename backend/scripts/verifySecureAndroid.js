@@ -48,26 +48,25 @@ async function cleanup() {
   check("server has SECURE_BROWSER_SECRET configured (>= 16 chars)", S.configured());
   if (!S.configured()) { console.log("\nCannot continue without the secret"); process.exit(2); }
 
-  const course = await prisma.course.findUnique({ where: { slug: "java-practice" } });
-  const groups = await prisma.academicGroup.findMany({ where: { isActive: true } });
-  const off = await prisma.featureSetting.findMany({ where: { featureKey: { in: ["lms", "compiler"] }, enabled: false } });
-  const offIds = new Set(off.map((f) => f.instituteId));
-  const real = groups.find((g) => !offIds.has(g.instituteId));
-  const { instituteId, departmentId } = real;
+  const institute = await prisma.institute.findFirst({ select: { id: true } });
+  const instituteId = institute.id;
   const ts = Date.now();
-  const grp = await prisma.academicGroup.create({ data: { instituteId, departmentId, batch: "ZZ-VERIFY-SA", section: `ZZ-${ts}` } });
-  const mk = async (name, role, inst, group) => { const pw = rand(); const u = await prisma.user.create({ data: { name, email: `verify-sa-${name.toLowerCase().replace(/\W+/g, "")}-${ts}@example.invalid`, passwordHash: await bcrypt.hash(pw, 10), role, instituteId: inst, academicGroupId: group ? group.id : null, mustChangePassword: false } }); return { ...u, pw }; };
-  const s1 = await mk("Alice", "STUDENT", instituteId, grp), s2 = await mk("Bob", "STUDENT", instituteId, grp);
-  const admin = await mk("Admin", "ADMIN", null), instAdmin = await mk("Inst Admin", "INSTITUTE_ADMIN", instituteId);
-  await prisma.courseAcademicGroupAssignment.create({ data: { courseId: course.id, academicGroupId: grp.id, assignedByUserId: admin.id, assignedByName: admin.name } });
-  const level = await prisma.moduleCodingTest.findFirst({ where: { chapter: { module: { courseId: course.id } }, isActive: true }, orderBy: { createdAt: "asc" } });
-  const original = { securityLevel: level.securityLevel, securityPolicy: level.securityPolicy, maxAttempts: level.maxAttempts, proctoring: level.proctoring };
+  const mk = async (name, role, inst) => { const pw = rand(); const u = await prisma.user.create({ data: { name, email: `verify-sa-${name.toLowerCase().replace(/\W+/g, "")}-${ts}@example.invalid`, passwordHash: await bcrypt.hash(pw, 10), role, instituteId: inst, mustChangePassword: false } }); return { ...u, pw }; };
+  const s1 = await mk("Alice", "STUDENT", instituteId), s2 = await mk("Bob", "STUDENT", instituteId);
+  const instAdmin = await mk("Inst Admin", "INSTITUTE_ADMIN", instituteId);
+  // Own fixtures, no dependence on seeded courses: Course > Module > completed Lesson > coding test > one question.
+  const course = await prisma.course.create({ data: { slug: `verify-sa-${ts}`, name: "Verify Android Course", status: "DRAFT" } });
+  const mod = await prisma.courseModule.create({ data: { courseId: course.id, title: "Verify Android Module" } });
+  const lesson = await prisma.lesson.create({ data: { moduleId: mod.id, title: "Verify Android Lesson", content: "x", order: 0 } });
+  for (const s of [s1, s2]) await prisma.lessonProgress.create({ data: { studentId: s.id, lessonId: lesson.id, status: "COMPLETED", completedAt: new Date() } });
+  const question = await prisma.question.create({ data: { title: "Verify Android Question", description: "Return the sum of two integers.", questionType: "CODING", difficulty: "EASY", points: 10, testCases: { create: [{ input: "2 3", expected: "5", isHidden: false }, { input: "10 20", expected: "30", isHidden: true }] } } });
+  const level = await prisma.moduleCodingTest.create({ data: { moduleId: mod.id, title: "Verify Android Test", questionCount: 1, timeLimitMin: 30, passingPercent: 50, maxAttempts: null, requireFullscreen: false, allowedLanguages: ["java"] } });
+  await prisma.question.update({ where: { id: question.id }, data: { moduleCodingTestId: level.id } });
   const setLevel = (data) => prisma.moduleCodingTest.update({ where: { id: level.id }, data });
-  const start = (tok, ua, jwt) => call("POST", `/module-coding/level/${level.id}/start`, jwt, null, { ...(tok ? { "X-Secure-Session": tok } : {}), ...(ua ? { "User-Agent": ua } : {}) });
+  const start = (tok, ua, jwt) => call("POST", `/module-coding/module/${mod.id}/start`, jwt, null, { ...(tok ? { "X-Secure-Session": tok } : {}), ...(ua ? { "User-Agent": ua } : {}) });
 
   try {
     const T1 = await login(s1.email, s1.pw), T2 = await login(s2.email, s2.pw), TI = await login(instAdmin.email, instAdmin.pw);
-    await setLevel({ maxAttempts: 50 });
 
     // ---- opt-out: an ordinary web exam is untouched
     await setLevel({ securityLevel: "STANDARD", securityPolicy: null });
@@ -95,7 +94,7 @@ async function cleanup() {
     check("opt-in: a phone browser with no secure session is refused (SECURE_CLIENT_REQUIRED, not a downgrade)", noSession.status === 403 && noSession.body.code === "SECURE_CLIENT_REQUIRED");
     const noSessionDesktop = await start(null, DESKTOP_UA, T1);
     check("opt-in: a desktop browser with no secure session is refused too", noSessionDesktop.status === 403 && noSessionDesktop.body.code === "SECURE_CLIENT_REQUIRED");
-    const spoof = await call("POST", `/module-coding/level/${level.id}/start`, T1, { securityLevel: "STANDARD", clientKind: "ANDROID_MANAGED" }, { "X-Security-Level": "STANDARD", "X-Client-Kind": "ANDROID_MANAGED", "User-Agent": PHONE_UA });
+    const spoof = await call("POST", `/module-coding/module/${mod.id}/start`, T1, { securityLevel: "STANDARD", clientKind: "ANDROID_MANAGED" }, { "X-Security-Level": "STANDARD", "X-Client-Kind": "ANDROID_MANAGED", "User-Agent": PHONE_UA });
     check("opt-in: client-supplied level or client-kind headers cannot downgrade the policy", spoof.status === 403 && spoof.body.code === "SECURE_CLIENT_REQUIRED");
 
     const electron = await handshake(T1, "VERIFYA-1", secret, "ELECTRON", ELECTRON_FULL);
@@ -112,7 +111,7 @@ async function cleanup() {
     const tok = good.body.token;
     check("the Android session records its kind and capability set", !!(await prisma.secureExamSession.findFirst({ where: { tokenHash: S.sha256(tok), clientKind: "ANDROID_MANAGED" } })));
     check("another student cannot use this Android session (SECURE_SESSION_INVALID)", (await start(tok, PHONE_UA, T2)).body?.code === "SECURE_SESSION_INVALID");
-    const st = await call("GET", `/module-coding/level/${level.id}`, T1, null, { "X-Secure-Session": tok, "User-Agent": PHONE_UA });
+    const st = await call("GET", `/module-coding/module/${mod.id}`, T1, null, { "X-Secure-Session": tok, "User-Agent": PHONE_UA });
     check("the device check passes with a verified Android session on a phone", st.status === 200 && st.body.securityCheck.secureBrowserOk === true && st.body.securityCheck.mobileBlocked === false);
     const ok = await start(tok, PHONE_UA, T1);
     check("opt-in: a verified Android managed session starts the exam on a phone", ok.status === 200 && !!ok.body.attemptId && !!ok.body.sessionId);
@@ -144,12 +143,14 @@ async function cleanup() {
     const rolled = await call("POST", `/module-coding/attempts/${attemptId}/autosave`, T1, { questionId: q0, language: "java", code: "class Main{}", seq: 6 }, H);
     check("rollback: dropping ANDROID_MANAGED from the policy makes the server refuse Android sessions immediately", rolled.status === 403 && rolled.body.code === "CLIENT_KIND_NOT_ALLOWED");
   } finally {
-    await prisma.moduleCodingTest.update({ where: { id: level.id }, data: original }).catch((e) => console.log("restore failed:", e.message));
-    await prisma.courseAcademicGroupAssignment.deleteMany({ where: { courseId: course.id, academicGroupId: grp.id } });
+    await prisma.examSecurityEvent.deleteMany({ where: { testId: level.id } }).catch(() => {});
+    await prisma.moduleCodingAttempt.deleteMany({ where: { moduleCodingTestId: level.id } }).catch(() => {});
     await cleanup();
+    await prisma.question.deleteMany({ where: { id: question.id } }).catch(() => {});
+    await prisma.moduleCodingTest.deleteMany({ where: { id: level.id } }).catch(() => {});
+    await prisma.courseModule.deleteMany({ where: { id: mod.id } }).catch(() => {});
+    await prisma.course.deleteMany({ where: { id: course.id } }).catch(() => {});
   }
-  const restored = await prisma.moduleCodingTest.findUnique({ where: { id: level.id } });
-  check("level settings restored exactly", restored.securityLevel === original.securityLevel && restored.maxAttempts === original.maxAttempts && restored.proctoring === original.proctoring);
   console.log(failures === 0 ? "\nSECURE ANDROID VERIFIED" : `\n${failures} CHECK(S) FAILED`);
   process.exit(failures ? 1 : 0);
 })().catch(async (e) => { console.error(e); await cleanup().catch(() => {}); process.exit(2); });
