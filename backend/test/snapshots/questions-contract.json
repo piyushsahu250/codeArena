@@ -8478,19 +8478,12 @@
         "questionsAttempted": ".",
         "totalAttempts": "."
       },
-      "mostAttempted": "list",
-      "mostDifficult": "list",
-      "mostTrivial": "list",
+      "mostAttempted": "map",
+      "mostDifficult": "map",
+      "mostTrivial": "map",
       "neverAttempted": {
         "count": ".",
-        "sample": [
-          {
-            "questionId": ".",
-            "subject": ".",
-            "title": ".",
-            "topic": "."
-          }
-        ]
+        "sample": "map"
       },
       "totals": {
         "byDifficulty": "map",
@@ -8509,19 +8502,12 @@
         "questionsAttempted": ".",
         "totalAttempts": "."
       },
-      "mostAttempted": "list",
-      "mostDifficult": "list",
-      "mostTrivial": "list",
+      "mostAttempted": "map",
+      "mostDifficult": "map",
+      "mostTrivial": "map",
       "neverAttempted": {
         "count": ".",
-        "sample": [
-          {
-            "questionId": ".",
-            "subject": ".",
-            "title": ".",
-            "topic": "."
-          }
-        ]
+        "sample": "map"
       },
       "totals": {
         "byDifficulty": "map",
@@ -8540,52 +8526,12 @@
         "questionsAttempted": ".",
         "totalAttempts": "."
       },
-      "mostAttempted": [
-        {
-          "attempts": ".",
-          "avgScore": ".",
-          "avgTimeMs": ".",
-          "passRate": ".",
-          "questionId": ".",
-          "subject": ".",
-          "title": ".",
-          "topic": "."
-        }
-      ],
-      "mostDifficult": [
-        {
-          "attempts": ".",
-          "avgScore": ".",
-          "avgTimeMs": ".",
-          "passRate": ".",
-          "questionId": ".",
-          "subject": ".",
-          "title": ".",
-          "topic": "."
-        }
-      ],
-      "mostTrivial": [
-        {
-          "attempts": ".",
-          "avgScore": ".",
-          "avgTimeMs": ".",
-          "passRate": ".",
-          "questionId": ".",
-          "subject": ".",
-          "title": ".",
-          "topic": "."
-        }
-      ],
+      "mostAttempted": "map",
+      "mostDifficult": "map",
+      "mostTrivial": "map",
       "neverAttempted": {
         "count": ".",
-        "sample": [
-          {
-            "questionId": ".",
-            "subject": ".",
-            "title": ".",
-            "topic": "."
-          }
-        ]
+        "sample": "map"
       },
       "totals": {
         "byDifficulty": "map",
