@@ -242,7 +242,7 @@ const auditRows = async (where) => (await prisma.auditLog.findMany({ where, sele
 
   // ---------- bulk status ----------
   await call("bulk status: anonymous", "POST", "/users/bulk-status", null, { studentIds: [victim.id], isActive: false });
-  await call("bulk status: staff refused", "POST", "/users/bulk-status", T.staffA, { studentIds: [victim.id], isActive: false });
+  await call("bulk status: staff refused", "POST", "/users/bulk-status", T.staffB, { studentIds: [victim.id], isActive: false });
   await call("bulk status: nobody selected", "POST", "/users/bulk-status", T.instA, { studentIds: [], isActive: false });
   await call("bulk status: deactivate own, foreign, unknown and staff ids", "POST", "/users/bulk-status", T.instA, { studentIds: [victim.id, b2 && b2.id, stuB.id, bogus, staffA.id].filter(Boolean), isActive: false });
   note("bulk status: stored", (await prisma.user.findMany({ where: { id: { in: [victim.id, b2.id, stuB.id, staffA.id] } }, select: { email: true, isActive: true } , orderBy: { email: "asc" } })));
@@ -257,7 +257,7 @@ const auditRows = async (where) => (await prisma.auditLog.findMany({ where, sele
   await prisma.testAttempt.create({ data: { testId: test.id, studentId: b3.id, status: "SUBMITTED", totalScore: 0 } });
   const free = await prisma.user.findFirst({ where: { email: em("b20") } });
   await call("delete: anonymous", "DELETE", `/users/${free.id}`, null);
-  await call("delete: staff refused", "DELETE", `/users/${free.id}`, T.staffA);
+  await call("delete: staff refused", "DELETE", `/users/${free.id}`, T.staffB);
   await call("delete: one's own account", "DELETE", `/users/${instA.id}`, T.instA);
   await call("delete: unknown user", "DELETE", `/users/${bogus}`, T.instA);
   await call("delete: user of another institute", "DELETE", `/users/${stuB.id}`, T.instA);

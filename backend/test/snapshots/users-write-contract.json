@@ -659,36 +659,9 @@
   },
   {
     "name": "edit: employee id already used",
-    "status": 200,
+    "status": 409,
     "body": {
-      "academicGroup": null,
-      "accountStatus": "ACTIVE",
-      "batchYear": null,
-      "class": null,
-      "createdAt": "<time>",
-      "department": null,
-      "designation": "Lecturer",
-      "email": "zz-uw-new-st1-<ts>@example.invalid",
-      "emailVerified": false,
-      "employeeId": "E-100",
-      "gender": null,
-      "id": "<id>",
-      "institute": {
-        "id": "<id>",
-        "name": "ZZ UW A <ts>"
-      },
-      "isActive": true,
-      "lastLoginAt": "<masked>",
-      "mobile": null,
-      "mustChangePassword": true,
-      "name": "ZZ UW staff renamed",
-      "pendingEmail": null,
-      "profilePhotoUrl": null,
-      "program": null,
-      "registrationNumber": null,
-      "role": "STAFF",
-      "rollNumber": null,
-      "section": null
+      "error": "That employee ID is already in use by another account at this institute"
     }
   },
   {
@@ -870,7 +843,7 @@
       "lastLoginAt": "<masked>",
       "mobile": null,
       "mustChangePassword": true,
-      "name": "ZZ UW staff renamed",
+      "name": "ZZ UW staff new",
       "pendingEmail": null,
       "profilePhotoUrl": null,
       "program": null,
@@ -1079,7 +1052,6 @@
   {
     "name": "edit: audit rows",
     "db": [
-      "USER_PROFILE_UPDATED|role:-|student:-|inst:-|keys:after,before,changedFields,studentId,studentName",
       "STUDENT_PROFILE_UPDATED|role:-|student:-|inst:-|keys:after,before,changedFields,studentId,studentName",
       "STUDENT_PROFILE_UPDATED|role:-|student:-|inst:-|keys:after,before,changedFields,studentId,studentName",
       "STUDENT_PROFILE_UPDATED|role:-|student:-|inst:-|keys:after,before,changedFields,studentId,studentName",
@@ -1965,10 +1937,9 @@
   },
   {
     "name": "reset: student refused",
-    "status": 401,
+    "status": 403,
     "body": {
-      "authExpired": true,
-      "error": "This session has been signed out. Please log in again."
+      "error": "Insufficient permissions"
     }
   },
   {
@@ -2067,10 +2038,12 @@
   },
   {
     "name": "reset: institute admin resets a staff member",
-    "status": 401,
+    "status": 200,
     "body": {
-      "authExpired": true,
-      "error": "This session has been signed out. Please log in again."
+      "defaultPassword": "<masked>",
+      "emailError": "<masked>",
+      "emailSent": "<masked>",
+      "success": true
     }
   },
   {
@@ -2086,6 +2059,7 @@
   {
     "name": "reset: audit rows",
     "db": [
+      "PASSWORD_RESET|role:-|student:set|inst:set|keys:emailError,emailSent,studentId,studentName",
       "PASSWORD_RESET|role:-|student:set|inst:set|keys:emailError,emailSent,studentId,studentName",
       "PASSWORD_RESET|role:-|student:set|inst:set|keys:emailError,emailSent,studentId,studentName",
       "PASSWORD_RESET|role:-|student:set|inst:set|keys:emailError,emailSent,studentId,studentName",
@@ -2111,26 +2085,55 @@
   },
   {
     "name": "bulk reset: nobody selected",
-    "status": 401,
+    "status": 400,
     "body": {
-      "authExpired": true,
-      "error": "This session has been signed out. Please log in again."
+      "error": "No students selected"
     }
   },
   {
     "name": "bulk reset: own, foreign and unknown ids",
-    "status": 401,
+    "status": 200,
     "body": {
-      "authExpired": true,
-      "error": "This session has been signed out. Please log in again."
+      "batchId": null,
+      "emailsQueued": 0,
+      "failedIds": [
+        "<id>",
+        "<id>"
+      ],
+      "results": [
+        {
+          "email": "zz-uw-new-b1-<ts>@example.invalid",
+          "generatedPassword": "<masked>",
+          "id": "<id>",
+          "name": "ZZ UW bulk 1",
+          "rollNumber": "000"
+        },
+        {
+          "email": "zz-uw-new-b2-<ts>@example.invalid",
+          "generatedPassword": "<masked>",
+          "id": "<id>",
+          "name": "ZZ UW bulk 2",
+          "rollNumber": "001"
+        }
+      ]
     }
   },
   {
     "name": "bulk reset: a non-student account in the list",
-    "status": 401,
+    "status": 200,
     "body": {
-      "authExpired": true,
-      "error": "This session has been signed out. Please log in again."
+      "batchId": null,
+      "emailsQueued": 0,
+      "failedIds": [],
+      "results": [
+        {
+          "email": "zz-uw-staffa-<ts>@example.invalid",
+          "generatedPassword": "<masked>",
+          "id": "<id>",
+          "name": "ZZ UW staffA",
+          "rollNumber": null
+        }
+      ]
     }
   },
   {
@@ -2154,6 +2157,8 @@
   {
     "name": "bulk reset: audit rows",
     "db": [
+      "PASSWORD_RESET|role:-|student:-|inst:-|keys:bulk,count,sendEmail,studentIds",
+      "PASSWORD_RESET|role:-|student:-|inst:-|keys:bulk,count,sendEmail,studentIds",
       "PASSWORD_RESET|role:-|student:-|inst:-|keys:bulk,count,sendEmail,studentIds"
     ]
   },
@@ -2167,25 +2172,30 @@
   },
   {
     "name": "bulk status: staff refused",
-    "status": 403,
+    "status": 401,
     "body": {
-      "error": "Insufficient permissions"
+      "authExpired": true,
+      "error": "This session has been signed out. Please log in again."
     }
   },
   {
     "name": "bulk status: nobody selected",
-    "status": 401,
+    "status": 400,
     "body": {
-      "authExpired": true,
-      "error": "This session has been signed out. Please log in again."
+      "error": "No students selected"
     }
   },
   {
     "name": "bulk status: deactivate own, foreign, unknown and staff ids",
-    "status": 401,
+    "status": 200,
     "body": {
-      "authExpired": true,
-      "error": "This session has been signed out. Please log in again."
+      "failedIds": [
+        "<id>",
+        "<id>",
+        "<id>"
+      ],
+      "skipped": 0,
+      "updated": 2
     }
   },
   {
@@ -2193,11 +2203,11 @@
     "db": [
       {
         "email": "zz-uw-new-b1-<ts>@example.invalid",
-        "isActive": true
+        "isActive": false
       },
       {
         "email": "zz-uw-new-b2-<ts>@example.invalid",
-        "isActive": true
+        "isActive": false
       },
       {
         "email": "zz-uw-staffa-<ts>@example.invalid",
@@ -2211,18 +2221,20 @@
   },
   {
     "name": "bulk status: deactivating again skips them",
-    "status": 401,
+    "status": 200,
     "body": {
-      "authExpired": true,
-      "error": "This session has been signed out. Please log in again."
+      "failedIds": [],
+      "skipped": 2,
+      "updated": 0
     }
   },
   {
     "name": "bulk status: activate",
-    "status": 401,
+    "status": 200,
     "body": {
-      "authExpired": true,
-      "error": "This session has been signed out. Please log in again."
+      "failedIds": [],
+      "skipped": 0,
+      "updated": 2
     }
   },
   {
@@ -2237,6 +2249,10 @@
   {
     "name": "bulk status: audit rows",
     "db": [
+      "ACCOUNT_DEACTIVATED|role:-|student:-|inst:-|keys:after,before,bulk,studentId,studentName",
+      "ACCOUNT_DEACTIVATED|role:-|student:-|inst:-|keys:after,before,bulk,studentId,studentName",
+      "ACCOUNT_ACTIVATED|role:-|student:-|inst:-|keys:after,before,bulk,studentId,studentName",
+      "ACCOUNT_ACTIVATED|role:-|student:-|inst:-|keys:after,before,bulk,studentId,studentName",
       "ACCOUNT_DEACTIVATED|role:-|student:-|inst:-|keys:after,before,bulk,studentId,studentName"
     ]
   },
@@ -2250,73 +2266,66 @@
   },
   {
     "name": "delete: staff refused",
-    "status": 403,
+    "status": 401,
     "body": {
-      "error": "Insufficient permissions"
+      "authExpired": true,
+      "error": "This session has been signed out. Please log in again."
     }
   },
   {
     "name": "delete: one's own account",
-    "status": 401,
+    "status": 400,
     "body": {
-      "authExpired": true,
-      "error": "This session has been signed out. Please log in again."
+      "error": "You cannot delete your own account"
     }
   },
   {
     "name": "delete: unknown user",
-    "status": 401,
+    "status": 404,
     "body": {
-      "authExpired": true,
-      "error": "This session has been signed out. Please log in again."
+      "error": "User not found"
     }
   },
   {
     "name": "delete: user of another institute",
-    "status": 401,
+    "status": 403,
     "body": {
-      "authExpired": true,
-      "error": "This session has been signed out. Please log in again."
+      "error": "You can only manage accounts under your own institute"
     }
   },
   {
     "name": "delete: a student with a test attempt",
-    "status": 401,
+    "status": 409,
     "body": {
-      "authExpired": true,
-      "error": "This session has been signed out. Please log in again."
+      "error": "This account has 1 test attempt on record. This action cannot be undone, and academic records like this are best preserved — it is recommended to deactivate the account instead."
     }
   },
   {
     "name": "delete: an account that created a test",
-    "status": 401,
+    "status": 409,
     "body": {
-      "authExpired": true,
-      "error": "This session has been signed out. Please log in again."
+      "error": "This account has created 1 test. Reassign or delete it first, then delete the account."
     }
   },
   {
     "name": "delete: a student with nothing on record",
-    "status": 401,
+    "status": 200,
     "body": {
-      "authExpired": true,
-      "error": "This session has been signed out. Please log in again."
+      "success": true
     }
   },
   {
     "name": "delete: the same student again",
-    "status": 401,
+    "status": 404,
     "body": {
-      "authExpired": true,
-      "error": "This session has been signed out. Please log in again."
+      "error": "User not found"
     }
   },
   {
     "name": "delete: a staff member with nothing on record",
-    "status": 401,
+    "status": 200,
     "body": {
-      "authExpired": true,
-      "error": "This session has been signed out. Please log in again."
+      "success": true
     }
   },
   {
@@ -2329,15 +2338,17 @@
   {
     "name": "delete: audit rows",
     "db": [
+      "USER_DELETED|role:INSTITUTE_ADMIN|student:set|inst:set|keys:deletedUserName,deletedUserRole",
+      "USER_DELETED|role:INSTITUTE_ADMIN|student:set|inst:set|keys:deletedUserName,deletedUserRole",
       "USER_DELETED|role:ADMIN|student:set|inst:set|keys:deletedUserName,deletedUserRole"
     ]
   },
   {
     "name": "delete: gone",
     "db": {
-      "free": false,
+      "free": true,
       "kept": true,
-      "staff": false
+      "staff": true
     }
   }
 ]
