@@ -319,7 +319,7 @@ async function wouldCreateFolderLoop(folderId, newParentId, parentOf) {
   return false;
 }
 
-const BLOCKED_BY_HISTORY = "Has student submissions - archive instead";
+const BLOCKED_BY_HISTORY = "Has student submissions — archive instead";
 const BLOCKED_BY_TEST = "Used in one or more tests";
 const blockedEntry = (q, reason) => ({ id: q.id, title: q.title || q.description.slice(0, 60), reason });
 

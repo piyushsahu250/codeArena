@@ -187,5 +187,5 @@ test("sharing is refused outside the institute and, for staff, outside their own
 
 test("blocked entries name the question and the reason", () => {
   assert.deepEqual(d.blockedEntry({ id: "1", title: null, description: "d".repeat(80) }, d.BLOCKED_BY_TEST), { id: "1", title: "d".repeat(60), reason: "Used in one or more tests" });
-  assert.equal(d.blockedEntry({ id: "1", title: "T", description: "x" }, d.BLOCKED_BY_HISTORY).reason, "Has student submissions - archive instead");
+  assert.equal(d.blockedEntry({ id: "1", title: "T", description: "x" }, d.BLOCKED_BY_HISTORY).reason, "Has student submissions — archive instead");
 });
