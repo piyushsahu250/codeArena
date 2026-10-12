@@ -26,7 +26,7 @@ function norm(v) {
   if (v === null || v === undefined) return null;
   if (typeof v === "string") return v.replace(UUID, "<id>").replace(ISO, "<time>").replace(/\d{13}/g, "<ts>");
   if (Array.isArray(v)) return v.map(norm);
-  if (typeof v === "object") { const o = {}; for (const k of Object.keys(v).sort()) o[k] = ALWAYS_MASK.has(k) ? "<masked>" : k === "token" ? (v[k] ? "<token>" : null) : norm(v[k]); return o; }
+  if (typeof v === "object") { const o = {}; for (const k of Object.keys(v).sort()) o[k] = ALWAYS_MASK.has(k) ? "<masked>" : k === "token" ? (v[k] ? "<token>" : null) : (k === "results" && Array.isArray(v[k]) ? [...v[k]].sort((a, b) => String(a.email).localeCompare(String(b.email))) : null) ? norm([...v[k]].sort((a, b) => String(a.email).localeCompare(String(b.email)))) : norm(v[k]); return o; }
   return v;
 }
 let ipSeq = 0;
