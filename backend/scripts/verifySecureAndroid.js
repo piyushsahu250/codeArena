@@ -48,7 +48,7 @@ async function cleanup() {
   check("server has SECURE_BROWSER_SECRET configured (>= 16 chars)", S.configured());
   if (!S.configured()) { console.log("\nCannot continue without the secret"); process.exit(2); }
 
-  const institute = await prisma.institute.findFirst({ select: { id: true } });
+  const institute = await prisma.institute.create({ data: { name: `ZZ Verify SA ${Date.now()}` } });
   const instituteId = institute.id;
   const ts = Date.now();
   const mk = async (name, role, inst) => { const pw = rand(); const u = await prisma.user.create({ data: { name, email: `verify-sa-${name.toLowerCase().replace(/\W+/g, "")}-${ts}@example.invalid`, passwordHash: await bcrypt.hash(pw, 10), role, instituteId: inst, mustChangePassword: false } }); return { ...u, pw }; };
@@ -150,6 +150,7 @@ async function cleanup() {
     await prisma.moduleCodingTest.deleteMany({ where: { id: level.id } }).catch(() => {});
     await prisma.courseModule.deleteMany({ where: { id: mod.id } }).catch(() => {});
     await prisma.course.deleteMany({ where: { id: course.id } }).catch(() => {});
+    await prisma.institute.deleteMany({ where: { id: instituteId } }).catch(() => {});
   }
   console.log(failures === 0 ? "\nSECURE ANDROID VERIFIED" : `\n${failures} CHECK(S) FAILED`);
   process.exit(failures ? 1 : 0);
