@@ -11,11 +11,21 @@
 //     network, not by this file. Nothing here is a fake "AI detector".
 const crypto = require("crypto");
 
-const CAPABILITIES = ["kiosk", "appRestriction", "browserRestriction", "networkRestriction", "clipboard", "fullscreen", "devtoolsDisabled", "screenCaptureProtection"];
+// Client kinds. ELECTRON is the Windows secure client; ANDROID_MANAGED is the dedicated-device Android exam app (android-exam-client/). Each kind signs its
+// own canonical capability list, so the Electron signature format is byte-for-byte what it always was.
+const CLIENT_KINDS = ["ELECTRON", "ANDROID_MANAGED"];
+const ELECTRON_CAPABILITIES = ["kiosk", "appRestriction", "browserRestriction", "networkRestriction", "clipboard", "fullscreen", "devtoolsDisabled", "screenCaptureProtection"];
+// Android: every entry is read by the app from real device state (DevicePolicyManager / ActivityManager), never from a setting the student can change.
+const ANDROID_CAPABILITIES = ["deviceOwner", "lockTask", "kiosk", "homeBlocked", "overviewBlocked", "globalActionsBlocked", "notificationsBlocked", "assistantUnavailable",
+  "screenCaptureProtection", "appRestriction", "browserRestriction", "fullscreen", "devtoolsDisabled", "clipboard"];
+const CAPABILITY_SETS = { ELECTRON: ELECTRON_CAPABILITIES, ANDROID_MANAGED: ANDROID_CAPABILITIES };
+const CAPABILITIES = [...new Set([...ELECTRON_CAPABILITIES, ...ANDROID_CAPABILITIES])];
 const CAPABILITY_LABELS = {
   kiosk: "Kiosk mode", appRestriction: "Application restriction", browserRestriction: "Browser restriction (no tabs, extensions or navigation)",
   networkRestriction: "Network restriction", clipboard: "Clipboard restriction", fullscreen: "Fullscreen", devtoolsDisabled: "Developer tools restricted",
   screenCaptureProtection: "Screen-capture protection",
+  deviceOwner: "Institution-managed device (device owner)", lockTask: "Lock task mode active", homeBlocked: "Home button disabled", overviewBlocked: "Recent-apps screen disabled",
+  globalActionsBlocked: "Power-button menu disabled", notificationsBlocked: "Notifications and status bar disabled", assistantUnavailable: "Assistant and search apps unavailable",
 };
 const EXIT_ACTIONS = ["WARNING", "PAUSE", "LOCK", "REQUIRE_INVIGILATOR", "AUTO_SUBMIT"];
 
@@ -53,9 +63,9 @@ function verifyNonce(nonce, studentId, instituteId, deviceId) {
 }
 
 // What the client signs: nonce + version + the exact capability set it reports, so a man-in-the-middle cannot upgrade the claims.
-const canonicalCaps = (caps) => JSON.stringify(CAPABILITIES.map((k) => [k, !!(caps && caps[k])]));
+const canonicalCaps = (caps, kind = "ELECTRON") => JSON.stringify((CAPABILITY_SETS[kind] || ELECTRON_CAPABILITIES).map((k) => [k, !!(caps && caps[k])]));
 function clientSignature(deviceSecret, { nonce, clientVersion, clientKind, capabilities }) {
-  return hmac(deviceSecret, `session|${nonce}|${clientVersion}|${clientKind}|${canonicalCaps(capabilities)}`);
+  return hmac(deviceSecret, `session|${nonce}|${clientVersion}|${clientKind}|${canonicalCaps(capabilities, clientKind)}`);
 }
 function verifyClientSignature(deviceSecret, payload, sig) {
   if (!deviceSecret) return false;
@@ -83,14 +93,17 @@ function connectionState(session, { heartbeatSec = 15, graceSec = 120 } = {}, no
 }
 
 // Compare reported capabilities with the capabilities a policy requires. Returns the per-check list the exam page shows.
-function capabilityChecks(policy, capabilities) {
+// The list shows the client kind's own capabilities PLUS anything the policy requires that this kind cannot attest (so a requirement a client kind has no way
+// to meet always fails, never silently disappears).
+function capabilityChecks(policy, capabilities, kind = "ELECTRON") {
   const required = new Set(policy.requiredCapabilities || []);
-  return CAPABILITIES.map((key) => ({ key, label: CAPABILITY_LABELS[key], required: required.has(key), ok: !!(capabilities && capabilities[key]) }));
+  const keys = [...new Set([...(CAPABILITY_SETS[kind] || ELECTRON_CAPABILITIES), ...required])];
+  return keys.map((key) => ({ key, label: CAPABILITY_LABELS[key] || key, required: required.has(key), ok: !!(capabilities && capabilities[key]) && (CAPABILITY_SETS[kind] || ELECTRON_CAPABILITIES).includes(key) }));
 }
 const failedRequired = (checks) => checks.filter((c) => c.required && !c.ok);
 
 module.exports = {
-  CAPABILITIES, CAPABILITY_LABELS, EXIT_ACTIONS, NONCE_TTL_MS, sessionTtlMs, configured, sha256,
+  CLIENT_KINDS, CAPABILITY_SETS, CAPABILITIES,CAPABILITY_LABELS, EXIT_ACTIONS, NONCE_TTL_MS, sessionTtlMs, configured, sha256,
   deriveDeviceSecret, makeNonce, verifyNonce, clientSignature, verifyClientSignature, newToken,
   versionAtLeast, minClientVersion, connectionState, capabilityChecks, failedRequired, canonicalCaps,
 };

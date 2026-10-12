@@ -1,8 +1,6 @@
-# Android exam security — what works today, and the managed-device design (NOT BUILT, NOT TESTED)
+# Android exam security - what works today, and the managed-device client (source written, NOT BUILT, NOT TESTED on a device)
 
-Status of this document: **design and assessment only**. No Android application exists in this repository, no managed Android device has been provisioned and
-no Android behaviour described below as "to verify" has been tested. Nothing here may be cited as proof that a Home press, a Power-button long-press or an
-assistant gesture is blocked.
+Status of this document: the **server side is implemented and unit-tested in CI** (`ANDROID_MANAGED` client kind). The **Android client source exists in `android-exam-client/` but has never been compiled or run** (no JDK/Android SDK on the authoring machine). No managed Android device has been provisioned, and every Android behaviour described below as "to verify" is untested. Nothing here may be cited as proof that a Home press, a Power-button long-press or an assistant gesture is blocked.
 
 Related: [EXAM_SECURITY.md](EXAM_SECURITY.md) (web layers and server guarantees), [SECURE_EXAM_ARCHITECTURE.md](SECURE_EXAM_ARCHITECTURE.md) (LOCKDOWN profile, secure
 session handshake), [SECURE_EXAM_TEST_REPORT.md](SECURE_EXAM_TEST_REPORT.md).
@@ -82,7 +80,7 @@ Known limits to document honestly (not promises)
 
 No rows are filled because no managed device has been tested. Do not copy a result into this table without an on-device test log.
 
-## 7. Report
+## 7. Report (updated)
 
 | Item | Result | Evidence |
 |---|---|---|
@@ -90,14 +88,39 @@ No rows are filled because no managed device has been tested. Do not copy a resu
 | Student is told when the overlay heuristic fires | PASS (code, CI green) | commit ac26b51; not tested on a phone |
 | Phones refused for PROCTORED / LOCKDOWN | PASS (existing) | verifyTestSecurity.js, verifyExamSecurity.js |
 | Server-authoritative timer, attempts, session | PASS (existing) | same scripts |
-| Android managed app | NOT BUILT | no Android code in repository |
-| Lock Task / assistant / Power-button behaviour | NOT TESTED | no managed device available |
-| Administrator override with audit log | NOT BUILT | |
-| Device compatibility matrix | NOT TESTED | |
-| Android browser automated tests | NOT TESTED | no Android device or emulator harness in CI |
+| Server: `ANDROID_MANAGED` client kind, per-kind signed capability list | PASS (unit tests) | backend/test/secureAndroidClient.test.js |
+| Server: Electron signature format unchanged | PASS (unit test with the legacy construction) | same file |
+| Server: no silent downgrade between client kinds; unattestable requirements always fail | PASS (unit tests); end-to-end against a live DB NOT TESTED | same file; evaluateSecureSession check is in routes/secureExam.js |
+| Server: phones refused unless a secure session is mandatory and Android is accepted | PASS (unit tests) | `mobileRefused` |
+| Android interruption events are observable facts, reportable by a secure client only | PASS (unit test) | same file |
+| Android client source (handshake, device policy, WebView, heartbeat, PIN exit) | WRITTEN, NOT BUILT | android-exam-client/ |
+| Signature vector matches between server and Android code | PASS on the server side; Android side NOT RUN | same hex asserted in HandshakeTest.kt |
+| Debug APK | BLOCKED | no JDK / Android SDK available; no APK exists |
+| Lock Task / Home / assistant / Power-button behaviour | NOT TESTED | no managed device |
+| Device-owner provisioning, EMM policy, unenrol | NOT TESTED / not performed | needs authorisation and hardware |
+| Administrator override of a failed strict requirement, audit-logged | NOT BUILT (staff unlock of a locked attempt exists; a start-time override does not) | |
+| Android browser / emulator automated tests | NOT TESTED | no emulator in CI |
+| Device compatibility matrix | NOT TESTED | table in section 6 is empty |
 
-## 8. What is needed to proceed
+## 8. Exam-type coverage
 
-* A decision on who builds and signs the Android exam app, and an EMM choice (or custom DPC).
-* At least one institution-owned test device per target manufacturer, factory-reset and enrolled as a dedicated device.
-* Authorisation for any change to device management or production policy; nothing here changes a device or production data.
+| Exam type | Secure-session engine (strict Android) | Notes |
+|---|---|---|
+| Module coding tests, chapter Levels, JAVA Practice | Yes (coding-attempt engine) | LOCKDOWN + `allowedClientKinds` override |
+| Formal Test engine (MCQ, company tests) | No: LOCKDOWN is refused there | needs the engine moved onto the secure-session model |
+| Readiness tests, mock interviews, AI interviews, LMS quizzes | No | web modes only; set phones off for graded use |
+
+## 9. Remaining OS limitations
+
+* Behaviour of Home, assistant gesture and Power long-press under Lock Task depends on Android version and OEM; unverified until tested per model.
+* Lock Task does not guarantee that every emergency or OEM system action is blocked.
+* Hiding the Google app can affect other Google services on the device.
+* A second phone, notes or another person are outside any device policy.
+* Capabilities are attested by the app from device state; a device that is not institution-owned cannot be trusted to attest honestly.
+
+## 10. What is needed to proceed
+
+1. A machine with JDK 17 and the Android SDK (or Android Studio) to run `./gradlew testDebugUnitTest assembleDebug` and report the result.
+2. One institution-owned Android device per target manufacturer, factory-reset, plus your authorisation to enrol it (`dpm set-device-owner` or EMM).
+3. A keystore you generate and keep, for release signing (none exists; none is created here).
+4. A decision on the EMM (or manual enrolment for a pilot) and on moving the formal Test engine onto the secure-session model.

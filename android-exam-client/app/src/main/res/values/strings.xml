@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">CodeArena Exam</string>
+    <string name="cfg_app_url">CodeArena web address</string>
+    <string name="cfg_api_url">CodeArena API address</string>
+    <string name="cfg_device_id">Registered exam device id</string>
+    <string name="cfg_device_secret">Device secret (shown once when the device is registered)</string>
+    <string name="cfg_allowed_hosts">Allowed hosts (comma separated)</string>
+    <string name="cfg_blocked_packages">Assistant and search packages to make unavailable during an exam (comma separated)</string>
+    <string name="cfg_pin">Invigilator PIN hash (salt:hash, PBKDF2-HMAC-SHA256)</string>
+</resources>

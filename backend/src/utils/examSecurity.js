@@ -32,7 +32,7 @@ const PRESETS = {
     requireFullscreen: true, multiSession: "BLOCK", mobileAllowed: false, secureBrowserRequired: true,
     requireScreenShare: false, // the secure client is the only window; screen share is for browser-based PROCTORED exams
     requiredCapabilities: ["kiosk", "appRestriction", "browserRestriction", "networkRestriction", "clipboard", "fullscreen", "devtoolsDisabled"],
-    exitAction: "LOCK", graceSec: 120,
+    exitAction: "LOCK", graceSec: 120, allowedClientKinds: ["ELECTRON"],
     insertionCharThreshold: 150, insertionLineThreshold: 10,
   },
 };
@@ -41,6 +41,9 @@ const BOOLEAN_KEYS = ["blockCopy", "blockPaste", "blockCut", "blockContextMenu",
 const NUMBER_KEYS = ["insertionCharThreshold", "insertionLineThreshold"];
 const SecureExamCaps = require("./secureExam");
 const sanitizeCaps = (arr) => (Array.isArray(arr) ? arr.filter((k, i) => SecureExamCaps.CAPABILITIES.includes(k) && arr.indexOf(k) === i) : null);
+
+// Which secure-client kinds may satisfy a secure-browser requirement. Default is the desktop client only, so enabling the Android app is always an explicit admin choice.
+const sanitizeKinds = (arr) => { const k = Array.isArray(arr) ? arr.filter((x, i) => SecureExamCaps.CLIENT_KINDS.includes(x) && arr.indexOf(x) === i) : []; return k.length ? k : null; };
 
 function resolvePolicy(test) {
   const level = LEVELS.includes(test?.securityLevel) ? test.securityLevel : "STANDARD";
@@ -51,8 +54,11 @@ function resolvePolicy(test) {
   if (["FLAG", "BLOCK"].includes(o.multiSession)) base.multiSession = o.multiSession;
   const caps = sanitizeCaps(o.requiredCapabilities);
   if (caps) base.requiredCapabilities = caps;
+  const kinds = sanitizeKinds(o.allowedClientKinds);
+  if (kinds) base.allowedClientKinds = kinds;
   if (SecureExamCaps.EXIT_ACTIONS.includes(o.exitAction)) base.exitAction = o.exitAction;
   if (Number.isFinite(o.graceSec)) base.graceSec = Math.min(900, Math.max(30, Math.floor(o.graceSec)));
+  if (!base.allowedClientKinds) base.allowedClientKinds = ["ELECTRON"];
   if (base.requireFullscreen === null) base.requireFullscreen = test?.requireFullscreen !== false;
   return { level, ...base };
 }
@@ -66,6 +72,8 @@ function sanitizePolicyOverrides(input) {
   if (["FLAG", "BLOCK"].includes(input.multiSession)) out.multiSession = input.multiSession;
   const caps = sanitizeCaps(input.requiredCapabilities);
   if (caps) out.requiredCapabilities = caps;
+  const kinds = sanitizeKinds(input.allowedClientKinds);
+  if (kinds) out.allowedClientKinds = kinds;
   if (SecureExamCaps.EXIT_ACTIONS.includes(input.exitAction)) out.exitAction = input.exitAction;
   if (Number.isFinite(Number(input.graceSec))) out.graceSec = Math.min(900, Math.max(30, Math.floor(Number(input.graceSec))));
   return out;
@@ -84,10 +92,12 @@ const EVENT_SEVERITY = {
   HEARTBEAT_LOST: "MEDIUM", HEARTBEAT_RESTORED: "LOW", SESSION_TAMPERING: "CRITICAL", DEVICE_MISMATCH: "CRITICAL", VERSION_MISMATCH: "HIGH",
   MULTIPLE_PERSON: "HIGH", PHONE_DETECTED: "HIGH", FACE_MISSING: "MEDIUM", EXAM_LOCKED: "HIGH", EXAM_UNLOCKED: "LOW",
   POSSIBLE_EXTERNAL_ASSISTANT: "MEDIUM", SPLIT_SCREEN_SUSPECTED: "MEDIUM",
+  // Android managed client: observable facts only. SYSTEM_UI_INTERRUPTION = the exam window lost focus (notification shade, system dialog, assistant or other overlay - the app cannot tell which).
+  SYSTEM_UI_INTERRUPTION: "MEDIUM", SCREEN_OFF_RESUME: "LOW",
 };
 const CLIENT_REPORTABLE = new Set(["PAGE_HIDDEN", "NETWORK_DISCONNECT", "NETWORK_RECONNECT", "UNUSUAL_ACTIVITY", "SUSPICIOUS_CODE_INSERTION", "EXTERNAL_NAVIGATION_ATTEMPT", "SCREEN_SHARE_STOPPED", "FOCUS_LOSS", "CAMERA_FAILURE", "MIC_FAILURE", "SCREEN_SHARE_FAILURE", "MULTIPLE_PERSON", "PHONE_DETECTED", "FACE_MISSING"]);
 // Reportable ONLY by an authenticated secure-client session (never from a plain browser page).
-const SECURE_CLIENT_REPORTABLE = new Set(["CLIPBOARD_ATTEMPT", "SECURE_CLIENT_STARTED", "SECURE_CLIENT_STOPPED", "KIOSK_EXIT", "APPLICATION_POLICY_FAILURE", "BROWSER_POLICY_FAILURE", "NETWORK_POLICY_FAILURE", "EXTERNAL_NAVIGATION", "TAB_ATTEMPT", "WINDOW_ATTEMPT", "DEVTOOLS_ATTEMPT", "SCREEN_CAPTURE_ATTEMPT", "FOCUS_LOSS", "CAMERA_FAILURE", "MIC_FAILURE", "SCREEN_SHARE_FAILURE"]);
+const SECURE_CLIENT_REPORTABLE = new Set(["CLIPBOARD_ATTEMPT", "SECURE_CLIENT_STARTED", "SECURE_CLIENT_STOPPED", "KIOSK_EXIT", "APPLICATION_POLICY_FAILURE", "BROWSER_POLICY_FAILURE", "NETWORK_POLICY_FAILURE", "EXTERNAL_NAVIGATION", "TAB_ATTEMPT", "WINDOW_ATTEMPT", "DEVTOOLS_ATTEMPT", "SCREEN_CAPTURE_ATTEMPT", "FOCUS_LOSS", "CAMERA_FAILURE", "MIC_FAILURE", "SCREEN_SHARE_FAILURE", "SYSTEM_UI_INTERRUPTION", "SCREEN_OFF_RESUME"]);
 // Server-originated only (a client must not be able to forge evidence of a different kind).
 const SERVER_ONLY = new Set(["MULTIPLE_SESSION", "SECURE_BROWSER_MISSING", "SESSION_REPLACED", "CLIPBOARD_ATTEMPT", "COPY_ATTEMPT", "PASTE_ATTEMPT"]);
 
@@ -116,6 +126,7 @@ const WEIGHTS = {
   SCREEN_SHARE_FAILURE: 4, HEARTBEAT_LOST: 4, HEARTBEAT_RESTORED: 0, SESSION_TAMPERING: 20, DEVICE_MISMATCH: 20, VERSION_MISMATCH: 8,
   MULTIPLE_PERSON: 8, PHONE_DETECTED: 10, FACE_MISSING: 3, EXAM_LOCKED: 0, EXAM_UNLOCKED: 0,
   POSSIBLE_EXTERNAL_ASSISTANT: 4, SPLIT_SCREEN_SUSPECTED: 3,
+  SYSTEM_UI_INTERRUPTION: 2, SCREEN_OFF_RESUME: 0,
   TAB_SWITCH: 6, TAB_SWITCH_BRIEF: 1, FULLSCREEN_EXIT: 5, CAMERA_DROPPED: 5, MIC_DROPPED: 4, DEVTOOLS: 4, COPY: 2, PASTE: 3, CUT: 2,
   RIGHT_CLICK: 1, DRAG_ATTEMPT: 2, PRINT_SCREEN_ATTEMPT: 3, MULTI_MONITOR: 4, REFRESH_ATTEMPT: 1, BROWSER_SHORTCUT: 1,
 };
@@ -140,6 +151,9 @@ function computeRisk(events) {
 
 const MOBILE_UA = /Android|iPhone|iPad|iPod|Mobile/i;
 const isMobileUserAgent = (ua) => MOBILE_UA.test(String(ua || ""));
+// A phone/tablet is refused when the policy says so, EXCEPT when the policy accepts the Android managed client AND a secure session is mandatory: the Android exam
+// app is itself a phone WebView. It is still refused further on by the secure-session check, which needs a verified ANDROID_MANAGED session for this student.
+const mobileRefused = (policy, ua) => !policy.mobileAllowed && isMobileUserAgent(ua) && !(policy.secureBrowserRequired && (policy.allowedClientKinds || []).includes("ANDROID_MANAGED"));
 
 // Subset the browser needs to apply the policy (nothing secret).
 function clientPolicy(policy) {
@@ -148,7 +162,7 @@ function clientPolicy(policy) {
     blockContextMenu: policy.blockContextMenu, blockDrag: policy.blockDrag, requireFullscreen: policy.requireFullscreen,
     multiSession: policy.multiSession, mobileAllowed: policy.mobileAllowed, secureBrowserRequired: policy.secureBrowserRequired,
     requireScreenShare: policy.requireScreenShare,
-    requiredCapabilities: policy.requiredCapabilities, exitAction: policy.exitAction, graceSec: policy.graceSec,
+    requiredCapabilities: policy.requiredCapabilities, allowedClientKinds: policy.allowedClientKinds, exitAction: policy.exitAction, graceSec: policy.graceSec,
     insertionCharThreshold: policy.insertionCharThreshold, insertionLineThreshold: policy.insertionLineThreshold,
   };
 }
@@ -157,5 +171,5 @@ module.exports = {
   PRESETS, LEVELS, resolvePolicy, sanitizePolicyOverrides, clientPolicy,
   EVENT_SEVERITY, CLIENT_REPORTABLE, SECURE_CLIENT_REPORTABLE, SERVER_ONLY, cleanMetadata,
   WEIGHTS, riskLevel, computeRisk,
-  isMobileUserAgent,
+  isMobileUserAgent, mobileRefused,
 };

@@ -47,6 +47,11 @@ async function evaluateSecureSession(token, { studentId, policy, attemptId = nul
   if (!device || device.status !== "ACTIVE" || device.instituteId !== session.instituteId) {
     return { ok: false, status: 403, code: "DEVICE_NOT_ALLOWED", message: "This computer is not registered for secure exams." };
   }
+  // No silent downgrade between client kinds: a policy that only accepts the desktop client never accepts a phone session, and the reverse.
+  const accepted = policy?.allowedClientKinds || ["ELECTRON"];
+  if (!accepted.includes(session.clientKind)) {
+    return { ok: false, status: 403, code: "CLIENT_KIND_NOT_ALLOWED", message: `This assessment cannot be taken with this kind of secure client. It requires: ${accepted.map((k) => (k === "ANDROID_MANAGED" ? "an institution-managed Android exam device" : "the CodeArena Secure Exam desktop client")).join(" or ")}.` };
+  }
   if (attemptId && session.attemptId && session.attemptId !== attemptId) {
     await recordEvent({ type: "SESSION_TAMPERING", session, attempt: { id: attemptId }, metadata: { reason: "session bound to another attempt" } });
     return { ok: false, status: 403, code: "SECURE_SESSION_MISMATCH", message: "This secure session belongs to a different attempt." };
@@ -62,7 +67,7 @@ async function evaluateSecureSession(token, { studentId, policy, attemptId = nul
   if (session.lockedAt && !session.unlockedAt) {
     return { ok: false, status: 423, code: "SESSION_LOCKED", message: "Your exam is locked. Please call your invigilator." };
   }
-  const checks = S.capabilityChecks(policy || { requiredCapabilities: [] }, session.capabilities);
+  const checks = S.capabilityChecks(policy || { requiredCapabilities: [] }, session.capabilities, session.clientKind);
   const failed = S.failedRequired(checks);
   if (failed.length) {
     return { ok: false, status: 403, code: "SECURE_CAPABILITY_MISSING", message: `This computer does not meet the exam security requirements: ${failed.map((f) => f.label).join(", ")}.`, checks };
@@ -169,7 +174,7 @@ router.post("/session", authenticate, requireRole("STUDENT"), handshakeLimiter, 
     if (!S.configured()) return res.status(503).json({ code: "SECURE_EXAM_UNAVAILABLE", error: "The secure exam service is not configured" });
     const student = await studentContext(req, res); if (!student) return;
     const { deviceId, nonce, sig, clientVersion, clientKind, capabilities } = req.body || {};
-    if (!deviceId || !nonce || !sig || !clientVersion || !["ELECTRON"].includes(clientKind) || typeof capabilities !== "object") return res.status(400).json({ error: "deviceId, nonce, sig, clientVersion, clientKind and capabilities are required" });
+    if (!deviceId || !nonce || !sig || !clientVersion || !S.CLIENT_KINDS.includes(clientKind) || typeof capabilities !== "object") return res.status(400).json({ error: "deviceId, nonce, sig, clientVersion, clientKind and capabilities are required" });
     const device = await prisma.examDevice.findUnique({ where: { instituteId_deviceId: { instituteId: student.instituteId, deviceId: String(deviceId) } } });
     if (!device || device.status !== "ACTIVE") return res.status(403).json({ code: "DEVICE_NOT_ALLOWED", error: "This computer is not registered for secure exams" });
     const evidence = { instituteId: student.instituteId, deviceId: device.deviceId, studentId: student.id };
@@ -236,7 +241,7 @@ router.post("/heartbeat", authenticate, requireRole("STUDENT"), heartbeatLimiter
 
     // Capability regression mid-exam (for example the client reports it left kiosk or its policy check failed)
     if (patch.capabilities && attempt && policy.requiredCapabilities) {
-      const failed = S.failedRequired(S.capabilityChecks(policy, patch.capabilities));
+      const failed = S.failedRequired(S.capabilityChecks(policy, patch.capabilities, session.clientKind));
       if (failed.length) await recordEvent({ type: "APPLICATION_POLICY_FAILURE", session, attempt, metadata: { missing: failed.map((f) => f.key).join(",") } });
     }
 

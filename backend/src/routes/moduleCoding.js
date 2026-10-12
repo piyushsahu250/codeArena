@@ -131,7 +131,7 @@ async function enforceSingleSession(req, res, attempt) {
 
 // Start-time requirements the SERVER enforces (never the page alone): mobile support and the managed-browser handshake.
 function startRequirementFailure(req, policy) {
-  if (!policy.mobileAllowed && X.isMobileUserAgent(req.get("user-agent"))) {
+  if (X.mobileRefused(policy, req.get("user-agent"))) {
     return { code: "MOBILE_NOT_SUPPORTED", error: "This assessment cannot be taken on a phone or tablet. Please use a laptop or desktop computer." };
   }
   return null;
@@ -303,7 +303,7 @@ router.get(["/module/:moduleId", "/level/:levelId"], authenticate, requireRole("
 
     // Device health check for the exam page: server-evaluated, never trusted from the browser.
     const pol = X.resolvePolicy(test);
-    const secureStatus = { mobileBlocked: !pol.mobileAllowed && X.isMobileUserAgent(req.get("user-agent")), secureBrowserRequired: pol.secureBrowserRequired, secureBrowserOk: !pol.secureBrowserRequired, checks: null, code: null, message: null };
+    const secureStatus = { mobileBlocked: X.mobileRefused(pol, req.get("user-agent")), secureBrowserRequired: pol.secureBrowserRequired, secureBrowserOk: !pol.secureBrowserRequired, checks: null, code: null, message: null };
     if (pol.secureBrowserRequired) {
       const ev = await evaluateSecureSession(req.get("x-secure-session"), { studentId: req.user.id, policy: pol });
       secureStatus.secureBrowserOk = ev.ok;

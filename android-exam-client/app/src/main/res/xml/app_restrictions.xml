@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Managed configuration an EMM pushes to this app. The device secret is delivered here, never compiled into the APK. -->
+<restrictions xmlns:android="http://schemas.android.com/apk/res/android">
+    <restriction android:key="app_url" android:title="@string/cfg_app_url" android:restrictionType="string" android:defaultValue="https://codearena.site" />
+    <restriction android:key="api_url" android:title="@string/cfg_api_url" android:restrictionType="string" android:defaultValue="https://api-aws.codearena.site/api" />
+    <restriction android:key="device_id" android:title="@string/cfg_device_id" android:restrictionType="string" />
+    <restriction android:key="device_secret" android:title="@string/cfg_device_secret" android:restrictionType="string" />
+    <restriction android:key="allowed_hosts" android:title="@string/cfg_allowed_hosts" android:restrictionType="string" android:defaultValue="codearena.site,api-aws.codearena.site,fonts.googleapis.com,fonts.gstatic.com" />
+    <restriction android:key="blocked_packages" android:title="@string/cfg_blocked_packages" android:restrictionType="string" android:defaultValue="com.google.android.googlequicksearchbox,com.google.android.apps.bard,com.google.android.apps.googleassistant" />
+    <restriction android:key="invigilator_pin_hash" android:title="@string/cfg_pin" android:restrictionType="string" />
+</restrictions>
