@@ -8493,24 +8493,9 @@
         ]
       },
       "totals": {
-        "byDifficulty": {
-          "EASY": ".",
-          "HARD": ".",
-          "MEDIUM": "."
-        },
-        "byStatus": {
-          "DRAFT": ".",
-          "PUBLISHED": ".",
-          "VERIFIED": "."
-        },
-        "byType": {
-          "CODING": ".",
-          "MCQ": ".",
-          "MULTISELECT": ".",
-          "NUMERICAL": ".",
-          "SQL": ".",
-          "TRUE_FALSE": "."
-        },
+        "byDifficulty": "map",
+        "byStatus": "map",
+        "byType": "map",
         "total": "."
       }
     }
@@ -8539,20 +8524,9 @@
         ]
       },
       "totals": {
-        "byDifficulty": {
-          "EASY": ".",
-          "MEDIUM": "."
-        },
-        "byStatus": {
-          "DRAFT": ".",
-          "PUBLISHED": "."
-        },
-        "byType": {
-          "CODING": ".",
-          "MCQ": ".",
-          "MULTISELECT": ".",
-          "TRUE_FALSE": "."
-        },
+        "byDifficulty": "map",
+        "byStatus": "map",
+        "byType": "map",
         "total": "."
       }
     }
@@ -8614,24 +8588,9 @@
         ]
       },
       "totals": {
-        "byDifficulty": {
-          "EASY": ".",
-          "HARD": ".",
-          "MEDIUM": "."
-        },
-        "byStatus": {
-          "DRAFT": ".",
-          "PUBLISHED": ".",
-          "VERIFIED": "."
-        },
-        "byType": {
-          "CODING": ".",
-          "MCQ": ".",
-          "MULTISELECT": ".",
-          "NUMERICAL": ".",
-          "SQL": ".",
-          "TRUE_FALSE": "."
-        },
+        "byDifficulty": "map",
+        "byStatus": "map",
+        "byType": "map",
         "total": "."
       }
     }
