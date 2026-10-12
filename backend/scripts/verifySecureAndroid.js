@@ -117,7 +117,7 @@ async function cleanup() {
     check("opt-in: a verified Android managed session starts the exam on a phone", ok.status === 200 && !!ok.body.attemptId && !!ok.body.sessionId);
     check("hidden tests never reach the Android client", !/"isHidden":true/.test(JSON.stringify(ok.body)));
     const attemptId = ok.body.attemptId, examSession = ok.body.sessionId, q0 = ok.body.questions[0].id;
-    check("timer integrity: the deadline comes from the server and is in the future", typeof ok.body.deadline === "string" && new Date(ok.body.deadline).getTime() > Date.now());
+    check("timer integrity: the deadline comes from the server and is in the future", Number.isFinite(ok.body.deadline) && ok.body.deadline > Date.now() && ok.body.deadline - Date.now() <= 30 * 60 * 1000 + 5000);
     const H = { "X-Secure-Session": tok, "X-Exam-Session": examSession, "User-Agent": PHONE_UA };
     check("autosave works with the Android secure session", (await call("POST", `/module-coding/attempts/${attemptId}/autosave`, T1, { questionId: q0, language: "java", code: "class Main{}", seq: 1 }, H)).status === 200);
     const noSec = await call("POST", `/module-coding/attempts/${attemptId}/autosave`, T1, { questionId: q0, language: "java", code: "x", seq: 2 }, { "X-Exam-Session": examSession, "User-Agent": PHONE_UA });
