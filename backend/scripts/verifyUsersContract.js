@@ -81,7 +81,7 @@ async function cleanup() {
   const pw = {};
   const mk = async (key, role, instituteId, extra = {}) => {
     pw[key] = `Zz9!${crypto.randomBytes(8).toString("base64url")}`;
-    return prisma.user.create({ data: { name: `ZZ UC ${key}`, email: `zz-uc-${key}-${ts}@example.invalid`, passwordHash: await bcrypt.hash(pw[key], 10), role, instituteId, mustChangePassword: false, ...extra } });
+    return prisma.user.create({ data: { name: `ZZ UC ${key}`, email: `zz-uc-${key.toLowerCase()}-${ts}@example.invalid`, passwordHash: await bcrypt.hash(pw[key], 10), role, instituteId, mustChangePassword: false, ...extra } });
   };
   const platform = await mk("platform", "ADMIN", null);
   const instA = await mk("instA", "INSTITUTE_ADMIN", A.id);
