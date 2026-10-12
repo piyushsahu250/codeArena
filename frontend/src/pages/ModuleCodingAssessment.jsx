@@ -845,10 +845,11 @@ export default function ModuleCodingAssessment() {
               </section>
             )}
 
+            {status.lessonsComplete && status.alreadyPassed && (
+              <Banner color="var(--mint)">✓ You've already passed this assessment (best score {status.bestScore}%). You can attempt it again to practice, and your best score is always kept.</Banner>
+            )}
             {!status.lessonsComplete ? (
               <Banner color="var(--amber-dark)">{status.lockReason || "Complete this module's lessons and practice test first."}</Banner>
-            ) : status.alreadyPassed ? (
-              <Banner color="var(--mint)">✓ You've already passed this assessment (best score {status.bestScore}%).</Banner>
             ) : !status.activeAttemptId && status.attemptsRemaining === 0 ? (
               <Banner color="var(--rust)">You've used all allowed attempts. Contact your instructor for an additional attempt.</Banner>
             ) : !status.activeAttemptId && status.cooldownRemainingSec > 0 ? (

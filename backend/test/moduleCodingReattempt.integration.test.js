@@ -116,3 +116,48 @@ test("custom-mode attempt reset prioritizes a passed attempt into the deleted se
     if (courseId) await prisma.course.delete({ where: { id: courseId } }).catch(() => {});
   }
 });
+
+test("a student who has passed can attempt again to practice, and the pass and best score are kept", async (t) => {
+  if (!serverReachable) return t.skip("no live server/fixture data reachable at localhost:4000");
+  let courseId, moduleId, testId, questionId;
+  try {
+    const course = await prisma.course.create({ data: { slug: `mc-practice-after-pass-${Date.now()}`, name: "MC Practice After Pass Course", status: "DRAFT" } });
+    courseId = course.id;
+    const mod = await prisma.courseModule.create({ data: { courseId, title: "M1", order: 0 } });
+    moduleId = mod.id;
+    const lesson = await prisma.lesson.create({ data: { moduleId, title: "L1", order: 0, content: "hello" } });
+    await prisma.lessonProgress.create({ data: { studentId: student.id, lessonId: lesson.id, status: "COMPLETED" } });
+    const codingTest = await prisma.moduleCodingTest.create({ data: { moduleId, title: `MC Practice After Pass ${Date.now()}`, maxAttempts: null, isActive: true, passingPercent: 50 } });
+    testId = codingTest.id;
+    const question = await prisma.question.create({ data: { description: "Reverse a string", questionType: "CODING", questionStatus: "PUBLISHED", moduleCodingTestId: testId, instituteId: null } });
+    questionId = question.id;
+
+    // Attempt 1 passed with 80, attempt 2 (a practice run) scored only 30.
+    const base = Date.now();
+    await prisma.moduleCodingAttempt.create({ data: { moduleCodingTestId: testId, studentId: student.id, status: "SUBMITTED", attemptNumber: 1, score: 80, passed: true, submittedAt: new Date(base - 20000), startedAt: new Date(base - 30000) } });
+    await prisma.moduleCodingAttempt.create({ data: { moduleCodingTestId: testId, studentId: student.id, status: "SUBMITTED", attemptNumber: 2, score: 30, passed: false, submittedAt: new Date(base - 5000), startedAt: new Date(base - 10000) } });
+
+    const status = await httpRequest("GET", `/api/module-coding/module/${moduleId}`, studentToken);
+    assert.equal(status.status, 200, JSON.stringify(status.body));
+    assert.equal(status.body.alreadyPassed, true, "a weaker later attempt must not undo the pass");
+    assert.equal(status.body.bestScore, 80, "the best score across attempts is the one kept");
+    assert.equal(status.body.status, "PASSED");
+    assert.equal(status.body.canStart, true, "having passed must not block another attempt");
+
+    const start = await httpRequest("POST", `/api/module-coding/module/${moduleId}/start`, studentToken);
+    assert.equal(start.status, 200, `a passed student must be able to start another attempt: ${JSON.stringify(start.body)}`);
+    assert.ok(start.body.attemptId, "a new attempt must be created");
+  } finally {
+    if (testId) {
+      await prisma.moduleCodingAttempt.deleteMany({ where: { moduleCodingTestId: testId } }).catch(() => {});
+      await prisma.moduleCodingTest.delete({ where: { id: testId } }).catch(() => {});
+    }
+    if (questionId) await prisma.question.delete({ where: { id: questionId } }).catch(() => {});
+    if (moduleId) {
+      await prisma.lessonProgress.deleteMany({ where: { lesson: { moduleId } } }).catch(() => {});
+      await prisma.lesson.deleteMany({ where: { moduleId } }).catch(() => {});
+      await prisma.courseModule.delete({ where: { id: moduleId } }).catch(() => {});
+    }
+    if (courseId) await prisma.course.delete({ where: { id: courseId } }).catch(() => {});
+  }
+});

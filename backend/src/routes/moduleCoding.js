@@ -315,7 +315,7 @@ router.get(["/module/:moduleId", "/level/:levelId"], authenticate, requireRole("
     const canStart =
       !!activeAttempt ||
       (live && lessonsComplete &&
-        !alreadyPassed &&
+        // already passed is not a block: the student may practice again (best score is kept)
         (attemptsRemaining === null || attemptsRemaining > 0) &&
         cooldownRemainingSec <= 0);
 
@@ -441,7 +441,8 @@ router.post(["/module/:moduleId/start", "/level/:levelId/start"], authenticate, 
       where: { moduleCodingTestId: test.id, studentId: req.user.id, status: { not: "IN_PROGRESS" } },
     });
     const alreadyPassed = await prisma.moduleCodingAttempt.findFirst({ where: { moduleCodingTestId: test.id, studentId: req.user.id, passed: true } });
-    if (alreadyPassed) return res.status(403).json({ error: "You have already passed this assessment" });
+    // A student who has already passed may attempt again to practice: the pass and the best score are derived from ALL finalized attempts (any pass, highest score),
+    // so a weaker retake can never undo either. The attempt limit, if one is set, still applies.
     if (test.maxAttempts != null && finalizedCount >= test.maxAttempts) {
       return res.status(403).json({ error: "You have used all allowed attempts for this assessment. Contact your instructor for an additional attempt." });
     }
@@ -449,7 +450,7 @@ router.post(["/module/:moduleId/start", "/level/:levelId/start"], authenticate, 
       where: { moduleCodingTestId: test.id, studentId: req.user.id, status: { not: "IN_PROGRESS" } },
       orderBy: { attemptNumber: "desc" },
     });
-    if (lastFinalized && test.cooldownMinutes > 0) {
+    if (lastFinalized && !alreadyPassed && test.cooldownMinutes > 0) {
       const cooldownUntil = new Date(lastFinalized.submittedAt).getTime() + test.cooldownMinutes * 60 * 1000;
       if (Date.now() < cooldownUntil) {
         return res.status(403).json({ error: `Please wait before retrying — cooldown active for ${Math.ceil((cooldownUntil - Date.now()) / 60000)} more minute(s).` });
