@@ -30,6 +30,23 @@ router.post("/", ...staffInstitute, c.create);
 router.get("/", ...staffInstitute, c.list);
 router.get("/meta/filters", ...staffInstitute, c.filters);
 
+// folders and bulk operations: literal paths, before "/:id"
+router.get("/folders", ...staffInstitute, c.listFolders);
+router.post("/folders", ...staffInstitute, c.createFolder);
+router.patch("/folders/:id", ...staffInstitute, c.editFolder);
+router.get("/folders/:id/delete-preview", ...staffInstitute, c.deletePreview);
+router.delete("/folders/:id", ...staffInstitute, c.deleteFolder);
+router.get("/folders/:id/shares", ...staffInstitute, c.listShares);
+router.post("/folders/:id/shares", ...staffInstitute, c.shareFolder);
+router.delete("/folders/:id/shares/:staffId", ...staffInstitute, c.revokeShare);
+router.post("/folders/:id/merge", ...staffInstitute, c.mergeFolder);
+router.post("/folders/:id/clear", ...staffInstitute, c.clearFolder);
+router.post("/bulk-move", ...staffInstitute, c.bulkMove);
+router.post("/bulk-assign-subject", ...staffInstitute, c.bulkAssignSubject);
+router.post("/bulk-status", ...staffInstitute, c.bulkStatus);
+router.post("/bulk-delete", ...staffInstitute, c.bulkDelete);
+router.post("/bulk-copy", ...staffInstitute, c.bulkCopy);
+
 router.post("/:id/duplicate", ...staffInstitute, c.duplicate);
 router.get("/:id", ...staffInstitute, c.getOne);
 router.patch("/:id", ...staffInstitute, c.edit);

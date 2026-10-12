@@ -1,0 +1,1092 @@
+[
+  {
+    "name": "folders list: anonymous",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "Missing or invalid Authorization header"
+    }
+  },
+  {
+    "name": "folders list: student refused",
+    "status": 403,
+    "body": {
+      "error": "Insufficient permissions"
+    }
+  },
+  {
+    "name": "folders list: institute admin",
+    "status": 200,
+    "body": [
+      {
+        "_count": {
+          "children": 0,
+          "questions": 0
+        },
+        "category": null,
+        "createdAt": "<time>",
+        "createdById": "<id>",
+        "description": null,
+        "id": "<id>",
+        "instituteId": "<id>",
+        "name": "ZZ QF child",
+        "parentId": "<id>"
+      },
+      {
+        "_count": {
+          "children": 1,
+          "questions": 0
+        },
+        "category": null,
+        "createdAt": "<time>",
+        "createdById": "<id>",
+        "description": null,
+        "id": "<id>",
+        "instituteId": "<id>",
+        "name": "ZZ QF root",
+        "parentId": null
+      }
+    ]
+  },
+  {
+    "name": "folders list: other institute",
+    "status": 200,
+    "body": [
+      {
+        "_count": {
+          "children": 0,
+          "questions": 0
+        },
+        "category": null,
+        "createdAt": "<time>",
+        "createdById": "<id>",
+        "description": null,
+        "id": "<id>",
+        "instituteId": "<id>",
+        "name": "ZZ QF foreign",
+        "parentId": null
+      }
+    ]
+  },
+  {
+    "name": "folders list: staff without access sees none of the institute's",
+    "status": 200,
+    "body": []
+  },
+  {
+    "name": "folders create: anonymous",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "Missing or invalid Authorization header"
+    }
+  },
+  {
+    "name": "folders create: student refused",
+    "status": 403,
+    "body": {
+      "error": "Insufficient permissions"
+    }
+  },
+  {
+    "name": "folders create: no name",
+    "status": 400,
+    "body": {
+      "error": "Folder name is required"
+    }
+  },
+  {
+    "name": "folders create: parent of another institute",
+    "status": 403,
+    "body": {
+      "error": "That parent folder isn't in your institute's question bank"
+    }
+  },
+  {
+    "name": "folders create: parent that does not exist",
+    "status": 403,
+    "body": {
+      "error": "That parent folder isn't in your institute's question bank"
+    }
+  },
+  {
+    "name": "folders create: top level",
+    "status": 200,
+    "body": {
+      "category": "Technical",
+      "createdAt": "<time>",
+      "createdById": "<id>",
+      "description": "d",
+      "id": "<id>",
+      "instituteId": "<id>",
+      "name": "ZZ QF made",
+      "parentId": null
+    }
+  },
+  {
+    "name": "folders create: nested",
+    "status": 200,
+    "body": {
+      "category": null,
+      "createdAt": "<time>",
+      "createdById": "<id>",
+      "description": null,
+      "id": "<id>",
+      "instituteId": "<id>",
+      "name": "ZZ QF made child",
+      "parentId": "<id>"
+    }
+  },
+  {
+    "name": "folders create: same name again",
+    "status": 200,
+    "body": {
+      "category": null,
+      "createdAt": "<time>",
+      "createdById": "<id>",
+      "description": null,
+      "id": "<id>",
+      "instituteId": "<id>",
+      "name": "ZZ QF made",
+      "parentId": null
+    }
+  },
+  {
+    "name": "folders create: by a staff member",
+    "status": 200,
+    "body": {
+      "category": null,
+      "createdAt": "<time>",
+      "createdById": "<id>",
+      "description": null,
+      "id": "<id>",
+      "instituteId": "<id>",
+      "name": "ZZ QF staff folder",
+      "parentId": null
+    }
+  },
+  {
+    "name": "folders create: by the platform admin",
+    "status": 200,
+    "body": {
+      "category": null,
+      "createdAt": "<time>",
+      "createdById": "<id>",
+      "description": null,
+      "id": "<id>",
+      "instituteId": null,
+      "name": "ZZ QF platform folder",
+      "parentId": null
+    }
+  },
+  {
+    "name": "folders create: stored",
+    "db": [
+      {
+        "category": null,
+        "createdById": "instA",
+        "description": null,
+        "instituteId": "A",
+        "name": "ZZ QF child",
+        "parentId": "set"
+      },
+      {
+        "category": "Technical",
+        "createdById": "instA",
+        "description": "d",
+        "instituteId": "A",
+        "name": "ZZ QF made",
+        "parentId": null
+      },
+      {
+        "category": null,
+        "createdById": "instA",
+        "description": null,
+        "instituteId": "A",
+        "name": "ZZ QF made",
+        "parentId": null
+      },
+      {
+        "category": null,
+        "createdById": "instA",
+        "description": null,
+        "instituteId": "A",
+        "name": "ZZ QF made child",
+        "parentId": "set"
+      },
+      {
+        "category": null,
+        "createdById": "platform",
+        "description": null,
+        "instituteId": null,
+        "name": "ZZ QF platform folder",
+        "parentId": null
+      },
+      {
+        "category": null,
+        "createdById": "instA",
+        "description": null,
+        "instituteId": "A",
+        "name": "ZZ QF root",
+        "parentId": null
+      },
+      {
+        "category": null,
+        "createdById": "staffA",
+        "description": null,
+        "instituteId": "A",
+        "name": "ZZ QF staff folder",
+        "parentId": null
+      }
+    ]
+  },
+  {
+    "name": "folders edit: anonymous",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "Missing or invalid Authorization header"
+    }
+  },
+  {
+    "name": "folders edit: student refused",
+    "status": 403,
+    "body": {
+      "error": "Insufficient permissions"
+    }
+  },
+  {
+    "name": "folders edit: unknown folder",
+    "status": 404,
+    "body": {
+      "error": "Folder not found"
+    }
+  },
+  {
+    "name": "folders edit: folder of another institute",
+    "status": 403,
+    "body": {
+      "error": "Not your institute's folder"
+    }
+  },
+  {
+    "name": "folders edit: blank name",
+    "status": 400,
+    "body": {
+      "error": "Folder name is required"
+    }
+  },
+  {
+    "name": "folders edit: rename and describe",
+    "status": 200,
+    "body": {
+      "category": "Aptitude",
+      "createdAt": "<time>",
+      "createdById": "<id>",
+      "description": null,
+      "id": "<id>",
+      "instituteId": "<id>",
+      "name": "ZZ QF root renamed",
+      "parentId": null
+    }
+  },
+  {
+    "name": "folders edit: its own parent",
+    "status": 400,
+    "body": {
+      "error": "A folder can't be its own parent"
+    }
+  },
+  {
+    "name": "folders edit: move under a folder of this institute",
+    "status": 200,
+    "body": {
+      "category": null,
+      "createdAt": "<time>",
+      "createdById": "<id>",
+      "description": null,
+      "id": "<id>",
+      "instituteId": "<id>",
+      "name": "ZZ QF child",
+      "parentId": "<id>"
+    }
+  },
+  {
+    "name": "folders edit: move under a folder of another institute",
+    "status": 403,
+    "body": {
+      "error": "That parent folder isn't in your institute's question bank"
+    }
+  },
+  {
+    "name": "folders edit: move to the top level",
+    "status": 200,
+    "body": {
+      "category": null,
+      "createdAt": "<time>",
+      "createdById": "<id>",
+      "description": null,
+      "id": "<id>",
+      "instituteId": "<id>",
+      "name": "ZZ QF child",
+      "parentId": null
+    }
+  },
+  {
+    "name": "folders edit: staff edits an institute folder they can see",
+    "status": 200,
+    "body": {
+      "category": null,
+      "createdAt": "<time>",
+      "createdById": "<id>",
+      "description": "by staff",
+      "id": "<id>",
+      "instituteId": "<id>",
+      "name": "ZZ QF staff folder",
+      "parentId": null
+    }
+  },
+  {
+    "name": "folders preview: anonymous",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "Missing or invalid Authorization header"
+    }
+  },
+  {
+    "name": "folders preview: unknown folder",
+    "status": 404,
+    "body": {
+      "error": "Folder not found"
+    }
+  },
+  {
+    "name": "folders preview: folder of another institute",
+    "status": 403,
+    "body": {
+      "error": "Not your institute's folder"
+    }
+  },
+  {
+    "name": "folders preview: counts questions, sub-banks and blocked ones",
+    "status": 200,
+    "body": {
+      "blockedCount": 2,
+      "questionCount": 5,
+      "subBankCount": 2
+    }
+  },
+  {
+    "name": "folders delete: anonymous",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "Missing or invalid Authorization header"
+    }
+  },
+  {
+    "name": "folders delete: unknown folder",
+    "status": 404,
+    "body": {
+      "error": "Folder not found"
+    }
+  },
+  {
+    "name": "folders delete: folder of another institute",
+    "status": 403,
+    "body": {
+      "error": "Not your institute's folder"
+    }
+  },
+  {
+    "name": "folders delete: a tree with a question used in a test",
+    "status": 200,
+    "body": {
+      "deletedFolderCount": 0,
+      "deletedQuestionCount": 3,
+      "fullyDeleted": false,
+      "skippedQuestionCount": 2
+    }
+  },
+  {
+    "name": "folders delete: what is left",
+    "db": {
+      "folders": [
+        "ZZ QF del kid",
+        "ZZ QF del kid two",
+        "ZZ QF del root"
+      ],
+      "questions": [
+        "ZZ QF q graded",
+        "ZZ QF q in a test"
+      ]
+    }
+  },
+  {
+    "name": "folders delete: audit rows",
+    "db": [
+      "QUESTION_DELETED|role:INSTITUTE_ADMIN|student:-|inst:set|keys:bulk,count,folderId"
+    ]
+  },
+  {
+    "name": "folders delete: a tree with nothing blocking it",
+    "status": 200,
+    "body": {
+      "deletedFolderCount": 2,
+      "deletedQuestionCount": 1,
+      "fullyDeleted": true,
+      "skippedQuestionCount": 0
+    }
+  },
+  {
+    "name": "folders delete: the clean tree is gone",
+    "db": {
+      "folders": 0
+    }
+  },
+  {
+    "name": "shares list: anonymous",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "Missing or invalid Authorization header"
+    }
+  },
+  {
+    "name": "shares list: unknown folder",
+    "status": 404,
+    "body": {
+      "error": "Question bank not found"
+    }
+  },
+  {
+    "name": "shares list: other institute",
+    "status": 403,
+    "body": {
+      "error": "You can only manage question banks under your own institute"
+    }
+  },
+  {
+    "name": "shares list: staff who is not the creator",
+    "status": 403,
+    "body": {
+      "error": "Only the question bank's creator can view its sharing"
+    }
+  },
+  {
+    "name": "shares add: staff who is not the creator",
+    "status": 403,
+    "body": {
+      "error": "Only the question bank's creator can share it"
+    }
+  },
+  {
+    "name": "shares add: unknown folder",
+    "status": 404,
+    "body": {
+      "error": "Question bank not found"
+    }
+  },
+  {
+    "name": "shares add: other institute",
+    "status": 403,
+    "body": {
+      "error": "You can only manage question banks under your own institute"
+    }
+  },
+  {
+    "name": "shares add: a staff member of another institute",
+    "status": 400,
+    "body": {
+      "error": "One or more selected staff members are not valid for this institute"
+    }
+  },
+  {
+    "name": "shares add: a student",
+    "status": 400,
+    "body": {
+      "error": "One or more selected staff members are not valid for this institute"
+    }
+  },
+  {
+    "name": "shares add: nobody",
+    "status": 200,
+    "body": {
+      "success": true
+    }
+  },
+  {
+    "name": "shares add: the creator shares with a colleague",
+    "status": 200,
+    "body": {
+      "success": true
+    }
+  },
+  {
+    "name": "shares add: the same colleague again",
+    "status": 200,
+    "body": {
+      "success": true
+    }
+  },
+  {
+    "name": "shares list: the creator",
+    "status": 200,
+    "body": [
+      {
+        "createdAt": "<time>",
+        "folderId": "<id>",
+        "id": "<id>",
+        "sharedByName": "ZZ QF staffA",
+        "sharedByUserId": "<id>",
+        "staff": {
+          "id": "<id>",
+          "name": "ZZ QF staffA2"
+        },
+        "staffId": "<id>"
+      }
+    ]
+  },
+  {
+    "name": "shares list: an institute admin",
+    "status": 200,
+    "body": [
+      {
+        "createdAt": "<time>",
+        "folderId": "<id>",
+        "id": "<id>",
+        "sharedByName": "ZZ QF staffA",
+        "sharedByUserId": "<id>",
+        "staff": {
+          "id": "<id>",
+          "name": "ZZ QF staffA2"
+        },
+        "staffId": "<id>"
+      }
+    ]
+  },
+  {
+    "name": "shares revoke: staff who is not the creator",
+    "status": 403,
+    "body": {
+      "error": "Only the question bank's creator can revoke sharing"
+    }
+  },
+  {
+    "name": "shares revoke: unknown folder",
+    "status": 404,
+    "body": {
+      "error": "Question bank not found"
+    }
+  },
+  {
+    "name": "shares revoke: the creator",
+    "status": 200,
+    "body": {
+      "success": true
+    }
+  },
+  {
+    "name": "shares revoke: someone with no share",
+    "status": 200,
+    "body": {
+      "success": true
+    }
+  },
+  {
+    "name": "shares: stored",
+    "db": {
+      "rows": 0
+    }
+  },
+  {
+    "name": "shares: audit rows",
+    "db": [
+      "QUESTION_BANK_SHARED|role:STAFF|student:-|inst:set|keys:folderId,folderName,sharedWithCount",
+      "QUESTION_BANK_SHARED|role:INSTITUTE_ADMIN|student:-|inst:set|keys:folderId,folderName,sharedWithCount"
+    ]
+  },
+  {
+    "name": "merge: anonymous",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "Missing or invalid Authorization header"
+    }
+  },
+  {
+    "name": "merge: no target",
+    "status": 400,
+    "body": {
+      "error": "Choose a different target folder to merge into"
+    }
+  },
+  {
+    "name": "merge: into itself",
+    "status": 400,
+    "body": {
+      "error": "Choose a different target folder to merge into"
+    }
+  },
+  {
+    "name": "merge: unknown target",
+    "status": 404,
+    "body": {
+      "error": "Folder not found"
+    }
+  },
+  {
+    "name": "merge: target of another institute",
+    "status": 403,
+    "body": {
+      "error": "Not your institute's folder"
+    }
+  },
+  {
+    "name": "merge: a source holding another staff member's questions",
+    "status": 403,
+    "body": {
+      "error": "Not your institute's folder"
+    }
+  },
+  {
+    "name": "merge: succeeds",
+    "status": 200,
+    "body": {
+      "success": true
+    }
+  },
+  {
+    "name": "merge: stored",
+    "db": {
+      "kidMoved": true,
+      "questionMoved": true,
+      "sourceGone": true
+    }
+  },
+  {
+    "name": "move: anonymous",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "Missing or invalid Authorization header"
+    }
+  },
+  {
+    "name": "move: student refused",
+    "status": 403,
+    "body": {
+      "error": "Insufficient permissions"
+    }
+  },
+  {
+    "name": "move: nothing selected",
+    "status": 400,
+    "body": {
+      "error": "No questions selected"
+    }
+  },
+  {
+    "name": "move: folder of another institute",
+    "status": 403,
+    "body": {
+      "error": "That folder isn't in your institute's question bank"
+    }
+  },
+  {
+    "name": "move: none of the questions are the requester's",
+    "status": 403,
+    "body": {
+      "error": "None of the selected questions are in your institute's question bank"
+    }
+  },
+  {
+    "name": "move: own and foreign questions together",
+    "status": 200,
+    "body": {
+      "movedCount": 2,
+      "skippedCount": 2
+    }
+  },
+  {
+    "name": "move: staff cannot move another staff member's question",
+    "status": 403,
+    "body": {
+      "error": "None of the selected questions are in your institute's question bank"
+    }
+  },
+  {
+    "name": "move: out of the folder",
+    "status": 200,
+    "body": {
+      "movedCount": 1,
+      "skippedCount": 0
+    }
+  },
+  {
+    "name": "move: stored",
+    "db": [
+      {
+        "d": "ZZ QF q bulk 1",
+        "folder": null
+      },
+      {
+        "d": "ZZ QF q bulk 2",
+        "folder": "set"
+      },
+      {
+        "d": "ZZ QF q bulk foreign",
+        "folder": null
+      },
+      {
+        "d": "ZZ QF q bulk staff",
+        "folder": null
+      }
+    ]
+  },
+  {
+    "name": "assign: anonymous",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "Missing or invalid Authorization header"
+    }
+  },
+  {
+    "name": "assign: nothing selected",
+    "status": 400,
+    "body": {
+      "error": "No questions selected"
+    }
+  },
+  {
+    "name": "assign: no subject",
+    "status": 400,
+    "body": {
+      "error": "Subject and Unit are required"
+    }
+  },
+  {
+    "name": "assign: unit of another subject",
+    "status": 400,
+    "body": {
+      "error": "That Unit does not belong to the selected Subject"
+    }
+  },
+  {
+    "name": "assign: none of the questions are the requester's",
+    "status": 403,
+    "body": {
+      "error": "None of the selected questions are in your institute's question bank"
+    }
+  },
+  {
+    "name": "assign: own and foreign questions together",
+    "status": 200,
+    "body": {
+      "skippedCount": 1,
+      "updatedCount": 2
+    }
+  },
+  {
+    "name": "assign: stored",
+    "db": [
+      {
+        "d": "ZZ QF q bulk 1",
+        "subject": "set",
+        "unit": "set"
+      },
+      {
+        "d": "ZZ QF q bulk 2",
+        "subject": "set",
+        "unit": "set"
+      },
+      {
+        "d": "ZZ QF q bulk foreign",
+        "subject": null,
+        "unit": null
+      }
+    ]
+  },
+  {
+    "name": "assign: audit rows",
+    "db": [
+      "QUESTION_UPDATED|role:INSTITUTE_ADMIN|student:-|inst:set|keys:bulk,count,subjectId,type,unitId"
+    ]
+  },
+  {
+    "name": "status: anonymous",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "Missing or invalid Authorization header"
+    }
+  },
+  {
+    "name": "status: nothing selected",
+    "status": 400,
+    "body": {
+      "error": "No questions selected"
+    }
+  },
+  {
+    "name": "status: unknown status",
+    "status": 400,
+    "body": {
+      "error": "Invalid review status"
+    }
+  },
+  {
+    "name": "status: none of the questions are the requester's",
+    "status": 403,
+    "body": {
+      "error": "None of the selected questions are in your institute's question bank"
+    }
+  },
+  {
+    "name": "status: archive own and foreign questions",
+    "status": 200,
+    "body": {
+      "blocked": [],
+      "skippedCount": 1,
+      "updatedCount": 2
+    }
+  },
+  {
+    "name": "status: verify a multiple-choice question",
+    "status": 200,
+    "body": {
+      "blocked": [],
+      "skippedCount": 0,
+      "updatedCount": 1
+    }
+  },
+  {
+    "name": "status: verify a coding question that has no tests",
+    "status": 200,
+    "body": {
+      "blocked": [
+        {
+          "id": "<id>",
+          "reasons": [
+            "Needs at least 2 visible sample test cases (has 0)",
+            "Needs at least 5 hidden test cases (has 0)"
+          ],
+          "title": "ZZ QF coding bare"
+        }
+      ],
+      "skippedCount": 1,
+      "updatedCount": 1
+    }
+  },
+  {
+    "name": "status: stored",
+    "db": [
+      {
+        "by": null,
+        "d": "ZZ QF coding bare",
+        "status": "PUBLISHED"
+      },
+      {
+        "by": "set",
+        "d": "ZZ QF q bulk 1",
+        "status": "VERIFIED"
+      },
+      {
+        "by": "set",
+        "d": "ZZ QF q bulk 2",
+        "status": "VERIFIED"
+      },
+      {
+        "by": null,
+        "d": "ZZ QF q bulk foreign",
+        "status": "PUBLISHED"
+      }
+    ]
+  },
+  {
+    "name": "status: audit rows",
+    "db": [
+      "QUESTION_UPDATED|role:INSTITUTE_ADMIN|student:-|inst:set|keys:blockedCount,bulk,count,questionStatus",
+      "QUESTION_UPDATED|role:INSTITUTE_ADMIN|student:-|inst:set|keys:blockedCount,bulk,count,questionStatus",
+      "QUESTION_UPDATED|role:INSTITUTE_ADMIN|student:-|inst:set|keys:blockedCount,bulk,count,questionStatus"
+    ]
+  },
+  {
+    "name": "delete: anonymous",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "Missing or invalid Authorization header"
+    }
+  },
+  {
+    "name": "delete: nothing selected",
+    "status": 400,
+    "body": {
+      "error": "No questions selected"
+    }
+  },
+  {
+    "name": "delete: free, foreign, graded and unknown ids",
+    "status": 200,
+    "body": {
+      "blocked": [
+        {
+          "id": "<id>",
+          "reason": "Has student submissions — archive instead",
+          "title": "ZZ QF q del graded"
+        }
+      ],
+      "deletedCount": 1,
+      "skippedCount": 2
+    }
+  },
+  {
+    "name": "delete: staff cannot delete another staff member's question",
+    "status": 200,
+    "body": {
+      "blocked": [],
+      "deletedCount": 0,
+      "skippedCount": 1
+    }
+  },
+  {
+    "name": "delete: a question used in a test",
+    "status": 200,
+    "body": {
+      "blocked": [
+        {
+          "id": "<id>",
+          "reason": "Used in one or more tests",
+          "title": "ZZ QF q del in test"
+        }
+      ],
+      "deletedCount": 0,
+      "skippedCount": 0
+    }
+  },
+  {
+    "name": "delete: stored",
+    "db": {
+      "free": true,
+      "gradedKept": true,
+      "inTestKept": true,
+      "staffKept": true
+    }
+  },
+  {
+    "name": "delete: audit rows",
+    "db": [
+      "QUESTION_DELETED|role:INSTITUTE_ADMIN|student:-|inst:set|keys:bulk,count,folderId",
+      "QUESTION_DELETED|role:INSTITUTE_ADMIN|student:-|inst:set|keys:bulk,count,folderId",
+      "QUESTION_DELETED|role:INSTITUTE_ADMIN|student:-|inst:set|keys:bulk,count"
+    ]
+  },
+  {
+    "name": "copy: anonymous",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "Missing or invalid Authorization header"
+    }
+  },
+  {
+    "name": "copy: nothing selected",
+    "status": 400,
+    "body": {
+      "error": "No questions selected"
+    }
+  },
+  {
+    "name": "copy: no destination",
+    "status": 400,
+    "body": {
+      "error": "A destination question bank is required"
+    }
+  },
+  {
+    "name": "copy: destination of another institute",
+    "status": 403,
+    "body": {
+      "error": "That folder isn't in your institute's question bank"
+    }
+  },
+  {
+    "name": "copy: own, already-there, foreign and unknown ids",
+    "status": 200,
+    "body": {
+      "copiedCount": 1,
+      "skippedCount": 3
+    }
+  },
+  {
+    "name": "copy: stored",
+    "db": [
+      {
+        "creator": "set",
+        "folder": null,
+        "imageKey": "zz-qf/image-key",
+        "imageMimeType": "image/png",
+        "tests": 2
+      },
+      {
+        "creator": "set",
+        "folder": "set",
+        "imageKey": null,
+        "imageMimeType": null,
+        "tests": 2
+      }
+    ]
+  },
+  {
+    "name": "clear: anonymous",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "Missing or invalid Authorization header"
+    }
+  },
+  {
+    "name": "clear: unknown folder",
+    "status": 404,
+    "body": {
+      "error": "Question bank not found"
+    }
+  },
+  {
+    "name": "clear: folder of another institute",
+    "status": 404,
+    "body": {
+      "error": "Question bank not found"
+    }
+  },
+  {
+    "name": "clear: a folder with free, graded, used-in-test and another staff member's questions",
+    "status": 200,
+    "body": {
+      "blocked": [
+        {
+          "id": "<id>",
+          "reason": "Has student submissions — archive instead",
+          "title": "ZZ QF q clear graded"
+        },
+        {
+          "id": "<id>",
+          "reason": "Used in one or more tests",
+          "title": "ZZ QF q clear in test"
+        }
+      ],
+      "clearedCount": 2,
+      "skippedCount": 0
+    }
+  },
+  {
+    "name": "clear: what is left",
+    "db": [
+      "ZZ QF q clear graded",
+      "ZZ QF q clear in test"
+    ]
+  }
+]

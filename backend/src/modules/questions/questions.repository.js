@@ -98,3 +98,52 @@ module.exports = {
   findFolder, findFolderWithShares, findQuestionForAccess, findQuestionForDuplicate, findQuestionDetail, testCasesOf, findDuplicate, createQuestion, updateQuestion, deleteQuestion,
   listPage, filterLists, classificationCounts, analyticsTotals, analyticsQuestions, submissionStats, questionIdsWithSubmissionHistory,
 };
+
+// ================= folders and bulk operations =================
+const { questionFolderVisibilityWhere } = require("../../utils/questionVisibility");
+
+const listFolders = (req) => prisma.questionFolder.findMany({
+  where: questionFolderVisibilityWhere(req),
+  include: { _count: { select: { questions: true, children: true } } },
+  orderBy: { name: "asc" },
+});
+const createFolder = (data) => prisma.questionFolder.create({ data });
+const updateFolder = (id, data) => prisma.questionFolder.update({ where: { id }, data });
+const deleteFolder = (id) => prisma.questionFolder.delete({ where: { id } });
+const parentOfFolder = async (id) => (await prisma.questionFolder.findUnique({ where: { id }, select: { parentId: true } }))?.parentId ?? null;
+const childFolderIds = (parentIds) => prisma.questionFolder.findMany({ where: { parentId: { in: parentIds } }, select: { id: true } });
+const foldersByIds = (ids) => prisma.questionFolder.findMany({ where: { id: { in: ids } } });
+const foldersByParent = (parentId) => prisma.questionFolder.findMany({ where: { parentId } });
+const foldersForSharing = (id, select) => prisma.questionFolder.findUnique({ where: { id }, select });
+
+const questionsInFolders = (folderIds, { idsOnly = false } = {}) => prisma.question.findMany({
+  where: { folderId: { in: folderIds } },
+  ...(idsOnly ? { select: { id: true } } : {}),
+  orderBy: { createdAt: "asc" },
+});
+const questionsInFolder = (folderId) => prisma.question.findMany({ where: { folderId }, orderBy: { createdAt: "asc" } });
+const questionsByIds = (ids, { withTests = false } = {}) => prisma.question.findMany({ where: { id: { in: ids } }, ...(withTests ? { include: { testCases: true } } : {}) });
+const testAttachedQuestionIds = (questionIds) => (questionIds.length > 0
+  ? prisma.testQuestion.findMany({ where: { questionId: { in: questionIds } }, select: { questionId: true }, distinct: ["questionId"] })
+  : []);
+const testCasesForQuestions = (ids) => prisma.testCase.findMany({ where: { questionId: { in: ids } } });
+const moveQuestions = (ids, folderId) => prisma.question.updateMany({ where: { id: { in: ids } }, data: { folderId } });
+const classifyQuestions = (ids, data) => prisma.question.updateMany({ where: { id: { in: ids } }, data });
+const setQuestionStatus = (ids, questionStatus, updatedById) => prisma.question.updateMany({ where: { id: { in: ids } }, data: { questionStatus, updatedById } });
+const copyQuestion = (data) => prisma.question.create({ data });
+const mergeFolders = (sourceId, targetId) => prisma.$transaction([
+  prisma.question.updateMany({ where: { folderId: sourceId }, data: { folderId: targetId } }),
+  prisma.questionFolder.updateMany({ where: { parentId: sourceId }, data: { parentId: targetId } }),
+  prisma.questionFolder.delete({ where: { id: sourceId } }),
+]);
+
+const listShares = (folderId) => prisma.questionFolderShare.findMany({ where: { folderId }, include: { staff: { select: { id: true, name: true } } }, orderBy: { createdAt: "asc" } });
+const staffInInstitute = (ids, instituteId) => prisma.user.findMany({ where: { id: { in: ids }, role: "STAFF", ...(instituteId ? { instituteId } : {}) }, select: { id: true } });
+const createShares = (rows) => prisma.questionFolderShare.createMany({ data: rows, skipDuplicates: true });
+const deleteShare = (folderId, staffId) => prisma.questionFolderShare.deleteMany({ where: { folderId, staffId } });
+
+Object.assign(module.exports, {
+  listFolders, createFolder, updateFolder, deleteFolder, parentOfFolder, childFolderIds, foldersByIds, foldersByParent, foldersForSharing,
+  questionsInFolders, questionsInFolder, questionsByIds, testAttachedQuestionIds, testCasesForQuestions, moveQuestions, classifyQuestions, setQuestionStatus, copyQuestion, mergeFolders,
+  listShares, staffInInstitute, createShares, deleteShare,
+});
