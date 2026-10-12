@@ -32,7 +32,7 @@ function norm(v) {
 // Structure only. A list is recorded as one element shape when its elements are objects and as "list" otherwise (empty or of plain values), because production holds
 // real rows the snapshot must not depend on.
 // Maps keyed by a data value (counts per status, type or difficulty) are recorded as "map": which keys exist depends on the rows present.
-const DYNAMIC_KEYS = new Set(["byStatus", "byType", "byDifficulty"]);
+const DYNAMIC_KEYS = new Set(["byStatus", "byType", "byDifficulty", "mostAttempted", "mostDifficult", "mostTrivial", "sample"]);
 const shapeOf = (v) => (Array.isArray(v) ? (v.length && v[0] && typeof v[0] === "object" ? [shapeOf(v[0])] : "list") : v && typeof v === "object" ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, DYNAMIC_KEYS.has(k) ? "map" : shapeOf(v[k])])) : ".");
 let ipSeq = 0;
 const nextIp = () => `203.0.113.${200 + ++ipSeq}`;
