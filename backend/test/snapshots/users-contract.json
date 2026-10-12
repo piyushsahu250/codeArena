@@ -154,15 +154,15 @@
     "status": 200,
     "body": [
       {
-        "browser": "string",
-        "device": "string",
-        "id": "string",
-        "ip": "string",
-        "isActive": "boolean",
-        "isCurrent": "boolean",
-        "loginAt": "string",
-        "logoutAt": "null",
-        "os": "string"
+        "browser": ".",
+        "device": ".",
+        "id": ".",
+        "ip": ".",
+        "isActive": ".",
+        "isCurrent": ".",
+        "loginAt": ".",
+        "logoutAt": ".",
+        "os": "."
       }
     ]
   },
@@ -274,21 +274,6 @@
     "db": [
       "EMAIL_VERIFICATION:to-new-address",
       "EMAIL_VERIFICATION:to-new-address",
-      "EMAIL_VERIFICATION:to-new-address",
-      "EMAIL_VERIFICATION:to-new-address",
-      "EMAIL_VERIFICATION:to-new-address",
-      "EMAIL_VERIFICATION:to-new-address",
-      "LOGIN_ALERT:to-current",
-      "LOGIN_ALERT:to-current",
-      "LOGIN_ALERT:to-current",
-      "LOGIN_ALERT:to-current",
-      "LOGIN_ALERT:to-current",
-      "LOGIN_ALERT:to-current",
-      "LOGIN_ALERT:to-current",
-      "LOGIN_ALERT:to-current",
-      "LOGIN_ALERT:to-current",
-      "LOGIN_ALERT:to-current",
-      "LOGIN_ALERT:to-current",
       "LOGIN_ALERT:to-current",
       "LOGIN_ALERT:to-current",
       "LOGIN_ALERT:to-current",
@@ -1161,42 +1146,42 @@
     "name": "list: platform admin sees everyone (shape)",
     "status": 200,
     "body": {
-      "page": "number",
-      "pageSize": "number",
+      "page": ".",
+      "pageSize": ".",
       "rows": [
         {
-          "academicGroup": "null",
-          "accountStatus": "string",
-          "batchYear": "null",
-          "class": "null",
-          "createdAt": "string",
-          "department": "null",
-          "designation": "null",
-          "email": "string",
-          "emailVerified": "boolean",
-          "employeeId": "null",
-          "gender": "null",
-          "id": "string",
+          "academicGroup": ".",
+          "accountStatus": ".",
+          "batchYear": ".",
+          "class": ".",
+          "createdAt": ".",
+          "department": ".",
+          "designation": ".",
+          "email": ".",
+          "emailVerified": ".",
+          "employeeId": ".",
+          "gender": ".",
+          "id": ".",
           "institute": {
-            "id": "string",
-            "name": "string"
+            "id": ".",
+            "name": "."
           },
-          "isActive": "boolean",
-          "lastLoginAt": "string",
-          "mobile": "null",
-          "mustChangePassword": "boolean",
-          "name": "string",
-          "pendingEmail": "null",
-          "profilePhotoUrl": "null",
-          "program": "null",
-          "registrationNumber": "null",
-          "role": "string",
-          "rollNumber": "null",
-          "section": "null"
+          "isActive": ".",
+          "lastLoginAt": ".",
+          "mobile": ".",
+          "mustChangePassword": ".",
+          "name": ".",
+          "pendingEmail": ".",
+          "profilePhotoUrl": ".",
+          "program": ".",
+          "registrationNumber": ".",
+          "role": ".",
+          "rollNumber": ".",
+          "section": "."
         }
       ],
-      "total": "number",
-      "totalPages": "number"
+      "total": ".",
+      "totalPages": "."
     }
   },
   {
@@ -2435,12 +2420,12 @@
     "status": 200,
     "body": [
       {
-        "createdAt": "string",
-        "emailSent": "null",
-        "id": "string",
-        "resetBy": "string",
-        "studentId": "string",
-        "studentName": "null"
+        "createdAt": ".",
+        "emailSent": ".",
+        "id": ".",
+        "resetBy": ".",
+        "studentId": ".",
+        "studentName": "."
       }
     ]
   },
@@ -2542,38 +2527,38 @@
     "body": {
       "conflicts": [
         {
-          "academicGroupId": "string",
-          "batch": "string",
-          "branch": "string",
+          "academicGroupId": ".",
+          "batch": ".",
+          "branch": ".",
           "institute": {
-            "id": "string",
-            "name": "string"
+            "id": ".",
+            "name": "."
           },
-          "rollNumber": "string",
-          "section": "string",
+          "rollNumber": ".",
+          "section": ".",
           "students": [
             {
-              "academicGroupId": "string",
-              "batchYear": "string",
-              "createdAt": "string",
-              "department": "string",
-              "email": "string",
-              "id": "string",
-              "instituteId": "string",
-              "isActive": "boolean",
-              "mobile": "string",
-              "name": "string",
-              "registrationNumber": "string",
-              "rollNumber": "string",
-              "section": "string"
+              "academicGroupId": ".",
+              "batchYear": ".",
+              "createdAt": ".",
+              "department": ".",
+              "email": ".",
+              "id": ".",
+              "instituteId": ".",
+              "isActive": ".",
+              "mobile": ".",
+              "name": ".",
+              "registrationNumber": ".",
+              "rollNumber": ".",
+              "section": "."
             }
           ]
         }
       ],
-      "page": "number",
-      "pageSize": "number",
-      "total": "number",
-      "totalPages": "number"
+      "page": ".",
+      "pageSize": ".",
+      "total": ".",
+      "totalPages": "."
     }
   },
   {
@@ -3037,14 +3022,14 @@
     "name": "audit actions: institute B",
     "status": 200,
     "body": [
-      "string"
+      "."
     ]
   },
   {
     "name": "audit actions: platform admin (shape)",
     "status": 200,
     "body": [
-      "string"
+      "."
     ]
   },
   {
@@ -3066,12 +3051,12 @@
     "name": "migration status: platform admin (shape)",
     "status": 200,
     "body": {
-      "academicGroupsTotal": "number",
-      "classesTotal": "number",
-      "studentsUnlinked": "number",
-      "studentsWithClassId": "number",
-      "studentsWithGroupId": "number",
-      "zeroDataLossGatePassed": "boolean"
+      "academicGroupsTotal": ".",
+      "classesTotal": ".",
+      "studentsUnlinked": ".",
+      "studentsWithClassId": ".",
+      "studentsWithGroupId": ".",
+      "zeroDataLossGatePassed": "."
     }
   },
   {
