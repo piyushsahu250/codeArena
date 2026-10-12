@@ -162,7 +162,7 @@ function clientPolicy(policy) {
     blockContextMenu: policy.blockContextMenu, blockDrag: policy.blockDrag, requireFullscreen: policy.requireFullscreen,
     multiSession: policy.multiSession, mobileAllowed: policy.mobileAllowed, secureBrowserRequired: policy.secureBrowserRequired,
     requireScreenShare: policy.requireScreenShare,
-    requiredCapabilities: policy.requiredCapabilities, allowedClientKinds: policy.allowedClientKinds, exitAction: policy.exitAction, graceSec: policy.graceSec,
+    requiredCapabilities: policy.requiredCapabilities, exitAction: policy.exitAction, graceSec: policy.graceSec,
     insertionCharThreshold: policy.insertionCharThreshold, insertionLineThreshold: policy.insertionLineThreshold,
   };
 }
