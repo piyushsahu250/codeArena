@@ -38,7 +38,10 @@ async function maybeSendLoginAlert(user, req, isFirstLogin, isNewDevice) {
 }
 
 // ---- login ----
-async function login(req, { email, password }) {
+async function login(req, body) {
+  const problem = d.loginRequestProblem(body);
+  if (problem) throw new ServiceError(400, problem);
+  const { email, password } = body;
   const user = await repo.findUserForLogin(email);
 
   // Both "no such account" and "wrong password" run through bcrypt.compare and return the same message, so neither the text nor the timing tells a caller whether

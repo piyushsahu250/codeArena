@@ -80,7 +80,8 @@ if [ -n "$DESTRUCTIVE" ]; then
   fi
   echo "ALLOW_DESTRUCTIVE_SCHEMA=1 is set -- continuing." >&2
 else
-  echo "Schema guard: no destructive changes ($(printf '%s\n' "$DIFF" | grep -vc '^--\|^$' || true) statements, additive/index only)."
+  # Accurate wording (see scripts/schema-guard-summary.sh): the managed trigram-index DROP INDEX lines are named as such, never called additive. Display only.
+  printf '%s\n' "$DIFF" | bash "$REPO/scripts/schema-guard-summary.sh"
 fi
 
 # Separate judge service (optional, switched by JUDGE_REMOTE_ENABLED=1 in container.env). The API and the judge are two containers of the SAME

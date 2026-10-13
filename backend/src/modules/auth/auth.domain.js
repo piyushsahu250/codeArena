@@ -14,6 +14,7 @@ const DUMMY_HASH = "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy
 const MESSAGES = {
   registrationDisabled: "User registration is managed by the administrator. Please contact your institute administrator to receive your login credentials.",
   badCredentials: "Invalid email or password.",
+  loginRequestInvalid: "Invalid request. Send your email address and password as text.",
   accountDeactivated: "This account has been deactivated. Contact your administrator.",
   instituteDeactivated: "Your institute's access has been deactivated. Contact the platform administrator.",
   emailRequired: "Email is required",
@@ -39,6 +40,15 @@ const hashToCompare = (user) => (user ? user.passwordHash : DUMMY_HASH);
 
 // Checked AFTER the password, so a deactivated account or institute is only ever revealed to someone who already proved they know the right password.
 // Returns { status, message } to refuse, or null to let the login proceed.
+// The shape a login request must have BEFORE any database lookup: an email that is text, and a password that is absent or text. A missing password stays a
+// 401 (as before); a body that is not an object, a non-text email or a non-text password is a 400 with a fixed message (it used to reach Prisma and surface as a 500).
+function loginRequestProblem(body) {
+  if (!body || typeof body !== "object" || Array.isArray(body)) return MESSAGES.loginRequestInvalid;
+  if (typeof body.email !== "string") return MESSAGES.loginRequestInvalid;
+  if (body.password !== undefined && body.password !== null && typeof body.password !== "string") return MESSAGES.loginRequestInvalid;
+  return null;
+}
+
 function loginRefusal(user) {
   if (!user.isActive) return { status: 403, message: MESSAGES.accountDeactivated };
   if (user.institute && user.institute.isActive === false) return { status: 403, message: MESSAGES.instituteDeactivated };
@@ -75,5 +85,5 @@ const tokenExpired = (expiry, now = new Date()) => !expiry || expiry < now;
 
 module.exports = {
   RESET_TOKEN_TTL_MS, RESET_REQUEST_COOLDOWN_MS, DUMMY_HASH, MESSAGES,
-  hashToken, newResetToken, resetLink, passwordReusedMessage, hashToCompare, loginRefusal, passwordState, requiresProfileCompletion, deviceSignals, loginResponse, tokenExpired,
+  hashToken, newResetToken, resetLink, passwordReusedMessage, hashToCompare, loginRequestProblem, loginRefusal, passwordState, requiresProfileCompletion, deviceSignals, loginResponse, tokenExpired,
 };

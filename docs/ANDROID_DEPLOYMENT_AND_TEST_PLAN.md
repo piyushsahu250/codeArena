@@ -136,3 +136,20 @@ signature) is kept as a workflow artifact. That is a compile and unit-test resul
 * A signing key you control for release builds (section 4).
 
 No claim that Gemini or any other assistant is blocked may be made until section 5 tests 4, 5, 7, 8 and 12 pass on the enrolled device model.
+
+## 8. Status after the 2026-10-13 deployment (d82db9f live)
+
+Server side is deployed and inactive for every existing test (no test lists `ANDROID_MANAGED`). The Android app compiles and passes its unit tests in CI; it has not been installed anywhere.
+No claim is made that Gemini, the Home button or the Power button is blocked on any device.
+
+Remaining dependencies, each external to the repository:
+
+| Dependency | Owner | Needed for |
+|---|---|---|
+| Release keystore generated and backed up (section 4) | you | any signed release build |
+| Gradle wrapper committed (`gradle wrapper --gradle-version 8.7`, run once on a machine with a JDK) | anyone with JDK 17 | local builds (CI already builds without it) |
+| EMM account or a manual QR provisioning pilot, with managed configuration support | institution IT | enrolment, `device_secret` and `invigilator_pin_hash` delivery |
+| One institution-owned Android 9+ device per target manufacturer, factory-reset | institution | device-owner enrolment and every PHYSICAL test in section 5 |
+| Authorisation to enrol each device and to opt one disposable test into `ANDROID_MANAGED` | you | tests 3 to 21 |
+| Start-time administrator override with an audit log | engineering (not built) | pilot exceptions |
+| Strict mode for formal tests, readiness, interviews, quizzes | engineering (not built) | covering those exam types |

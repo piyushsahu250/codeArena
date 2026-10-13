@@ -8,16 +8,16 @@
   },
   {
     "name": "login: no body fields",
-    "status": 500,
+    "status": 400,
     "body": {
-      "error": "Login failed"
+      "error": "Invalid request. Send your email address and password as text."
     }
   },
   {
     "name": "login: email not a string",
-    "status": 500,
+    "status": 400,
     "body": {
-      "error": "Login failed"
+      "error": "Invalid request. Send your email address and password as text."
     }
   },
   {

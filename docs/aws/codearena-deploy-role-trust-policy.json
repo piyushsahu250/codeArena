@@ -1,0 +1,15 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AssumableByTheNamedOperatorWithMFAOnly",
+      "Effect": "Allow",
+      "Principal": { "AWS": "arn:aws:iam::640538431170:user/REPLACE-WITH-THE-OPERATOR-IAM-USER" },
+      "Action": "sts:AssumeRole",
+      "Condition": {
+        "Bool": { "aws:MultiFactorAuthPresent": "true" },
+        "NumericLessThan": { "aws:MultiFactorAuthAge": "3600" }
+      }
+    }
+  ]
+}

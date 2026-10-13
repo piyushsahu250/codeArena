@@ -67,3 +67,29 @@ test("the reset link and the reuse message", () => {
   assert.match(d.passwordReusedMessage(5), /last 5 passwords/);
   assert.match(d.passwordReusedMessage(undefined), /last 3 passwords/);
 });
+
+test("a login request must have text email and an absent-or-text password before any database lookup", () => {
+  const bad = d.MESSAGES.loginRequestInvalid;
+  assert.equal(d.loginRequestProblem(undefined), bad);
+  assert.equal(d.loginRequestProblem(null), bad);
+  assert.equal(d.loginRequestProblem("x"), bad);
+  assert.equal(d.loginRequestProblem([]), bad);
+  assert.equal(d.loginRequestProblem({}), bad, "no body fields");
+  assert.equal(d.loginRequestProblem({ email: 123, password: "x" }), bad, "email not text");
+  assert.equal(d.loginRequestProblem({ email: { equals: "a@b.c" }, password: "x" }), bad, "a filter object is not an email");
+  assert.equal(d.loginRequestProblem({ email: "a@b.c", password: 123 }), bad, "password not text");
+  assert.equal(d.loginRequestProblem({ email: "a@b.c", password: { a: 1 } }), bad);
+});
+
+test("shapes that were never a 500 keep their old handling (a missing password and an empty email stay a credentials failure)", () => {
+  assert.equal(d.loginRequestProblem({ email: "a@b.c" }), null, "missing password is still a 401");
+  assert.equal(d.loginRequestProblem({ email: "a@b.c", password: null }), null);
+  assert.equal(d.loginRequestProblem({ email: "", password: "" }), null, "an empty string reaches the normal not-found path");
+  assert.equal(d.loginRequestProblem({ email: "a@b.c", password: "secret", extra: 1 }), null);
+});
+
+test("the invalid-request message is fixed text that reveals no implementation detail", () => {
+  assert.equal(d.MESSAGES.loginRequestInvalid, "Invalid request. Send your email address and password as text.");
+  assert.doesNotMatch(d.MESSAGES.loginRequestInvalid, /prisma|findUnique|undefined|stack|sql/i);
+  assert.notEqual(d.MESSAGES.loginRequestInvalid, d.MESSAGES.badCredentials);
+});
