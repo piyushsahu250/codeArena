@@ -23,7 +23,7 @@ Role `codearena-ssm-deploy` with the permission policy in [aws/codearena-ssm-dep
 * `ssm:SendCommand` only on instance `i-02bedc5ba41539f46` and the document `AWS-RunShellScript` (the two resource ARNs `SendCommand` evaluates).
 * `ssm:GetCommandInvocation`, `ListCommands`, `ListCommandInvocations`, `DescribeInstanceInformation`: these do not support resource-level restriction, so they are `*` limited to region ap-south-1.
 * `ec2:DescribeInstances` (read-only) for the host status checks the deploy procedure uses.
-* Nothing else: no IAM, no S3, no RDS, no other instances, no other regions, no `ssm:StartSession`.
+* Nothing else: no IAM, no S3, no RDS, no other instances, no `ssm:StartSession`. The region is pinned by the instance ARN for `SendCommand` and by an `aws:RequestedRegion` condition on the read actions.
 
 Trust policy ([aws/codearena-deploy-role-trust-policy.json](aws/codearena-deploy-role-trust-policy.json)): assumable only by one named operator IAM user (replace the placeholder), only with MFA present and an MFA age under one hour; set the role's maximum session duration to 1 hour.
 If IAM Identity Center is enabled later, replace the trust policy with a permission set carrying the same policy and a 1-hour session.
@@ -48,3 +48,29 @@ and allow `ssm:SendCommand` on that document instead of `AWS-RunShellScript`. Th
 5. Root: keep MFA on, no access keys, use only for break-glass; the 2026-10-13 deployment should have used an assumed role once one exists.
 
 Do not rotate, disable or delete anything without a separate explicit approval for that exact key.
+
+## 5. Change log: what was actually applied on 2026-10-13 (approved by the owner)
+
+Identity used: the interactive root session (account 640538431170, region ap-south-1, host `i-02bedc5ba41539f46`). Recovery paths confirmed before any change: root MFA enabled (no root access keys), the `codearena-admin` console login, and the unchanged EC2 instance role / SSM agent.
+
+| # | Change | Result |
+|---|---|---|
+| 1 | `chmod 600 /opt/codearena/container.env.bak-1791195875` (via SSM; contents never read) | mode 644 -> 600, owner stays `root:root`, size and mtime unchanged; the other three variants were already 600; health unchanged on `d82db9f`. No restart. |
+| 2 | Created managed policy `CodeArenaSsmDeployOnly` (v1) from `aws/codearena-ssm-deploy-policy.json` | created |
+| 3 | Created role `codearena-ssm-deploy`, max session 3600 s, trust: only `user/codearena-admin`, only with MFA present and MFA age under 3600 s; attached the policy above; no inline policies | created |
+
+Validation by the IAM policy simulator (no live calls): `ssm:SendCommand` on the host plus `AWS-RunShellScript` is allowed; the same on another instance, or with another document, is implicitly denied; the read actions are allowed; `iam:AttachRolePolicy`, `PutRolePolicy`, `CreateRole`, `CreateAccessKey`, `PassRole`, `CreatePolicyVersion`, `sts:AssumeRole`, `ssm:StartSession`, `ec2:StopInstances`/`TerminateInstances`, `s3:*`, `rds:DeleteDBInstance`, `secretsmanager:GetSecretValue` and `ssm:GetParameter` are all implicitly denied. The new role cannot escalate by attaching policies.
+
+Escalation path that still exists (not yet removed): the simulator shows the current `codearena-deploy` user is **allowed** `iam:AttachRolePolicy` and `iam:PutRolePolicy` on `codearena-ec2-role` and on the new role (via `CodeArenaDeployIAMScoped`). It is denied `UpdateAssumeRolePolicy`, `CreateAccessKey`, `AttachUserPolicy` and `CreateUser`.
+
+Not done, and why:
+
+| Step | Status |
+|---|---|
+| Live test of the role (assume with MFA, `echo ok` through SSM, denials) | BLOCKED: the role requires MFA and `codearena-admin` has no MFA device. Adding one needs the owner's authenticator app. |
+| MFA on `codearena-admin` | BLOCKED: owner action (console: IAM > Users > codearena-admin > Security credentials > Assign MFA device). The seed was deliberately not generated or handled here. |
+| Detach `PowerUserAccess` and `CodeArenaDeployIAMScoped` from `CodeArenaDeployers` | NOT DONE, held back deliberately: after the live test, and because CloudTrail shows that `codearena-deploy` was also used for infrastructure setup, not only SSM (see below). |
+
+CloudTrail (last ~89 days, event history) for `codearena-deploy`: routine deployment use is 12 `SendCommand` and 20 `ListCommandInvocations` calls in ap-south-1. It was also used for setup work: IAM (`CreateUser` x3, `CreateAccessKey` x2, `PutUserPolicy` x2, `PutRolePolicy` and `DeleteRolePolicy` on instance-role policies, last write 2026-09-11), budgets and SNS alarms, a CloudWatch alarm, S3 bucket checks and one `DeleteBucket`, Route 53/CloudFront reads. Detaching the two policies will end that ability for this key; any future infrastructure work then needs the admin role or the owner's admin login.
+
+Audited recovery procedure: if the deploy role is locked out or misconfigured, sign in as root (MFA enabled) or `codearena-admin`, then `aws iam detach-role-policy` / `delete-role` for `codearena-ssm-deploy` and `delete-policy` for `CodeArenaSsmDeployOnly`; nothing else depends on them. To restore the group's old permissions if step 7 is later taken and needs to be reverted: `aws iam attach-group-policy --group-name CodeArenaDeployers --policy-arn arn:aws:iam::aws:policy/PowerUserAccess` and `--policy-arn arn:aws:iam::640538431170:policy/CodeArenaDeployIAMScoped`.
