@@ -116,3 +116,23 @@ Per device record: manufacturer, model, Android version, security patch level, h
 | Production deployment | Server change is inactive by default but not live | Approve the plan in section 3 for the exact commit |
 | Start-time administrator override with audit log | A strict exam currently cannot be started by an override | Decide whether to build it (not built) |
 | Formal MCQ/Test engine, readiness, mock interviews, LMS quizzes | They do not use secure sessions | Decide whether to move them onto the secure-session model |
+
+## 7. Update 2026-10-13: CI build, coverage audit, EMM prerequisites
+
+**CI build.** `.github/workflows/android.yml` installs JDK 17, Android SDK (platform 34, build-tools 34.0.0) and Gradle 8.7 on a clean runner and runs `gradle testDebugUnitTest assembleDebug`.
+It is deliberately not one of the checks the release gate requires (the backend deploys independently). The first run failed with three real compile errors (a wrong `SecretKeySpec` import, a KDoc
+containing `/*` that opened a nested comment, and layout calls); all were fixed at the cause. The latest run: unit tests and `assembleDebug` succeeded and the debug APK (about 2.7 MB, Android debug
+signature) is kept as a workflow artifact. That is a compile and unit-test result only: nothing has been installed on a device. The earlier "Gradle wrapper missing" note still applies to local builds.
+
+**Coverage.** See the matrix in [ANDROID_MANAGED_EXAM_MODE.md](ANDROID_MANAGED_EXAM_MODE.md) section 8. Strict mode exists only in the coding-attempt engine. The other engines now fail closed on a stored LOCKDOWN level.
+
+**Android Enterprise / EMM prerequisites (needed before any physical test):**
+* Institution-owned devices running Android 9 or newer (API 28+), supporting fully managed / dedicated-device enrolment (zero-touch, QR or EMM).
+* An EMM that supports dedicated devices, managed app configuration and private app distribution (any Android Enterprise EMM), or manual QR provisioning for a pilot.
+* Devices that are factory-reset before enrolment and have no personal Google account added.
+* Network access from the device to `codearena.site` and `api-aws.codearena.site` over https.
+* A CodeArena device registration per device (`POST /api/secure-exam/devices`), and its one-time secret entered as the managed configuration `device_secret`.
+* The invigilator PIN hash from `android-exam-client/tools/make-pin.js`, delivered as `invigilator_pin_hash`.
+* A signing key you control for release builds (section 4).
+
+No claim that Gemini or any other assistant is blocked may be made until section 5 tests 4, 5, 7, 8 and 12 pass on the enrolled device model.

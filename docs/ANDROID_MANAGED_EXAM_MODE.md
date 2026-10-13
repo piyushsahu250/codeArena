@@ -1,6 +1,6 @@
-# Android exam security - what works today, and the managed-device client (source written, NOT BUILT, NOT TESTED on a device)
+# Android exam security - what works today, and the managed-device client (compiles in CI, NOT run on any device)
 
-Status of this document: the **server side is implemented and unit-tested in CI** (`ANDROID_MANAGED` client kind). The **Android client source exists in `android-exam-client/` but has never been compiled or run** (no JDK/Android SDK on the authoring machine). No managed Android device has been provisioned, and every Android behaviour described below as "to verify" is untested. Nothing here may be cited as proof that a Home press, a Power-button long-press or an assistant gesture is blocked.
+Status of this document: the **server side is implemented and tested in CI** (`ANDROID_MANAGED` client kind). The **Android client in `android-exam-client/` compiles and its unit tests pass on a clean CI runner, but it has never been installed or run on a device**. No managed Android device has been provisioned, and every Android behaviour described below as "to verify" is untested. Nothing here may be cited as proof that a Home press, a Power-button long-press or an assistant gesture is blocked.
 
 Related: [EXAM_SECURITY.md](EXAM_SECURITY.md) (web layers and server guarantees), [SECURE_EXAM_ARCHITECTURE.md](SECURE_EXAM_ARCHITECTURE.md) (LOCKDOWN profile, secure
 session handshake), [SECURE_EXAM_TEST_REPORT.md](SECURE_EXAM_TEST_REPORT.md).
@@ -93,22 +93,33 @@ No rows are filled because no managed device has been tested. Do not copy a resu
 | Server: no silent downgrade between client kinds; unattestable requirements always fail | PASS (unit tests); end-to-end against a live DB NOT TESTED | same file; evaluateSecureSession check is in routes/secureExam.js |
 | Server: phones refused unless a secure session is mandatory and Android is accepted | PASS (unit tests) | `mobileRefused` |
 | Android interruption events are observable facts, reportable by a secure client only | PASS (unit test) | same file |
-| Android client source (handshake, device policy, WebView, heartbeat, PIN exit) | WRITTEN, NOT BUILT | android-exam-client/ |
-| Signature vector matches between server and Android code | PASS on the server side; Android side NOT RUN | same hex asserted in HandshakeTest.kt |
-| Debug APK | BLOCKED | no JDK / Android SDK available; no APK exists |
+| Android client source (handshake, device policy, WebView, heartbeat, PIN exit) | COMPILES and its unit tests PASS on a clean CI runner (JDK 17, Android SDK 34, Gradle 8.7); NEVER RUN on a device | `.github/workflows/android.yml`; the first run found three real compile errors, since fixed |
+| Signature vector matches between server and Android code | PASS (the same hex is asserted by the server test and by `HandshakeTest.kt`, which ran in the Android CI job) | CI |
+| Debug APK | BUILT in CI (artifact `codearena-exam-debug-apk`, about 2.7 MB, signed with the Android debug key only); not installed anywhere | Android workflow run |
 | Lock Task / Home / assistant / Power-button behaviour | NOT TESTED | no managed device |
 | Device-owner provisioning, EMM policy, unenrol | NOT TESTED / not performed | needs authorisation and hardware |
 | Administrator override of a failed strict requirement, audit-logged | NOT BUILT (staff unlock of a locked attempt exists; a start-time override does not) | |
 | Android browser / emulator automated tests | NOT TESTED | no emulator in CI |
 | Device compatibility matrix | NOT TESTED | table in section 6 is empty |
 
-## 8. Exam-type coverage
+## 8. Exam-type coverage matrix (server-side, audited 2026-10-13)
 
-| Exam type | Secure-session engine (strict Android) | Notes |
-|---|---|---|
-| Module coding tests, chapter Levels, JAVA Practice | Yes (coding-attempt engine) | LOCKDOWN + `allowedClientKinds` override |
-| Formal Test engine (MCQ, company tests) | No: LOCKDOWN is refused there | needs the engine moved onto the secure-session model |
-| Readiness tests, mock interviews, AI interviews, LMS quizzes | No | web modes only; set phones off for graded use |
+"Strict" means the server requires a verified secure-client session (desktop or Android) bound to the attempt. Only the coding-attempt engine has that machinery.
+
+| Entry point | Route / file | Strict mode (secure session) | What the server enforces today | Tests |
+|---|---|---|---|---|
+| Module coding tests | `routes/moduleCoding.js` `POST /module-coding/module/:moduleId/start` and every `/attempts/:attemptId/*` call (`enforceSecureSession`, `secureClientFailure`) | YES | secure session, client kind, capabilities, phone refusal, one active session, server timer, hidden tests withheld | `scripts/verifySecureAndroid.js`, `scripts/verifySecureExam.js` (not in CI), `test/secureAndroidClient.test.js` |
+| Chapter Levels | same file, `POST /module-coding/level/:levelId/start` | YES (same code) | same | same engine |
+| JAVA Practice | same engine (Levels of the `java-practice` course) | YES (same code) | same | `scripts/verifyJavaPractice.js` (not in CI) |
+| Formal MCQ / company / coding Tests | `modules/tests/tests.attempts.service.js`, `utils/testExamSecurity.js` | NO. STANDARD and PROCTORED only; admin input rejects LOCKDOWN (`parseSecurityInput`); a stored LOCKDOWN level now refuses the start (`STRICT_MODE_UNSUPPORTED`) instead of running as STANDARD | phone refusal (PROCTORED), one active session, server timer, questions only after start | `test/strictModeCoverage.test.js`, `scripts/verifyTestSecurity.js` (not in CI) |
+| Readiness tests | `routes/readiness.js` (`policyOf`, `startRequirementFailure` at start) | NO (same as Tests; same guard) | same | `test/strictModeCoverage.test.js`, `scripts/verifyReadinessInterviewSecurity.js` (not in CI) |
+| Mock interviews | `routes/interview.js` | NO (level is server-derived: never LOCKDOWN) | same | same |
+| AI / voice interviews | `routes/aiInterview.js` | NO (level derived from interview type: PROCTORED or STANDARD) | evidence only, phone refusal for PROCTORED | `scripts/verifyAiInterviewSecurity.js` (not in CI) |
+| LMS lesson quizzes and practice tests | `routes/learning.js`, `routes/practice.js` | NO and not proctored at all | none beyond authentication and attempt rules | none for security |
+
+Consequence: a strict Android or desktop exam can be configured only on module coding tests, chapter Levels and JAVA Practice. Everything else has no strict mode and says so
+at the server instead of running weaker silently. Moving the formal Test engine, readiness, interviews and quizzes onto the secure-session model is a separate, larger change that
+has not been done.
 
 ## 9. Remaining OS limitations
 
