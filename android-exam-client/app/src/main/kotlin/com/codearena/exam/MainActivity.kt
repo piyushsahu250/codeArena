@@ -23,6 +23,7 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Button
 import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
@@ -88,8 +89,15 @@ class MainActivity : AppCompatActivity() {
         overlay = TextView(this).apply {
             gravity = Gravity.CENTER; textSize = 18f; setTextColor(Color.WHITE); setBackgroundColor(Color.parseColor("#b91c1c")); setPadding(48, 48, 48, 48); visibility = View.GONE
         }
-        val body = android.widget.FrameLayout(this).apply { addView(web, -1, -1); addView(overlay, -1, -1) }
-        setContentView(LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; addView(bar, -1, -2); addView(body, -1, 0).also { (body.layoutParams as LinearLayout.LayoutParams).weight = 1f } })
+        val match = ViewGroup.LayoutParams.MATCH_PARENT
+        val body = FrameLayout(this)
+        body.addView(web, FrameLayout.LayoutParams(match, match))
+        body.addView(overlay, FrameLayout.LayoutParams(match, match))
+        val root = LinearLayout(this)
+        root.orientation = LinearLayout.VERTICAL
+        root.addView(bar, LinearLayout.LayoutParams(match, ViewGroup.LayoutParams.WRAP_CONTENT))
+        root.addView(body, LinearLayout.LayoutParams(match, 0, 1f))
+        setContentView(root)
         enterImmersive()
 
         val (cfg, error) = ExamConfig.load(this)

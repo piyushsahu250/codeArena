@@ -7,7 +7,7 @@ import java.net.URL
 
 class ApiException(val status: Int, val code: String?, message: String) : Exception(message)
 
-/** Talks to /api/secure-exam/* over https with the platform default TLS (no custom trust managers, no hostname bypass). Blocking: call from a worker thread. */
+/** Talks to the secure-exam endpoints of the CodeArena API over https with the platform default TLS (no custom trust managers, no hostname bypass). Blocking: call from a worker thread. */
 class SecureApi(private val config: ExamConfig) {
     data class Session(val token: String, val heartbeatSec: Int)
     data class Beat(val locked: Boolean, val ok: Boolean)
