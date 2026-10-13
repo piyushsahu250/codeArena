@@ -1,0 +1,73 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "SsmAgentAndSessionTransport",
+      "Effect": "Allow",
+      "Action": [
+        "ssm:DescribeAssociation", "ssm:GetDeployablePatchSnapshotForInstance", "ssm:GetDocument", "ssm:DescribeDocument", "ssm:GetManifest",
+        "ssm:ListAssociations", "ssm:ListInstanceAssociations", "ssm:PutInventory", "ssm:PutComplianceItems", "ssm:PutConfigurePackageResult",
+        "ssm:UpdateAssociationStatus", "ssm:UpdateInstanceAssociationStatus", "ssm:UpdateInstanceInformation",
+        "ssmmessages:CreateControlChannel", "ssmmessages:CreateDataChannel", "ssmmessages:OpenControlChannel", "ssmmessages:OpenDataChannel",
+        "ec2messages:AcknowledgeMessage", "ec2messages:DeleteMessage", "ec2messages:FailMessage", "ec2messages:GetEndpoint", "ec2messages:GetMessages", "ec2messages:SendReply"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "CloudWatchAgent",
+      "Effect": "Allow",
+      "Action": [
+        "cloudwatch:PutMetricData", "ec2:DescribeVolumes", "ec2:DescribeTags", "ec2:DescribeInstances",
+        "logs:PutLogEvents", "logs:PutRetentionPolicy", "logs:DescribeLogStreams", "logs:DescribeLogGroups", "logs:CreateLogStream", "logs:CreateLogGroup",
+        "xray:PutTraceSegments", "xray:PutTelemetryRecords", "xray:GetSamplingRules", "xray:GetSamplingTargets", "xray:GetSamplingStatisticSummaries"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "AgentConfigParameter",
+      "Effect": "Allow",
+      "Action": "ssm:GetParameter",
+      "Resource": "arn:aws:ssm:*:*:parameter/AmazonCloudWatch-*"
+    },
+    {
+      "Sid": "ApplicationSecretAndParameters",
+      "Effect": "Allow",
+      "Action": ["secretsmanager:GetSecretValue", "ssm:GetParameter", "ssm:GetParameters", "ssm:GetParametersByPath"],
+      "Resource": [
+        "arn:aws:secretsmanager:ap-south-1:640538431170:secret:codearena/backend/secrets-*",
+        "arn:aws:ssm:ap-south-1:640538431170:parameter/codearena/prod/*",
+        "arn:aws:ssm:ap-south-1:640538431170:parameter/DATABASE_URL",
+        "arn:aws:ssm:ap-south-1:640538431170:parameter/DIRECT_DATABASE_URL",
+        "arn:aws:ssm:ap-south-1:640538431170:parameter/PII_ENCRYPTION_KEY",
+        "arn:aws:ssm:ap-south-1:640538431170:parameter/MAIL_USER",
+        "arn:aws:ssm:ap-south-1:640538431170:parameter/MAIL_PASSWORD",
+        "arn:aws:ssm:ap-south-1:640538431170:parameter/MAIL_FROM",
+        "arn:aws:ssm:ap-south-1:640538431170:parameter/RDS_MASTER_PASSWORD"
+      ]
+    },
+    {
+      "Sid": "DecryptSecureStringsAndSecret",
+      "Effect": "Allow",
+      "Action": "kms:Decrypt",
+      "Resource": "*"
+    },
+    {
+      "Sid": "SendEmail",
+      "Effect": "Allow",
+      "Action": ["ses:SendEmail", "ses:SendRawEmail", "ses:GetAccount"],
+      "Resource": "*"
+    },
+    {
+      "Sid": "BackupsBucketReadWrite",
+      "Effect": "Allow",
+      "Action": ["s3:PutObject", "s3:GetObject", "s3:ListBucket"],
+      "Resource": ["arn:aws:s3:::codearena-backups-640538431170", "arn:aws:s3:::codearena-backups-640538431170/*"]
+    },
+    {
+      "Sid": "NeverIamNeverOtherAccounts",
+      "Effect": "Deny",
+      "Action": ["iam:*", "sts:AssumeRole", "organizations:*", "account:*", "s3:DeleteBucket", "s3:DeleteObject", "s3:DeleteObjectVersion", "ec2:RunInstances", "ec2:TerminateInstances"],
+      "Resource": "*"
+    }
+  ]
+}

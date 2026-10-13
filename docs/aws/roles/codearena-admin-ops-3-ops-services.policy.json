@@ -1,0 +1,61 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "BudgetsForCodearenaOnly",
+      "Effect": "Allow",
+      "Action": ["budgets:ViewBudget", "budgets:ModifyBudget"],
+      "Resource": "arn:aws:budgets::640538431170:budget/CodeArena-*"
+    },
+    {
+      "Sid": "AlarmsForCodearenaOnly",
+      "Effect": "Allow",
+      "Action": ["cloudwatch:PutMetricAlarm", "cloudwatch:DeleteAlarms", "cloudwatch:EnableAlarmActions", "cloudwatch:DisableAlarmActions"],
+      "Resource": [
+        "arn:aws:cloudwatch:ap-south-1:640538431170:alarm:codearena-*",
+        "arn:aws:cloudwatch:us-east-1:640538431170:alarm:codearena-*"
+      ]
+    },
+    {
+      "Sid": "ReadAlarms",
+      "Effect": "Allow",
+      "Action": ["cloudwatch:DescribeAlarms", "cloudwatch:DescribeAlarmHistory"],
+      "Resource": "*",
+      "Condition": { "StringEquals": { "aws:RequestedRegion": ["ap-south-1", "us-east-1"] } }
+    },
+    {
+      "Sid": "AlertTopicsForCodearenaOnly",
+      "Effect": "Allow",
+      "Action": ["sns:CreateTopic", "sns:DeleteTopic", "sns:SetTopicAttributes", "sns:Subscribe", "sns:Unsubscribe", "sns:GetTopicAttributes", "sns:ListSubscriptionsByTopic"],
+      "Resource": [
+        "arn:aws:sns:ap-south-1:640538431170:codearena-*",
+        "arn:aws:sns:us-east-1:640538431170:codearena-*"
+      ]
+    },
+    {
+      "Sid": "ListTopics",
+      "Effect": "Allow",
+      "Action": "sns:ListTopics",
+      "Resource": "*",
+      "Condition": { "StringEquals": { "aws:RequestedRegion": ["ap-south-1", "us-east-1"] } }
+    },
+    {
+      "Sid": "CreateAndHardenScratchBucketsOnly",
+      "Effect": "Allow",
+      "Action": ["s3:CreateBucket", "s3:PutBucketPublicAccessBlock", "s3:PutEncryptionConfiguration", "s3:PutBucketVersioning", "s3:PutBucketTagging"],
+      "Resource": "arn:aws:s3:::codearena-tmp-*"
+    },
+    {
+      "Sid": "DeleteScratchBucketsOnly",
+      "Effect": "Allow",
+      "Action": ["s3:DeleteBucket"],
+      "Resource": "arn:aws:s3:::codearena-tmp-*"
+    },
+    {
+      "Sid": "ListBuckets",
+      "Effect": "Allow",
+      "Action": ["s3:ListAllMyBuckets", "s3:GetBucketLocation", "s3:GetBucketVersioning", "s3:GetBucketPublicAccessBlock"],
+      "Resource": "*"
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "QuestionImagesBucketOnly",
+      "Effect": "Allow",
+      "Action": ["s3:PutObject", "s3:GetObject", "s3:DeleteObject", "s3:ListBucket"],
+      "Resource": ["arn:aws:s3:::codearena-question-images-640538431170", "arn:aws:s3:::codearena-question-images-640538431170/*"]
+    },
+    {
+      "Sid": "RunCommandOnTheCodeArenaHostOnly",
+      "Effect": "Allow",
+      "Action": "ssm:SendCommand",
+      "Resource": ["arn:aws:ec2:ap-south-1:640538431170:instance/i-02bedc5ba41539f46", "arn:aws:ssm:ap-south-1::document/AWS-RunShellScript"]
+    },
+    {
+      "Sid": "ReadResultsAndHostStatus",
+      "Effect": "Allow",
+      "Action": ["ssm:GetCommandInvocation", "ssm:ListCommands", "ssm:ListCommandInvocations", "ssm:DescribeInstanceInformation", "ec2:DescribeInstances"],
+      "Resource": "*",
+      "Condition": { "StringEquals": { "aws:RequestedRegion": "ap-south-1" } }
+    },
+    {
+      "Sid": "NeverIamNeverRolesNeverBilling",
+      "Effect": "Deny",
+      "Action": ["iam:*", "sts:AssumeRole", "organizations:*", "account:*", "budgets:*", "secretsmanager:*", "kms:Decrypt", "ssm:GetParameter*", "ssm:StartSession"],
+      "Resource": "*"
+    }
+  ]
+}

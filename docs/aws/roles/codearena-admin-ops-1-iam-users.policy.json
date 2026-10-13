@@ -1,0 +1,41 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "CreateServiceUsersOnlyWithTheBoundary",
+      "Effect": "Allow",
+      "Action": ["iam:CreateUser", "iam:TagUser"],
+      "Resource": "arn:aws:iam::640538431170:user/codearena-*",
+      "Condition": { "StringEquals": { "iam:PermissionsBoundary": "arn:aws:iam::640538431170:policy/CodeArenaServiceUserBoundary" } }
+    },
+    {
+      "Sid": "ApplyTheBoundaryToExistingServiceUsers",
+      "Effect": "Allow",
+      "Action": "iam:PutUserPermissionsBoundary",
+      "Resource": "arn:aws:iam::640538431170:user/codearena-*",
+      "Condition": { "StringEquals": { "iam:PermissionsBoundary": "arn:aws:iam::640538431170:policy/CodeArenaServiceUserBoundary" } }
+    },
+    {
+      "Sid": "ManageServiceUserPoliciesOnlyForBoundedUsers",
+      "Effect": "Allow",
+      "Action": ["iam:PutUserPolicy", "iam:DeleteUserPolicy", "iam:AttachUserPolicy", "iam:DetachUserPolicy"],
+      "Resource": "arn:aws:iam::640538431170:user/codearena-*",
+      "Condition": { "StringEquals": { "iam:PermissionsBoundary": "arn:aws:iam::640538431170:policy/CodeArenaServiceUserBoundary" } }
+    },
+    {
+      "Sid": "ServiceUserAccessKeyLifecycle",
+      "Effect": "Allow",
+      "Action": ["iam:CreateAccessKey", "iam:UpdateAccessKey", "iam:DeleteAccessKey", "iam:ListAccessKeys", "iam:GetAccessKeyLastUsed", "iam:DeleteUser"],
+      "Resource": "arn:aws:iam::640538431170:user/codearena-*"
+    },
+    {
+      "Sid": "ReadIdentityState",
+      "Effect": "Allow",
+      "Action": [
+        "iam:GetUser", "iam:ListUsers", "iam:ListUserPolicies", "iam:GetUserPolicy", "iam:ListAttachedUserPolicies",
+        "iam:ListGroupsForUser", "iam:ListMFADevices", "iam:GetAccountSummary", "iam:GetPolicy", "iam:GetPolicyVersion"
+      ],
+      "Resource": "*"
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "EditInlinePoliciesOfTheInstanceRoleOnlyWhileItIsBounded",
+      "Effect": "Allow",
+      "Action": ["iam:PutRolePolicy", "iam:DeleteRolePolicy"],
+      "Resource": "arn:aws:iam::640538431170:role/codearena-ec2-role",
+      "Condition": { "StringEquals": { "iam:PermissionsBoundary": "arn:aws:iam::640538431170:policy/CodeArenaEc2RoleBoundary" } }
+    },
+    {
+      "Sid": "AttachOnlyTheTwoAwsManagedPoliciesTheInstanceRoleAlreadyUses",
+      "Effect": "Allow",
+      "Action": ["iam:AttachRolePolicy", "iam:DetachRolePolicy"],
+      "Resource": "arn:aws:iam::640538431170:role/codearena-ec2-role",
+      "Condition": {
+        "StringEquals": {
+          "iam:PermissionsBoundary": "arn:aws:iam::640538431170:policy/CodeArenaEc2RoleBoundary",
+          "iam:PolicyARN": [
+            "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore",
+            "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+          ]
+        }
+      }
+    },
+    {
+      "Sid": "ReadTheInstanceRole",
+      "Effect": "Allow",
+      "Action": ["iam:GetRole", "iam:GetRolePolicy", "iam:ListRolePolicies", "iam:ListAttachedRolePolicies", "iam:ListInstanceProfilesForRole"],
+      "Resource": "arn:aws:iam::640538431170:role/codearena-*"
+    }
+  ]
+}

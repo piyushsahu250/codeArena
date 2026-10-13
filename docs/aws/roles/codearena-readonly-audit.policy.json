@@ -1,0 +1,68 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "IdentityMetadataReadOnly",
+      "Effect": "Allow",
+      "Action": [
+        "iam:GetAccountSummary", "iam:GetAccountPasswordPolicy", "iam:GetUser", "iam:GetGroup", "iam:GetRole",
+        "iam:GetPolicy", "iam:GetPolicyVersion", "iam:GetUserPolicy", "iam:GetGroupPolicy", "iam:GetRolePolicy",
+        "iam:GetAccessKeyLastUsed", "iam:GetLoginProfile",
+        "iam:ListUsers", "iam:ListGroups", "iam:ListRoles", "iam:ListPolicies", "iam:ListPolicyVersions",
+        "iam:ListAttachedUserPolicies", "iam:ListAttachedGroupPolicies", "iam:ListAttachedRolePolicies",
+        "iam:ListUserPolicies", "iam:ListGroupPolicies", "iam:ListRolePolicies", "iam:ListGroupsForUser",
+        "iam:ListAccessKeys", "iam:ListMFADevices", "iam:ListInstanceProfiles", "iam:ListEntitiesForPolicy",
+        "iam:SimulatePrincipalPolicy"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "AuditTrailRead",
+      "Effect": "Allow",
+      "Action": ["cloudtrail:LookupEvents", "cloudtrail:DescribeTrails", "cloudtrail:GetTrailStatus", "cloudtrail:GetEventSelectors"],
+      "Resource": "*"
+    },
+    {
+      "Sid": "RegionalInventoryReadOnly",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:DescribeInstances", "ec2:DescribeInstanceStatus", "ec2:DescribeVolumes", "ec2:DescribeSnapshots",
+        "ec2:DescribeSecurityGroups", "ec2:DescribeAddresses", "ec2:DescribeNetworkInterfaces", "ec2:DescribeTags",
+        "rds:DescribeDBInstances", "rds:DescribeDBSnapshots", "rds:DescribeDBClusters", "rds:ListTagsForResource",
+        "cloudwatch:DescribeAlarms", "cloudwatch:DescribeAlarmHistory", "cloudwatch:GetMetricData", "cloudwatch:GetMetricStatistics", "cloudwatch:ListMetrics",
+        "logs:DescribeLogGroups", "logs:DescribeLogStreams",
+        "sns:ListTopics", "sns:GetTopicAttributes", "sns:ListSubscriptionsByTopic",
+        "ssm:DescribeInstanceInformation", "ssm:ListCommands", "ssm:ListCommandInvocations",
+        "ses:GetAccount", "ses:GetSendQuota", "ses:GetSendStatistics", "ses:ListIdentities"
+      ],
+      "Resource": "*",
+      "Condition": { "StringEquals": { "aws:RequestedRegion": ["ap-south-1", "us-east-1"] } }
+    },
+    {
+      "Sid": "GlobalServicesReadOnly",
+      "Effect": "Allow",
+      "Action": [
+        "s3:ListAllMyBuckets", "s3:GetBucketLocation", "s3:GetBucketVersioning", "s3:GetBucketPublicAccessBlock",
+        "s3:GetEncryptionConfiguration", "s3:GetBucketPolicyStatus", "s3:GetBucketTagging", "s3:GetLifecycleConfiguration",
+        "route53:ListHostedZones", "route53:ListResourceRecordSets", "route53:ListHealthChecks", "route53:GetHealthCheckStatus",
+        "cloudfront:ListDistributions", "cloudfront:GetDistribution",
+        "budgets:ViewBudget", "ce:GetCostAndUsage",
+        "acm:ListCertificates", "acm:DescribeCertificate",
+        "access-analyzer:ValidatePolicy"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "NeverReadSecretsDataOrRunCommands",
+      "Effect": "Deny",
+      "Action": [
+        "secretsmanager:*", "kms:Decrypt", "kms:GenerateDataKey",
+        "ssm:GetParameter", "ssm:GetParameters", "ssm:GetParametersByPath", "ssm:GetCommandInvocation", "ssm:SendCommand", "ssm:StartSession", "ssm:ResumeSession",
+        "s3:GetObject", "s3:GetObjectVersion", "s3:PutObject", "s3:DeleteObject", "s3:DeleteObjectVersion",
+        "logs:GetLogEvents", "logs:FilterLogEvents", "logs:StartQuery",
+        "sts:AssumeRole", "iam:PassRole", "iam:CreateAccessKey"
+      ],
+      "Resource": "*"
+    }
+  ]
+}

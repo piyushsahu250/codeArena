@@ -1,0 +1,87 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "NoPrivilegedAwsManagedPolicies",
+      "Effect": "Deny",
+      "Action": ["iam:AttachUserPolicy", "iam:AttachRolePolicy", "iam:AttachGroupPolicy"],
+      "Resource": "*",
+      "Condition": {
+        "ArnLike": {
+          "iam:PolicyARN": [
+            "arn:aws:iam::aws:policy/AdministratorAccess",
+            "arn:aws:iam::aws:policy/PowerUserAccess",
+            "arn:aws:iam::aws:policy/IAMFullAccess",
+            "arn:aws:iam::aws:policy/job-function/*",
+            "arn:aws:iam::640538431170:policy/CodeArenaDeployIAMScoped"
+          ]
+        }
+      }
+    },
+    {
+      "Sid": "TheHumanAdminAndRootAreOutOfScope",
+      "Effect": "Deny",
+      "Action": [
+        "iam:CreateAccessKey", "iam:UpdateAccessKey", "iam:DeleteAccessKey", "iam:DeleteUser",
+        "iam:PutUserPolicy", "iam:AttachUserPolicy", "iam:DetachUserPolicy", "iam:DeleteUserPolicy", "iam:PutUserPermissionsBoundary",
+        "iam:CreateLoginProfile", "iam:UpdateLoginProfile", "iam:DeleteLoginProfile", "iam:DeactivateMFADevice", "iam:DeleteVirtualMFADevice"
+      ],
+      "Resource": "arn:aws:iam::640538431170:user/codearena-admin"
+    },
+    {
+      "Sid": "GuardTheAccessControlRolesAndPolicies",
+      "Effect": "Deny",
+      "Action": [
+        "iam:PutRolePolicy", "iam:DeleteRolePolicy", "iam:AttachRolePolicy", "iam:DetachRolePolicy", "iam:DeleteRole",
+        "iam:UpdateRole", "iam:UpdateAssumeRolePolicy", "iam:PutRolePermissionsBoundary", "iam:DeleteRolePermissionsBoundary", "iam:TagRole", "iam:UntagRole"
+      ],
+      "Resource": [
+        "arn:aws:iam::640538431170:role/codearena-admin-ops",
+        "arn:aws:iam::640538431170:role/codearena-readonly-audit",
+        "arn:aws:iam::640538431170:role/codearena-ssm-deploy"
+      ]
+    },
+    {
+      "Sid": "NoTrustPolicyChangesNoNewRolesNoPassRole",
+      "Effect": "Deny",
+      "Action": ["iam:UpdateAssumeRolePolicy", "iam:CreateRole", "iam:DeleteRole", "iam:PassRole", "iam:CreateServiceLinkedRole"],
+      "Resource": "*"
+    },
+    {
+      "Sid": "BoundariesAndAccessPoliciesAreImmutableFromHere",
+      "Effect": "Deny",
+      "Action": [
+        "iam:CreatePolicyVersion", "iam:DeletePolicyVersion", "iam:SetDefaultPolicyVersion", "iam:DeletePolicy", "iam:CreatePolicy",
+        "iam:DeleteUserPermissionsBoundary", "iam:DeleteRolePermissionsBoundary", "iam:PutRolePermissionsBoundary"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "NoOtherPrincipalTypesAndNoAssumeRole",
+      "Effect": "Deny",
+      "Action": [
+        "sts:AssumeRole", "iam:CreateGroup", "iam:AddUserToGroup", "iam:RemoveUserFromGroup", "iam:AttachGroupPolicy", "iam:PutGroupPolicy",
+        "iam:CreateOpenIDConnectProvider", "iam:CreateSAMLProvider", "iam:UpdateAccountPasswordPolicy"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "DataBucketsAreNeverTouchedFromThisRole",
+      "Effect": "Deny",
+      "Action": ["s3:DeleteBucket", "s3:DeleteObject", "s3:DeleteObjectVersion", "s3:PutBucketPolicy", "s3:DeleteBucketPolicy", "s3:PutLifecycleConfiguration", "s3:PutBucketVersioning", "s3:PutBucketPublicAccessBlock"],
+      "Resource": [
+        "arn:aws:s3:::codearena-backups-640538431170", "arn:aws:s3:::codearena-backups-640538431170/*",
+        "arn:aws:s3:::codearena-question-images-640538431170", "arn:aws:s3:::codearena-question-images-640538431170/*"
+      ]
+    },
+    {
+      "Sid": "NeverReadSecretsOrRunCommands",
+      "Effect": "Deny",
+      "Action": [
+        "secretsmanager:*", "kms:Decrypt", "ssm:GetParameter", "ssm:GetParameters", "ssm:GetParametersByPath", "ssm:GetCommandInvocation",
+        "ssm:SendCommand", "ssm:StartSession", "s3:GetObject", "s3:GetObjectVersion", "rds:DeleteDBInstance", "rds:ModifyDBInstance", "ec2:TerminateInstances", "ec2:StopInstances"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
