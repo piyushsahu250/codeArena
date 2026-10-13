@@ -2,7 +2,7 @@ package com.codearena.exam
 
 import java.security.MessageDigest
 import javax.crypto.Mac
-import javax.crypto.SecretKeySpec
+import javax.crypto.spec.SecretKeySpec
 
 /**
  * Client side of the secure-session handshake. MUST stay byte-compatible with backend/src/utils/secureExam.js (clientSignature / canonicalCaps for the
