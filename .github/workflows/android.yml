@@ -1,0 +1,63 @@
+name: Android exam client
+
+# Compiles and unit-tests android-exam-client/ on a clean runner (JDK 17, Android SDK 34, Gradle 8.7), so the app can be built without relying on any developer machine.
+# Deliberately NOT one of the checks the release gate (scripts/check-ci-green.sh) requires: the backend deploys independently of the Android app.
+# Produces an UNSIGNED-BY-US debug APK (signed with the Android debug key) as a workflow artifact. No release keystore exists or is used here.
+on:
+  push:
+    branches: [main, "ci/**"]
+    paths: ["android-exam-client/**", ".github/workflows/android.yml"]
+  pull_request:
+    paths: ["android-exam-client/**", ".github/workflows/android.yml"]
+  workflow_dispatch: {}
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: android-exam-client
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: "platforms;android-34 build-tools;34.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.7"
+      - name: Versions
+        run: |
+          java -version
+          gradle --version
+          echo "ANDROID_HOME=$ANDROID_HOME"
+      - name: Unit tests and debug build
+        run: gradle --no-daemon --stacktrace testDebugUnitTest assembleDebug
+      - name: Keep the debug APK
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: codearena-exam-debug-apk
+          path: android-exam-client/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 14
+      - name: Keep test and lint reports on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-reports
+          path: |
+            android-exam-client/app/build/reports
+            android-exam-client/app/build/test-results
+          if-no-files-found: ignore

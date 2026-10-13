@@ -34,12 +34,17 @@ function parseSecurityInput(body) {
 function policyOf(test) {
   const p = X.resolvePolicy({ ...test, securityLevel: TEST_LEVELS.includes(test?.securityLevel) ? test.securityLevel : "STANDARD" });
   p.secureBrowserRequired = false; p.requireScreenShare = false; p.requiredCapabilities = [];
+  // Fail closed: a stored LOCKDOWN level (admin input refuses it, so this can only come from older data or a direct write) is never silently run as STANDARD.
+  p.strictUnsupported = test?.securityLevel === "LOCKDOWN";
   const explicitPhones = test?.securityPolicy && typeof test.securityPolicy === "object" && typeof test.securityPolicy.mobileAllowed === "boolean";
   if (p.level === "PROCTORED" && !explicitPhones) p.mobileAllowed = false;
   return p;
 }
 
 function startRequirementFailure(req, policy) {
+  if (policy.strictUnsupported) {
+    return { code: "STRICT_MODE_UNSUPPORTED", error: "This assessment requires the strict secure exam environment, which this type of assessment does not support. Please contact your invigilator or administrator." };
+  }
   if (!policy.mobileAllowed && X.isMobileUserAgent(req.get("user-agent"))) {
     return { code: "MOBILE_NOT_SUPPORTED", error: "This assessment requires Secure Exam Mode, which a phone or tablet browser cannot provide. Please use a laptop or desktop computer." };
   }

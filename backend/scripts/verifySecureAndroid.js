@@ -54,6 +54,7 @@ async function cleanup() {
   const mk = async (name, role, inst) => { const pw = rand(); const u = await prisma.user.create({ data: { name, email: `verify-sa-${name.toLowerCase().replace(/\W+/g, "")}-${ts}@example.invalid`, passwordHash: await bcrypt.hash(pw, 10), role, instituteId: inst, mustChangePassword: false } }); return { ...u, pw }; };
   const s1 = await mk("Alice", "STUDENT", instituteId), s2 = await mk("Bob", "STUDENT", instituteId);
   const instAdmin = await mk("Inst Admin", "INSTITUTE_ADMIN", instituteId);
+  const admin = await mk("Admin", "ADMIN", null);
   // Own fixtures, no dependence on seeded courses: Course > Module > completed Lesson > coding test > one question.
   const course = await prisma.course.create({ data: { slug: `verify-sa-${ts}`, name: "Verify Android Course", status: "PUBLISHED" } });
   const mod = await prisma.courseModule.create({ data: { courseId: course.id, title: "Verify Android Module", isActive: true } });
@@ -89,7 +90,11 @@ async function cleanup() {
     check("no opt-in: an Android session cannot satisfy a desktop-only policy (CLIENT_KIND_NOT_ALLOWED)", sAndDesk.status === 403 && sAndDesk.body.code === "CLIENT_KIND_NOT_ALLOWED");
 
     // ---- opt-in: Android-only strict exam
-    await setLevel({ securityLevel: "LOCKDOWN", securityPolicy: { allowedClientKinds: ["ANDROID_MANAGED"], requiredCapabilities: ANDROID_REQUIRED, exitAction: "LOCK", graceSec: 120 } });
+    const TA = await login(admin.email, admin.pw);
+    check("a student cannot opt a test into the Android client (403)", (await call("PATCH", `/module-coding/admin/tests/${level.id}`, T1, { securityLevel: "LOCKDOWN", securityPolicy: { allowedClientKinds: ["ANDROID_MANAGED"] } })).status === 403);
+    const patched = await call("PATCH", `/module-coding/admin/tests/${level.id}`, TA, { securityLevel: "LOCKDOWN", securityPolicy: { allowedClientKinds: ["ANDROID_MANAGED", "EVIL", "ANDROID_MANAGED"], requiredCapabilities: [...ANDROID_REQUIRED, "bogus"], exitAction: "LOCK", graceSec: 120 } });
+    const stored = (await prisma.moduleCodingTest.findUnique({ where: { id: level.id } })).securityPolicy || {};
+    check("an admin opts the test in through the admin API; unknown kinds and capabilities are dropped", patched.status === 200 && JSON.stringify(stored.allowedClientKinds) === JSON.stringify(["ANDROID_MANAGED"]) && !stored.requiredCapabilities.includes("bogus") && stored.requiredCapabilities.length === ANDROID_REQUIRED.length);
     const noSession = await start(null, PHONE_UA, T1);
     check("opt-in: a phone browser with no secure session is refused (SECURE_CLIENT_REQUIRED, not a downgrade)", noSession.status === 403 && noSession.body.code === "SECURE_CLIENT_REQUIRED");
     const noSessionDesktop = await start(null, DESKTOP_UA, T1);
