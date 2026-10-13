@@ -21,7 +21,7 @@ const probe = async (code, input = "") => {
   // Which C dialect the compiler really provides: compile and run a one-line probe (no shell, argument arrays only).
   const fs = require("fs"), os = require("os"), path = require("path");
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "cstd-"));
-  fs.writeFileSync(path.join(dir, "p.c"), '#include <stdio.h>\nint main(void){printf("%ld\n",(long)__STDC_VERSION__);return 0;}\n');
+  fs.writeFileSync(path.join(dir, "p.c"), '#include <stdio.h>\nint main(void){printf("%ld\\n",(long)__STDC_VERSION__);return 0;}\n');
   const built = spawnSync("gcc", ["-std=gnu17", path.join(dir, "p.c"), "-o", path.join(dir, "p")], { encoding: "utf8" });
   const ran = built.status === 0 ? spawnSync(path.join(dir, "p"), [], { encoding: "utf8" }) : { stdout: "" };
   fs.rmSync(dir, { recursive: true, force: true });
