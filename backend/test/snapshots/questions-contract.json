@@ -8561,6 +8561,7 @@
     "status": 200,
     "body": {
       "starterCodeByLanguage": {
+        "c": "#include <stdio.h>\n#include <stdlib.h>\n\n// Return a malloc'd array of int and set *returnSize to its length.\nint* twoSum(int* nums, int numsSize, int target, int* returnSize) {\n    // Write your code here\n    *returnSize = 0;\n    return NULL;\n}\n",
         "cpp": "#include <bits/stdc++.h>\nusing namespace std;\n\nclass Solution {\npublic:\n    vector<int> twoSum(vector<int>& nums, int target) {\n        // Write your code here\n        \n    }\n};\n",
         "java": "import java.util.*;\n\nclass Solution {\n    public int[] twoSum(int[] nums, int target) {\n        // Write your code here\n        \n    }\n}\n",
         "javascript": "/**\n * @param {int[]} nums\n * @param {int} target\n * @return {int[]}\n */\nvar twoSum = function(nums, target) {\n    // Write your code here\n    \n};\n",
@@ -8570,7 +8571,8 @@
         "java",
         "python",
         "cpp",
-        "javascript"
+        "javascript",
+        "c"
       ]
     }
   },
