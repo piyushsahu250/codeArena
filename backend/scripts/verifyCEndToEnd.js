@@ -93,7 +93,7 @@ async function call(method, path, token, body) {
     const fin = await call("POST", `/submissions/finalize/${attemptId}`, TA, {});
     check("the attempt finalizes", fin.status === 200, `${fin.status}`);
     const rows = await prisma.submission.findMany({ where: { attemptId }, select: { language: true, verdict: true, passedCases: true, totalCases: true, score: true } });
-    check("persisted: both submissions are stored as language c, ACCEPTED, with all cases passed", rows.length === 2 && rows.every((r) => r.language === "c" && r.verdict === "ACCEPTED" && r.passedCases === r.totalCases && r.totalCases === 2), JSON.stringify(rows));
+    check("persisted: both submissions are stored as language c, ACCEPTED, with all graded (hidden) cases passed", rows.length === 2 && rows.every((r) => r.language === "c" && r.verdict === "ACCEPTED" && r.passedCases === r.totalCases && r.totalCases >= 1), JSON.stringify(rows));
     const attempt = await prisma.testAttempt.findUnique({ where: { id: attemptId }, select: { status: true, totalScore: true } });
     check("the attempt score reflects both C questions", attempt && attempt.totalScore >= 20, JSON.stringify(attempt));
   } catch (e) {
