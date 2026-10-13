@@ -43,7 +43,16 @@ jobs:
           gradle --version
           echo "ANDROID_HOME=$ANDROID_HOME"
       - name: Unit tests and debug build
-        run: gradle --no-daemon --stacktrace testDebugUnitTest assembleDebug
+        run: |
+          code=0
+          gradle --no-daemon --stacktrace testDebugUnitTest assembleDebug > /tmp/gradle.out 2>&1 || code=$?
+          cat /tmp/gradle.out
+          if [ "$code" -ne 0 ]; then
+            # also published as annotations so the reason is readable from the run summary without opening the raw log
+            ERRS=$(grep -E "^e: |error:|FAILED|What went wrong|Execution failed|Could not|not found|Unresolved" /tmp/gradle.out | head -40 | cut -c1-300 | sed 's/%/%25/g' | awk 'BEGIN{ORS="%0A"} {print}')
+            echo "::error title=gradle failed (exit $code)::$ERRS"
+          fi
+          exit $code
       - name: Keep the debug APK
         if: success()
         uses: actions/upload-artifact@v4
