@@ -867,6 +867,7 @@ function QuestionBankPickerModal({ selected, onToggle, onQuestionsSeen, onClose,
   // "It must NOT show DBMS -> Unit 1 questions when Java -> Unit 1 is selected." A staff member
   // can still opt out (e.g. reusing a question written under a different Subject) via the toggle.
   const [filterToSubject, setFilterToSubject] = useState(!!(subjectId && unitId));
+  const [hiddenCount, setHiddenCount] = useState(0); // questions of this folder/search that the Subject/Unit filter is hiding
 
   useEffect(() => {
     api.get("/questions/folders").then((res) => setFolders(res.data));
@@ -883,9 +884,21 @@ function QuestionBankPickerModal({ selected, onToggle, onQuestionsSeen, onClose,
         params.subjectId = subjectId;
         params.unitId = unitId;
       }
-      api.get("/questions", { params }).then((res) => {
+      const filtered = !!(filterToSubject && subjectId && unitId);
+      api.get("/questions", { params }).then(async (res) => {
         setItems(res.data.rows);
         onQuestionsSeen(res.data.rows);
+        // The Subject/Unit filter is on by default, so a folder whose questions were filed under a different (or no) Subject/Unit looked EMPTY while the folder card
+        // still counted them. Ask how many the same folder/search holds without the filter, so the list can say what is hidden and offer to show it.
+        let hidden = 0;
+        if (filtered) {
+          try {
+            const { subjectId: _s, unitId: _u, ...unfiltered } = params;
+            const all = await api.get("/questions", { params: { ...unfiltered, pageSize: 1 } });
+            hidden = Math.max(0, (all.data.total || 0) - (res.data.total ?? res.data.rows.length));
+          } catch { /* the hint is optional */ }
+        }
+        setHiddenCount(hidden);
         setLoadingItems(false);
       });
     }, 300); // debounce so typing in the search box doesn't fire a request per keystroke
@@ -946,7 +959,17 @@ function QuestionBankPickerModal({ selected, onToggle, onQuestionsSeen, onClose,
                     <span className="mono" style={{ marginLeft: "auto", fontSize: 11, color: "var(--ink-dim)" }}>{qq.points} pts</span>
                   </label>
                 ))}
-                {!loadingItems && items.length === 0 && <p style={{ color: "var(--ink-dim)", fontSize: 13 }}>No questions here yet.</p>}
+                {!loadingItems && hiddenCount > 0 && (
+                  <div role="status" style={{ border: "1px solid var(--line)", borderRadius: 8, padding: "10px 12px", fontSize: 13, background: "var(--amber-soft, rgba(232,163,61,0.12))" }}>
+                    {items.length === 0
+                      ? `None of the ${hiddenCount} question${hiddenCount === 1 ? "" : "s"} here ${hiddenCount === 1 ? "is" : "are"} filed under this test's Subject/Unit${subjectLabel ? ` (${subjectLabel})` : ""}; ${hiddenCount === 1 ? "it belongs" : "they belong"} to a different Subject/Unit or to none.`
+                      : `${hiddenCount} more question${hiddenCount === 1 ? " is" : "s are"} hidden because ${hiddenCount === 1 ? "it belongs" : "they belong"} to a different Subject/Unit or to none.`}{" "}
+                    <button type="button" className="btn btn-ghost" style={{ fontSize: 12, padding: "2px 8px" }} onClick={() => setFilterToSubject(false)}>
+                      Show all {items.length + hiddenCount}
+                    </button>
+                  </div>
+                )}
+                {!loadingItems && items.length === 0 && hiddenCount === 0 && <p style={{ color: "var(--ink-dim)", fontSize: 13 }}>No questions here yet.</p>}
               </div>
             </>
           )}
