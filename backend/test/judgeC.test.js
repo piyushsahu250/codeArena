@@ -57,10 +57,13 @@ test("wrong answer, compilation error (line kept, no server path), runtime error
   assert.equal(ce.verdict, "COMPILE_ERROR");
   assert.equal(ce.errorSummary.line, 3, "the compiler line number reaches the student");
   assert.ok(!/judge-|\/tmp\/|sol_bin|\/var\//.test(JSON.stringify(ce)), "no temporary server path in the response");
-  const rt = await run("int main(){int*p=0;*p=1;return 0;}", [tc("", "")]);
+  const rt = await run("int main(){volatile int*p=0;*p=1;return 0;}", [tc("", "")]);
   assert.notEqual(rt.verdict, "ACCEPTED", "a segfault never passes");
-  assert.ok(rt.details[0].verdict === "RUNTIME_ERROR", `segfault is a runtime error, got ${rt.details[0].verdict}`);
+  assert.equal(rt.details[0].verdict, "RUNTIME_ERROR", `segfault is a runtime error, got ${rt.details[0].verdict}`);
   assert.equal(rt.errorSummary.type, "Segmentation Fault");
+  const npe = await run("int main(){int*p=0;*p=1;return 0;}", [tc("", "")]);
+  assert.equal(npe.details[0].verdict, "RUNTIME_ERROR");
+  assert.ok(["Segmentation Fault", "Invalid Operation"].includes(npe.errorSummary.type), `a plain null dereference is classified (gcc -O2 may trap), got ${npe.errorSummary.type}`);
   const tle = await run("int main(){for(;;){} return 0;}", [tc("", "")], { timeLimitMs: 500 });
   assert.equal(tle.verdict, "TLE");
 });

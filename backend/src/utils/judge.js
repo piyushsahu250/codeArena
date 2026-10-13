@@ -298,6 +298,9 @@ const RUNTIME_ERROR_PATTERNS = {
     [/[Ff]loating point exception/, "Division by Zero", "Your program divided by zero (or used an invalid modulo) — check your divisor before dividing."],
     [/double free|free\(\): invalid/, "Memory Error", "Your program freed memory incorrectly — check for a duplicate or invalid free() call."],
     [/[Aa]borted/, "Aborted", "Your program called abort() or hit a runtime-checked failure — check assertions and error-handling paths."],
+    // gcc -O2 turns a provable null dereference into a trap instruction (SIGILL) instead of a segfault, so students see this for classic null-pointer bugs too.
+    [/Illegal instruction/, "Invalid Operation", "Your program executed an invalid operation — most often dereferencing a null or invalid pointer, or other undefined behavior. Check pointers before using them."],
+    [/Bus error/, "Bus Error", "Your program accessed memory in an invalid way — check pointer arithmetic and array bounds."],
   ],
   python: [
     [/ZeroDivisionError/, "Division by Zero", "Your code divided by zero — check your divisor before dividing."],
