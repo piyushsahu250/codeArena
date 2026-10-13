@@ -3,6 +3,9 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const { spawnSync } = require("node:child_process");
+// RLIMIT_NPROC counts every process of the OS user, and the judge caps it at 64 for the sandbox user in production. A developer or CI user already runs more than that,
+// which broke Node (it starts threads) in these tests only. The cap is read when judge.js loads, so it is raised here, before the require.
+process.env.JUDGE_MAX_PROCESSES = process.env.JUDGE_MAX_PROCESSES || "4096";
 const { judgeSubmission } = require("../src/utils/judge");
 const H = require("../src/utils/functionHarness");
 

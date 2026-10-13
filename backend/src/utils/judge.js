@@ -334,6 +334,15 @@ function classifyRuntimeError(language, rawMessage) {
 // exceeds it gets allocation failures, not just a number we report after the fact) and under
 // `/usr/bin/time -v`, which writes real peak-RSS to a separate file (statsFile) so its report
 // never gets mixed into the submitted program's own stderr.
+// Text a crashed process would have printed in a terminal, so the existing RUNTIME_ERROR_PATTERNS (and their student-facing hints) recognise it. Only appended
+// when the program's own stderr does not already say it.
+const SIGNAL_TEXT = { 4: "Illegal instruction", 6: "Aborted", 7: "Bus error", 8: "Floating point exception", 11: "Segmentation fault" };
+function withSignalText(stderr, signal) {
+  const text = SIGNAL_TEXT[signal];
+  if (!text || new RegExp(text, "i").test(stderr || "")) return stderr;
+  return `${stderr ? stderr + "\n" : ""}${text} (signal ${signal})`;
+}
+
 async function spawnWithTimeout(cmd, args, options, input, timeLimitMs, { enforceLimits = true, enforceMemory = true, memoryLimitKb = MEMORY_LIMIT_KB } = {}) {
   const networkDenied = enforceLimits && await checkNetworkDenialAvailable(); // only for actual execution, not compilation
   return new Promise((resolve) => {
@@ -436,12 +445,17 @@ async function spawnWithTimeout(cmd, args, options, input, timeLimitMs, { enforc
     child.stdout.on("data", (d) => { stdout = trackOutput(d, stdout); });
     child.stderr.on("data", (d) => { stderr = trackOutput(d, stderr); });
 
+    // GNU time (-v -o file) records "Command terminated by signal N" in the STATS FILE, not on stderr, and the shell that would print "Segmentation fault" is
+    // replaced by exec. Without reading it, a crashing C program had an empty stderr and was classified as a generic "Runtime Error".
+    let exitSignal = null;
     function readStatsAndCleanup() {
       let memoryKb = null;
       try {
         const raw = fs.readFileSync(statsFile, "utf8");
         const match = raw.match(/Maximum resident set size \(kbytes\):\s*(\d+)/);
         if (match) memoryKb = Number(match[1]);
+        const sig = raw.match(/Command terminated by signal (d+)/);
+        if (sig) exitSignal = Number(sig[1]);
       } catch { /* stats file may not exist if the process never actually started */ }
       // Same DROP_PRIVILEGES ownership gap as cleanupTmpDir() above -- /usr/bin/time itself runs
       // as `sandbox` under the dropped-privilege spawn, so statsFile is sandbox-owned; confirmed
@@ -463,7 +477,7 @@ async function spawnWithTimeout(cmd, args, options, input, timeLimitMs, { enforc
       if (codeExit !== 0) {
         const memoryExceeded = memoryKb != null && memoryKb >= memoryLimitKb * 0.97;
         const oom = memoryExceeded || OOM_PATTERNS.test(stderr);
-        return resolve({ ok: false, error: stderr || "Runtime error", oom, timeMs, memoryKb });
+        return resolve({ ok: false, error: withSignalText(stderr, exitSignal) || "Runtime error", oom, timeMs, memoryKb });
       }
       resolve({ ok: true, stdout, timeMs, memoryKb });
     });
