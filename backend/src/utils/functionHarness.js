@@ -65,16 +65,29 @@ function validateSignature(signature) {
 // returning an array — a fundamentally different signature shape) — so array-typed signatures
 // simply aren't offered in C. Scalar-only signatures still work fine in C.
 function languagesSupportedBy(signature) {
-  const usesArrays = isArrayType(signature.returnType) || signature.params.some((p) => isArrayType(p.type));
+  // C supports scalars and 1D arrays of int/long/double/boolean (pointer + length convention, see C_ARRAY below). Only string[] has no sensible C shape here.
+  const usesStringArray = signature.returnType === "string[]" || signature.params.some((p) => p.type === "string[]");
   const all = ["java", "python", "cpp", "javascript", "c"];
-  return usesArrays ? all.filter((l) => l !== "c") : all;
+  return usesStringArray ? all.filter((l) => l !== "c") : all;
 }
 
 // ---- Starter code (the empty skeleton shown in the editor) ----
 
 const JAVA_TYPE = { int: "int", long: "long", double: "double", boolean: "boolean", string: "String", "int[]": "int[]", "long[]": "long[]", "double[]": "double[]", "string[]": "String[]", "boolean[]": "boolean[]" };
 const CPP_TYPE = { int: "int", long: "long long", double: "double", boolean: "bool", string: "string", "int[]": "vector<int>", "long[]": "vector<long long>", "double[]": "vector<double>", "string[]": "vector<string>", "boolean[]": "vector<bool>" };
-const C_TYPE = { int: "int", long: "long", double: "double", boolean: "int", string: "char*" }; // scalar-only
+const C_TYPE = { int: "int", long: "long", double: "double", boolean: "int", string: "char*" };
+// 1D arrays in C follow the LeetCode convention: an array PARAMETER is a pointer plus a length parameter named <name>Size; an array RETURN is a malloc'd pointer and
+// the function sets *returnSize. Element types: boolean[] is an array of int (0/1). string[] is not offered in C.
+const C_ARRAY = { "int[]": "int", "long[]": "long", "double[]": "double", "boolean[]": "int" };
+const cArrayType = (t) => `${C_ARRAY[t]}*`;
+function cParamList(params, returnType) {
+  const parts = [];
+  for (const p of params) {
+    if (isArrayType(p.type)) { parts.push(`${cArrayType(p.type)} ${p.name}`, `int ${p.name}Size`); } else parts.push(`${C_TYPE[p.type]} ${p.name}`);
+  }
+  if (isArrayType(returnType)) parts.push("int* returnSize");
+  return parts.join(", ");
+}
 
 function generateStarterCode(language, signature) {
   validateSignature(signature);
@@ -98,10 +111,13 @@ function generateStarterCode(language, signature) {
       return `/**\n${jsdoc}\n */\nvar ${methodName} = function(${paramList}) {\n    // Write your code here\n    \n};\n`;
     }
     case "c": {
-      if (isArrayType(returnType) || params.some((p) => isArrayType(p.type))) {
-        throw new Error("C doesn't support array-typed Function-based signatures — use STDIO mode, or a language other than C for this question");
+      if (returnType === "string[]" || params.some((p) => p.type === "string[]")) {
+        throw new Error("C doesn't support string[] in Function-based signatures — use STDIO mode, or a language other than C for this question");
       }
-      const paramList = params.map((p) => `${C_TYPE[p.type]} ${p.name}`).join(", ");
+      const paramList = cParamList(params, returnType);
+      if (isArrayType(returnType)) {
+        return `#include <stdio.h>\n#include <stdlib.h>\n\n// Return a malloc'd array of ${C_ARRAY[returnType]} and set *returnSize to its length.\n${cArrayType(returnType)} ${methodName}(${paramList}) {\n    // Write your code here\n    *returnSize = 0;\n    return NULL;\n}\n`;
+      }
       return `#include <stdio.h>\n\n${C_TYPE[returnType]} ${methodName}(${paramList}) {\n    // Write your code here\n    \n}\n`;
     }
     default:
@@ -285,38 +301,137 @@ function jsDriver(signature) {
   return lines.join("\n") + "\n";
 }
 
+// Prints a double with the SHORTEST precision that round-trips (the same idea as Python's repr), instead of printf's default %g which keeps only 6 significant digits
+// and so turned 3.14159265 into 3.14159. Needs <stdio.h>, <stdlib.h> and <string.h>, which the drivers include before the student's code.
+const C_DOUBLE_HELPER = `static void __printDouble(double v) {
+    char b[40]; int p;
+    for (p = 1; p <= 17; p++) { snprintf(b, sizeof b, "%.*g", p, v); if (strtod(b, NULL) == v) break; }
+    printf("%s", b);
+}`;
+
 function cDriver(signature) {
   const { methodName, returnType, params } = signature;
-  if (isArrayType(returnType) || params.some((p) => isArrayType(p.type))) {
-    throw new Error("C doesn't support array-typed Function-based signatures");
+  if (returnType === "string[]" || params.some((p) => p.type === "string[]")) {
+    throw new Error("C doesn't support string[] in Function-based signatures");
   }
-  const decls = params.map((p) => {
-    if (p.type === "int") return `    int ${p.name}; scanf("%d", &${p.name});`;
-    if (p.type === "long") return `    long ${p.name}; scanf("%ld", &${p.name});`;
-    if (p.type === "double") return `    double ${p.name}; scanf("%lf", &${p.name});`;
-    if (p.type === "boolean") return `    char __buf_${p.name}[16]; scanf("%15s", __buf_${p.name}); int ${p.name} = (strcmp(__buf_${p.name}, "true") == 0);`;
-    if (p.type === "string") return `    char ${p.name}[4096]; scanf(" %4095[^\\n]", ${p.name});`;
-    throw new Error(`Unsupported type ${p.type}`);
-  }).join("\n");
-  const argList = params.map((p) => p.name).join(", ");
-  const printResult = returnType === "boolean"
-    ? `    printf("%s\\n", result ? "true" : "false");`
-    : returnType === "double"
-    ? `    printf("%g\\n", result);`
-    : returnType === "string"
-    ? `    printf("%s\\n", result);`
-    : `    printf("%ld\\n", (long)result);`;
-  const cReturn = C_TYPE[returnType];
+  const usesArrays = isArrayType(returnType) || params.some((p) => isArrayType(p.type));
+  const argList = params.flatMap((p) => (isArrayType(p.type) ? [p.name, `${p.name}Size`] : [p.name])).concat(isArrayType(returnType) ? ["&__returnSize"] : []).join(", ");
 
-  return `#include <stdio.h>
+  if (!usesArrays) {
+    // Scalar-only signatures: unchanged reading convention (whitespace-separated scanf tokens), only the double formatting is safer than before.
+    const decls = params.map((p) => {
+      if (p.type === "int") return `    int ${p.name}; scanf("%d", &${p.name});`;
+      if (p.type === "long") return `    long ${p.name}; scanf("%ld", &${p.name});`;
+      if (p.type === "double") return `    double ${p.name}; scanf("%lf", &${p.name});`;
+      if (p.type === "boolean") return `    char __buf_${p.name}[16]; scanf("%15s", __buf_${p.name}); int ${p.name} = (strcmp(__buf_${p.name}, "true") == 0);`;
+      if (p.type === "string") return `    char ${p.name}[4096]; scanf(" %4095[^\\n]", ${p.name});`;
+      throw new Error(`Unsupported type ${p.type}`);
+    }).join("\n");
+    const printResult = returnType === "boolean"
+      ? `    printf("%s\\n", result ? "true" : "false");`
+      : returnType === "double"
+      ? `    __printDouble(result); printf("\\n");`
+      : returnType === "string"
+      ? `    printf("%s\\n", result);`
+      : `    printf("%ld\\n", (long)result);`;
+    return `#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+
+${C_DOUBLE_HELPER}
 
 <<<STUDENT_CODE>>>
 
 int main() {
 ${decls}
-    ${cReturn} result = ${methodName}(${argList});
+    ${C_TYPE[returnType]} result = ${methodName}(${argList});
 ${printResult}
+    return 0;
+}
+`;
+  }
+
+  // Signatures with arrays: one parameter per input line (the same convention every other language's driver uses), arrays as space-separated values on their line.
+  const decls = params.map((p) => {
+    const n = p.name;
+    switch (p.type) {
+      case "int": return `    __readLine(); int ${n} = (int)strtol(__line, NULL, 10);`;
+      case "long": return `    __readLine(); long ${n} = strtol(__line, NULL, 10);`;
+      case "double": return `    __readLine(); double ${n} = strtod(__line, NULL);`;
+      case "boolean": return `    __readLine(); int ${n} = __isTrue(__line);`;
+      case "string": return `    char ${n}[4096]; __readLine(); __stripEol(__line); strncpy(${n}, __line, sizeof(${n}) - 1); ${n}[sizeof(${n}) - 1] = 0;`;
+      case "int[]": return `    __readLine(); int* ${n}; int ${n}Size = __parseArr(__line, 'i', (void**)&${n});`;
+      case "long[]": return `    __readLine(); long* ${n}; int ${n}Size = __parseArr(__line, 'l', (void**)&${n});`;
+      case "double[]": return `    __readLine(); double* ${n}; int ${n}Size = __parseArr(__line, 'd', (void**)&${n});`;
+      case "boolean[]": return `    __readLine(); int* ${n}; int ${n}Size = __parseArr(__line, 'b', (void**)&${n});`;
+      default: throw new Error(`Unsupported type ${p.type}`);
+    }
+  }).join("\n");
+
+  let call;
+  if (isArrayType(returnType)) {
+    const kind = { "int[]": "i", "long[]": "l", "double[]": "d", "boolean[]": "b" }[returnType];
+    call = `    int __returnSize = 0;
+    ${cArrayType(returnType)} result = ${methodName}(${argList});
+    if (result == NULL) __returnSize = 0;
+    __printArr(result, __returnSize, '${kind}');`;
+  } else {
+    const printResult = returnType === "boolean"
+      ? `    printf("%s\\n", result ? "true" : "false");`
+      : returnType === "double"
+      ? `    __printDouble(result); printf("\\n");`
+      : returnType === "string"
+      ? `    printf("%s\\n", result);`
+      : `    printf("%ld\\n", (long)result);`;
+    call = `    ${C_TYPE[returnType]} result = ${methodName}(${argList});
+${printResult}`;
+  }
+
+  return `#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+
+${C_DOUBLE_HELPER}
+
+static char __line[1 << 22];
+static void __readLine(void) { if (!fgets(__line, sizeof __line, stdin)) __line[0] = 0; }
+static void __stripEol(char* s) { size_t n = strlen(s); while (n > 0 && (s[n - 1] == '\\n' || s[n - 1] == '\\r')) s[--n] = 0; }
+static int __isTrue(const char* s) { while (*s == ' ' || *s == '\\t') s++; return tolower((unsigned char)s[0]) == 't' && tolower((unsigned char)s[1]) == 'r' && tolower((unsigned char)s[2]) == 'u' && tolower((unsigned char)s[3]) == 'e'; }
+// Parses whitespace-separated values of one kind ('i' int, 'l' long, 'd' double, 'b' boolean) into a malloc'd array; returns the count (0 for an empty line).
+static int __parseArr(const char* s, char kind, void** out) {
+    int cap = 16, n = 0;
+    size_t sz = (kind == 'l') ? sizeof(long) : (kind == 'd') ? sizeof(double) : sizeof(int);
+    char* a = (char*)malloc(cap * sz);
+    for (;;) {
+        while (*s == ' ' || *s == '\\t' || *s == '\\r' || *s == '\\n') s++;
+        if (!*s) break;
+        const char* start = s;
+        if (n == cap) { cap *= 2; a = (char*)realloc(a, cap * sz); }
+        if (kind == 'i') { char* e; long v = strtol(s, &e, 10); if (e == s) break; ((int*)a)[n++] = (int)v; s = e; }
+        else if (kind == 'l') { char* e; long v = strtol(s, &e, 10); if (e == s) break; ((long*)a)[n++] = v; s = e; }
+        else if (kind == 'd') { char* e; double v = strtod(s, &e); if (e == s) break; ((double*)a)[n++] = v; s = e; }
+        else { int t = __isTrue(s); while (*s && *s != ' ' && *s != '\\t' && *s != '\\r' && *s != '\\n') s++; ((int*)a)[n++] = t; if (s == start) break; }
+    }
+    *out = a;
+    return n;
+}
+static void __printArr(const void* v, int n, char kind) {
+    for (int i = 0; i < n; i++) {
+        if (i) printf(" ");
+        if (kind == 'i') printf("%d", ((const int*)v)[i]);
+        else if (kind == 'l') printf("%ld", ((const long*)v)[i]);
+        else if (kind == 'd') __printDouble(((const double*)v)[i]);
+        else printf("%s", ((const int*)v)[i] ? "true" : "false");
+    }
+    printf("\\n");
+}
+
+<<<STUDENT_CODE>>>
+
+int main() {
+${decls}
+${call}
     return 0;
 }
 `;
@@ -385,7 +500,7 @@ function looksLikeFullProgram(language, code) {
 function wrapFunctionCode(language, signature, studentCode) {
   validateSignature(signature);
   if (!languagesSupportedBy(signature).includes(language)) {
-    throw new Error(`This question's signature isn't available in ${language} (array types aren't supported in C)`);
+    throw new Error(`This question's signature isn't available in ${language} (string[] isn't supported in C)`);
   }
   switch (language) {
     case "java": {

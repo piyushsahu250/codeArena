@@ -171,7 +171,10 @@ const RUNNERS = {
   },
   c: {
     srcName: "sol.c",
-    compile: (file, dir) => ({ cmd: "gcc", args: [file, "-O2", "-o", path.join(dir, "sol_bin")] }),
+    // Compiled as C (gcc, not g++): -std=gnu17 is the explicit form of the default dialect (C17 plus GNU extensions, so POSIX functions such as strdup keep working), and
+    // -lm links the math library, which gcc does NOT do implicitly: without it any program calling sqrt/pow/floor/... on a runtime value failed to link.
+    // The library goes AFTER the source file so the linker can resolve symbols the object needs. Arguments are an array, never a shell string.
+    compile: (file, dir) => ({ cmd: "gcc", args: ["-std=gnu17", "-O2", "-pipe", file, "-o", path.join(dir, "sol_bin"), "-lm"] }),
     run: (_file, dir) => ({ cmd: path.join(dir, "sol_bin"), args: [] }),
   },
   cpp: {
