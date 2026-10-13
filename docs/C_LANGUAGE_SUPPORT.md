@@ -40,14 +40,16 @@ Compiler: `gcc` (the production image installs Debian `build-essential`; the exa
 * Limits: default 2,000 ms per test case, 256 MB, 2 MB of output, 64 processes, 45 s compile budget; each configurable per question or by environment.
 * Messages shown to students: compile errors keep the compiler line number and a hint; temporary server paths are removed.
 
-## 5. Tests
+## 5. Tests and verification scripts
 
-`backend/test/judgeC.test.js` (runs in CI with gcc present, skipped without it) executes real C through the real judge: Hello World, input and output, even/odd, loops, arrays, strings with spaces, several test cases, 200,000-integer input, empty input, `math.h`, wrong answer, partial score, compile error (line number kept, no server path in the response), segfault and null dereference, infinite loop timeout, excessive memory, output flood, secrets in the environment, ten concurrent submissions, function-mode scalars/strings/booleans/doubles/arrays, starter code, plus regression runs for Python, JavaScript and C++.
+* `backend/test/judgeC.test.js` (unit job, gcc present in CI): real C through the real judge. Hello World, input and output, even/odd, loops, arrays, strings with spaces, several test cases, 200,000-integer input, empty input, `math.h`, wrong answer, partial score, compile error (line number kept, no server path in the response), segfault and null dereference, infinite loop timeout, excessive memory, output flood, secrets in the environment, ten concurrent submissions, function mode (scalars, strings, booleans, doubles, arrays), starter code, plus regression runs for Python, JavaScript and C++.
+* `backend/scripts/verifyCEndToEnd.js` (integration job, real API + database + judge, disposable data): a full-program question and an array-typed function question on a published test; the student runs C on the visible sample, gets a compile error with the right line and no server path, a wrong answer, an unknown-language refusal (the server does not trust the selector), a 403 from another institute and a 401 anonymously; submits against the hidden cases; finalizes; the persisted submissions are language `c`, ACCEPTED, and the attempt score is the sum. Every student response is checked for hidden test text and reference solutions. Passing in CI.
+* `backend/scripts/verifyCJudgeSandbox.js` (run it **inside the production container**): C probe programs check what a sandboxed program really experiences: the gcc version and C dialect, no server secrets in the environment, running as the unprivileged sandbox user, unreadable `/etc/shadow` and application files, no writes to `/app`, `/etc`, `/usr/local/bin`, no outbound network, a process limit, memory/time/output limits, and no leftover workspaces. Where privilege dropping is off it reports those checks as not applicable rather than passing them. **Not yet run against production** (see below).
 
 ## 6. What is NOT verified (be honest)
 
-* **Not run on the production sandbox.** The CI tests run without `JUDGE_DROP_PRIVILEGES`, the network-denial rule and the dedicated `sandbox` user, so filesystem isolation, path traversal, outbound network and process-spawn restrictions for C were **not tested here**. Existing code and its comments describe them; they need a run inside the production container.
-* Browser end-to-end journeys (student, assessment, admin, LMS), mobile editor behaviour, refresh and reconnect during execution: **NOT TESTED**.
-* Load: only ten concurrent submissions in CI. No claim is made for 200, 500, 1,000 or 2,000 users; the judge is a small fixed-concurrency queue on one host.
-* Reference-solution validation before publishing and the bulk-import path were audited by reading, not exercised with C data here.
-* The running compiler version on the production image.
+* **The production sandbox probe has not been run.** CI has no `sandbox` user or network-denial rule, so filesystem isolation, outbound network and process-spawn limits for C are untested until `verifyCJudgeSandbox.js` runs in the production container. The running gcc version is likewise unread.
+* Browser journeys (student, assessment, admin, LMS), the mobile editor, and refresh or reconnect during execution: NOT TESTED. The existing Playwright suite covers MCQ flows, not code editing.
+* Load: ten concurrent submissions in CI only. No claim for 200 to 2,000 users; the judge is a small fixed-concurrency queue on one host.
+* Bulk import of a C question and reference-solution validation before publishing were audited by reading, not exercised with C data.
+* Nothing in this change is deployed. The fixes in `judge.js` and `functionHarness.js` reach students only after a backend deploy.
