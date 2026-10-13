@@ -95,3 +95,21 @@ test("preview summary counts rows by status", () => {
   const s = d.previewSummary([{ status: "valid" }, { status: "valid" }, { status: "error" }, { status: "duplicate" }]);
   assert.deepEqual([s.totalRows, s.validCount, s.invalidCount, s.duplicateCount], [4, 2, 1, 1]);
 });
+
+test("withDeadline answers with the fallback when the work is slower than the deadline, and with the work's own result when it is faster", async () => {
+  const slow = new Promise((resolve) => setTimeout(() => resolve({ ok: true }), 200));
+  assert.deepEqual(await d.withDeadline(slow, 20, { ok: false, error: "late" }), { ok: false, error: "late" });
+  assert.deepEqual(await d.withDeadline(Promise.resolve({ ok: true, messageId: "m" }), 500, { ok: false }), { ok: true, messageId: "m" });
+});
+
+test("withDeadline leaves no timer behind (the process can exit) and does not hide a rejection of the work itself", async () => {
+  const t0 = Date.now();
+  await d.withDeadline(Promise.resolve(1), 60_000, 2);
+  assert.ok(Date.now() - t0 < 1000, "a fast result is not held up by the long deadline");
+  await assert.rejects(() => d.withDeadline(Promise.reject(new Error("boom")), 1000, null), /boom/);
+});
+
+test("the credentials e-mail wait is short enough to finish well inside the browser's 45 second limit", () => {
+  assert.ok(d.MAIL_WAIT_MS >= 1000 && d.MAIL_WAIT_MS <= 20000);
+  assert.match(d.MAIL_STILL_SENDING, /account was created/i, "the message says the account exists");
+});
