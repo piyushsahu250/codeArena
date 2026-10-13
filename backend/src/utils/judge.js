@@ -337,6 +337,7 @@ function classifyRuntimeError(language, rawMessage) {
 // exceeds it gets allocation failures, not just a number we report after the fact) and under
 // `/usr/bin/time -v`, which writes real peak-RSS to a separate file (statsFile) so its report
 // never gets mixed into the submitted program's own stderr.
+// A wrapper shell that waits for the program reports 128+N as its own exit status instead of GNU time seeing the signal, so that form is decoded too.
 // Text a crashed process would have printed in a terminal, so the existing RUNTIME_ERROR_PATTERNS (and their student-facing hints) recognise it. Only appended
 // when the program's own stderr does not already say it.
 const SIGNAL_TEXT = { 4: "Illegal instruction", 6: "Aborted", 7: "Bus error", 8: "Floating point exception", 11: "Segmentation fault" };
@@ -480,7 +481,7 @@ async function spawnWithTimeout(cmd, args, options, input, timeLimitMs, { enforc
       if (codeExit !== 0) {
         const memoryExceeded = memoryKb != null && memoryKb >= memoryLimitKb * 0.97;
         const oom = memoryExceeded || OOM_PATTERNS.test(stderr);
-        return resolve({ ok: false, error: withSignalText(stderr, exitSignal) || "Runtime error", oom, timeMs, memoryKb });
+        return resolve({ ok: false, error: withSignalText(stderr, exitSignal || (codeExit > 128 && codeExit < 160 ? codeExit - 128 : null)) || "Runtime error", oom, timeMs, memoryKb });
       }
       resolve({ ok: true, stdout, timeMs, memoryKb });
     });
