@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import Editor from "@monaco-editor/react";
+import StableCodeEditor from "../components/StableCodeEditor";
 import * as tf from "@tensorflow/tfjs";
 import * as blazeface from "@tensorflow-models/blazeface";
 import api, { API_BASE_URL } from "../api";
@@ -2404,7 +2404,8 @@ export default function TestTaking() {
                   An explicit number on the wrapper AND on <Editor> removes that dependency
                   entirely; the outer column's overflow:auto lets the student scroll past it. */}
               <div style={{ flex: isMobile ? "none" : 1, height: isMobile ? 380 : undefined, minHeight: 0 }}>
-                <Editor
+                <StableCodeEditor
+                  contextKey={`${activeIdx}|${answer?.language}`}
                   height={isMobile ? 380 : "100%"}
                   language={isSql ? "sql" : LANGUAGES.find((l) => l.id === answer?.language)?.monaco}
                   value={answer?.code || ""}

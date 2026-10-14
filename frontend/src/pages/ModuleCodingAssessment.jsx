@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import Editor from "@monaco-editor/react";
+import StableCodeEditor from "../components/StableCodeEditor";
 import api, { API_BASE_URL } from "../api";
 import { useGamification } from "../context/GamificationContext";
 import { useProctoring } from "../hooks/useProctoring";
@@ -1189,7 +1189,8 @@ export default function ModuleCodingAssessment() {
               not definite. The outer column scrolls, so a taller editor just means less empty
               space, never a cut-off. */}
           <div style={isMobile ? { height: 420, minHeight: 0, flexShrink: 0 } : { flex: "1 1 0", minHeight: 200 }}>
-            <Editor
+            <StableCodeEditor
+              contextKey={`${activeIdx}|${answer?.language}`}
               height={isMobile ? 420 : "100%"}
               language={ALL_LANGUAGES.find((l) => l.id === answer?.language)?.monaco}
               value={answer?.code || ""}
