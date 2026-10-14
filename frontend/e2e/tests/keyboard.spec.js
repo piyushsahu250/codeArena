@@ -4,6 +4,7 @@ const { data, users, login } = require("./helpers");
 // "A, S and D do not type in the code editor during a test" regression suite. Real Chromium, the real Monaco editor, a real timed test (standard and
 // PROCTORED, so every proctoring listener is installed). What is asserted is the text Monaco actually holds, not just that keys were pressed.
 
+
 async function openTest(page, testId, firstQuestionPattern) {
   await login(page, users.student);
   await page.goto(`/test/${testId}`);
@@ -24,7 +25,12 @@ async function openTest(page, testId, firstQuestionPattern) {
     throw new Error("Begin Assessment stayed disabled. Pre-start screen: " + screen);
   }
   await begin.click();
-  await expect(page.getByText(firstQuestionPattern).first()).toBeVisible({ timeout: 20000 });
+  try {
+    await expect(page.getByText(firstQuestionPattern).first()).toBeVisible({ timeout: 20000 });
+  } catch {
+    const screen = (await page.locator("body").innerText()).replace(/\s+/g, " ").slice(0, 1200);
+    throw new Error("The question did not appear after Begin. Screen: " + screen);
+  }
   await expect(page.locator(".monaco-editor").first()).toBeVisible();
 }
 
