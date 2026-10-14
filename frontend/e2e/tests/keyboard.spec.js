@@ -8,8 +8,9 @@ async function openTest(page, testId, firstQuestionPattern) {
   await login(page, users.student);
   await page.goto(`/test/${testId}`);
   // PROCTORED tests keep Begin disabled until the pre-flight security check has run
+  await expect(page.getByRole("button", { name: /Begin Assessment/ })).toBeVisible({ timeout: 20000 });
   const check = page.getByRole("button", { name: "Run security check" });
-  if (await check.isVisible({ timeout: 5000 }).catch(() => false)) {
+  if (await check.isVisible()) {
     await check.click();
     await expect(page.getByText("Secure connection (HTTPS)")).toBeVisible();
     expect(await page.locator("li:has-text(\"✕\")").allTextContents(), "required security checks that failed on this browser").toEqual([]);
