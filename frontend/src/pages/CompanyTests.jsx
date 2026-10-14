@@ -76,11 +76,11 @@ export default function CompanyTests() {
                   </div>
                   <button
                     className="btn btn-dark"
-                    disabled={status.label !== "Live now"}
-                    style={{ opacity: status.label !== "Live now" ? 0.4 : 1 }}
-                    onClick={() => attend(test)}
+                    disabled={status.label !== "Live now" && !status.completed}
+                    style={{ opacity: status.label !== "Live now" && !status.completed ? 0.4 : 1 }}
+                    onClick={() => (status.completed ? navigate(`/test/${test.id}/result`) : attend(test))}
                   >
-                    {status.label === "Live now" ? "Start Test →" : status.label}
+                    {status.label === "Live now" ? (test.myStatus === "IN_PROGRESS" ? "Resume Test →" : "Start Test →") : status.completed ? "View result →" : status.label}
                   </button>
                 </div>
               );
