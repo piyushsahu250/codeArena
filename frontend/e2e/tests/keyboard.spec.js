@@ -48,8 +48,8 @@ const keysOf = (page) => page.evaluate(() => window.__keys);
 const watchViolations = (page) => { const sent = []; page.on("request", (r) => { if (/\/tests\/attempts\/[^/]+\/violation/.test(r.url()) && r.method() === "POST") sent.push(r.postData() || ""); }); return sent; };
 
 for (const [label, idKey, pattern] of [
-  ["standard timed test", "codingTestId", /E2E coding \(full program\)/],
-  ["PROCTORED timed test (all proctoring listeners active)", "codingProctoredTestId", /E2E coding \(full program\)/],
+  ["standard timed test", "codingTestId", /Code Full/],
+  ["PROCTORED timed test (all proctoring listeners active)", "codingProctoredTestId", /Code Full/],
 ]) {
   test(`${label}: a, s, d (lower and upper case) type normally in full-program mode`, async ({ page }) => {
     const violations = watchViolations(page);
@@ -80,7 +80,7 @@ for (const [label, idKey, pattern] of [
 }
 
 test("a, s, d work at the start, middle and end of a line, and after editing", async ({ page }) => {
-  await openTest(page, data.codingTestId, /E2E coding \(full program\)/);
+  await openTest(page, data.codingTestId, /Code Full/);
   await focusEditorAndClear(page);
   await page.keyboard.type("xyz");
   await page.keyboard.press("Home"); await page.keyboard.press("a");
@@ -96,9 +96,9 @@ test("a, s, d work at the start, middle and end of a line, and after editing", a
 });
 
 test("function-based mode: a, s, d type normally in the editor of the second question", async ({ page }) => {
-  await openTest(page, data.codingTestId, /E2E coding \(full program\)/);
+  await openTest(page, data.codingTestId, /Code Full/);
   await page.getByRole("button", { name: /Next/ }).first().click();
-  await expect(page.getByText(/E2E coding \(function\)/).first()).toBeVisible();
+  await expect(page.getByText(/Code Function/).first()).toBeVisible();
   await page.waitForFunction((src) => new Function("return (" + src + ")()")().includes("addNums"), readEditor.toString(), { timeout: 15000 });
   await page.locator(".monaco-editor .view-lines").first().click();
   await page.keyboard.press("Control+a"); await page.keyboard.press("Delete");
@@ -110,7 +110,7 @@ test("function-based mode: a, s, d type normally in the editor of the second que
 });
 
 test("C is selectable and types normally; the typed code is what autosave sends to the server", async ({ page }) => {
-  await openTest(page, data.codingTestId, /E2E coding \(full program\)/);
+  await openTest(page, data.codingTestId, /Code Full/);
   await page.locator("select.mono").first().selectOption("c");
   await focusEditorAndClear(page);
   const code = "#include <stdio.h>\nint main(void) { int a, s, d; scanf(\"%d %d\", &a, &d); s = a + d; printf(\"%d\\n\", s); return 0; }";
@@ -131,7 +131,7 @@ test("other text fields take a, s, d too (login form here; the same global liste
 });
 
 test("modifier shortcuts keep their meaning: Ctrl+A / Ctrl+Z in the editor work, Ctrl+S is the one intercepted shortcut and never touches the text", async ({ page }) => {
-  await openTest(page, data.codingProctoredTestId, /E2E coding \(full program\)/);
+  await openTest(page, data.codingProctoredTestId, /Code Full/);
   await focusEditorAndClear(page);
   await recordKeys(page);
   await page.keyboard.type("sad ads das");
@@ -151,7 +151,7 @@ test("modifier shortcuts keep their meaning: Ctrl+A / Ctrl+Z in the editor work,
 test("hidden test cases and reference solutions never reach the browser during the test", async ({ page }) => {
   const bodies = [];
   page.on("response", async (r) => { if (r.url().includes("/api/")) { try { bodies.push(await r.text()); } catch { /* ignore */ } } });
-  await openTest(page, data.codingTestId, /E2E coding \(full program\)/);
+  await openTest(page, data.codingTestId, /Code Full/);
   const all = bodies.join("\n");
   expect(all).not.toMatch(/"isHidden":\s*true/);
   expect(all).not.toMatch(/referenceSolution/i);
