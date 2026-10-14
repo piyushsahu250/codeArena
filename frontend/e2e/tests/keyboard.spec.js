@@ -16,11 +16,13 @@ async function openTest(page, testId, firstQuestionPattern) {
   await page.getByLabel("I have read and understood the instructions.").check();
   await page.getByRole("button", { name: /Begin Assessment/ }).click();
   await expect(page.getByText(firstQuestionPattern).first()).toBeVisible({ timeout: 20000 });
-  await page.waitForFunction(() => window.monaco && window.monaco.editor.getModels().length > 0, null, { timeout: 30000 });
   await expect(page.locator(".monaco-editor").first()).toBeVisible();
 }
 
-const editorText = (page) => page.evaluate(() => window.monaco.editor.getModels()[0].getValue());
+// The app bundles Monaco (no window.monaco global), so the text is read from the rendered lines, in visual order.
+const readEditor = () => { const lines = [...document.querySelectorAll(".monaco-editor .view-lines .view-line")].sort((a, b) => parseFloat(a.style.top) - parseFloat(b.style.top)); return lines.map((l) => l.textContent.replace(/00a0/g, " ")).join("
+"); };
+const editorText = (page) => page.evaluate(readEditor);
 async function focusEditorAndClear(page) {
   await page.locator(".monaco-editor .view-lines").first().click();
   await page.keyboard.press("Control+a");
@@ -88,11 +90,11 @@ test("function-based mode: a, s, d type normally in the editor of the second que
   await openTest(page, data.codingTestId, /E2E coding \(full program\)/);
   await page.getByRole("button", { name: /Next/ }).first().click();
   await expect(page.getByText(/E2E coding \(function\)/).first()).toBeVisible();
-  await page.waitForFunction(() => window.monaco.editor.getModels().some((m) => /addNums/.test(m.getValue())), null, { timeout: 15000 });
+  await page.waitForFunction((src) => new Function("return (" + src + ")()")().includes("addNums"), readEditor.toString(), { timeout: 15000 });
   await page.locator(".monaco-editor .view-lines").first().click();
   await page.keyboard.press("Control+a"); await page.keyboard.press("Delete");
   await page.keyboard.type("def addNums(self, a, b):\n    return a + b  # sum and add, standard dads");
-  const t = await page.evaluate(() => window.monaco.editor.getModels().map((m) => m.getValue()).find((v) => v.includes("addNums")));
+  const t = await editorText(page);
   expect(t).toContain("def addNums(self, a, b):");
   expect(t).toContain("return a + b  # sum and add, standard dads");
 });
