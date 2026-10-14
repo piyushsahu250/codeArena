@@ -15,7 +15,14 @@ async function openTest(page, testId, firstQuestionPattern) {
     expect(await page.locator("li:has-text(\"✕\")").allTextContents(), "required security checks that failed on this browser").toEqual([]);
   }
   await page.getByLabel("I have read and understood the instructions.").check();
-  await page.getByRole("button", { name: /Begin Assessment/ }).click();
+  const begin = page.getByRole("button", { name: /Begin Assessment/ });
+  try {
+    await expect(begin).toBeEnabled({ timeout: 8000 });
+  } catch {
+    const screen = (await page.locator("body").innerText()).replace(/\s+/g, " ").slice(0, 1500);
+    throw new Error("Begin Assessment stayed disabled. Pre-start screen: " + screen);
+  }
+  await begin.click();
   await expect(page.getByText(firstQuestionPattern).first()).toBeVisible({ timeout: 20000 });
   await expect(page.locator(".monaco-editor").first()).toBeVisible();
 }
@@ -82,6 +89,7 @@ test("a, s, d work at the start, middle and end of a line, and after editing", a
   await expect.poll(() => editorText(page)).toBe("axydzs");
   await page.keyboard.press("Backspace");
   await expect.poll(() => editorText(page)).toBe("axyzs");
+  await page.keyboard.press("End");
   await page.keyboard.type("add sad dads");
   await expect.poll(() => editorText(page)).toBe("axyzsadd sad dads");
 });
@@ -94,6 +102,7 @@ test("function-based mode: a, s, d type normally in the editor of the second que
   await page.locator(".monaco-editor .view-lines").first().click();
   await page.keyboard.press("Control+a"); await page.keyboard.press("Delete");
   await page.keyboard.type("def addNums(self, a, b):\n    return a + b  # sum and add, standard dads");
+  await expect.poll(() => editorText(page)).toContain("return a + b  # sum and add, standard dads");
   const t = await editorText(page);
   expect(t).toContain("def addNums(self, a, b):");
   expect(t).toContain("return a + b  # sum and add, standard dads");
