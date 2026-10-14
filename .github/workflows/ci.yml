@@ -87,6 +87,8 @@ jobs:
       # has no actual effect on what ships.
       - run: npm install
       - run: npm run build
+      - name: Keyboard regression (typing keys are never intercepted)
+        run: node scripts/keyboardRegression.mjs
 
   # Static gate, no installs needed. A variable that is used but never declared only fails when that line runs (a blank page for the one screen that reaches it,
   # or a 500 for one request); three such bugs reached production before this existed (lesson page, project page, AI voice interview).

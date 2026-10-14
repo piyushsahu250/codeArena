@@ -22,7 +22,7 @@
 // (key, ctrlKey, metaKey, shiftKey) -- not a real Event -- so it's usable both from a live
 // keydown handler (`classifyKeyEvent(e)`) and from a plain object in a test, with zero DOM
 // dependency either way.
-export function classifyKeyEvent({ key, ctrlKey = false, metaKey = false, shiftKey = false } = {}) {
+export function classifyKeyEvent({ key, ctrlKey = false, metaKey = false, shiftKey = false, altKey = false } = {}) {
   const ctrlOrCmd = ctrlKey || metaKey;
   const k = String(key || "").toLowerCase();
 
@@ -32,6 +32,11 @@ export function classifyKeyEvent({ key, ctrlKey = false, metaKey = false, shiftK
   // (view-source). Every letter check here REQUIRES ctrlOrCmd — "i", "j", "c", "u" alone are
   // always normal typing, never classified as anything.
   if (key === "F12") return "DEVTOOLS";
+
+  // AltGr: Windows reports the AltGr key of international layouts (Polish, Czech, Portuguese, Spanish, Nordic, many Indic and others) as Ctrl+Alt, and the letters it
+  // produces (for example AltGr+A, AltGr+S) are ordinary characters, not shortcuts. Treating Ctrl+Alt+S as the Ctrl+S browser shortcut cancelled the keystroke, so those
+  // students could not type the character at all. Ctrl+Alt without Cmd is therefore character entry. (Ctrl+Alt+letter is not a browser or devtools shortcut anywhere.)
+  if (ctrlKey && altKey && !metaKey) return null;
   if (ctrlOrCmd && shiftKey && ["i", "j", "c"].includes(k)) return "DEVTOOLS";
   if (ctrlOrCmd && k === "u") return "DEVTOOLS";
 

@@ -53,7 +53,23 @@ async function seed() {
   const test = await mkTest(`${TAG} Standard Test`);
   const proctored = await mkTest(`${TAG} Proctored Test`, { securityLevel: "PROCTORED" });
   const fsTest = await mkTest(`${TAG} Fullscreen Test`, { requireFullscreen: true });
-  console.log(JSON.stringify({ users, institutes: { A: { id: A.id, name: A.name }, B: { id: B.id, name: B.name } }, testId: test.id, proctoredTestId: proctored.id, fullscreenTestId: fsTest.id, questionTexts: ["E2E question 1: pick option B", "E2E question 2: pick option B"] }));
+  // Coding questions (full-program and function-based) for the keyboard regression: a real Monaco editor inside a timed test, with and without proctoring.
+  const FH = require("../src/utils/functionHarness");
+  const fnSig = { methodName: "addNums", returnType: "int", params: [{ name: "a", type: "int" }, { name: "b", type: "int" }] };
+  const fnFields = FH.resolveCodingFields({ evaluationType: "FUNCTION", functionSignature: fnSig });
+  const cases = { create: [{ input: "1 2", expected: "3", isHidden: false }, { input: "5 6", expected: "11", isHidden: true }] };
+  const codeFull = await prisma.question.create({ data: { title: `${TAG} Code Full`, description: "E2E coding (full program): read two integers and print the sum.", questionType: "CODING", difficulty: "EASY", points: 10, instituteId: A.id, evaluationType: "STDIO", testCases: cases } });
+  const codeFn = await prisma.question.create({ data: { title: `${TAG} Code Function`, description: "E2E coding (function): return a + b.", questionType: "CODING", difficulty: "EASY", points: 10, instituteId: A.id, evaluationType: "FUNCTION", functionSignature: fnSig, starterCodeByLanguage: fnFields.starterCodeByLanguage, testCases: { create: [{ input: "1\n2", expected: "3", isHidden: false }, { input: "5\n6", expected: "11", isHidden: true }] } } });
+  const mkCodingTest = (title, extra = {}) => prisma.test.create({
+    data: {
+      title, durationMin: 30, startTime: new Date(now - 60000), endTime: new Date(now + 6 * 3600000), isPublished: true, showResults: true, requireFullscreen: false,
+      createdById: users.staff.id, instituteId: A.id, academicGroups: { create: [{ academicGroupId: group.id }] },
+      questions: { create: [codeFull, codeFn].map((q, order) => ({ questionId: q.id, order })) }, ...extra,
+    },
+  });
+  const codingTest = await mkCodingTest(`${TAG} Coding Test`);
+  const codingProctored = await mkCodingTest(`${TAG} Coding Proctored Test`, { securityLevel: "PROCTORED" });
+  console.log(JSON.stringify({ users, institutes: { A: { id: A.id, name: A.name }, B: { id: B.id, name: B.name } }, testId: test.id, codingTestId: codingTest.id, codingProctoredTestId: codingProctored.id, proctoredTestId: proctored.id, fullscreenTestId: fsTest.id, questionTexts: ["E2E question 1: pick option B", "E2E question 2: pick option B"] }));
 }
 
 (async () => {
