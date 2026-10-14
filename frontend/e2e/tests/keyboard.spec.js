@@ -26,7 +26,11 @@ async function openTest(page, testId, firstQuestionPattern) {
   }
   await begin.click();
   try {
-    await expect(page.getByText(firstQuestionPattern).first()).toBeVisible({ timeout: 20000 });
+    // Question order is shuffled per attempt, so land on the wanted question whichever one is shown first.
+    await expect(page.locator("h2", { hasText: /Code (Full|Function)/ }).first()).toBeVisible({ timeout: 20000 });
+    const wanted = page.locator("h2", { hasText: firstQuestionPattern }).first();
+    if (!(await wanted.isVisible())) await page.getByRole("button", { name: /Next/ }).first().click();
+    await expect(wanted).toBeVisible({ timeout: 10000 });
   } catch {
     const screen = (await page.locator("body").innerText()).replace(/\s+/g, " ").slice(0, 1200);
     throw new Error("The question did not appear after Begin. Screen: " + screen);
@@ -111,9 +115,7 @@ test("a, s, d work at the start, middle and end of a line, and after editing", a
   await expect.poll(() => stableText(page)).toBe("axyzsadd sad dads");
 });
 
-test("function-based mode: a, s, d type normally in the editor of the second question", async ({ page }) => {
-  await openTest(page, data.codingTestId, /Code Full/);
-  await page.getByRole("button", { name: /Next/ }).first().click();
+  await openTest(page, data.codingTestId, /Code Function/);
   await expect(page.getByText(/Code Function/).first()).toBeVisible();
   await page.waitForFunction((src) => new Function("return (" + src + ")()")().includes("addNums"), readEditor.toString(), { timeout: 15000 });
   await page.locator(".monaco-editor .view-lines").first().click();
