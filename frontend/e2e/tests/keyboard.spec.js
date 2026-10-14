@@ -89,7 +89,7 @@ for (const [label, idKey, pattern] of [
     await page.keyboard.type("asd");
     await expectText(page, "asd");
     await page.keyboard.press("Enter");
-    await page.keyboard.press("Shift+a"); await page.keyboard.press("Shift+s"); await page.keyboard.press("Shift+d");
+    await page.keyboard.press("Shift+A"); await page.keyboard.press("Shift+S"); await page.keyboard.press("Shift+D");
     await expectText(page, "asd\nASD");
 
     await page.keyboard.press("Enter");
@@ -171,6 +171,7 @@ test("modifier shortcuts keep their meaning: Ctrl+A / Ctrl+Z in the editor work,
   await expectText(page, "sad ads das");
   const keys = await keysOf(page);
   expect(keys.find((e) => e.type === "keydown" && e.ctrl && e.key === "s")?.prevented, "Ctrl+S is the intentional, modifier-gated exception").toBe(true);
+  await page.keyboard.press("End"); // undo leaves the restored text selected; typing now would replace it
   await page.keyboard.type("d");
   await expectText(page, "sad ads dasd");
 });
