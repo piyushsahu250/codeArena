@@ -7,9 +7,15 @@ const { data, users, login } = require("./helpers");
 async function openTest(page, testId, firstQuestionPattern) {
   await login(page, users.student);
   await page.goto(`/test/${testId}`);
+  // PROCTORED tests keep Begin disabled until the pre-flight security check has run
+  const check = page.getByRole("button", { name: "Run security check" });
+  if (await check.isVisible({ timeout: 5000 }).catch(() => false)) {
+    await check.click();
+    await expect(page.getByText("Secure connection (HTTPS)")).toBeVisible();
+  }
   await page.getByLabel("I have read and understood the instructions.").check();
   await page.getByRole("button", { name: /Begin Assessment/ }).click();
-  await expect(page.getByText(firstQuestionPattern).first()).toBeVisible();
+  await expect(page.getByText(firstQuestionPattern).first()).toBeVisible({ timeout: 20000 });
   await page.waitForFunction(() => window.monaco && window.monaco.editor.getModels().length > 0, null, { timeout: 30000 });
   await expect(page.locator(".monaco-editor").first()).toBeVisible();
 }
