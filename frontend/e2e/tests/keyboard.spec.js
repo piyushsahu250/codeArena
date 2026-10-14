@@ -51,11 +51,20 @@ async function stableText(page) {
   }
   return prev;
 }
+// Polls until the settled editor text equals `expected`; on failure the message carries both strings on ONE line (a multi-line diff does not survive CI annotations).
+async function expectText(page, expected) {
+  let last = null;
+  try {
+    await expect.poll(async () => (last = await stableText(page)), { timeout: 8000 }).toBe(expected);
+  } catch {
+    throw new Error(`editor text mismatch: expected ${JSON.stringify(expected)} but the editor holds ${JSON.stringify(last)}`);
+  }
+}
 async function focusEditorAndClear(page) {
   await page.locator(".monaco-editor .view-lines").first().click();
   await page.keyboard.press("Control+a");
   await page.keyboard.press("Delete");
-  await expect.poll(() => stableText(page)).toBe("");
+  await expectText(page, "");
 }
 // Records every keydown/keyup as the WINDOW sees it in the bubbling phase, i.e. after every document-level handler ran, with whether it was cancelled.
 async function recordKeys(page) {
@@ -78,15 +87,15 @@ for (const [label, idKey, pattern] of [
     await recordKeys(page);
 
     await page.keyboard.type("asd");
-    await expect.poll(() => stableText(page)).toBe("asd");
+    await expectText(page, "asd");
     await page.keyboard.press("Enter");
     await page.keyboard.press("Shift+a"); await page.keyboard.press("Shift+s"); await page.keyboard.press("Shift+d");
-    await expect.poll(() => stableText(page)).toBe("asd\nASD");
+    await expectText(page, "asd\nASD");
 
     await page.keyboard.press("Enter");
     const sentence = "data structures and algorithms";
     await page.keyboard.type(sentence, { delay: 15 });
-    await expect.poll(() => stableText(page)).toBe(`asd\nASD\n${sentence}`);
+    await expectText(page, `asd\nASD\n${sentence}`);
 
     const keys = await keysOf(page);
     for (const k of ["a", "s", "d", "A", "S", "D"]) {
@@ -107,12 +116,12 @@ test("a, s, d work at the start, middle and end of a line, and after editing", a
   await page.keyboard.press("End"); await page.keyboard.press("s");
   await page.keyboard.press("Home"); for (let i = 0; i < 3; i++) await page.keyboard.press("ArrowRight");
   await page.keyboard.press("d");
-  await expect.poll(() => stableText(page)).toBe("axydzs");
+  await expectText(page, "axydzs");
   await page.keyboard.press("Backspace");
-  await expect.poll(() => stableText(page)).toBe("axyzs");
+  await expectText(page, "axyzs");
   await page.keyboard.press("End");
   await page.keyboard.type("add sad dads");
-  await expect.poll(() => stableText(page)).toBe("axyzsadd sad dads");
+  await expectText(page, "axyzsadd sad dads");
 });
 
 test("function-based mode: a, s, d type normally in the editor of the function question", async ({ page }) => {
@@ -134,7 +143,7 @@ test("C is selectable and types normally; the typed code is what autosave sends 
   const code = "#include <stdio.h>\nint main(void) { int a, s, d; scanf(\"%d %d\", &a, &d); s = a + d; printf(\"%d\\n\", s); return 0; }";
   const autosave = page.waitForRequest((r) => /\/submissions\/autosave/.test(r.url()) && r.method() === "POST" && (r.postData() || "").includes("scanf"), { timeout: 20000 });
   await page.keyboard.type(code);
-  await expect.poll(() => stableText(page)).toBe(code);
+  await expectText(page, code);
   const req = await autosave;
   expect(JSON.parse(req.postData()).code, "the server receives exactly what was typed").toBe(code);
   expect(JSON.parse(req.postData()).language).toBe("c");
@@ -155,15 +164,15 @@ test("modifier shortcuts keep their meaning: Ctrl+A / Ctrl+Z in the editor work,
   await page.keyboard.type("sad ads das");
   await page.keyboard.press("Control+a");
   await page.keyboard.type("x");
-  await expect.poll(() => stableText(page)).toBe("x");
+  await expectText(page, "x");
   await page.keyboard.press("Control+z");
-  await expect.poll(() => stableText(page)).toBe("sad ads das");
+  await expectText(page, "sad ads das");
   await page.keyboard.press("Control+s");
-  await expect.poll(() => stableText(page), "Ctrl+S inserts nothing").toBe("sad ads das");
+  await expectText(page, "sad ads das");
   const keys = await keysOf(page);
   expect(keys.find((e) => e.type === "keydown" && e.ctrl && e.key === "s")?.prevented, "Ctrl+S is the intentional, modifier-gated exception").toBe(true);
   await page.keyboard.type("d");
-  await expect.poll(() => stableText(page)).toBe("sad ads dasd");
+  await expectText(page, "sad ads dasd");
 });
 
 test("hidden test cases and reference solutions never reach the browser during the test", async ({ page }) => {
