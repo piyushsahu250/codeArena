@@ -28,6 +28,9 @@ export default function StableCodeEditor({ value, onChange, contextKey, ...props
     <Editor
       {...props}
       value={shownRef.current}
+      // Enter always inserts a newline. With the default ("on") Enter accepts an open word suggestion instead, silently replacing what was typed
+      // (typing ASD then Enter turned it into the suggested "asd" and produced no new line). Autocomplete stays; Tab still accepts a suggestion.
+      options={{ ...props.options, acceptSuggestionOnEnter: "off" }}
       onChange={(v, ev) => {
         lastEmittedRef.current = v ?? "";
         if (onChange) onChange(v, ev);
