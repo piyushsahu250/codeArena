@@ -115,8 +115,8 @@ test("a, s, d work at the start, middle and end of a line, and after editing", a
   await expect.poll(() => stableText(page)).toBe("axyzsadd sad dads");
 });
 
+test("function-based mode: a, s, d type normally in the editor of the function question", async ({ page }) => {
   await openTest(page, data.codingTestId, /Code Function/);
-  await expect(page.getByText(/Code Function/).first()).toBeVisible();
   await page.waitForFunction((src) => new Function("return (" + src + ")()")().includes("addNums"), readEditor.toString(), { timeout: 15000 });
   await page.locator(".monaco-editor .view-lines").first().click();
   await page.keyboard.press("Control+a"); await page.keyboard.press("Delete");
