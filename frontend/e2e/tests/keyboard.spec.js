@@ -20,8 +20,7 @@ async function openTest(page, testId, firstQuestionPattern) {
 }
 
 // The app bundles Monaco (no window.monaco global), so the text is read from the rendered lines, in visual order.
-const readEditor = () => { const lines = [...document.querySelectorAll(".monaco-editor .view-lines .view-line")].sort((a, b) => parseFloat(a.style.top) - parseFloat(b.style.top)); return lines.map((l) => l.textContent.replace(/00a0/g, " ")).join("
-"); };
+const readEditor = () => { const lines = [...document.querySelectorAll(".monaco-editor .view-lines .view-line")].sort((a, b) => parseFloat(a.style.top) - parseFloat(b.style.top)); return lines.map((l) => l.textContent.replace(/ /g, " ")).join("\n"); };
 const editorText = (page) => page.evaluate(readEditor);
 async function focusEditorAndClear(page) {
   await page.locator(".monaco-editor .view-lines").first().click();
