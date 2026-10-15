@@ -324,11 +324,22 @@ function studentInstituteWhere(requesterInstituteId) {
 const isoSeconds = (d) => (d ? new Date(d).toISOString().replace("T", " ").slice(0, 19) + " UTC" : "");
 
 // One spreadsheet row per attempt, ranked over the (already institute-scoped, score-ordered) list; `roll` only narrows which rows are shown, not the ranks.
+// Case-insensitive, whitespace-tolerant student search shared (by value) with frontend/src/utils/studentSearch.js: every space-separated word must appear in the
+// name, roll number, PRN/registration number or e-mail. Plain substring tests only, never a regex built from the input.
+const normSearch = (v) => String(v ?? "").normalize("NFKC").toLowerCase().replace(/\s+/g, " ").trim();
+function matchesStudentQuery(student, query) {
+  const words = normSearch(query).slice(0, 100).split(" ").filter(Boolean);
+  if (words.length === 0) return true;
+  const fields = [student?.name, student?.rollNumber, student?.registrationNumber, student?.email].map(normSearch);
+  return words.every((w) => fields.some((f) => f.includes(w)));
+}
+
 function resultExportRows(attempts, bases, test, roll) {
   const needle = String(roll || "").trim().toLowerCase();
   return attempts
     .map((a, idx) => ({ a, rank: idx + 1 }))
     .filter(({ a }) => !needle || (a.student.rollNumber || "").toLowerCase().includes(needle))
+    .filter(({ a }) => matchesStudentQuery(a.student, search))
     .map(({ a, rank }) => {
       const base = bases.get(a.id);
       const max = base.maxScore;
@@ -392,4 +403,4 @@ function reattemptAuditDetails(student, test, attempt) {
   };
 }
 
-Object.assign(module.exports, { RESULTS_CAP, STATUS_LABEL, studentInstituteWhere, resultExportRows, exportFilename, questionAnalyticsRows, reattemptAuditDetails });
+Object.assign(module.exports, { RESULTS_CAP, STATUS_LABEL, studentInstituteWhere, matchesStudentQuery, resultExportRows, exportFilename, questionAnalyticsRows, reattemptAuditDetails });

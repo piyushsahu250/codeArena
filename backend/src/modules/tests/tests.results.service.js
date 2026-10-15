@@ -34,11 +34,11 @@ async function exportResults(actor, testId, query) {
   const attempts = await repo.attemptsForExport(testId, d.studentInstituteWhere(actor.requesterInstituteId));
   // Each attempt is scored out of ITS OWN assigned questions (manifest); points come from the Question table so a question removed later still counts.
   const bases = await scoreBases(prisma, attempts);
-  const rows = d.resultExportRows(attempts, bases, test, query.roll);
+  const rows = d.resultExportRows(attempts, bases, test, query.roll, typeof query.q === "string" ? query.q : "");
   const format = query.format === "csv" ? "csv" : "xlsx";
   await logAudit({
     req: actor.req, action: AUDIT_ACTIONS.DATA_EXPORTED, actorId: actor.user.id, actorName: actor.user.name, actorRole: actor.user.role, instituteId: actor.requesterInstituteId,
-    details: { entity: "test-results", testId, rows: rows.length, format, rollFilter: query.roll ? true : false },
+    details: { entity: "test-results", testId, rows: rows.length, format, rollFilter: query.roll ? true : false, searchFilter: typeof query.q === "string" && query.q.trim() ? true : false },
   });
   return { rows, filename: `${d.exportFilename(test.title)}-results`, format };
 }

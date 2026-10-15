@@ -91,6 +91,8 @@ jobs:
         run: node scripts/keyboardRegression.mjs
       - name: Device check regression (a touchscreen laptop is a desktop)
         run: node scripts/deviceCheckRegression.mjs
+      - name: Student search regression (leaderboard search matches name, roll number, PRN)
+        run: node scripts/studentSearchRegression.mjs
 
   # Static gate, no installs needed. A variable that is used but never declared only fails when that line runs (a blank page for the one screen that reaches it,
   # or a 500 for one request); three such bugs reached production before this existed (lesson page, project page, AI voice interview).

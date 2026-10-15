@@ -31,9 +31,9 @@ async function seed() {
     return { id: u.id, name, email: u.email, password, role, instituteId };
   };
   const users = {
-    student: await mk("student", "Ela Student", "STUDENT", A.id, { department: "E2E Computer Science", academicGroupId: group.id, program: "B.Tech", rollNumber: "101" }),
-    student2: await mk("student2", "Ben Student", "STUDENT", A.id, { department: "E2E Computer Science", academicGroupId: group.id, rollNumber: "102" }),
-    student3: await mk("student3", "Cal Student", "STUDENT", A.id, { department: "E2E Computer Science", academicGroupId: group.id, rollNumber: "103" }),
+    student: await mk("student", "Ela Student", "STUDENT", A.id, { department: "E2E Computer Science", academicGroupId: group.id, program: "B.Tech", rollNumber: "101", registrationNumber: "PRN-ELA-7001" }),
+    student2: await mk("student2", "Ben Student", "STUDENT", A.id, { department: "E2E Computer Science", academicGroupId: group.id, rollNumber: "102", registrationNumber: "PRN-BEN-7002" }),
+    student3: await mk("student3", "Cal Student", "STUDENT", A.id, { department: "E2E Computer Science", academicGroupId: group.id, rollNumber: "103", registrationNumber: "PRN-CAL-7003" }),
     studentB: await mk("studentb", "Zed Other", "STUDENT", B.id),
     staff: await mk("staff", "Sam Staff", "STAFF", A.id, { department: "E2E Computer Science" }),
     clerk: await mk("clerk", "Cora Clerk", "CLERK", A.id),
@@ -68,9 +68,14 @@ async function seed() {
     },
   });
   const companyTest = await mkTest(`${TAG} Company Test`, { company: "ZZCO" });
+  // A finished test with three submitted attempts, for the staff leaderboard search tests.
+  const resultsTest = await mkTest(`${TAG} Results Test`);
+  for (const [u, score] of [[users.student, 9], [users.student2, 6], [users.student3, 3]]) {
+    await prisma.testAttempt.create({ data: { testId: resultsTest.id, studentId: u.id, status: "SUBMITTED", totalScore: score, startedAt: new Date(now - 30 * 60000), submittedAt: new Date(now - 10 * 60000), questionOrder: questions.map((q) => q.id) } });
+  }
   const codingTest = await mkCodingTest(`${TAG} Coding Test`);
   const codingProctored = await mkCodingTest(`${TAG} Coding Proctored Test`, { securityLevel: "PROCTORED" });
-  console.log(JSON.stringify({ users, institutes: { A: { id: A.id, name: A.name }, B: { id: B.id, name: B.name } }, testId: test.id, companyTestId: companyTest.id, codingTestId: codingTest.id, codingProctoredTestId: codingProctored.id, proctoredTestId: proctored.id, fullscreenTestId: fsTest.id, questionTexts: ["E2E question 1: pick option B", "E2E question 2: pick option B"] }));
+  console.log(JSON.stringify({ users, institutes: { A: { id: A.id, name: A.name }, B: { id: B.id, name: B.name } }, testId: test.id, companyTestId: companyTest.id, resultsTestId: resultsTest.id, codingTestId: codingTest.id, codingProctoredTestId: codingProctored.id, proctoredTestId: proctored.id, fullscreenTestId: fsTest.id, questionTexts: ["E2E question 1: pick option B", "E2E question 2: pick option B"] }));
 }
 
 (async () => {
