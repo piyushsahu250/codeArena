@@ -18,12 +18,12 @@ async function cleanup() {
     await prisma.test.deleteMany({ where: { id: { in: ids } } });
   }
   await prisma.user.deleteMany({ where: { email: { startsWith: "verify-autofin-", endsWith: "@example.invalid" } } });
+  await prisma.institute.deleteMany({ where: { code: "ZZVAF" } });
 }
 
 async function main() {
   await cleanup();
-  const institute = await prisma.institute.findFirst();
-  if (!institute) throw new Error("no institute in this database");
+  const institute = await prisma.institute.create({ data: { name: "ZZ-VERIFY auto-finalize institute", code: "ZZVAF" } });
   const mkUser = async (tag, role) => prisma.user.create({
     data: { name: `Verify AutoFin ${tag}`, email: `verify-autofin-${tag}-${Date.now()}@example.invalid`, passwordHash: await bcrypt.hash(crypto.randomBytes(18).toString("base64url"), 4), role, instituteId: institute.id, mustChangePassword: false },
   });
