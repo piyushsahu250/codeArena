@@ -40,7 +40,7 @@ test("a filtered row keeps its leaderboard rank, and the count says so", async (
   await search(page).fill("cal");
   await expectNames(page, ["Cal"]);
   const cells = await rows(page).first().locator("td").allInnerTexts();
-  expect(cells.some((c) => c.trim() === "3" || c.trim() === "#3"), "Cal is still ranked 3rd of 3: " + JSON.stringify(cells)).toBe(true);
+  expect(cells.some((c) => /(^|\s)#?3$/.test(c.trim())), "Cal is still ranked 3rd of 3: " + JSON.stringify(cells)).toBe(true);
   await expect(page.getByText(/Showing 1 of 3/)).toBeVisible();
 });
 
