@@ -13,6 +13,7 @@ const { processGamification } = require("../../utils/gamification");
 const { classifyViolation } = require("../../utils/proctoringSeverity");
 const { MANIFEST_VERSION, validateManifest, scoreBase } = require("../../utils/attemptManifest");
 const aiService = require("../../services/ai/aiService");
+const { annotateEvents } = require("../../utils/evidenceClassification");
 const d = require("./tests.domain");
 const repo = require("./tests.repository");
 
@@ -118,7 +119,8 @@ async function violationLog(actor, attemptId) {
   const violations = await repo.violationsOf(attempt.id);
   const byType = {};
   for (const v of violations) byType[v.type] = (byType[v.type] || 0) + 1;
-  return { student: attempt.student, tabSwitchCount: attempt.tabSwitchCount, byType, events: violations };
+  // Each event also carries the evidence class the server can honestly give it. `severity` and `penalized` are the legacy counting rules, unchanged.
+  return { student: attempt.student, tabSwitchCount: attempt.tabSwitchCount, byType, events: annotateEvents(violations), evidenceNote: "Browser signals are observations, not proof. A page cannot see other apps, devices or assistants. Only an authorised reviewer can confirm misconduct." };
 }
 
 // ---- in-page AI helper ----

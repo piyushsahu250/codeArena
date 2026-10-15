@@ -28,6 +28,8 @@ const RANK_MEDAL = { 1: "🥇", 2: "🥈", 3: "🥉" };
 
 // Mirrors backend/src/utils/proctoringSeverity.js's 4-level taxonomy purely for display.
 const SEVERITY_COLOR = { INTERRUPTION: "var(--ink-dim)", SUSPICIOUS: "var(--amber)", CONFIRMED_VIOLATION: "var(--rust)" };
+// What the server can honestly say about a browser-reported event (utils/evidenceClassification.js). Nothing here is a confirmed finding: only a reviewer can confirm.
+const EVIDENCE_LABEL = { OBSERVED_EVENT: "Observed (browser signal)", SUSPECTED_ACTIVITY: "Suspected — review needed", INCONCLUSIVE: "Inconclusive", POLICY_VIOLATION: "Policy violation", CONFIRMED_VIOLATION: "Confirmed by reviewer" };
 
 export default function TestResults() {
   const { id } = useParams();
@@ -371,16 +373,15 @@ export default function TestResults() {
                             {violationsById[a.id] && !violationsById[a.id].error && (
                               <>
                                 <p className="mono" style={{ fontSize: 11, color: "var(--ink-dim)", marginBottom: 8 }}>
-                                  Only <span style={{ color: SEVERITY_COLOR.CONFIRMED_VIOLATION }}>confirmed violations</span> count toward
-                                  the {a.tabSwitchCount} shown in the table — <span style={{ color: SEVERITY_COLOR.SUSPICIOUS }}>suspicious</span> events
-                                  only escalate into one after repeating, and <span style={{ color: SEVERITY_COLOR.INTERRUPTION }}>interruptions</span> never do.
+                                  {violationsById[a.id].evidenceNote || "Browser signals are observations, not proof."} "Counted" means the event
+                                  added to the {a.tabSwitchCount} strike(s) in the table under the exam's counting rule — it is not a finding of misconduct.
                                 </p>
                                 <table style={{ width: "100%", fontSize: 12 }}>
                                   <thead>
                                     <tr style={{ textAlign: "left", color: "var(--ink-dim)" }}>
                                       <th style={{ padding: "2px 8px" }}>Time</th>
                                       <th>Event</th>
-                                      <th>Severity</th>
+                                      <th>Evidence</th>
                                       <th>Counted?</th>
                                     </tr>
                                   </thead>
@@ -389,7 +390,9 @@ export default function TestResults() {
                                       <tr key={ev.id} className="mono">
                                         <td style={{ padding: "2px 8px" }}>{new Date(ev.createdAt).toLocaleTimeString()}</td>
                                         <td>{ev.type.replace(/_/g, " ")}</td>
-                                        <td style={{ color: SEVERITY_COLOR[ev.severity] || "inherit" }}>{ev.severity.replace(/_/g, " ")}</td>
+                                        <td title={ev.evidence ? `${ev.evidence.rationale} Limits: ${ev.evidence.limits}` : undefined} style={{ color: ev.evidence?.classification === "SUSPECTED_ACTIVITY" ? SEVERITY_COLOR.SUSPICIOUS : "inherit" }}>
+                                          {EVIDENCE_LABEL[ev.evidence?.classification] || "Observed (browser signal)"}
+                                        </td>
                                         <td>{ev.penalized ? "Yes" : "No"}</td>
                                       </tr>
                                     ))}
