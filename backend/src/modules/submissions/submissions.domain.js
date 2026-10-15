@@ -9,6 +9,15 @@ function deadlineOf(attempt) {
   return new Date(attempt.startedAt).getTime() + attempt.test.durationMin * 60 * 1000;
 }
 
+// Margin after a student's own deadline before the server closes an abandoned attempt itself, so their client's normal expiry submit always goes first.
+const AUTO_FINALIZE_GRACE_MS = 60 * 1000;
+
+// Of the IN_PROGRESS attempts on tests whose window has closed, the ones the server may close on its own: only those whose OWN deadline (startedAt +
+// durationMin) has also passed. The window closing stops new starts; it does not shorten a student's time.
+function attemptsDueForAutoFinalize(attempts, now = new Date()) {
+  return attempts.filter((a) => now.getTime() > deadlineOf(a) + AUTO_FINALIZE_GRACE_MS);
+}
+
 // The questions this attempt was given: the manifest locked at start (TestAttempt.questionOrder), or -- only for legacy attempts that predate it -- the test's
 // current list.
 function assignedQuestionIds(attempt) {
@@ -67,6 +76,6 @@ function storedAnswer(question, selectedOptions, numericResponse) {
 const shouldRestoreBest = (priorBest, fresh) => !!priorBest && priorBest.verdict !== "PENDING" && !!fresh && priorBest.score > fresh.score;
 
 module.exports = {
-  PREMATURE_FINALIZE_GRACE_MS, deadlineOf, assignedQuestionIds, isCodingType, languageFor, toOriginalIndices, gradeQuizAnswer, scoreFor,
+  PREMATURE_FINALIZE_GRACE_MS, AUTO_FINALIZE_GRACE_MS, attemptsDueForAutoFinalize, deadlineOf, assignedQuestionIds, isCodingType, languageFor, toOriginalIndices, gradeQuizAnswer, scoreFor,
   sanitizeSubmitResponse, sanitizeCodingResult, storedAnswer, shouldRestoreBest,
 };
