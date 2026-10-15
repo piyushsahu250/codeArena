@@ -334,7 +334,7 @@ function matchesStudentQuery(student, query) {
   return words.every((w) => fields.some((f) => f.includes(w)));
 }
 
-function resultExportRows(attempts, bases, test, roll) {
+function resultExportRows(attempts, bases, test, roll, search) {
   const needle = String(roll || "").trim().toLowerCase();
   return attempts
     .map((a, idx) => ({ a, rank: idx + 1 }))

@@ -38,7 +38,7 @@ async function exportResults(actor, testId, query) {
   const format = query.format === "csv" ? "csv" : "xlsx";
   await logAudit({
     req: actor.req, action: AUDIT_ACTIONS.DATA_EXPORTED, actorId: actor.user.id, actorName: actor.user.name, actorRole: actor.user.role, instituteId: actor.requesterInstituteId,
-    details: { entity: "test-results", testId, rows: rows.length, format, rollFilter: query.roll ? true : false, searchFilter: typeof query.q === "string" && query.q.trim() ? true : false },
+    details: { entity: "test-results", testId, rows: rows.length, format, rollFilter: query.roll ? true : false },
   });
   return { rows, filename: `${d.exportFilename(test.title)}-results`, format };
 }
