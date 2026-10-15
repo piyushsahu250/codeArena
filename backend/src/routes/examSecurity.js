@@ -47,6 +47,43 @@ router.post("/events", authenticate, requireRole("STUDENT"), EVENT_LIMIT, async 
   } catch (err) { console.error(err); res.status(500).json({ error: "Failed to record events" }); }
 });
 
+
+// STUDENT: keyboard signals for a formal-test attempt, accepted ONLY while the attempt is IN_PROGRESS and the test's own policy has blockAiShortcuts on
+// (the server, not the page, decides whether this is active). The student id always comes from the authenticated session. Observations only: the page sees a
+// key combination, never an application, so nothing here can be a confirmed violation and nothing is penalised or auto-submitted.
+const AI_SIGNAL_TYPES = new Set(["COPILOT_KEY_SIGNAL", "AI_SHORTCUT_DETECTED"]);
+const AI_SIGNAL_META_KEYS = ["code", "key", "metaKey", "shiftKey", "ctrlKey", "altKey", "cancelable", "defaultPrevented", "cancelAttempted", "count", "clientAt"];
+const MAX_AI_SIGNALS_PER_ATTEMPT = 200;
+router.post("/test-events", authenticate, requireRole("STUDENT"), EVENT_LIMIT, async (req, res) => {
+  try {
+    const { attemptId, events } = req.body || {};
+    if (typeof attemptId !== "string" || !attemptId || attemptId.length > 64 || !Array.isArray(events) || events.length === 0) return res.status(400).json({ error: "attemptId and a non-empty events array are required" });
+    const attempt = await prisma.testAttempt.findUnique({
+      where: { id: attemptId },
+      select: { id: true, studentId: true, status: true, testId: true, test: { select: { id: true, instituteId: true, securityLevel: true, securityPolicy: true, requireFullscreen: true } } },
+    });
+    // Same non-disclosure as every attempt route: someone else's attempt looks exactly like a nonexistent one.
+    if (!attempt || attempt.studentId !== req.user.id) return res.status(404).json({ error: "Attempt not found" });
+    if (attempt.status !== "IN_PROGRESS") return res.json({ accepted: 0, closed: true });
+    if (!policyOf(attempt.test).blockAiShortcuts) return res.json({ accepted: 0, disabled: true });
+    const existing = await prisma.examSecurityEvent.count({ where: { attemptKind: "TEST", attemptId: attempt.id, type: { in: [...AI_SIGNAL_TYPES] } } });
+    if (existing >= MAX_AI_SIGNALS_PER_ATTEMPT) return res.json({ accepted: 0, capped: true });
+
+    const rows = [];
+    for (const ev of events.slice(0, 10)) {
+      const type = String(ev?.type || "").toUpperCase();
+      if (!AI_SIGNAL_TYPES.has(type)) continue; // unknown or server-only types are ignored, never stored
+      const picked = {};
+      for (const k of AI_SIGNAL_META_KEYS) if (ev?.metadata && Object.prototype.hasOwnProperty.call(ev.metadata, k)) picked[k] = ev.metadata[k];
+      rows.push({
+        attemptKind: "TEST", attemptId: attempt.id, studentId: req.user.id, testId: attempt.testId, instituteId: attempt.test?.instituteId || null,
+        type, severity: X.EVENT_SEVERITY[type] || "LOW", metadata: X.cleanMetadata(picked),
+      });
+    }
+    if (rows.length) await prisma.examSecurityEvent.createMany({ data: rows });
+    res.json({ accepted: rows.length });
+  } catch (err) { console.error(err); res.status(500).json({ error: "Failed to record events" }); }
+});
 // Records a server-originated event (used by moduleCoding.js when it enforces a rule). Never throws into the caller.
 async function recordServerEvent({ attempt, type, metadata, questionId }) {
   try {

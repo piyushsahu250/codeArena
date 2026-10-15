@@ -91,6 +91,8 @@ jobs:
         run: node scripts/keyboardRegression.mjs
       - name: Device check regression (a touchscreen laptop is a desktop)
         run: node scripts/deviceCheckRegression.mjs
+      - name: AI shortcut regression (only the documented Copilot key signature matches)
+        run: node scripts/aiShortcutRegression.mjs
 
   # Static gate, no installs needed. A variable that is used but never declared only fails when that line runs (a blank page for the one screen that reaches it,
   # or a 500 for one request); three such bugs reached production before this existed (lesson page, project page, AI voice interview).
@@ -155,7 +157,7 @@ jobs:
           SECURE_BROWSER_SECRET: ci-only-secure-browser-secret-0123456789
         run: |
           fail=0
-          for s in verifyPermissions verifyAsyncErrors verifyRouteMetrics verifyAttemptManifest verifySubmissionsContract verifyStaffAnalytics verifyTestsContract verifyAuthContract verifyUsersContract verifyUsersWriteContract verifyAutoFinalizeDeadline verifyQuestionsContract verifyQuestionFoldersContract verifyQuestionImportExportContract verifySecureAndroid; do
+          for s in verifyPermissions verifyAsyncErrors verifyRouteMetrics verifyAttemptManifest verifySubmissionsContract verifyStaffAnalytics verifyTestsContract verifyAuthContract verifyUsersContract verifyUsersWriteContract verifyAutoFinalizeDeadline verifyAiShortcutIntake verifyQuestionsContract verifyQuestionFoldersContract verifyQuestionImportExportContract verifySecureAndroid; do
             echo "=== $s"
             code=0; node scripts/$s.js > "/tmp/$s.out" 2>&1 || code=$?
             cat "/tmp/$s.out"

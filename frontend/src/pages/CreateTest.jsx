@@ -542,6 +542,14 @@ export default function CreateTest() {
                   <option value="PROCTORED">Proctored — one tab only, fullscreen, security check, phones refused</option>
                 </select>
               </label>
+              <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
+                <input type="checkbox" checked={form.securityPolicy?.blockAiShortcuts === true} onChange={(e) => setForm({ ...form, securityPolicy: { ...form.securityPolicy, blockAiShortcuts: e.target.checked } })} /> Record the Copilot key and AI-assistant shortcuts
+              </label>
+              <p style={{ fontSize: 12, color: "var(--ink-dim)", margin: "0 0 4px 22px" }}>
+                While a student is taking the test, the browser tries to cancel the Windows Copilot key and logs that it was pressed, for your review. A web page cannot guarantee the
+                key is blocked: Windows or the keyboard can act before the browser sees it, and the page never learns which app opened. A logged key press is a signal, not proof of
+                cheating. For stronger control use a managed exam computer or the secure exam client.
+              </p>
               {form.securityLevel === "PROCTORED" && (
                 <>
                   <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>

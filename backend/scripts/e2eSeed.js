@@ -68,9 +68,12 @@ async function seed() {
     },
   });
   const companyTest = await mkTest(`${TAG} Company Test`, { company: "ZZCO" });
+  // Tests for the Copilot key / AI-assistant shortcut signals: one with the policy on, one with it off.
+  const aiShortcutTest = await mkTest(`${TAG} AI Shortcut Test`, { securityPolicy: { blockAiShortcuts: true } });
+  const aiShortcutOffTest = await mkTest(`${TAG} AI Shortcut Off Test`);
   const codingTest = await mkCodingTest(`${TAG} Coding Test`);
   const codingProctored = await mkCodingTest(`${TAG} Coding Proctored Test`, { securityLevel: "PROCTORED" });
-  console.log(JSON.stringify({ users, institutes: { A: { id: A.id, name: A.name }, B: { id: B.id, name: B.name } }, testId: test.id, companyTestId: companyTest.id, codingTestId: codingTest.id, codingProctoredTestId: codingProctored.id, proctoredTestId: proctored.id, fullscreenTestId: fsTest.id, questionTexts: ["E2E question 1: pick option B", "E2E question 2: pick option B"] }));
+  console.log(JSON.stringify({ users, institutes: { A: { id: A.id, name: A.name }, B: { id: B.id, name: B.name } }, testId: test.id, companyTestId: companyTest.id, aiShortcutTestId: aiShortcutTest.id, aiShortcutOffTestId: aiShortcutOffTest.id, codingTestId: codingTest.id, codingProctoredTestId: codingProctored.id, proctoredTestId: proctored.id, fullscreenTestId: fsTest.id, questionTexts: ["E2E question 1: pick option B", "E2E question 2: pick option B"] }));
 }
 
 (async () => {
