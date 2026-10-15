@@ -16,6 +16,14 @@
 # Exit code is non-zero if the new version was NOT left running healthy.
 set -euo pipefail
 
+# One deploy at a time. Two overlapping runs (two SSM commands, or a retry while the first is still building) would race on the same image tag and container
+# name. The lock is held by this process and released when it exits, however it exits.
+exec 9>/var/lock/codearena-deploy.lock
+if ! flock -n 9; then
+  echo "ABORTING: another deploy is already running on this host (lock /var/lock/codearena-deploy.lock). Wait for it to finish, then re-run." >&2
+  exit 9
+fi
+
 REPO=/opt/codearena
 ENV_FILE="$REPO/container.env"
 NAME=codearena-backend
