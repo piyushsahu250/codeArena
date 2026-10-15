@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import api from "../api";
 import Navbar from "../components/Navbar";
 import { downloadFromApi } from "../utils/downloadFile";
+import { matchesStudentQuery } from "../utils/studentSearch";
 
 const STATUS_STYLE = {
   SUBMITTED: { bg: "var(--success-bg)", color: "var(--mint)", label: "Submitted" },
@@ -34,7 +35,7 @@ export default function TestResults() {
   const [test, setTest] = useState(null);
   const [attempts, setAttempts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [rollFilter, setRollFilter] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [expandedId, setExpandedId] = useState(null);
   // "Tab switches" was previously just a bare count with nowhere to see what actually happened --
   // GET /tests/admin/attempts/:id/violations (added alongside the exam severity taxonomy) already
@@ -121,11 +122,9 @@ export default function TestResults() {
   }
 
   // Rank reflects position in the full (already score-sorted) list, so it
-  // stays stable regardless of the roll-number filter below.
+  // stays stable regardless of the search below.
   const ranked = attempts.map((a, idx) => ({ ...a, rank: idx + 1 }));
-  const filtered = rollFilter.trim()
-    ? ranked.filter((a) => (a.student.rollNumber || "").toLowerCase().includes(rollFilter.trim().toLowerCase()))
-    : ranked;
+  const filtered = searchQuery.trim() ? ranked.filter((a) => matchesStudentQuery(a.student, searchQuery)) : ranked;
 
   const completedCount = attempts.filter((a) => a.status !== "IN_PROGRESS").length;
 
@@ -144,15 +143,15 @@ export default function TestResults() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [attempts, test]);
 
-  // Real .xlsx built by the server (typed numbers, text roll/PRN, formula-injection guard). The roll
-  // filter is passed through so the file matches what's on screen; clear the filter to export everyone.
+  // Real .xlsx built by the server (typed numbers, text roll/PRN, formula-injection guard). The search
+  // query is passed through so the file matches what's on screen; clear the search to export everyone.
   const [downloadingResults, setDownloadingResults] = useState(false);
   const [downloadError, setDownloadError] = useState("");
   async function downloadResults(format = "xlsx") {
     setDownloadingResults(true);
     setDownloadError("");
     try {
-      await downloadFromApi(`/tests/${id}/results/export`, { params: { format, ...(rollFilter.trim() ? { roll: rollFilter.trim() } : {}) }, fallbackName: `test-results.${format}` });
+      await downloadFromApi(`/tests/${id}/results/export`, { params: { format, ...(searchQuery.trim() ? { q: searchQuery.trim() } : {}) }, fallbackName: `test-results.${format}` });
     } catch (err) {
       setDownloadError(err.message);
     } finally {
@@ -181,7 +180,7 @@ export default function TestResults() {
           </div>
         </div>
         {downloadError && <p style={{ color: "var(--rust)", marginTop: 10, fontSize: 13 }}>⚠ {downloadError}</p>}
-        {rollFilter.trim() && <p style={{ color: "var(--ink-dim)", marginTop: 6, fontSize: 12 }}>The download only includes rows matching the roll filter "{rollFilter.trim()}" — clear it to export everyone.</p>}
+        {searchQuery.trim() && <p style={{ color: "var(--ink-dim)", marginTop: 6, fontSize: 12 }}>The download only includes rows matching "{searchQuery.trim()}" — clear the search to export everyone.</p>}
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12, marginTop: 20 }}>
           <StatCard label="Completed" value={`${completedCount} / ${attempts.length}`} />
@@ -242,13 +241,21 @@ export default function TestResults() {
           </div>
         )}
 
-        <input
-          type="text"
-          placeholder="Filter by roll number…"
-          value={rollFilter}
-          onChange={(e) => setRollFilter(e.target.value)}
-          style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid var(--line)", fontSize: 14, marginTop: 20 }}
-        />
+        <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 20 }}>
+          <input
+            type="search"
+            aria-label="Search the leaderboard by name, roll number, PRN or e-mail"
+            placeholder="Search by name, roll number, PRN or e-mail…"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            autoComplete="off"
+            style={{ flex: 1, minWidth: 0, padding: "10px 12px", borderRadius: 8, border: "1px solid var(--line)", fontSize: 14 }}
+          />
+          {searchQuery && <button type="button" className="btn btn-ghost" onClick={() => setSearchQuery("")}>Clear</button>}
+        </div>
+        {searchQuery.trim() && !loading && attempts.length > 0 && (
+          <p className="mono" style={{ color: "var(--ink-dim)", marginTop: 6, fontSize: 12 }} aria-live="polite">Showing {filtered.length} of {attempts.length} — ranks stay as on the full leaderboard.</p>
+        )}
 
         <div className="card" style={{ marginTop: 16, overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 760 }}>
@@ -409,7 +416,7 @@ export default function TestResults() {
               })}
               {!loading && filtered.length === 0 && (
                 <tr><td colSpan={9} style={{ padding: 32, textAlign: "center", color: "var(--ink-dim)" }}>
-                  {attempts.length === 0 ? "No attempts yet." : "No student matches that roll number."}
+                  {attempts.length === 0 ? "No attempts yet." : `No student matches "${searchQuery.trim()}". Try part of a name, roll number, PRN or e-mail.`}
                 </td></tr>
               )}
             </tbody>
