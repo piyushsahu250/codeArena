@@ -47,7 +47,7 @@ test("the people table opens a person's detail with workload, ratios and a log",
   await first.click();
   await expect(page.getByText("By activity type")).toBeVisible();
   await expect(page.getByText("Ratios with published formulas")).toBeVisible();
-  await expect(page.getByText("Activity log")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Activity log" })).toBeVisible();
   await expect(page.locator("body")).not.toContainText(/NaN|undefined/);
 });
 

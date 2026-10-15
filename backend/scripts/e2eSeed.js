@@ -31,9 +31,9 @@ async function seed() {
     return { id: u.id, name, email: u.email, password, role, instituteId };
   };
   const users = {
-    student: await mk("student", "Ela Student", "STUDENT", A.id, { department: "E2E Computer Science", academicGroupId: group.id, program: "B.Tech", rollNumber: "101" }),
-    student2: await mk("student2", "Ben Student", "STUDENT", A.id, { department: "E2E Computer Science", academicGroupId: group.id, rollNumber: "102" }),
-    student3: await mk("student3", "Cal Student", "STUDENT", A.id, { department: "E2E Computer Science", academicGroupId: group.id, rollNumber: "103" }),
+    student: await mk("student", "Ela Student", "STUDENT", A.id, { department: "E2E Computer Science", academicGroupId: group.id, program: "B.Tech", rollNumber: "101", registrationNumber: "PRN-ELA-7001" }),
+    student2: await mk("student2", "Ben Student", "STUDENT", A.id, { department: "E2E Computer Science", academicGroupId: group.id, rollNumber: "102", registrationNumber: "PRN-BEN-7002" }),
+    student3: await mk("student3", "Cal Student", "STUDENT", A.id, { department: "E2E Computer Science", academicGroupId: group.id, rollNumber: "103", registrationNumber: "PRN-CAL-7003" }),
     studentB: await mk("studentb", "Zed Other", "STUDENT", B.id),
     staff: await mk("staff", "Sam Staff", "STAFF", A.id, { department: "E2E Computer Science" }),
     clerk: await mk("clerk", "Cora Clerk", "CLERK", A.id),
@@ -53,7 +53,32 @@ async function seed() {
   const test = await mkTest(`${TAG} Standard Test`);
   const proctored = await mkTest(`${TAG} Proctored Test`, { securityLevel: "PROCTORED" });
   const fsTest = await mkTest(`${TAG} Fullscreen Test`, { requireFullscreen: true });
-  console.log(JSON.stringify({ users, institutes: { A: { id: A.id, name: A.name }, B: { id: B.id, name: B.name } }, testId: test.id, proctoredTestId: proctored.id, fullscreenTestId: fsTest.id, questionTexts: ["E2E question 1: pick option B", "E2E question 2: pick option B"] }));
+  // Coding questions (full-program and function-based) for the keyboard regression: a real Monaco editor inside a timed test, with and without proctoring.
+  const FH = require("../src/utils/functionHarness");
+  const fnSig = { methodName: "addNums", returnType: "int", params: [{ name: "a", type: "int" }, { name: "b", type: "int" }] };
+  const fnFields = FH.resolveCodingFields({ evaluationType: "FUNCTION", functionSignature: fnSig });
+  const cases = { create: [{ input: "1 2", expected: "3", isHidden: false }, { input: "5 6", expected: "11", isHidden: true }] };
+  const codeFull = await prisma.question.create({ data: { title: `${TAG} Code Full`, description: "E2E coding (full program): read two integers and print the sum.", questionType: "CODING", difficulty: "EASY", points: 10, instituteId: A.id, evaluationType: "STDIO", testCases: cases } });
+  const codeFn = await prisma.question.create({ data: { title: `${TAG} Code Function`, description: "E2E coding (function): return a + b.", questionType: "CODING", difficulty: "EASY", points: 10, instituteId: A.id, evaluationType: "FUNCTION", functionSignature: fnSig, starterCodeByLanguage: fnFields.starterCodeByLanguage, testCases: { create: [{ input: "1\n2", expected: "3", isHidden: false }, { input: "5\n6", expected: "11", isHidden: true }] } } });
+  const mkCodingTest = (title, extra = {}) => prisma.test.create({
+    data: {
+      title, durationMin: 30, startTime: new Date(now - 60000), endTime: new Date(now + 6 * 3600000), isPublished: true, showResults: true, requireFullscreen: false,
+      createdById: users.staff.id, instituteId: A.id, academicGroups: { create: [{ academicGroupId: group.id }] },
+      questions: { create: [codeFull, codeFn].map((q, order) => ({ questionId: q.id, order })) }, ...extra,
+    },
+  });
+  const companyTest = await mkTest(`${TAG} Company Test`, { company: "ZZCO" });
+  // Tests for the Copilot key / AI-assistant shortcut signals: one with the policy on, one with it off.
+  const aiShortcutTest = await mkTest(`${TAG} AI Shortcut Test`, { securityPolicy: { blockAiShortcuts: true } });
+  const aiShortcutOffTest = await mkTest(`${TAG} AI Shortcut Off Test`);
+  // A finished test with three submitted attempts, for the staff leaderboard search tests.
+  const resultsTest = await mkTest(`${TAG} Results Test`);
+  for (const [u, score] of [[users.student, 9], [users.student2, 6], [users.student3, 3]]) {
+    await prisma.testAttempt.create({ data: { testId: resultsTest.id, studentId: u.id, status: "SUBMITTED", totalScore: score, startedAt: new Date(now - 30 * 60000), submittedAt: new Date(now - 10 * 60000), questionOrder: questions.map((q) => q.id) } });
+  }
+  const codingTest = await mkCodingTest(`${TAG} Coding Test`);
+  const codingProctored = await mkCodingTest(`${TAG} Coding Proctored Test`, { securityLevel: "PROCTORED" });
+  console.log(JSON.stringify({ users, institutes: { A: { id: A.id, name: A.name }, B: { id: B.id, name: B.name } }, testId: test.id, companyTestId: companyTest.id, aiShortcutTestId: aiShortcutTest.id, aiShortcutOffTestId: aiShortcutOffTest.id, resultsTestId: resultsTest.id, codingTestId: codingTest.id, codingProctoredTestId: codingProctored.id, proctoredTestId: proctored.id, fullscreenTestId: fsTest.id, questionTexts: ["E2E question 1: pick option B", "E2E question 2: pick option B"] }));
 }
 
 (async () => {
