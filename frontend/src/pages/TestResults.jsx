@@ -39,8 +39,13 @@ const RANK_MEDAL = { 1: "🥇", 2: "🥈", 3: "🥉" };
 
 // Mirrors backend/src/utils/proctoringSeverity.js's 4-level taxonomy purely for display.
 const SEVERITY_COLOR = { INTERRUPTION: "var(--ink-dim)", SUSPICIOUS: "var(--amber)", CONFIRMED_VIOLATION: "var(--rust)" };
-// What the server can honestly say about a browser-reported event (utils/evidenceClassification.js). Nothing here is a confirmed finding: only a reviewer can confirm.
-const EVIDENCE_LABEL = { OBSERVED_EVENT: "Observed (browser signal)", SUSPECTED_ACTIVITY: "Suspected — review needed", INCONCLUSIVE: "Inconclusive", POLICY_VIOLATION: "Policy violation", CONFIRMED_VIOLATION: "Confirmed by reviewer" };
+// What the server can honestly say about a browser-reported event (utils/evidenceClassification.js). Only a reviewer can confirm misconduct.
+// CONFIRMED_POLICY_VIOLATION = the server saw an action the exam's published rules prohibit (utils/proctoringPolicy.js); it says what was observed, not why or by whom.
+const EVIDENCE_LABEL = { OBSERVED_EVENT: "Observed (browser signal)", SUSPECTED_ACTIVITY: "Suspected — review needed", INCONCLUSIVE: "Inconclusive", POLICY_VIOLATION: "Policy violation", CONFIRMED_POLICY_VIOLATION: "Prohibited action observed", CONFIRMED_VIOLATION: "Confirmed by reviewer" };
+// Plain names for event types whose raw name over-claims.
+const EVENT_LABEL = { POSSIBLE_EXTERNAL_ASSISTANT: "Exam page lost focus (cause unknown)", TAB_SWITCH: "Exam page left (tab switch)", TAB_SWITCH_BRIEF: "Exam page briefly hidden", DEVTOOLS: "Window-size change (possible DevTools, unverified)", DRAG_ATTEMPT: "Drag on the exam page", COPILOT_KEY_SIGNAL: "Assistant key pressed", AI_SHORTCUT_DETECTED: "Assistant shortcut pressed", SPLIT_SCREEN_SUSPECTED: "Small window (possible split screen)" };
+// What the page could do about it. A web page asks the browser to cancel an event; it cannot confirm the browser did, and cannot stop leaving the page.
+const ENFORCEMENT_LABEL = { BLOCK_ATTEMPTED: "cancel requested, not verified", NOT_BLOCKABLE: "cannot be blocked by a web page", OBSERVED_ONLY: "recorded only" };
 
 export default function TestResults() {
   const { id } = useParams();
@@ -403,22 +408,40 @@ export default function TestResults() {
                                       <th style={{ padding: "2px 8px" }}>Time</th>
                                       <th>Event</th>
                                       <th>Evidence</th>
+                                      <th>Exam rule</th>
                                       <th>Counted?</th>
                                     </tr>
                                   </thead>
                                   <tbody>
-                                    {violationsById[a.id].events.map((ev) => (
-                                      <tr key={ev.id} className="mono">
-                                        <td style={{ padding: "2px 8px" }}>{new Date(ev.createdAt).toLocaleTimeString()}</td>
-                                        <td>{ev.type.replace(/_/g, " ")}</td>
-                                        <td title={ev.evidence ? `${ev.evidence.rationale} Limits: ${ev.evidence.limits}` : undefined} style={{ color: ev.evidence?.classification === "SUSPECTED_ACTIVITY" ? SEVERITY_COLOR.SUSPICIOUS : "inherit" }}>
-                                          {EVIDENCE_LABEL[ev.evidence?.classification] || "Observed (browser signal)"}
-                                        </td>
-                                        <td>{ev.penalized ? "Yes" : "No"}</td>
-                                      </tr>
-                                    ))}
+                                    {violationsById[a.id].events.flatMap((ev) => {
+                                      const pol = ev.evidence?.policy;
+                                      const confirmed = ev.evidence?.classification === "CONFIRMED_POLICY_VIOLATION";
+                                      return [
+                                        <tr key={ev.id} className="mono">
+                                          <td style={{ padding: "2px 8px" }}>{new Date(ev.createdAt).toLocaleTimeString()}</td>
+                                          <td>{EVENT_LABEL[ev.type] || ev.type.replace(/_/g, " ")}</td>
+                                          <td title={ev.evidence ? `${ev.evidence.rationale} Limits: ${ev.evidence.limits}` : undefined} style={{ color: confirmed ? SEVERITY_COLOR.CONFIRMED_VIOLATION : ev.evidence?.classification === "SUSPECTED_ACTIVITY" ? SEVERITY_COLOR.SUSPICIOUS : "inherit" }}>
+                                            {EVIDENCE_LABEL[ev.evidence?.classification] || "Observed (browser signal)"}
+                                          </td>
+                                          <td>{pol?.ruleId ? `${pol.title} · ${ENFORCEMENT_LABEL[pol.enforcement] || "Recorded"}` : "No exam rule applies"}</td>
+                                          <td>{ev.counted === false ? "Not counted (signal)" : ev.penalized ? "Yes" : "No"}</td>
+                                        </tr>,
+                                        pol && (pol.ruleId || pol.note) ? (
+                                          <tr key={`${ev.id}-rule`}>
+                                            <td />
+                                            <td colSpan={4} style={{ fontSize: 11, color: "var(--ink-dim)", padding: "0 0 6px" }}>
+                                              {pol.ruleId ? (
+                                                <>
+                                                  <b>{pol.description}.</b> Rule {pol.ruleId}, policy {pol.version}. Shows: {pol.shows} Does not show: {pol.doesNotShow}
+                                                </>
+                                              ) : pol.note}
+                                            </td>
+                                          </tr>
+                                        ) : null,
+                                      ];
+                                    })}
                                     {violationsById[a.id].events.length === 0 && (
-                                      <tr><td colSpan={4} style={{ padding: "6px 8px", color: "var(--ink-dim)" }}>No events recorded.</td></tr>
+                                      <tr><td colSpan={5} style={{ padding: "6px 8px", color: "var(--ink-dim)" }}>No events recorded.</td></tr>
                                     )}
                                   </tbody>
                                 </table>

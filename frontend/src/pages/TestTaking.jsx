@@ -1812,6 +1812,16 @@ export default function TestTaking() {
             </div>
           )}
 
+          {testMeta.security?.blockAiShortcuts === true && (
+            <div style={{ marginTop: 20, padding: 16, border: "1px solid var(--line)", borderRadius: 10, textAlign: "left" }} data-testid="ai-shortcut-rule">
+              <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-dim)", marginBottom: 8 }}>ASSISTANT SHORTCUTS ARE NOT ALLOWED</div>
+              <p style={{ fontSize: 13, margin: 0 }}>
+                Do not use assistant keys or shortcuts (for example the Copilot key) during this test. If a prohibited key reaches the exam page it is recorded as an attempt and shown to the invigilator
+                with the exact key combination. The page asks your browser to ignore the key, but some keys are handled by the operating system before the browser sees them, so this cannot always be prevented.
+              </p>
+            </div>
+          )}
+
           {attendanceBlocked && (
             <div style={{ marginTop: 20, padding: 16, border: "1px solid var(--rust)", borderRadius: 10, background: "rgba(220,38,38,0.08)" }}>
               <p style={{ fontSize: 13, color: "var(--rust)", fontWeight: 600 }}>{attendanceMessage}</p>

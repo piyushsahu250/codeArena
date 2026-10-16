@@ -84,6 +84,33 @@ This layer labels what reviewers see. It does not change which events count as s
 * The staff results screen shows the evidence label and the limits instead of presenting a browser signal as a confirmed violation.
 * `backend/test/evidenceClassification.test.js`.
 
+## 5b. Versioned exam rules and `CONFIRMED_POLICY_VIOLATION` (policy `2026-10-16.1`)
+
+`backend/src/utils/proctoringPolicy.js` is a rule catalog. A stored event becomes **CONFIRMED_POLICY_VIOLATION** only when all three hold:
+(1) the exam's own policy prohibits the action (a switch the administrator turned on, or a rule every exam publishes); (2) students are shown that rule
+before they start; (3) the event is something the page directly observed. The decision uses the stored event type, the stored metadata and the
+server-side `policyOf(test)`. The client cannot send a classification, rule id or "confirmed" flag: there is no such field, and an unknown type has no rule.
+
+| Rule id | Applies to | Prohibited when | What a web page can do |
+| --- | --- | --- | --- |
+| `PAGE_DEPARTURE` | `TAB_SWITCH`, `FULLSCREEN_EXIT` | always (tab switches); fullscreen exit when the test requires fullscreen | **Cannot block.** It records that the page was left. |
+| `AI_SHORTCUT_ATTEMPT` | `COPILOT_KEY_SIGNAL`, `AI_SHORTCUT_DETECTED` | `blockAiShortcuts` is on for the test | Asks the browser to cancel the key (`BLOCK_ATTEMPTED`, not verifiable); the OS may handle the key first. |
+| `CLIPBOARD` | `COPY`, `PASTE`, `CUT` | PROCTORED test and the matching `block*` switch on | Asks the browser to cancel (`BLOCK_ATTEMPTED`, not verifiable). |
+
+Never confirmed from the browser alone (reasons are in `NEVER_CONFIRMED` and shown to reviewers): `DEVTOOLS` (window-size inference),
+`BROWSER_SHORTCUT`, `PRINT_SCREEN_ATTEMPT`, `DRAG_ATTEMPT` (the page does not record where a drag started or ended, so editor selection cannot be told apart),
+`POSSIBLE_EXTERNAL_ASSISTANT` (focus lost while visible; cause unknown), `SPLIT_SCREEN_SUSPECTED`, `TAB_SWITCH_BRIEF`.
+
+A finding says "this prohibited action was observed under rule X, policy version V". It never says that an assistant, app or extension was opened or used, never
+names one, and never says a blocked action succeeded. Enforcement is reported as `BLOCK_ATTEMPTED`, `NOT_BLOCKABLE` or `OBSERVED_ONLY`.
+Operating-system level blocking (assistant keys, Home/Power, other apps) needs a managed device or the dedicated exam client: see `ANDROID_MANAGED_EXAM_MODE.md`.
+
+Staff see, per event, the rule, the policy version, the enforcement outcome, what the event shows and what it does not. Copilot-key/assistant-shortcut signals
+(stored as security events, not strikes) now appear in the same log, marked "not counted". The strike counting and the three-strike auto-submit are unchanged.
+
+**Not in this change (needs a schema migration and a decision, see section 6):** an append-only reviewer decision history, de-duplication ids,
+and per-event rate limits beyond the existing intake limits. Tests: `backend/test/proctoringPolicy.test.js`.
+
 ## 6. Decisions needed (not done: each changes live exam behaviour or the database)
 
 1. **Stop auto-submitting on browser-only signals (F1/F2).** Options: (a) keep as is; (b) keep strikes and warnings but replace auto-submit with a

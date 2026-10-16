@@ -5,11 +5,13 @@
 //   OBSERVED_EVENT        a raw browser event was received. Says nothing about intent.
 //   SUSPECTED_ACTIVITY    the pattern warrants a human look. Still not misconduct.
 //   POLICY_VIOLATION      objective, server-verifiable breach of a documented rule (e.g. a refused start). No browser-reported type reaches it.
+//   CONFIRMED_POLICY_VIOLATION  the server found that an action prohibited by the exam's PUBLISHED rules (utils/proctoringPolicy.js) was directly observed. A finding under that rule,
+//                         not proof of intent or of external-assistant use. Needs a rule, the matching policy switch and a directly observed event; never client-supplied.
 //   CONFIRMED_VIOLATION   set only by an authorised reviewer with a reason. Never produced automatically from browser signals.
 //   INCONCLUSIVE          the browser cannot reliably tell what happened (or the type is unknown).
 // A web page cannot see other apps, extensions, other devices, OS assistants or what a user looked at, so no browser-only signal may exceed SUSPECTED_ACTIVITY.
 
-const CLASSES = ["OBSERVED_EVENT", "SUSPECTED_ACTIVITY", "POLICY_VIOLATION", "CONFIRMED_VIOLATION", "INCONCLUSIVE"];
+const CLASSES = ["OBSERVED_EVENT", "SUSPECTED_ACTIVITY", "POLICY_VIOLATION", "CONFIRMED_POLICY_VIOLATION", "CONFIRMED_VIOLATION", "INCONCLUSIVE"];
 const RANK = { INCONCLUSIVE: 0, OBSERVED_EVENT: 1, SUSPECTED_ACTIVITY: 2, POLICY_VIOLATION: 3, CONFIRMED_VIOLATION: 4 };
 const AUTOMATIC_CEILING = "SUSPECTED_ACTIVITY";
 
@@ -20,6 +22,8 @@ const RULES = {
   POSSIBLE_EXTERNAL_ASSISTANT: { category: "POSSIBLE_EXTERNAL_ASSISTANCE", base: "OBSERVED_EVENT", suspectAfter: 3, limits: "Means only that the page stayed visible but lost focus. A browser cannot see which app, other device or assistant was involved; notifications, system dialogs and input methods cause the same signal." },
   SPLIT_SCREEN_SUSPECTED: { category: "POSSIBLE_EXTERNAL_ASSISTANCE", base: "OBSERVED_EVENT", suspectAfter: 3, limits: "A window much smaller than the screen. Snapped windows and some keyboards look the same." },
   BROWSER_SHORTCUT: { category: "BROWSER_SHORTCUT", base: "OBSERVED_EVENT", suspectAfter: null, limits: "A key combination was pressed. A keydown does not prove the browser or OS action completed, and editors use many of the same combinations." },
+  COPILOT_KEY_SIGNAL: { category: "AI_SHORTCUT", base: "OBSERVED_EVENT", suspectAfter: null, limits: "A key the exam rules prohibit reached the page. The operating system may handle such a key before the browser sees it, and the page cannot see whether an assistant opened." },
+  AI_SHORTCUT_DETECTED: { category: "AI_SHORTCUT", base: "OBSERVED_EVENT", suspectAfter: null, limits: "A key combination the exam rules prohibit reached the page. It does not show that an assistant opened, which one, or that it was used." },
   PRINT_SCREEN_ATTEMPT: { category: "BROWSER_SHORTCUT", base: "OBSERVED_EVENT", suspectAfter: null, limits: "A Print Screen key press. It does not show that a capture was taken." },
   DEVTOOLS: { category: "DEVTOOLS", base: "INCONCLUSIVE", suspectAfter: 2, limits: "Inferred from the gap between window and page size. Docked panels, snapped windows, zoom and some toolbars produce the same gap; the browser does not report whether DevTools is open." },
   TAB_SWITCH: { category: "TAB_SWITCH", base: "OBSERVED_EVENT", suspectAfter: 2, limits: "The page was hidden past the grace window. A phone call, lock screen, minimise, system dialog or background throttling does the same; the page cannot see which app or content was opened." },
@@ -57,11 +61,29 @@ function evidenceFor(type, occurrence = 1) {
 }
 
 // Adds `evidence` to each event of one attempt, in the order given (oldest first), counting recurrences per type.
-function annotateEvents(events) {
+//
+// `policy` is the test's resolved exam policy (utils/testExamSecurity.policyOf). Without it every event keeps the plain evidence classification (never above
+// SUSPECTED_ACTIVITY). With it, an event whose type has a PUBLISHED, PROHIBITED rule in utils/proctoringPolicy.js becomes CONFIRMED_POLICY_VIOLATION: a finding
+// under that rule, worded as exactly what was observed. The decision uses only the stored type, the stored metadata and the server-side policy; nothing the
+// client sent can raise it.
+function annotateEvents(events, policy) {
+  const { applyPolicy, CONFIRMED, POLICY_VERSION } = require("./proctoringPolicy");
   const seen = {};
   return events.map((e) => {
     seen[e.type] = (seen[e.type] || 0) + 1;
-    return { ...e, evidence: evidenceFor(e.type, seen[e.type]) };
+    const base = evidenceFor(e.type, seen[e.type]);
+    if (!policy) return { ...e, evidence: base };
+    const pol = applyPolicy({ type: e.type, policy, metadata: e.metadata });
+    if (!pol) return { ...e, evidence: { ...base, policy: null } };
+    const evidence = {
+      ...base,
+      policy: { version: POLICY_VERSION, ruleId: pol.ruleId, title: pol.title || null, enforcement: pol.enforcement || null, description: pol.description || null, shows: pol.shows || null, doesNotShow: pol.doesNotShow || null, note: pol.note || null },
+    };
+    if (pol.confirmed) {
+      evidence.classification = CONFIRMED;
+      evidence.rationale = `A prohibited action was observed: ${pol.description}. This is a finding under the published exam rule "${pol.title}" (policy ${POLICY_VERSION}); it does not show that an assistant or another app was used, or why it happened.`;
+    }
+    return { ...e, evidence };
   });
 }
 

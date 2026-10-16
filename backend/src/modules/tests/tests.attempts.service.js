@@ -14,6 +14,7 @@ const { classifyViolation } = require("../../utils/proctoringSeverity");
 const { MANIFEST_VERSION, validateManifest, scoreBase } = require("../../utils/attemptManifest");
 const aiService = require("../../services/ai/aiService");
 const { annotateEvents } = require("../../utils/evidenceClassification");
+const { POLICY_VERSION } = require("../../utils/proctoringPolicy");
 const d = require("./tests.domain");
 const repo = require("./tests.repository");
 
@@ -116,11 +117,20 @@ async function violationLog(actor, attemptId) {
   if (!attempt) throw new ServiceError(404, "Attempt not found");
   if (actor.requesterInstituteId && attempt.test.instituteId && attempt.test.instituteId !== actor.requesterInstituteId) throw new ServiceError(403, "You can only view attempts for tests under your own institute");
   if (!canStaffAccessTest(actor, attempt.test)) throw new ServiceError(403, "You can only view attempts for tests you created or that were shared with you");
-  const violations = await repo.violationsOf(attempt.id);
+  const [violations, signals] = await Promise.all([repo.violationsOf(attempt.id), repo.securitySignalsOf(attempt.id)]);
   const byType = {};
   for (const v of violations) byType[v.type] = (byType[v.type] || 0) + 1;
-  // Each event also carries the evidence class the server can honestly give it. `severity` and `penalized` are the legacy counting rules, unchanged.
-  return { student: attempt.student, tabSwitchCount: attempt.tabSwitchCount, byType, events: annotateEvents(violations), evidenceNote: "Browser signals are observations, not proof. A page cannot see other apps, devices or assistants. Only an authorised reviewer can confirm misconduct." };
+  // Keyboard signals live in the security-event table (they are not strikes); show them in the same log, in time order, flagged as not counted.
+  const signalRows = signals.map((s) => ({ id: `sig-${s.id}`, type: s.type, severity: null, penalized: false, counted: false, metadata: s.metadata || null, createdAt: s.createdAt }));
+  const merged = [...violations, ...signalRows].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+  // Each event carries the evidence class the server can honestly give it, judged against THIS test's own policy (the rules the student was shown).
+  // `severity` and `penalized` are the legacy counting rules, unchanged.
+  const policy = policyOf(attempt.test);
+  return {
+    student: attempt.student, tabSwitchCount: attempt.tabSwitchCount, byType, policyVersion: POLICY_VERSION,
+    events: annotateEvents(merged, policy),
+    evidenceNote: "Browser signals are observations, not proof. A page cannot see other apps, devices or assistants. A finding under a published exam rule says that the prohibited action was observed, not why, and only an authorised reviewer can confirm misconduct.",
+  };
 }
 
 // ---- in-page AI helper ----

@@ -153,9 +153,11 @@ const logPenalizedViolation = (attemptId, type, severity, tabSwitchCount, autoSu
 ]);
 const attemptForAdminReview = (id) => prisma.testAttempt.findUnique({
   where: { id },
-  include: { test: { select: { instituteId: true, createdById: true, shares: { select: { staffId: true } } } }, student: { select: { name: true, email: true } } },
+  include: { test: { select: { instituteId: true, createdById: true, securityLevel: true, securityPolicy: true, requireFullscreen: true, shares: { select: { staffId: true } } } }, student: { select: { name: true, email: true } } },
 });
 const violationsOf = (attemptId) => prisma.testViolation.findMany({ where: { attemptId }, orderBy: { createdAt: "asc" } });
+// Keyboard signals (Copilot key / assistant shortcuts) are stored as security events, not strikes; the staff log shows them alongside the strikes.
+const securitySignalsOf = (attemptId) => prisma.examSecurityEvent.findMany({ where: { attemptKind: "TEST", attemptId, type: { in: ["COPILOT_KEY_SIGNAL", "AI_SHORTCUT_DETECTED"] } }, orderBy: { createdAt: "asc" }, take: 200 });
 
 const attemptForAi = (id) => prisma.testAttempt.findUnique({ where: { id }, select: { id: true, testId: true, studentId: true, status: true } });
 const testQuestionForAi = (testId, questionId) => prisma.testQuestion.findUnique({
@@ -169,7 +171,7 @@ const attemptWithSubmissions = (testId, studentId) => prisma.testAttempt.findUni
 
 Object.assign(module.exports, {
   listTests, studentScope, attemptStatusesFor, findDetail, attemptLayout, questionsByIds, attendanceStatus, findForStart, findAttempt, findReattemptGrant, consumeReattemptGrant,
-  createAttempt, setSession, submissionsOf, attemptById, suspiciousCount, logViolation, logPenalizedViolation, attemptForAdminReview, violationsOf, attemptForAi, testQuestionForAi,
+  createAttempt, setSession, submissionsOf, attemptById, suspiciousCount, logViolation, logPenalizedViolation, attemptForAdminReview, violationsOf, securitySignalsOf, attemptForAi, testQuestionForAi,
   studentInstitute, testForResult, attemptWithSubmissions,
 });
 

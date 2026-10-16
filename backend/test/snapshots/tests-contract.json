@@ -3546,7 +3546,7 @@
                                     {
                                         "attemptId":  "\u003cid\u003e",
                                         "createdAt":  "\u003ctime\u003e",
-                                        "evidence":  {"category": "OTHER", "classification": "INCONCLUSIVE", "confirmed": false, "limits": "A face was not found in the frame; lighting, posture and camera angle cause this.", "occurrence": 1, "rationale": "The browser cannot reliably determine what happened.", "source": "BROWSER"},
+                                        "evidence":  {"category": "OTHER", "classification": "INCONCLUSIVE", "confirmed": false, "limits": "A face was not found in the frame; lighting, posture and camera angle cause this.", "occurrence": 1, "policy": null, "rationale": "The browser cannot reliably determine what happened.", "source": "BROWSER"},
                                         "id":  "\u003cid\u003e",
                                         "penalized":  false,
                                         "severity":  "INTERRUPTION",
@@ -3555,7 +3555,7 @@
                                     {
                                         "attemptId":  "\u003cid\u003e",
                                         "createdAt":  "\u003ctime\u003e",
-                                        "evidence":  {"category": "TAB_SWITCH", "classification": "OBSERVED_EVENT", "confirmed": false, "limits": "The page was hidden past the grace window. A phone call, lock screen, minimise, system dialog or background throttling does the same; the page cannot see which app or content was opened.", "occurrence": 1, "rationale": "A browser event was observed. It says nothing about intent.", "source": "BROWSER"},
+                                        "evidence":  {"category": "TAB_SWITCH", "classification": "CONFIRMED_POLICY_VIOLATION", "confirmed": false, "limits": "The page was hidden past the grace window. A phone call, lock screen, minimise, system dialog or background throttling does the same; the page cannot see which app or content was opened.", "occurrence": 1, "policy": {"description": "The exam page was hidden for longer than the grace period (tab switch, minimise or similar)", "doesNotShow": "Which app or tab was opened, what was viewed, that an assistant was used, or why (a call, a lock screen and a system dialog look the same to a page).", "enforcement": "NOT_BLOCKABLE", "note": null, "ruleId": "PAGE_DEPARTURE", "shows": "The exam page was left or hidden, which the exam rules prohibit.", "title": "Leaving the exam page", "version": "2026-10-16.1"}, "rationale": "A prohibited action was observed: The exam page was hidden for longer than the grace period (tab switch, minimise or similar). This is a finding under the published exam rule \"Leaving the exam page\" (policy 2026-10-16.1); it does not show that an assistant or another app was used, or why it happened.", "source": "BROWSER"},
                                         "id":  "\u003cid\u003e",
                                         "penalized":  true,
                                         "severity":  "CONFIRMED_VIOLATION",
@@ -3564,7 +3564,7 @@
                                     {
                                         "attemptId":  "\u003cid\u003e",
                                         "createdAt":  "\u003ctime\u003e",
-                                        "evidence":  {"category": "TAB_SWITCH", "classification": "SUSPECTED_ACTIVITY", "confirmed": false, "limits": "The page was hidden past the grace window. A phone call, lock screen, minimise, system dialog or background throttling does the same; the page cannot see which app or content was opened.", "occurrence": 2, "rationale": "Seen 2 times on this attempt; worth a human review. This is not proof of misconduct.", "source": "BROWSER"},
+                                        "evidence":  {"category": "TAB_SWITCH", "classification": "CONFIRMED_POLICY_VIOLATION", "confirmed": false, "limits": "The page was hidden past the grace window. A phone call, lock screen, minimise, system dialog or background throttling does the same; the page cannot see which app or content was opened.", "occurrence": 2, "policy": {"description": "The exam page was hidden for longer than the grace period (tab switch, minimise or similar)", "doesNotShow": "Which app or tab was opened, what was viewed, that an assistant was used, or why (a call, a lock screen and a system dialog look the same to a page).", "enforcement": "NOT_BLOCKABLE", "note": null, "ruleId": "PAGE_DEPARTURE", "shows": "The exam page was left or hidden, which the exam rules prohibit.", "title": "Leaving the exam page", "version": "2026-10-16.1"}, "rationale": "A prohibited action was observed: The exam page was hidden for longer than the grace period (tab switch, minimise or similar). This is a finding under the published exam rule \"Leaving the exam page\" (policy 2026-10-16.1); it does not show that an assistant or another app was used, or why it happened.", "source": "BROWSER"},
                                         "id":  "\u003cid\u003e",
                                         "penalized":  true,
                                         "severity":  "CONFIRMED_VIOLATION",
@@ -3573,14 +3573,15 @@
                                     {
                                         "attemptId":  "\u003cid\u003e",
                                         "createdAt":  "\u003ctime\u003e",
-                                        "evidence":  {"category": "TAB_SWITCH", "classification": "SUSPECTED_ACTIVITY", "confirmed": false, "limits": "The page was hidden past the grace window. A phone call, lock screen, minimise, system dialog or background throttling does the same; the page cannot see which app or content was opened.", "occurrence": 3, "rationale": "Seen 3 times on this attempt; worth a human review. This is not proof of misconduct.", "source": "BROWSER"},
+                                        "evidence":  {"category": "TAB_SWITCH", "classification": "CONFIRMED_POLICY_VIOLATION", "confirmed": false, "limits": "The page was hidden past the grace window. A phone call, lock screen, minimise, system dialog or background throttling does the same; the page cannot see which app or content was opened.", "occurrence": 3, "policy": {"description": "The exam page was hidden for longer than the grace period (tab switch, minimise or similar)", "doesNotShow": "Which app or tab was opened, what was viewed, that an assistant was used, or why (a call, a lock screen and a system dialog look the same to a page).", "enforcement": "NOT_BLOCKABLE", "note": null, "ruleId": "PAGE_DEPARTURE", "shows": "The exam page was left or hidden, which the exam rules prohibit.", "title": "Leaving the exam page", "version": "2026-10-16.1"}, "rationale": "A prohibited action was observed: The exam page was hidden for longer than the grace period (tab switch, minimise or similar). This is a finding under the published exam rule \"Leaving the exam page\" (policy 2026-10-16.1); it does not show that an assistant or another app was used, or why it happened.", "source": "BROWSER"},
                                         "id":  "\u003cid\u003e",
                                         "penalized":  true,
                                         "severity":  "CONFIRMED_VIOLATION",
                                         "type":  "TAB_SWITCH"
                                     }
                                 ],
-                     "evidenceNote":  "Browser signals are observations, not proof. A page cannot see other apps, devices or assistants. Only an authorised reviewer can confirm misconduct.",
+                     "evidenceNote":  "Browser signals are observations, not proof. A page cannot see other apps, devices or assistants. A finding under a published exam rule says that the prohibited action was observed, not why, and only an authorised reviewer can confirm misconduct.",
+                     "policyVersion":  "2026-10-16.1",
                      "student":  {
                                      "email":  "zz-tc-stuA-\u003cts\u003e@example.invalid",
                                      "name":  "ZZ TC stuA"
@@ -3600,7 +3601,7 @@
                                     {
                                         "attemptId":  "\u003cid\u003e",
                                         "createdAt":  "\u003ctime\u003e",
-                                        "evidence":  {"category": "OTHER", "classification": "INCONCLUSIVE", "confirmed": false, "limits": "A face was not found in the frame; lighting, posture and camera angle cause this.", "occurrence": 1, "rationale": "The browser cannot reliably determine what happened.", "source": "BROWSER"},
+                                        "evidence":  {"category": "OTHER", "classification": "INCONCLUSIVE", "confirmed": false, "limits": "A face was not found in the frame; lighting, posture and camera angle cause this.", "occurrence": 1, "policy": null, "rationale": "The browser cannot reliably determine what happened.", "source": "BROWSER"},
                                         "id":  "\u003cid\u003e",
                                         "penalized":  false,
                                         "severity":  "INTERRUPTION",
@@ -3609,7 +3610,7 @@
                                     {
                                         "attemptId":  "\u003cid\u003e",
                                         "createdAt":  "\u003ctime\u003e",
-                                        "evidence":  {"category": "TAB_SWITCH", "classification": "OBSERVED_EVENT", "confirmed": false, "limits": "The page was hidden past the grace window. A phone call, lock screen, minimise, system dialog or background throttling does the same; the page cannot see which app or content was opened.", "occurrence": 1, "rationale": "A browser event was observed. It says nothing about intent.", "source": "BROWSER"},
+                                        "evidence":  {"category": "TAB_SWITCH", "classification": "CONFIRMED_POLICY_VIOLATION", "confirmed": false, "limits": "The page was hidden past the grace window. A phone call, lock screen, minimise, system dialog or background throttling does the same; the page cannot see which app or content was opened.", "occurrence": 1, "policy": {"description": "The exam page was hidden for longer than the grace period (tab switch, minimise or similar)", "doesNotShow": "Which app or tab was opened, what was viewed, that an assistant was used, or why (a call, a lock screen and a system dialog look the same to a page).", "enforcement": "NOT_BLOCKABLE", "note": null, "ruleId": "PAGE_DEPARTURE", "shows": "The exam page was left or hidden, which the exam rules prohibit.", "title": "Leaving the exam page", "version": "2026-10-16.1"}, "rationale": "A prohibited action was observed: The exam page was hidden for longer than the grace period (tab switch, minimise or similar). This is a finding under the published exam rule \"Leaving the exam page\" (policy 2026-10-16.1); it does not show that an assistant or another app was used, or why it happened.", "source": "BROWSER"},
                                         "id":  "\u003cid\u003e",
                                         "penalized":  true,
                                         "severity":  "CONFIRMED_VIOLATION",
@@ -3618,7 +3619,7 @@
                                     {
                                         "attemptId":  "\u003cid\u003e",
                                         "createdAt":  "\u003ctime\u003e",
-                                        "evidence":  {"category": "TAB_SWITCH", "classification": "SUSPECTED_ACTIVITY", "confirmed": false, "limits": "The page was hidden past the grace window. A phone call, lock screen, minimise, system dialog or background throttling does the same; the page cannot see which app or content was opened.", "occurrence": 2, "rationale": "Seen 2 times on this attempt; worth a human review. This is not proof of misconduct.", "source": "BROWSER"},
+                                        "evidence":  {"category": "TAB_SWITCH", "classification": "CONFIRMED_POLICY_VIOLATION", "confirmed": false, "limits": "The page was hidden past the grace window. A phone call, lock screen, minimise, system dialog or background throttling does the same; the page cannot see which app or content was opened.", "occurrence": 2, "policy": {"description": "The exam page was hidden for longer than the grace period (tab switch, minimise or similar)", "doesNotShow": "Which app or tab was opened, what was viewed, that an assistant was used, or why (a call, a lock screen and a system dialog look the same to a page).", "enforcement": "NOT_BLOCKABLE", "note": null, "ruleId": "PAGE_DEPARTURE", "shows": "The exam page was left or hidden, which the exam rules prohibit.", "title": "Leaving the exam page", "version": "2026-10-16.1"}, "rationale": "A prohibited action was observed: The exam page was hidden for longer than the grace period (tab switch, minimise or similar). This is a finding under the published exam rule \"Leaving the exam page\" (policy 2026-10-16.1); it does not show that an assistant or another app was used, or why it happened.", "source": "BROWSER"},
                                         "id":  "\u003cid\u003e",
                                         "penalized":  true,
                                         "severity":  "CONFIRMED_VIOLATION",
@@ -3627,14 +3628,15 @@
                                     {
                                         "attemptId":  "\u003cid\u003e",
                                         "createdAt":  "\u003ctime\u003e",
-                                        "evidence":  {"category": "TAB_SWITCH", "classification": "SUSPECTED_ACTIVITY", "confirmed": false, "limits": "The page was hidden past the grace window. A phone call, lock screen, minimise, system dialog or background throttling does the same; the page cannot see which app or content was opened.", "occurrence": 3, "rationale": "Seen 3 times on this attempt; worth a human review. This is not proof of misconduct.", "source": "BROWSER"},
+                                        "evidence":  {"category": "TAB_SWITCH", "classification": "CONFIRMED_POLICY_VIOLATION", "confirmed": false, "limits": "The page was hidden past the grace window. A phone call, lock screen, minimise, system dialog or background throttling does the same; the page cannot see which app or content was opened.", "occurrence": 3, "policy": {"description": "The exam page was hidden for longer than the grace period (tab switch, minimise or similar)", "doesNotShow": "Which app or tab was opened, what was viewed, that an assistant was used, or why (a call, a lock screen and a system dialog look the same to a page).", "enforcement": "NOT_BLOCKABLE", "note": null, "ruleId": "PAGE_DEPARTURE", "shows": "The exam page was left or hidden, which the exam rules prohibit.", "title": "Leaving the exam page", "version": "2026-10-16.1"}, "rationale": "A prohibited action was observed: The exam page was hidden for longer than the grace period (tab switch, minimise or similar). This is a finding under the published exam rule \"Leaving the exam page\" (policy 2026-10-16.1); it does not show that an assistant or another app was used, or why it happened.", "source": "BROWSER"},
                                         "id":  "\u003cid\u003e",
                                         "penalized":  true,
                                         "severity":  "CONFIRMED_VIOLATION",
                                         "type":  "TAB_SWITCH"
                                     }
                                 ],
-                     "evidenceNote":  "Browser signals are observations, not proof. A page cannot see other apps, devices or assistants. Only an authorised reviewer can confirm misconduct.",
+                     "evidenceNote":  "Browser signals are observations, not proof. A page cannot see other apps, devices or assistants. A finding under a published exam rule says that the prohibited action was observed, not why, and only an authorised reviewer can confirm misconduct.",
+                     "policyVersion":  "2026-10-16.1",
                      "student":  {
                                      "email":  "zz-tc-stuA-\u003cts\u003e@example.invalid",
                                      "name":  "ZZ TC stuA"
