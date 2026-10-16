@@ -22,7 +22,7 @@
 // (key, ctrlKey, metaKey, shiftKey) -- not a real Event -- so it's usable both from a live
 // keydown handler (`classifyKeyEvent(e)`) and from a plain object in a test, with zero DOM
 // dependency either way.
-export function classifyKeyEvent({ key, ctrlKey = false, metaKey = false, shiftKey = false } = {}) {
+export function classifyKeyEvent({ key, ctrlKey = false, metaKey = false, shiftKey = false, altKey = false } = {}) {
   const ctrlOrCmd = ctrlKey || metaKey;
   const k = String(key || "").toLowerCase();
 
@@ -32,6 +32,11 @@ export function classifyKeyEvent({ key, ctrlKey = false, metaKey = false, shiftK
   // (view-source). Every letter check here REQUIRES ctrlOrCmd — "i", "j", "c", "u" alone are
   // always normal typing, never classified as anything.
   if (key === "F12") return "DEVTOOLS";
+
+  // AltGr: Windows reports the AltGr key of international layouts (Polish, Czech, Portuguese, Spanish, Nordic, many Indic and others) as Ctrl+Alt, and the letters it
+  // produces (for example AltGr+A, AltGr+S) are ordinary characters, not shortcuts. Treating Ctrl+Alt+S as the Ctrl+S browser shortcut cancelled the keystroke, so those
+  // students could not type the character at all. Ctrl+Alt without Cmd is therefore character entry. (Ctrl+Alt+letter is not a browser or devtools shortcut anywhere.)
+  if (ctrlKey && altKey && !metaKey) return null;
   if (ctrlOrCmd && shiftKey && ["i", "j", "c"].includes(k)) return "DEVTOOLS";
   if (ctrlOrCmd && k === "u") return "DEVTOOLS";
 
@@ -44,4 +49,21 @@ export function classifyKeyEvent({ key, ctrlKey = false, metaKey = false, shiftK
   if (key === "F5" || key === "F11") return "BROWSER_SHORTCUT";
 
   return null; // normal input -- never intercepted, never preventDefault()'d
+}
+
+// Signals a page can see for AI-assistant launchers. A web page never learns WHICH application a key opens, and the operating system or firmware often handles a
+// launcher key before the browser sees it, so every rule here is "this key combination was observed", never "an assistant was opened". Kept apart from
+// classifyKeyEvent above (browser/devtools shortcuts) so adding a rule here cannot change what an ordinary keystroke does. Add a rule only for a combination
+// whose mapping is documented by its vendor; each rule needs a modifier so ordinary typing can never match.
+export const AI_SHORTCUT_RULES = [
+  {
+    type: "COPILOT_KEY_SIGNAL",
+    // Windows keyboards with the dedicated Copilot key send Win+Shift+F23 (Microsoft's documented mapping). Meta is the Windows key.
+    match: ({ key, code, metaKey, shiftKey }) => (key === "F23" || code === "F23") && !!metaKey && !!shiftKey,
+  },
+];
+
+export function detectAiAssistantKey(event = {}) {
+  const rule = AI_SHORTCUT_RULES.find((r) => r.match(event));
+  return rule ? rule.type : null;
 }

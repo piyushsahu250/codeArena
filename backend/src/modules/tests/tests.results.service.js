@@ -12,6 +12,7 @@ const { ServiceError } = require("../../utils/serviceError");
 const { logAudit, AUDIT_ACTIONS } = require("../../utils/auditLog");
 const { canStaffAccessTest } = require("../../utils/testOwnership");
 const { scoreBases } = require("../../utils/attemptManifest");
+const { lifecycleOf, withRanks } = require("./attemptLifecycle");
 const d = require("./tests.domain");
 const repo = require("./tests.repository");
 
@@ -24,8 +25,11 @@ async function loadScoped(promise, actor, outsideMessage, accessMessage) {
 }
 
 async function leaderboard(actor, testId) {
-  await loadScoped(repo.testForResults(testId), actor, "You can only view results for tests under your own institute", "You can only view results for tests you created or that were shared with you");
-  return repo.attemptsForResults(testId, d.studentInstituteWhere(actor.requesterInstituteId));
+  const test = await loadScoped(repo.testForResults(testId), actor, "You can only view results for tests under your own institute", "You can only view results for tests you created or that were shared with you");
+  const attempts = await repo.attemptsForResults(testId, d.studentInstituteWhere(actor.requesterInstituteId));
+  // Each row carries its server-computed lifecycle (completed / in progress / time expired / unknown) and a rank that only finished attempts receive.
+  const now = new Date();
+  return withRanks(attempts.map((a) => ({ ...a, lifecycle: lifecycleOf(a, test, now) })));
 }
 
 // Returns what the controller needs to send the file: rows, file name, format.
@@ -34,7 +38,7 @@ async function exportResults(actor, testId, query) {
   const attempts = await repo.attemptsForExport(testId, d.studentInstituteWhere(actor.requesterInstituteId));
   // Each attempt is scored out of ITS OWN assigned questions (manifest); points come from the Question table so a question removed later still counts.
   const bases = await scoreBases(prisma, attempts);
-  const rows = d.resultExportRows(attempts, bases, test, query.roll);
+  const rows = d.resultExportRows(attempts, bases, test, query.roll, typeof query.q === "string" ? query.q : "");
   const format = query.format === "csv" ? "csv" : "xlsx";
   await logAudit({
     req: actor.req, action: AUDIT_ACTIONS.DATA_EXPORTED, actorId: actor.user.id, actorName: actor.user.name, actorRole: actor.user.role, instituteId: actor.requesterInstituteId,

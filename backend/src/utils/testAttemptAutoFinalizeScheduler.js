@@ -2,6 +2,8 @@ const prisma = require("../prisma");
 const { gradePendingCodingSubmissions } = require("./gradeAttempt");
 const { processGamification } = require("./gamification");
 const { logAudit, AUDIT_ACTIONS } = require("./auditLog");
+const { attemptsDueForAutoFinalize, AUTO_FINALIZE_GRACE_MS } = require("../modules/submissions/submissions.domain");
+
 
 // Finalize is normally driven entirely client-side (TestTaking.jsx's countdown calls
 // POST /finalize when it hits zero) or by the 3-strike violation handler in tests.js. Neither
@@ -10,14 +12,19 @@ const { logAudit, AUDIT_ACTIONS } = require("./auditLog");
 // IN_PROGRESS forever (confirmed live in production, 2026-10-01: a TCS Codevita 9 attempt with
 // zero submissions still showed IN_PROGRESS 8+ hours after the test's own endTime). This tick
 // is the missing enforcement: it finds every IN_PROGRESS attempt whose test has fully closed
-// (Test.endTime passed — the hard outer boundary every student shares, unlike the per-student
-// startedAt+durationMin deadline that finalize.js's deadlineOf() checks) and closes it out the
+// (Test.endTime passed) AND whose own deadline has passed (startedAt + durationMin, the per-student
+// deadline submissions.domain.deadlineOf enforces), and closes it out the
 // same way a late finalize call would.
 async function runOnce() {
-  const candidates = await prisma.testAttempt.findMany({
-    where: { status: "IN_PROGRESS", test: { endTime: { lt: new Date() } } },
-    select: { id: true, studentId: true },
+  const now = new Date();
+  const windowClosed = await prisma.testAttempt.findMany({
+    where: { status: "IN_PROGRESS", test: { endTime: { lt: now } } },
+    select: { id: true, studentId: true, startedAt: true, test: { select: { durationMin: true } } },
   });
+  // The window closing only stops NEW attempts from starting. A student who started late still owns the FULL duration (their deadline is startedAt +
+  // durationMin, the same rule submissions.domain.deadlineOf enforces on every write and the exam page counts down), so an attempt is only closed once
+  // that personal deadline has also passed. Closing at endTime alone submitted late starters while their own clock still showed time left.
+  const candidates = attemptsDueForAutoFinalize(windowClosed, now);
 
   let finalized = 0, failed = 0;
   const finalizedAttemptIds = [];
@@ -164,4 +171,4 @@ function startTestAttemptAutoFinalizeScheduler() {
   }, intervalMs);
 }
 
-module.exports = { startTestAttemptAutoFinalizeScheduler, runOnce, pruneExamSecurityEvents, sweepExpiredModuleCodingAttempts };
+module.exports = { AUTO_FINALIZE_GRACE_MS, startTestAttemptAutoFinalizeScheduler, runOnce, pruneExamSecurityEvents, sweepExpiredModuleCodingAttempts };

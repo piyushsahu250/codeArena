@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import Editor from "@monaco-editor/react";
+import StableCodeEditor from "../components/StableCodeEditor";
 import * as tf from "@tensorflow/tfjs";
 import * as blazeface from "@tensorflow-models/blazeface";
 import api, { API_BASE_URL } from "../api";
@@ -24,6 +24,7 @@ import { createFocusLossSignal, createSplitScreenWatch, runSecurityCheck } from 
 import { createOverlaySignal } from "../utils/viewportOverlaySignal";
 import { applyPlainTextInputHints, watchForNonAsciiInput } from "../utils/monacoSetup";
 import { classifyKeyEvent } from "../utils/keyboardShortcuts";
+import useAiShortcutSignals from "../hooks/useAiShortcutSignals";
 import { manifestProblem } from "../utils/assessmentManifest";
 
 const FACE_CHECK_INTERVAL_MS = 2000;
@@ -1110,6 +1111,13 @@ export default function TestTaking() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [started]);
+
+  // Copilot key / AI-assistant launcher signals: observed and reported only when this test's server policy turns it on (see hooks/useAiShortcutSignals.js).
+  useAiShortcutSignals({
+    enabled: started && (test?.security || testMeta?.security)?.blockAiShortcuts === true,
+    getAttemptId: () => attemptIdRef.current,
+    isFinished: () => finalizedRef.current,
+  });
 
   // DEVTOOLS heuristic (desktop only — mobile browsers don't expose a docked devtools panel the
   // same way, and are already covered by the SCREEN_OVERLAY_DETECTED viewport heuristic above).
@@ -2404,7 +2412,8 @@ export default function TestTaking() {
                   An explicit number on the wrapper AND on <Editor> removes that dependency
                   entirely; the outer column's overflow:auto lets the student scroll past it. */}
               <div style={{ flex: isMobile ? "none" : 1, height: isMobile ? 380 : undefined, minHeight: 0 }}>
-                <Editor
+                <StableCodeEditor
+                  contextKey={`${activeIdx}|${answer?.language}`}
                   height={isMobile ? 380 : "100%"}
                   language={isSql ? "sql" : LANGUAGES.find((l) => l.id === answer?.language)?.monaco}
                   value={answer?.code || ""}

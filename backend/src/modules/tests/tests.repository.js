@@ -175,7 +175,7 @@ Object.assign(module.exports, {
 
 // ================= batch 3: results, export, question analytics, reattempt =================
 
-const testForResults = (id) => prisma.test.findUnique({ where: { id }, select: { instituteId: true, createdById: true, shares: { select: { staffId: true } } } });
+const testForResults = (id) => prisma.test.findUnique({ where: { id }, select: { instituteId: true, createdById: true, durationMin: true, shares: { select: { staffId: true } } } });
 const attemptsForResults = (testId, studentWhere) => prisma.testAttempt.findMany({
   where: { testId, ...studentWhere },
   include: { student: { select: { name: true, email: true, rollNumber: true, registrationNumber: true } }, submissions: { select: { questionId: true } } },
@@ -184,7 +184,7 @@ const attemptsForResults = (testId, studentWhere) => prisma.testAttempt.findMany
 });
 const testForExport = (id) => prisma.test.findUnique({
   where: { id },
-  select: { title: true, passingMarks: true, instituteId: true, createdById: true, shares: { select: { staffId: true } }, questions: { select: { questionId: true, question: { select: { points: true } } } } },
+  select: { title: true, passingMarks: true, durationMin: true, instituteId: true, createdById: true, shares: { select: { staffId: true } }, questions: { select: { questionId: true, question: { select: { points: true } } } } },
 });
 const attemptsForExport = (testId, studentWhere) => prisma.testAttempt.findMany({
   where: { testId, ...studentWhere },

@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import ChalkUnderline from "../components/ChalkUnderline";
 import api from "../api";
-import { useToast } from "../context/ToastContext";
 
 // Same status derivation StudentDashboard.jsx uses for its "Upcoming Tests" cards — kept as a
 // local copy rather than a shared import since this platform's convention is each dashboard page
@@ -23,7 +22,6 @@ function statusOf(test) {
 // shape as MyAttendance.jsx.
 export default function MyTalentPools() {
   const navigate = useNavigate();
-  const toast = useToast();
   const [pools, setPools] = useState(null);
   const [error, setError] = useState("");
 
@@ -33,13 +31,10 @@ export default function MyTalentPools() {
       .catch((err) => setError(err.response?.data?.error || "Failed to load your Talent Pools"));
   }, []);
 
-  async function attend(test) {
-    try {
-      await api.post(`/tests/${test.id}/start`);
-      navigate(`/test/${test.id}`);
-    } catch (err) {
-      toast.error(err.response?.data?.error || "Could not start test");
-    }
+  // Open the exam page only. The attempt (and its server-side clock) is created by the Begin button on the exam page, after the student has read the
+  // instructions and passed the security check; starting it here consumed time and exposed the questions before that gate.
+  function attend(test) {
+    navigate(`/test/${test.id}`);
   }
 
   return (

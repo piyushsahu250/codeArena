@@ -448,6 +448,7 @@
                      "requireWebcam":  false,
                      "scheduledPublishAt":  null,
                      "security":  {
+                                      "blockAiShortcuts":  false,
                                       "blockContextMenu":  true,
                                       "blockCopy":  true,
                                       "blockCut":  true,
@@ -619,6 +620,7 @@
                      "requireWebcam":  false,
                      "scheduledPublishAt":  null,
                      "security":  {
+                                      "blockAiShortcuts":  false,
                                       "blockContextMenu":  true,
                                       "blockCopy":  true,
                                       "blockCut":  true,
@@ -1814,6 +1816,7 @@
                      "requireWebcam":  false,
                      "scheduledPublishAt":  null,
                      "security":  {
+                                      "blockAiShortcuts":  false,
                                       "blockContextMenu":  true,
                                       "blockCopy":  true,
                                       "blockCut":  true,
@@ -2096,6 +2099,7 @@
                      "requireWebcam":  false,
                      "scheduledPublishAt":  null,
                      "security":  {
+                                      "blockAiShortcuts":  false,
                                       "blockContextMenu":  true,
                                       "blockCopy":  true,
                                       "blockCut":  true,
@@ -2670,6 +2674,7 @@
                                            "\u003cid\u003e"
                                        ],
                      "security":  {
+                                      "blockAiShortcuts":  false,
                                       "blockContextMenu":  true,
                                       "blockCopy":  true,
                                       "blockCut":  true,
@@ -2716,6 +2721,7 @@
                                            "\u003cid\u003e"
                                        ],
                      "security":  {
+                                      "blockAiShortcuts":  false,
                                       "blockContextMenu":  true,
                                       "blockCopy":  true,
                                       "blockCut":  true,
@@ -2773,6 +2779,7 @@
                                            "\u003cid\u003e"
                                        ],
                      "security":  {
+                                      "blockAiShortcuts":  false,
                                       "blockContextMenu":  true,
                                       "blockCopy":  true,
                                       "blockCut":  true,
@@ -2819,6 +2826,7 @@
                                            "\u003cid\u003e"
                                        ],
                      "security":  {
+                                      "blockAiShortcuts":  false,
                                       "blockContextMenu":  true,
                                       "blockCopy":  true,
                                       "blockCut":  true,
@@ -2964,6 +2972,7 @@
                      "requireWebcam":  false,
                      "scheduledPublishAt":  null,
                      "security":  {
+                                      "blockAiShortcuts":  false,
                                       "blockContextMenu":  true,
                                       "blockCopy":  true,
                                       "blockCut":  true,
@@ -3050,6 +3059,7 @@
                      "requireWebcam":  false,
                      "scheduledPublishAt":  null,
                      "security":  {
+                                      "blockAiShortcuts":  false,
                                       "blockContextMenu":  true,
                                       "blockCopy":  true,
                                       "blockCut":  true,
@@ -3220,6 +3230,7 @@
                      "requireWebcam":  false,
                      "scheduledPublishAt":  null,
                      "security":  {
+                                      "blockAiShortcuts":  false,
                                       "blockContextMenu":  true,
                                       "blockCopy":  true,
                                       "blockCut":  true,
@@ -3535,6 +3546,7 @@
                                     {
                                         "attemptId":  "\u003cid\u003e",
                                         "createdAt":  "\u003ctime\u003e",
+                                        "evidence":  {"category": "OTHER", "classification": "INCONCLUSIVE", "confirmed": false, "limits": "A face was not found in the frame; lighting, posture and camera angle cause this.", "occurrence": 1, "rationale": "The browser cannot reliably determine what happened.", "source": "BROWSER"},
                                         "id":  "\u003cid\u003e",
                                         "penalized":  false,
                                         "severity":  "INTERRUPTION",
@@ -3543,6 +3555,7 @@
                                     {
                                         "attemptId":  "\u003cid\u003e",
                                         "createdAt":  "\u003ctime\u003e",
+                                        "evidence":  {"category": "TAB_SWITCH", "classification": "OBSERVED_EVENT", "confirmed": false, "limits": "The page was hidden past the grace window. A phone call, lock screen, minimise, system dialog or background throttling does the same; the page cannot see which app or content was opened.", "occurrence": 1, "rationale": "A browser event was observed. It says nothing about intent.", "source": "BROWSER"},
                                         "id":  "\u003cid\u003e",
                                         "penalized":  true,
                                         "severity":  "CONFIRMED_VIOLATION",
@@ -3551,6 +3564,7 @@
                                     {
                                         "attemptId":  "\u003cid\u003e",
                                         "createdAt":  "\u003ctime\u003e",
+                                        "evidence":  {"category": "TAB_SWITCH", "classification": "SUSPECTED_ACTIVITY", "confirmed": false, "limits": "The page was hidden past the grace window. A phone call, lock screen, minimise, system dialog or background throttling does the same; the page cannot see which app or content was opened.", "occurrence": 2, "rationale": "Seen 2 times on this attempt; worth a human review. This is not proof of misconduct.", "source": "BROWSER"},
                                         "id":  "\u003cid\u003e",
                                         "penalized":  true,
                                         "severity":  "CONFIRMED_VIOLATION",
@@ -3559,12 +3573,14 @@
                                     {
                                         "attemptId":  "\u003cid\u003e",
                                         "createdAt":  "\u003ctime\u003e",
+                                        "evidence":  {"category": "TAB_SWITCH", "classification": "SUSPECTED_ACTIVITY", "confirmed": false, "limits": "The page was hidden past the grace window. A phone call, lock screen, minimise, system dialog or background throttling does the same; the page cannot see which app or content was opened.", "occurrence": 3, "rationale": "Seen 3 times on this attempt; worth a human review. This is not proof of misconduct.", "source": "BROWSER"},
                                         "id":  "\u003cid\u003e",
                                         "penalized":  true,
                                         "severity":  "CONFIRMED_VIOLATION",
                                         "type":  "TAB_SWITCH"
                                     }
                                 ],
+                     "evidenceNote":  "Browser signals are observations, not proof. A page cannot see other apps, devices or assistants. Only an authorised reviewer can confirm misconduct.",
                      "student":  {
                                      "email":  "zz-tc-stuA-\u003cts\u003e@example.invalid",
                                      "name":  "ZZ TC stuA"
@@ -3584,6 +3600,7 @@
                                     {
                                         "attemptId":  "\u003cid\u003e",
                                         "createdAt":  "\u003ctime\u003e",
+                                        "evidence":  {"category": "OTHER", "classification": "INCONCLUSIVE", "confirmed": false, "limits": "A face was not found in the frame; lighting, posture and camera angle cause this.", "occurrence": 1, "rationale": "The browser cannot reliably determine what happened.", "source": "BROWSER"},
                                         "id":  "\u003cid\u003e",
                                         "penalized":  false,
                                         "severity":  "INTERRUPTION",
@@ -3592,6 +3609,7 @@
                                     {
                                         "attemptId":  "\u003cid\u003e",
                                         "createdAt":  "\u003ctime\u003e",
+                                        "evidence":  {"category": "TAB_SWITCH", "classification": "OBSERVED_EVENT", "confirmed": false, "limits": "The page was hidden past the grace window. A phone call, lock screen, minimise, system dialog or background throttling does the same; the page cannot see which app or content was opened.", "occurrence": 1, "rationale": "A browser event was observed. It says nothing about intent.", "source": "BROWSER"},
                                         "id":  "\u003cid\u003e",
                                         "penalized":  true,
                                         "severity":  "CONFIRMED_VIOLATION",
@@ -3600,6 +3618,7 @@
                                     {
                                         "attemptId":  "\u003cid\u003e",
                                         "createdAt":  "\u003ctime\u003e",
+                                        "evidence":  {"category": "TAB_SWITCH", "classification": "SUSPECTED_ACTIVITY", "confirmed": false, "limits": "The page was hidden past the grace window. A phone call, lock screen, minimise, system dialog or background throttling does the same; the page cannot see which app or content was opened.", "occurrence": 2, "rationale": "Seen 2 times on this attempt; worth a human review. This is not proof of misconduct.", "source": "BROWSER"},
                                         "id":  "\u003cid\u003e",
                                         "penalized":  true,
                                         "severity":  "CONFIRMED_VIOLATION",
@@ -3608,12 +3627,14 @@
                                     {
                                         "attemptId":  "\u003cid\u003e",
                                         "createdAt":  "\u003ctime\u003e",
+                                        "evidence":  {"category": "TAB_SWITCH", "classification": "SUSPECTED_ACTIVITY", "confirmed": false, "limits": "The page was hidden past the grace window. A phone call, lock screen, minimise, system dialog or background throttling does the same; the page cannot see which app or content was opened.", "occurrence": 3, "rationale": "Seen 3 times on this attempt; worth a human review. This is not proof of misconduct.", "source": "BROWSER"},
                                         "id":  "\u003cid\u003e",
                                         "penalized":  true,
                                         "severity":  "CONFIRMED_VIOLATION",
                                         "type":  "TAB_SWITCH"
                                     }
                                 ],
+                     "evidenceNote":  "Browser signals are observations, not proof. A page cannot see other apps, devices or assistants. Only an authorised reviewer can confirm misconduct.",
                      "student":  {
                                      "email":  "zz-tc-stuA-\u003cts\u003e@example.invalid",
                                      "name":  "ZZ TC stuA"
@@ -3874,6 +3895,7 @@
                      "requireWebcam":  false,
                      "scheduledPublishAt":  null,
                      "security":  {
+                                      "blockAiShortcuts":  false,
                                       "blockContextMenu":  true,
                                       "blockCopy":  true,
                                       "blockCut":  true,
@@ -4034,12 +4056,14 @@
                      {
                          "expectedQuestionCount":  2,
                          "id":  "\u003cid\u003e",
+                         "lifecycle":  {"detail": "Auto-submitted", "label": "Completed", "state": "COMPLETED"},
                          "manifestVersion":  1,
                          "optionOrder":  null,
                          "questionOrder":  [
                                                "\u003cid\u003e",
                                                "\u003cid\u003e"
                                            ],
+                         "rank":  1,
                          "sessionId":  "\u003csession\u003e",
                          "startedAt":  "\u003ctime\u003e",
                          "status":  "AUTO_SUBMITTED",
@@ -4067,12 +4091,14 @@
                      {
                          "expectedQuestionCount":  2,
                          "id":  "\u003cid\u003e",
+                         "lifecycle":  {"detail": "Auto-submitted", "label": "Completed", "state": "COMPLETED"},
                          "manifestVersion":  1,
                          "optionOrder":  null,
                          "questionOrder":  [
                                                "\u003cid\u003e",
                                                "\u003cid\u003e"
                                            ],
+                         "rank":  1,
                          "sessionId":  "\u003csession\u003e",
                          "startedAt":  "\u003ctime\u003e",
                          "status":  "AUTO_SUBMITTED",
@@ -4100,12 +4126,14 @@
                      {
                          "expectedQuestionCount":  2,
                          "id":  "\u003cid\u003e",
+                         "lifecycle":  {"detail": "Submitted", "label": "Completed", "state": "COMPLETED"},
                          "manifestVersion":  1,
                          "optionOrder":  null,
                          "questionOrder":  [
                                                "\u003cid\u003e",
                                                "\u003cid\u003e"
                                            ],
+                         "rank":  1,
                          "sessionId":  "\u003csession\u003e",
                          "startedAt":  "\u003ctime\u003e",
                          "status":  "SUBMITTED",
@@ -4129,12 +4157,14 @@
                      {
                          "expectedQuestionCount":  2,
                          "id":  "\u003cid\u003e",
+                         "lifecycle":  {"detail": "Submitted", "label": "Completed", "state": "COMPLETED"},
                          "manifestVersion":  1,
                          "optionOrder":  null,
                          "questionOrder":  [
                                                "\u003cid\u003e",
                                                "\u003cid\u003e"
                                            ],
+                         "rank":  2,
                          "sessionId":  "\u003csession\u003e",
                          "startedAt":  "\u003ctime\u003e",
                          "status":  "SUBMITTED",
@@ -4158,12 +4188,14 @@
                      {
                          "expectedQuestionCount":  2,
                          "id":  "\u003cid\u003e",
+                         "lifecycle":  {"detail": "Submitted", "label": "Completed", "state": "COMPLETED"},
                          "manifestVersion":  1,
                          "optionOrder":  null,
                          "questionOrder":  [
                                                "\u003cid\u003e",
                                                "\u003cid\u003e"
                                            ],
+                         "rank":  3,
                          "sessionId":  "\u003csession\u003e",
                          "startedAt":  "\u003ctime\u003e",
                          "status":  "SUBMITTED",
@@ -4193,12 +4225,14 @@
                      {
                          "expectedQuestionCount":  2,
                          "id":  "\u003cid\u003e",
+                         "lifecycle":  {"detail": "Submitted", "label": "Completed", "state": "COMPLETED"},
                          "manifestVersion":  1,
                          "optionOrder":  null,
                          "questionOrder":  [
                                                "\u003cid\u003e",
                                                "\u003cid\u003e"
                                            ],
+                         "rank":  1,
                          "sessionId":  "\u003csession\u003e",
                          "startedAt":  "\u003ctime\u003e",
                          "status":  "SUBMITTED",
@@ -4222,12 +4256,14 @@
                      {
                          "expectedQuestionCount":  2,
                          "id":  "\u003cid\u003e",
+                         "lifecycle":  {"detail": "Submitted", "label": "Completed", "state": "COMPLETED"},
                          "manifestVersion":  1,
                          "optionOrder":  null,
                          "questionOrder":  [
                                                "\u003cid\u003e",
                                                "\u003cid\u003e"
                                            ],
+                         "rank":  2,
                          "sessionId":  "\u003csession\u003e",
                          "startedAt":  "\u003ctime\u003e",
                          "status":  "SUBMITTED",
@@ -4257,12 +4293,14 @@
                      {
                          "expectedQuestionCount":  2,
                          "id":  "\u003cid\u003e",
+                         "lifecycle":  {"detail": "Submitted", "label": "Completed", "state": "COMPLETED"},
                          "manifestVersion":  1,
                          "optionOrder":  null,
                          "questionOrder":  [
                                                "\u003cid\u003e",
                                                "\u003cid\u003e"
                                            ],
+                         "rank":  1,
                          "sessionId":  "\u003csession\u003e",
                          "startedAt":  "\u003ctime\u003e",
                          "status":  "SUBMITTED",
@@ -4292,12 +4330,14 @@
                      {
                          "expectedQuestionCount":  2,
                          "id":  "\u003cid\u003e",
+                         "lifecycle":  {"detail": "Submitted", "label": "Completed", "state": "COMPLETED"},
                          "manifestVersion":  1,
                          "optionOrder":  null,
                          "questionOrder":  [
                                                "\u003cid\u003e",
                                                "\u003cid\u003e"
                                            ],
+                         "rank":  1,
                          "sessionId":  "\u003csession\u003e",
                          "startedAt":  "\u003ctime\u003e",
                          "status":  "SUBMITTED",
@@ -4321,12 +4361,14 @@
                      {
                          "expectedQuestionCount":  2,
                          "id":  "\u003cid\u003e",
+                         "lifecycle":  {"detail": "Submitted", "label": "Completed", "state": "COMPLETED"},
                          "manifestVersion":  1,
                          "optionOrder":  null,
                          "questionOrder":  [
                                                "\u003cid\u003e",
                                                "\u003cid\u003e"
                                            ],
+                         "rank":  2,
                          "sessionId":  "\u003csession\u003e",
                          "startedAt":  "\u003ctime\u003e",
                          "status":  "SUBMITTED",
@@ -4665,6 +4707,7 @@
                                            "\u003cid\u003e"
                                        ],
                      "security":  {
+                                      "blockAiShortcuts":  false,
                                       "blockContextMenu":  true,
                                       "blockCopy":  true,
                                       "blockCut":  true,
@@ -4718,6 +4761,7 @@
                                            "\u003cid\u003e"
                                        ],
                      "security":  {
+                                      "blockAiShortcuts":  false,
                                       "blockContextMenu":  true,
                                       "blockCopy":  true,
                                       "blockCut":  true,
