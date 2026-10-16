@@ -127,7 +127,14 @@ export default function AdminDashboard() {
       setForm({ ...emptyForm, instituteId: form.instituteId, role: form.role });
       load();
     } catch (err) {
-      setError(err.response?.data?.error || "Failed to create user");
+      const serverMessage = err.response?.data?.error;
+      if (serverMessage) setError(serverMessage);
+      else if (!err.response) {
+        // Nothing came back (timeout, dropped connection): the server may well have finished the create. Say so and refresh the list instead of the bare message, which
+        // sent admins into creating the same student twice.
+        setError("The server did not answer in time. The account may already have been created: check the list below (refreshing now) before trying again.");
+        load();
+      } else setError(`Failed to create user (server error ${err.response.status}). Check the list below before trying again.`);
     } finally {
       setSaving(false);
     }

@@ -6,7 +6,14 @@
 // it CAN see is that its own window stopped being the focused one while still visible (split-screen, a floating assistant, a
 // second monitor app) and that its window is only a fraction of the screen.
 
-const isTouch = () => typeof window !== "undefined" && (("ontouchstart" in window) || (navigator.maxTouchPoints || 0) > 0);
+// A phone or tablet, as the SERVER decides it (the same user-agent pattern as backend examSecurity.isMobileUserAgent), plus the browser's own mobile hint and
+// iPadOS in desktop mode. NOT "has a touchscreen": Windows and Chromebook laptops with a touch display report touch points and are ordinary desktops.
+export function isMobileDevice(nav = typeof navigator !== "undefined" ? navigator : null) {
+  if (!nav) return false;
+  if (nav.userAgentData && nav.userAgentData.mobile === true) return true;
+  if (/Android|iPhone|iPad|iPod|Mobile/i.test(String(nav.userAgent || ""))) return true;
+  return nav.platform === "MacIntel" && (nav.maxTouchPoints || 0) > 1;
+}
 
 // Fires onLoss once when the page is visible but has not held focus for `graceMs` (a brief focus flicker, a permission prompt
 // or a notification pull-down shorter than graceMs is ignored); fires onRestore when focus returns. A hidden page is the tab-
@@ -34,7 +41,7 @@ export function createFocusLossSignal({ graceMs = 2500, onLoss, onRestore } = {}
 // True when a touch device is showing the page in a window that is much smaller than the screen in BOTH steady states we can
 // measure (split-screen / floating window). Ignored while a text field is focused (the on-screen keyboard shrinks the viewport).
 export function isLikelySplitScreen() {
-  if (!isTouch() || typeof window === "undefined" || !window.screen) return false;
+  if (!isMobileDevice() || typeof window === "undefined" || !window.screen) return false;
   const el = document.activeElement;
   if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable)) return false;
   const vv = window.visualViewport;
@@ -77,7 +84,7 @@ export function runSecurityCheck(policy) {
   items.push({ key: "cookies", label: "Cookies and storage enabled", ok: navigator.cookieEnabled !== false && storageOk, required: true });
   if (policy?.requireFullscreen) items.push({ key: "fullscreen", label: "Fullscreen supported", ok: fsOk, required: proctored });
   items.push({ key: "split", label: "Assessment window fills the screen", ok: !isLikelySplitScreen(), required: proctored });
-  items.push({ key: "mobile", label: "Device is supported for this assessment", ok: policy?.mobileAllowed !== false || !isTouch(), required: true });
+  items.push({ key: "mobile", label: "Device is supported for this assessment", ok: policy?.mobileAllowed !== false || !isMobileDevice(), required: true });
   const ready = items.every((i) => i.ok || !i.required);
   return { items, ready };
 }

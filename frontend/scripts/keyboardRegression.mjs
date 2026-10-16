@@ -14,6 +14,12 @@ check("A, S, D, W, F specifically are never intercepted", ["a", "s", "d", "w", "
 check("Tab, Enter, Backspace, Delete, arrows, Home/End are never intercepted", ["Tab", "Enter", "Backspace", "Delete", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Home", "End", "Escape"].every((k) => classifyKeyEvent({ key: k }) === null));
 check("AltGr-style symbols (Ctrl+Alt is not Ctrl alone) still reach the editor for typing keys like [ ] { }", ["[", "]", "{", "}", "@", "\\"].every((k) => classifyKeyEvent({ key: k, shiftKey: false }) === null));
 
+// 1b. AltGr (reported as Ctrl+Alt on Windows) is character entry on international layouts: never intercepted.
+check("AltGr + a / s / d (Ctrl+Alt) types the character", ["a", "s", "d", "A", "S", "D", "ą", "ś"].every((k) => classifyKeyEvent({ key: k, ctrlKey: true, altKey: true }) === null));
+check("Ctrl+Alt+Shift+letter is not a shortcut either", classifyKeyEvent({ key: "S", ctrlKey: true, altKey: true, shiftKey: true }) === null);
+check("a bare Ctrl+S (no Alt) is still the intercepted shortcut", classifyKeyEvent({ key: "s", ctrlKey: true }) === "BROWSER_SHORTCUT");
+check("F12 is still caught even with Ctrl+Alt held", classifyKeyEvent({ key: "F12", ctrlKey: true, altKey: true }) === "DEVTOOLS");
+
 // 2. Prohibited shortcuts are still caught.
 check("F12 and Ctrl+Shift+I are flagged as devtools", classifyKeyEvent({ key: "F12" }) === "DEVTOOLS" && classifyKeyEvent({ key: "I", ctrlKey: true, shiftKey: true }) === "DEVTOOLS");
 check("Ctrl+S / Ctrl+P / Ctrl+T are flagged as browser shortcuts", ["s", "p", "t"].every((k) => classifyKeyEvent({ key: k, ctrlKey: true }) === "BROWSER_SHORTCUT"));

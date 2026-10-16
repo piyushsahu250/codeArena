@@ -16,6 +16,7 @@ const { studentCanAccessCourse } = require("../utils/courseEligibility");
 const X = require("../utils/examSecurity");
 const { recordServerEvent } = require("./examSecurity");
 const { evaluateSecureSession, bindSessionToAttempt } = require("./secureExam");
+const StartOverride = require("../utils/startOverride");
 const SecureExam = require("../utils/secureExam");
 // Before any session exists every required capability shows as failing (so the page lists what the client must provide).
 const S_CHECKS_OFF = (pol) => SecureExam.capabilityChecks(pol, {});
@@ -151,6 +152,8 @@ async function enforceSecureSession(req, res, attempt) {
   if (!policy.secureBrowserRequired) return true;
   const ev = await evaluateSecureSession(req.get("x-secure-session"), { studentId: req.user.id, policy, attemptId: attempt.id });
   if (ev.ok) return true;
+  // An attempt that was STARTED under an administrator override (recorded at start, see utils/startOverride.js) continues without a secure session. Every other attempt is unchanged.
+  if (await StartOverride.attemptHasOverride(prisma, attempt.id)) return true;
   res.status(ev.status).json({ error: ev.message, code: ev.code });
   return false;
 }
@@ -310,6 +313,16 @@ router.get(["/module/:moduleId", "/level/:levelId"], authenticate, requireRole("
       secureStatus.checks = ev.checks || (ev.ok ? [] : S_CHECKS_OFF(pol));
       secureStatus.code = ev.ok ? null : ev.code;
       secureStatus.message = ev.ok ? null : ev.message;
+      if (!ev.ok) {
+        // Same rule as the start route: an attempt started under an override may be resumed, and a student with no attempt in progress may start on an unused, unexpired grant.
+        const viaOverride = activeAttempt ? await StartOverride.attemptHasOverride(prisma, activeAttempt.id) : !!(await StartOverride.findActiveGrant(prisma, req.user.id, test.id));
+        if (viaOverride) {
+          secureStatus.secureBrowserOk = true;
+          secureStatus.overrideActive = true;
+          secureStatus.code = null;
+          secureStatus.message = "An administrator has allowed you to take this assessment without the secure exam client. This is recorded on your attempt.";
+        }
+      }
     }
 
     const canStart =
@@ -370,13 +383,22 @@ router.post(["/module/:moduleId/start", "/level/:levelId/start"], authenticate, 
     if (reqFail) return res.status(403).json(reqFail);
     const secureFail = await secureClientFailure(req, startPolicy);
     let secureSession = null;
+    let overrideGrant = null; // an administrator's one-time permission to start without a secure session (utils/startOverride.js)
+    let overrideResume = false; // resuming an attempt that was itself started under an override
     if (secureFail && secureFail.error) {
-      if (["SECURE_CLIENT_REQUIRED", "SECURE_SESSION_INVALID"].includes(secureFail.code)) {
-        await prisma.examSecurityEvent.create({ data: { attemptKind: "MODULE_CODING", attemptId: "none", studentId: req.user.id, testId: test.id, type: "SECURE_BROWSER_MISSING", severity: "HIGH" } }).catch(() => {});
+      // The only ways past a failed strict requirement: this student's own in-progress attempt was started under an override, or an administrator has granted an unused,
+      // unexpired override for this student and this test. Anything else is refused exactly as before.
+      const inProgress = await prisma.moduleCodingAttempt.findFirst({ where: { moduleCodingTestId: test.id, studentId: req.user.id, status: "IN_PROGRESS" }, select: { id: true } });
+      overrideResume = !!inProgress && (await StartOverride.attemptHasOverride(prisma, inProgress.id));
+      // A student who already has an in-progress attempt that was NOT started under an override must resume it on a secure client; a grant never applies to it.
+      overrideGrant = overrideResume || inProgress ? null : await StartOverride.findActiveGrant(prisma, req.user.id, test.id);
+      if (!overrideResume && !overrideGrant) {
+        if (["SECURE_CLIENT_REQUIRED", "SECURE_SESSION_INVALID"].includes(secureFail.code)) {
+          await prisma.examSecurityEvent.create({ data: { attemptKind: "MODULE_CODING", attemptId: "none", studentId: req.user.id, testId: test.id, type: "SECURE_BROWSER_MISSING", severity: "HIGH" } }).catch(() => {});
+        }
+        return res.status(secureFail.status || 403).json({ code: secureFail.code, error: secureFail.error, checks: secureFail.checks });
       }
-      return res.status(secureFail.status || 403).json({ code: secureFail.code, error: secureFail.error, checks: secureFail.checks });
-    }
-    if (secureFail) secureSession = secureFail.session;
+    } else if (secureFail) secureSession = secureFail.session;
 
     const existing = await prisma.moduleCodingAttempt.findFirst({
       where: { moduleCodingTestId: test.id, studentId: req.user.id, status: "IN_PROGRESS" },
@@ -472,6 +494,10 @@ router.post(["/module/:moduleId/start", "/level/:levelId/start"], authenticate, 
       selected = pool.slice(0, test.questionCount);
     }
 
+    if (overrideGrant) {
+      // Use the one-time permission atomically, right before the attempt exists. If another request used or revoked it first, this start is refused like any other strict failure.
+      if (!(await StartOverride.consumeGrant(prisma, overrideGrant.id))) return res.status(secureFail.status || 403).json({ code: secureFail.code, error: secureFail.error, checks: secureFail.checks });
+    }
     const newSession = crypto.randomBytes(16).toString("hex");
     const attempt = await prisma.moduleCodingAttempt.create({
       data: {
@@ -480,6 +506,8 @@ router.post(["/module/:moduleId/start", "/level/:levelId/start"], authenticate, 
         questions: { create: selected.map((q, i) => ({ questionId: q.id, order: i })) },
       },
     });
+    // The attempt remembers that it started under an override, so it can be resumed without a secure session and nothing else can.
+    if (overrideGrant) await StartOverride.recordUse(prisma, { grant: overrideGrant, attemptId: attempt.id, studentId: req.user.id, testId: test.id, instituteId: overrideGrant.instituteId });
 
     // LOCKDOWN: tie the authenticated secure session to the attempt it now protects.
     if (secureSession) {

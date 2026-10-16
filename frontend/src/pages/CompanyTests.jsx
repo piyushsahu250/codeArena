@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api";
-import { useToast } from "../context/ToastContext";
 import Navbar from "../components/Navbar";
 import ChalkUnderline from "../components/ChalkUnderline";
 
@@ -18,7 +17,6 @@ function statusOf(test) {
 // goes through; this page is purely a filtered lens over that same data, grouped by company.
 export default function CompanyTests() {
   const navigate = useNavigate();
-  const toast = useToast();
   const [tests, setTests] = useState(null);
   const [company, setCompany] = useState("");
 
@@ -26,13 +24,10 @@ export default function CompanyTests() {
     api.get("/tests").then((res) => setTests(res.data.filter((t) => t.company))).catch(() => setTests([]));
   }, []);
 
-  async function attend(test) {
-    try {
-      await api.post(`/tests/${test.id}/start`);
-      navigate(`/test/${test.id}`);
-    } catch (err) {
-      toast.error(err.response?.data?.error || "Could not start test");
-    }
+  // Open the exam page only. The attempt (and its server-side clock) is created by the Begin button on the exam page, after the student has read the
+  // instructions and passed the security check; starting it here consumed time and exposed the questions before that gate.
+  function attend(test) {
+    navigate(`/test/${test.id}`);
   }
 
   const companies = [...new Set((tests || []).map((t) => t.company))].sort();
@@ -81,11 +76,11 @@ export default function CompanyTests() {
                   </div>
                   <button
                     className="btn btn-dark"
-                    disabled={status.label !== "Live now"}
-                    style={{ opacity: status.label !== "Live now" ? 0.4 : 1 }}
-                    onClick={() => attend(test)}
+                    disabled={status.label !== "Live now" && !status.completed}
+                    style={{ opacity: status.label !== "Live now" && !status.completed ? 0.4 : 1 }}
+                    onClick={() => (status.completed ? navigate(`/test/${test.id}/result`) : attend(test))}
                   >
-                    {status.label === "Live now" ? "Start Test →" : status.label}
+                    {status.label === "Live now" ? (test.myStatus === "IN_PROGRESS" ? "Resume Test →" : "Start Test →") : status.completed ? "View result →" : status.label}
                   </button>
                 </div>
               );

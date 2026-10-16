@@ -47,6 +47,107 @@ router.post("/events", authenticate, requireRole("STUDENT"), EVENT_LIMIT, async 
   } catch (err) { console.error(err); res.status(500).json({ error: "Failed to record events" }); }
 });
 
+
+// STUDENT: keyboard signals for a formal-test attempt, accepted ONLY while the attempt is IN_PROGRESS and the test's own policy has blockAiShortcuts on
+// (the server, not the page, decides whether this is active). The student id always comes from the authenticated session. Observations only: the page sees a
+// key combination, never an application, so nothing here can be a confirmed violation and nothing is penalised or auto-submitted.
+const AI_SIGNAL_TYPES = new Set(["COPILOT_KEY_SIGNAL", "AI_SHORTCUT_DETECTED"]);
+const AI_SIGNAL_META_KEYS = ["code", "key", "metaKey", "shiftKey", "ctrlKey", "altKey", "cancelable", "defaultPrevented", "cancelAttempted", "count", "clientAt"];
+const MAX_AI_SIGNALS_PER_ATTEMPT = 200;
+router.post("/test-events", authenticate, requireRole("STUDENT"), EVENT_LIMIT, async (req, res) => {
+  try {
+    const { attemptId, events } = req.body || {};
+    if (typeof attemptId !== "string" || !attemptId || attemptId.length > 64 || !Array.isArray(events) || events.length === 0) return res.status(400).json({ error: "attemptId and a non-empty events array are required" });
+    const attempt = await prisma.testAttempt.findUnique({
+      where: { id: attemptId },
+      select: { id: true, studentId: true, status: true, testId: true, test: { select: { id: true, instituteId: true, securityLevel: true, securityPolicy: true, requireFullscreen: true } } },
+    });
+    // Same non-disclosure as every attempt route: someone else's attempt looks exactly like a nonexistent one.
+    if (!attempt || attempt.studentId !== req.user.id) return res.status(404).json({ error: "Attempt not found" });
+    if (attempt.status !== "IN_PROGRESS") return res.json({ accepted: 0, closed: true });
+    if (!policyOf(attempt.test).blockAiShortcuts) return res.json({ accepted: 0, disabled: true });
+    const existing = await prisma.examSecurityEvent.count({ where: { attemptKind: "TEST", attemptId: attempt.id, type: { in: [...AI_SIGNAL_TYPES] } } });
+    if (existing >= MAX_AI_SIGNALS_PER_ATTEMPT) return res.json({ accepted: 0, capped: true });
+
+    const rows = [];
+    for (const ev of events.slice(0, 10)) {
+      const type = String(ev?.type || "").toUpperCase();
+      if (!AI_SIGNAL_TYPES.has(type)) continue; // unknown or server-only types are ignored, never stored
+      const picked = {};
+      for (const k of AI_SIGNAL_META_KEYS) if (ev?.metadata && Object.prototype.hasOwnProperty.call(ev.metadata, k)) picked[k] = ev.metadata[k];
+      rows.push({
+        attemptKind: "TEST", attemptId: attempt.id, studentId: req.user.id, testId: attempt.testId, instituteId: attempt.test?.instituteId || null,
+        type, severity: X.EVENT_SEVERITY[type] || "LOW", metadata: X.cleanMetadata(picked),
+      });
+    }
+    if (rows.length) await prisma.examSecurityEvent.createMany({ data: rows });
+    res.json({ accepted: rows.length });
+  } catch (err) { console.error(err); res.status(500).json({ error: "Failed to record events" }); }
+});
+
+// ---- ADMINISTRATOR START OVERRIDE (see utils/startOverride.js) -----------------------------------------------------------------
+// Lets an authorised administrator of the test's institute allow ONE student to start ONE strict (secure-client) module-coding assessment without a secure session,
+// once, within a short window, with a reason that is written to the audit log. It waives nothing else: phone refusal, the timer, attempt limits and every other check
+// still apply. Granting, using and revoking are all recorded.
+const StartOverride = require("../utils/startOverride");
+const OVERRIDE_ROLES = ["ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"];
+const OVERRIDE_LIMIT = rateLimit({ windowMs: 60 * 1000, max: 20, keyGenerator: (req) => req.user?.id || req.ip, standardHeaders: false, legacyHeaders: false });
+
+async function overrideTestScope(req, res, testId) {
+  const instituteId = await resolveModuleCodingTestCourseInstituteId(testId);
+  if (instituteId === undefined) { res.status(404).json({ error: "Assessment not found" }); return null; }
+  if (!ownsLmsInstitute(req, instituteId)) { res.status(403).json({ error: "You can only manage assessments under your own institute" }); return null; }
+  const test = await prisma.moduleCodingTest.findUnique({ where: { id: testId }, select: { id: true, title: true, securityLevel: true, securityPolicy: true, requireFullscreen: true } });
+  if (!test) { res.status(404).json({ error: "Assessment not found" }); return null; }
+  return { test, instituteId };
+}
+
+router.post("/start-overrides", authenticate, requireRole(...OVERRIDE_ROLES), attachRequesterInstitute, OVERRIDE_LIMIT, async (req, res) => {
+  try {
+    const parsed = StartOverride.parseGrantInput(req.body);
+    if (!parsed.ok) return res.status(400).json({ error: parsed.error });
+    const { testId, studentId, reason, ttlMin } = parsed.value;
+    const scope = await overrideTestScope(req, res, testId);
+    if (!scope) return;
+    if (!X.resolvePolicy(scope.test).secureBrowserRequired) return res.status(400).json({ error: "This assessment does not require a secure client, so there is nothing to override." });
+    const student = await prisma.user.findUnique({ where: { id: studentId }, select: { id: true, role: true, instituteId: true, name: true } });
+    if (!student || student.role !== "STUDENT") return res.status(404).json({ error: "Student not found" });
+    if (scope.instituteId && student.instituteId !== scope.instituteId) return res.status(403).json({ error: "This student does not belong to the assessment's institute" });
+    if (req.requesterInstituteId && student.instituteId !== req.requesterInstituteId) return res.status(403).json({ error: "You can only manage students under your own institute" });
+    const active = await StartOverride.findActiveGrant(prisma, student.id, scope.test.id);
+    if (active) return res.json({ id: active.id, expiresAt: active.metadata?.expiresAt, existing: true });
+    const { row, expiresAt } = await StartOverride.createGrant(prisma, { student, test: scope.test, instituteId: scope.instituteId, actor: req.user, reason, ttlMin });
+    await logAudit({ req, action: AUDIT_ACTIONS.SECURE_START_OVERRIDE_GRANTED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role, studentId: student.id, instituteId: scope.instituteId || req.requesterInstituteId, details: { testId: scope.test.id, grantId: row.id, ttlMin, reason } });
+    res.status(201).json({ id: row.id, expiresAt, ttlMinutes: ttlMin });
+  } catch (err) { console.error(err); res.status(500).json({ error: "Failed to grant the override" }); }
+});
+
+router.get("/start-overrides", authenticate, requireRole(...OVERRIDE_ROLES), attachRequesterInstitute, async (req, res) => {
+  try {
+    const testId = typeof req.query.testId === "string" ? req.query.testId : "";
+    if (!testId) return res.status(400).json({ error: "testId is required" });
+    const scope = await overrideTestScope(req, res, testId);
+    if (!scope) return;
+    const rows = await prisma.examSecurityEvent.findMany({ where: { attemptKind: "MODULE_CODING", testId, type: { in: Object.values(StartOverride.TYPES) } }, orderBy: { createdAt: "desc" }, take: 100 });
+    res.json(rows.map((r) => ({
+      id: r.id, type: r.type, studentId: r.studentId, attemptId: r.attemptId === "none" ? null : r.attemptId, createdAt: r.createdAt, reason: r.metadata?.reason || null, expiresAt: r.metadata?.expiresAt || null,
+      state: r.type !== StartOverride.TYPES.GRANTED ? null : r.reviewStatus === "PENDING" ? (StartOverride.isActiveGrant(r) ? "ACTIVE" : "EXPIRED") : r.reviewNote === "REVOKED" ? "REVOKED" : "USED",
+    })));
+  } catch (err) { console.error(err); res.status(500).json({ error: "Failed to list overrides" }); }
+});
+
+router.delete("/start-overrides/:id", authenticate, requireRole(...OVERRIDE_ROLES), attachRequesterInstitute, OVERRIDE_LIMIT, async (req, res) => {
+  try {
+    const grant = await prisma.examSecurityEvent.findUnique({ where: { id: String(req.params.id) } });
+    if (!grant || grant.type !== StartOverride.TYPES.GRANTED || grant.attemptKind !== "MODULE_CODING") return res.status(404).json({ error: "Override not found" });
+    const scope = await overrideTestScope(req, res, grant.testId);
+    if (!scope) return;
+    const revoked = await StartOverride.revokeGrant(prisma, grant, req.user);
+    if (!revoked) return res.status(409).json({ error: "This override was already used or revoked" });
+    await logAudit({ req, action: AUDIT_ACTIONS.SECURE_START_OVERRIDE_REVOKED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role, studentId: grant.studentId, instituteId: scope.instituteId || req.requesterInstituteId, details: { testId: grant.testId, grantId: grant.id } });
+    res.json({ revoked: true });
+  } catch (err) { console.error(err); res.status(500).json({ error: "Failed to revoke the override" }); }
+});
 // Records a server-originated event (used by moduleCoding.js when it enforces a rule). Never throws into the caller.
 async function recordServerEvent({ attempt, type, metadata, questionId }) {
   try {

@@ -75,3 +75,45 @@ test("a reattempt audit entry keeps what the deleted attempt held", () => {
   assert.equal(out.studentRollNumber, "R1");
   assert.equal(out.testTitle, "Unit 1");
 });
+
+// The leaderboard search box used to match only the roll number, so typing a student's NAME (or PRN) found nobody. These cases are repeated in
+// frontend/scripts/studentSearchRegression.mjs against the on-screen matcher, which must behave identically.
+const S = { name: "Piyush Sahu", rollNumber: "CS-2024-017", registrationNumber: "PRN24000123", email: "piyush.sahu@college.test" };
+const SEARCH_CASES = [
+  ["", true, "empty query shows everyone"],
+  ["   ", true, "a blank query shows everyone"],
+  ["Piyush Sahu", true, "full name"],
+  ["piyush", true, "first name, partial"],
+  ["SAHU", true, "case-insensitive"],
+  ["  piyush   sahu  ", true, "leading, trailing and repeated spaces"],
+  ["sahu piyush", true, "words in any order"],
+  ["yush sa", true, "a partial word in the middle"],
+  ["cs-2024-017", true, "roll number"],
+  ["2024-017", true, "partial roll number"],
+  ["prn24000123", true, "PRN / registration number"],
+  ["000123", true, "partial PRN"],
+  ["piyush.sahu@college", true, "e-mail"],
+  ["piyush cs-2024", true, "name word plus roll number word"],
+  ["rahul", false, "a different name matches nobody"],
+  ["piyush rahul", false, "every word must match"],
+  [".*", false, "regex characters are plain text"],
+  ["(", false, "an unbalanced bracket is plain text and does not throw"],
+  ["%", false, "a SQL wildcard is plain text"],
+];
+test("student search matches name, roll number, PRN and e-mail, case-insensitively and ignoring extra spaces", () => {
+  for (const [q, expected, label] of SEARCH_CASES) assert.equal(d.matchesStudentQuery(S, q), expected, label);
+  assert.equal(d.matchesStudentQuery({ name: null, rollNumber: null }, "x"), false, "missing fields never throw");
+  assert.equal(d.matchesStudentQuery(S, undefined), true);
+  assert.equal(d.matchesStudentQuery(S, ["array"]), false, "a non-string query is treated as text, not trusted");
+});
+
+test("export `q` narrows by name or PRN, keeps ranks, and combines with the roll filter", () => {
+  const mk = (id, name, score, roll, prn) => ({ ...attempt(id, name, score, "SUBMITTED", { roll }), student: { name, email: `${id}@x.test`, rollNumber: roll, registrationNumber: prn } });
+  const attempts = [mk("a", "Asha Rao", 9, "R-1", "PRN001"), mk("b", "Bo Lin", 7, "R-2", "PRN002"), mk("c", "Bobby Tan", 5, "R-3", "PRN003")];
+  const bases = new Map(attempts.map((a) => [a.id, { maxScore: 10, expectedCount: 1 }]));
+  const byName = d.resultExportRows(attempts, bases, { passingMarks: null }, "", "bo");
+  assert.deepEqual(byName.map((r) => [r.Student, r.Rank]), [["Bo Lin", 2], ["Bobby Tan", 3]]);
+  assert.deepEqual(d.resultExportRows(attempts, bases, { passingMarks: null }, "", "prn001").map((r) => r.Student), ["Asha Rao"]);
+  assert.deepEqual(d.resultExportRows(attempts, bases, { passingMarks: null }, "R-3", "bo").map((r) => r.Student), ["Bobby Tan"], "roll AND q");
+  assert.equal(d.resultExportRows(attempts, bases, { passingMarks: null }, "", "").length, 3, "no filter, everyone");
+});
