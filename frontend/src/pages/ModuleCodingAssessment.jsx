@@ -1375,7 +1375,7 @@ function SecurityCheck({ policy, check }) {
   const fsOk = !!(document.fullscreenEnabled || document.webkitFullscreenEnabled);
   const rows = [];
   if (lockdown) {
-    rows.push({ label: "Secure Exam Environment", ok: !!check?.secureBrowserOk, hint: check?.message });
+    rows.push({ label: check?.overrideActive ? "Secure Exam Environment (administrator override)" : "Secure Exam Environment", ok: !!check?.secureBrowserOk, hint: check?.message });
     for (const c of check?.checks || []) if (c.required) rows.push({ label: c.label, ok: c.ok, hint: null });
   } else {
     rows.push({ label: "Browser supported", ok: typeof fetch === "function" && typeof document.hidden !== "undefined" });

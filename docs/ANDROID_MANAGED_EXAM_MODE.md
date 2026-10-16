@@ -56,6 +56,11 @@ Known limits to document honestly (not promises)
 1. A test configured "Strict Managed Android" never starts in plain browser mode. The server decides, from a verified token, not from the User-Agent.
 2. The pre-exam check shows each requirement with pass/fail and why; the student cannot proceed on a failed required item.
 3. Override only by an authorised administrator, with reason, student, test and time written to the audit log.
+   **Implemented** as `POST /api/exam-security/start-overrides` (institute admin, admin or super admin of the test's institute; reason of at least 10 characters; one student, one test;
+   expires after 30 minutes by default and at most 120; single-use, consumed atomically at start). It waives **only** the missing secure client: phone refusal, the timer, attempt limits, single-session and
+   publishing still apply. The attempt remembers it (`START_OVERRIDE_USED`) so it can be resumed without a secure session and no other attempt can. Grant, use and revoke are audit-log entries and HIGH-visibility
+   security events with no risk weight. `GET /api/exam-security/start-overrides?testId=` lists them; `DELETE /api/exam-security/start-overrides/:id` revokes an unused one. The student's pre-exam checklist shows
+   "Secure Exam Environment (administrator override)". Limits: module-coding engine only (the only engine with strict mode), and there is no administrator screen yet.
 4. Lockdown status is visible to the student for the whole attempt; leaving lock task or losing attestation raises a server-side event and applies the
    configured policy; recovery is a controlled flow (resume on the same attempt, same server clock, warnings preserved).
 5. Exit: an administrator PIN or an MDM command; documented, tested and audit-logged.
@@ -78,7 +83,7 @@ Known limits to document honestly (not promises)
 |---|---|---|---|---|---|
 | (to fill after testing) | | | | | **NOT TESTED** |
 
-No rows are filled because no managed device has been tested. Do not copy a result into this table without an on-device test log.
+No rows are filled because no managed device has been tested. Do not copy a result into this table without an on-device test log. The procedure, scenarios, evidence list and results template are in [ANDROID_ON_DEVICE_TEST_KIT.md](ANDROID_ON_DEVICE_TEST_KIT.md).
 
 ## 7. Report (updated)
 
@@ -98,7 +103,7 @@ No rows are filled because no managed device has been tested. Do not copy a resu
 | Debug APK | BUILT in CI (artifact `codearena-exam-debug-apk`, about 2.7 MB, signed with the Android debug key only); not installed anywhere | Android workflow run |
 | Lock Task / Home / assistant / Power-button behaviour | NOT TESTED | no managed device |
 | Device-owner provisioning, EMM policy, unenrol | NOT TESTED / not performed | needs authorisation and hardware |
-| Administrator override of a failed strict requirement, audit-logged | NOT BUILT (staff unlock of a locked attempt exists; a start-time override does not) | |
+| Administrator override of a failed strict requirement, audit-logged | BUILT (module coding tests, chapter Levels, JAVA Practice): server rules and unit tests written; the database-backed check `scripts/verifyStartOverride.js` runs in CI. No administrator screen yet (API only). Not exercised on a device | `utils/startOverride.js`, `routes/examSecurity.js`, `test/startOverride.test.js` |
 | Android browser / emulator automated tests | NOT TESTED | no emulator in CI |
 | Device compatibility matrix | NOT TESTED | table in section 6 is empty |
 
