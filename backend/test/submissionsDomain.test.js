@@ -77,3 +77,20 @@ test("missing or non-text ids are a 400 with a clear message, not a database err
     assert.throws(() => requireIds(bad, ["attemptId", "questionId"]), (e) => e instanceof ServiceError && e.status === 400 && /required/.test(e.message));
   }
 });
+
+// Regression: the auto-finalize sweep used to close every IN_PROGRESS attempt as soon as the test WINDOW ended, submitting late starters while their own
+// clock (startedAt + durationMin) still had time left.
+test("auto-finalize only closes attempts whose OWN deadline has passed, not every attempt once the window closed", () => {
+  const MIN = 60 * 1000;
+  const now = new Date("2026-10-14T12:00:00Z");
+  const at = (minutesAgo) => new Date(now.getTime() - minutesAgo * MIN);
+  const lateStarter = { id: "late", startedAt: at(30), test: { durationMin: 120 } }; // window closed, 90 minutes of their own time left
+  const justStarted = { id: "fresh", startedAt: at(1), test: { durationMin: 120 } };
+  const expired = { id: "expired", startedAt: at(200), test: { durationMin: 120 } }; // own deadline passed 80 minutes ago
+  const withinGrace = { id: "grace", startedAt: at(120), test: { durationMin: 120 } }; // deadline exactly now: the student's own client submits first
+  const justPastGrace = { id: "past", startedAt: at(122), test: { durationMin: 120 } };
+  const due = d.attemptsDueForAutoFinalize([lateStarter, justStarted, expired, withinGrace, justPastGrace], now).map((a) => a.id);
+  assert.deepEqual(due, ["expired", "past"]);
+  assert.equal(d.AUTO_FINALIZE_GRACE_MS, 60 * 1000);
+  assert.deepEqual(d.attemptsDueForAutoFinalize([], now), []);
+});

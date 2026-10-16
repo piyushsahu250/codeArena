@@ -13,14 +13,14 @@ const crypto = require("crypto");
 // Level presets. STANDARD deliberately equals what the platform already did, so existing assessments are unchanged.
 const PRESETS = {
   STANDARD: {
-    blockCopy: true, blockPaste: true, blockCut: true, blockContextMenu: true, blockDrag: true,
+    blockCopy: true, blockPaste: true, blockCut: true, blockContextMenu: true, blockDrag: true, blockAiShortcuts: false,
     requireFullscreen: null, // null = follow the test's own requireFullscreen column
     multiSession: "FLAG", // FLAG | BLOCK
     mobileAllowed: true, secureBrowserRequired: false, requireScreenShare: false, requiredCapabilities: [], exitAction: "WARNING", graceSec: 120,
     insertionCharThreshold: 400, insertionLineThreshold: 25,
   },
   PROCTORED: {
-    blockCopy: true, blockPaste: true, blockCut: true, blockContextMenu: true, blockDrag: true,
+    blockCopy: true, blockPaste: true, blockCut: true, blockContextMenu: true, blockDrag: true, blockAiShortcuts: false,
     requireFullscreen: true, multiSession: "BLOCK", mobileAllowed: true, secureBrowserRequired: false, requireScreenShare: false, requiredCapabilities: [], exitAction: "WARNING", graceSec: 120,
     insertionCharThreshold: 250, insertionLineThreshold: 15,
   },
@@ -28,7 +28,7 @@ const PRESETS = {
   // secure-client session on an institution-registered device that attests the capabilities below (utils/secureExam.js).
   // The policy always comes from the server; nothing the browser sends can lower it.
   LOCKDOWN: {
-    blockCopy: true, blockPaste: true, blockCut: true, blockContextMenu: true, blockDrag: true,
+    blockCopy: true, blockPaste: true, blockCut: true, blockContextMenu: true, blockDrag: true, blockAiShortcuts: false,
     requireFullscreen: true, multiSession: "BLOCK", mobileAllowed: false, secureBrowserRequired: true,
     requireScreenShare: false, // the secure client is the only window; screen share is for browser-based PROCTORED exams
     requiredCapabilities: ["kiosk", "appRestriction", "browserRestriction", "networkRestriction", "clipboard", "fullscreen", "devtoolsDisabled"],
@@ -37,7 +37,7 @@ const PRESETS = {
   },
 };
 const LEVELS = Object.keys(PRESETS);
-const BOOLEAN_KEYS = ["blockCopy", "blockPaste", "blockCut", "blockContextMenu", "blockDrag", "requireFullscreen", "mobileAllowed", "secureBrowserRequired", "requireScreenShare"];
+const BOOLEAN_KEYS = ["blockCopy", "blockPaste", "blockCut", "blockContextMenu", "blockDrag", "blockAiShortcuts", "requireFullscreen", "mobileAllowed", "secureBrowserRequired", "requireScreenShare"];
 const NUMBER_KEYS = ["insertionCharThreshold", "insertionLineThreshold"];
 const SecureExamCaps = require("./secureExam");
 const sanitizeCaps = (arr) => (Array.isArray(arr) ? arr.filter((k, i) => SecureExamCaps.CAPABILITIES.includes(k) && arr.indexOf(k) === i) : null);
@@ -94,12 +94,16 @@ const EVENT_SEVERITY = {
   POSSIBLE_EXTERNAL_ASSISTANT: "MEDIUM", SPLIT_SCREEN_SUSPECTED: "MEDIUM",
   // Android managed client: observable facts only. SYSTEM_UI_INTERRUPTION = the exam window lost focus (notification shade, system dialog, assistant or other overlay - the app cannot tell which).
   SYSTEM_UI_INTERRUPTION: "MEDIUM", SCREEN_OFF_RESUME: "LOW",
+  // Administrator override of a failed strict start requirement (utils/startOverride.js). Server-raised records of an administrative decision, not evidence about the student.
+  START_OVERRIDE_GRANTED: "HIGH", START_OVERRIDE_USED: "HIGH", START_OVERRIDE_REVOKED: "MEDIUM",
+  // Keyboard signals a formal test can report when its policy enables blockAiShortcuts. Observations only: the page sees a key combination, never an application.
+  COPILOT_KEY_SIGNAL: "LOW", AI_SHORTCUT_DETECTED: "LOW",
 };
 const CLIENT_REPORTABLE = new Set(["PAGE_HIDDEN", "NETWORK_DISCONNECT", "NETWORK_RECONNECT", "UNUSUAL_ACTIVITY", "SUSPICIOUS_CODE_INSERTION", "EXTERNAL_NAVIGATION_ATTEMPT", "SCREEN_SHARE_STOPPED", "FOCUS_LOSS", "CAMERA_FAILURE", "MIC_FAILURE", "SCREEN_SHARE_FAILURE", "MULTIPLE_PERSON", "PHONE_DETECTED", "FACE_MISSING"]);
 // Reportable ONLY by an authenticated secure-client session (never from a plain browser page).
 const SECURE_CLIENT_REPORTABLE = new Set(["CLIPBOARD_ATTEMPT", "SECURE_CLIENT_STARTED", "SECURE_CLIENT_STOPPED", "KIOSK_EXIT", "APPLICATION_POLICY_FAILURE", "BROWSER_POLICY_FAILURE", "NETWORK_POLICY_FAILURE", "EXTERNAL_NAVIGATION", "TAB_ATTEMPT", "WINDOW_ATTEMPT", "DEVTOOLS_ATTEMPT", "SCREEN_CAPTURE_ATTEMPT", "FOCUS_LOSS", "CAMERA_FAILURE", "MIC_FAILURE", "SCREEN_SHARE_FAILURE", "SYSTEM_UI_INTERRUPTION", "SCREEN_OFF_RESUME"]);
 // Server-originated only (a client must not be able to forge evidence of a different kind).
-const SERVER_ONLY = new Set(["MULTIPLE_SESSION", "SECURE_BROWSER_MISSING", "SESSION_REPLACED", "CLIPBOARD_ATTEMPT", "COPY_ATTEMPT", "PASTE_ATTEMPT"]);
+const SERVER_ONLY = new Set(["START_OVERRIDE_GRANTED", "START_OVERRIDE_USED", "START_OVERRIDE_REVOKED", "MULTIPLE_SESSION", "SECURE_BROWSER_MISSING", "SESSION_REPLACED", "CLIPBOARD_ATTEMPT", "COPY_ATTEMPT", "PASTE_ATTEMPT"]);
 
 // Bounded metadata: never store arbitrary client blobs (privacy + storage control).
 function cleanMetadata(meta) {
@@ -127,6 +131,8 @@ const WEIGHTS = {
   MULTIPLE_PERSON: 8, PHONE_DETECTED: 10, FACE_MISSING: 3, EXAM_LOCKED: 0, EXAM_UNLOCKED: 0,
   POSSIBLE_EXTERNAL_ASSISTANT: 4, SPLIT_SCREEN_SUSPECTED: 3,
   SYSTEM_UI_INTERRUPTION: 2, SCREEN_OFF_RESUME: 0,
+  START_OVERRIDE_GRANTED: 0, START_OVERRIDE_USED: 0, START_OVERRIDE_REVOKED: 0, // a decision by an administrator, never scored against the student
+  COPILOT_KEY_SIGNAL: 0, AI_SHORTCUT_DETECTED: 0, // signals for a reviewer, never part of the risk score
   TAB_SWITCH: 6, TAB_SWITCH_BRIEF: 1, FULLSCREEN_EXIT: 5, CAMERA_DROPPED: 5, MIC_DROPPED: 4, DEVTOOLS: 4, COPY: 2, PASTE: 3, CUT: 2,
   RIGHT_CLICK: 1, DRAG_ATTEMPT: 2, PRINT_SCREEN_ATTEMPT: 3, MULTI_MONITOR: 4, REFRESH_ATTEMPT: 1, BROWSER_SHORTCUT: 1,
 };
@@ -141,6 +147,7 @@ function computeRisk(events) {
   const byType = {};
   for (const e of events) {
     if (e.reviewStatus === "LEGITIMATE") continue;
+    if (e.type === "COPILOT_KEY_SIGNAL" || e.type === "AI_SHORTCUT_DETECTED") continue; // keyboard observations: shown to the reviewer, never scored, however often they repeat
     const w = WEIGHTS[e.type] ?? 1;
     // a repeat of the same type counts with diminishing weight so one noisy signal cannot dominate
     const n = (byType[e.type] = (byType[e.type] || 0) + 1);
@@ -159,7 +166,7 @@ const mobileRefused = (policy, ua) => !policy.mobileAllowed && isMobileUserAgent
 function clientPolicy(policy) {
   return {
     level: policy.level, blockCopy: policy.blockCopy, blockPaste: policy.blockPaste, blockCut: policy.blockCut,
-    blockContextMenu: policy.blockContextMenu, blockDrag: policy.blockDrag, requireFullscreen: policy.requireFullscreen,
+    blockContextMenu: policy.blockContextMenu, blockDrag: policy.blockDrag, blockAiShortcuts: policy.blockAiShortcuts === true, requireFullscreen: policy.requireFullscreen,
     multiSession: policy.multiSession, mobileAllowed: policy.mobileAllowed, secureBrowserRequired: policy.secureBrowserRequired,
     requireScreenShare: policy.requireScreenShare,
     requiredCapabilities: policy.requiredCapabilities, exitAction: policy.exitAction, graceSec: policy.graceSec,

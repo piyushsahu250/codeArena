@@ -1,6 +1,7 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
 const prisma = require("../prisma");
+const { countLiveTestAttempts } = require("../utils/liveAttempts");
 const { authenticate, requireRole } = require("../middleware/auth");
 const { attachRequesterInstitute } = require("../middleware/institute");
 const { getSnapshot } = require("../utils/metrics");
@@ -367,7 +368,7 @@ router.get("/monitoring", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), asy
       // honest, clearly-scoped proxy for "recently active," not a claim of live concurrent sessions.
       const activeUsersSince = new Date(Date.now() - 24 * 60 * 60 * 1000);
       const [testAttempts, moduleAttempts, interviewSessions, userRows] = await Promise.all([
-        prisma.testAttempt.count({ where: { status: "IN_PROGRESS" } }),
+        countLiveTestAttempts(prisma),
         prisma.moduleCodingAttempt.count({ where: { status: "IN_PROGRESS" } }),
         prisma.interviewSession.count({ where: { status: "IN_PROGRESS" } }),
         prisma.$queryRaw`SELECT COUNT(DISTINCT "userId")::int AS count FROM "LoginSession" WHERE "isActive" = true AND "loginAt" >= ${activeUsersSince}`,
