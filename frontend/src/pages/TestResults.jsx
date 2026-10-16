@@ -10,10 +10,20 @@ const STATUS_STYLE = {
   AUTO_SUBMITTED: { bg: "var(--warning-bg)", color: "var(--amber-dark)", label: "Auto-submitted" },
   IN_PROGRESS: { bg: "var(--card-bg)", color: "var(--ink-dim)", label: "In progress" },
 };
+// States that are not a finished attempt. Time expired is neither live nor finished: the student ran out of time and the server has not closed the attempt yet.
+const STATE_STYLE = {
+  IN_PROGRESS: { bg: "var(--card-bg)", color: "var(--ink-dim)", label: "In progress" },
+  TIME_EXPIRED: { bg: "var(--warning-bg)", color: "var(--amber-dark)", label: "Time expired" },
+  UNKNOWN: { bg: "var(--card-bg)", color: "var(--ink-dim)", label: "Unknown" },
+};
 
-function StatusBadge({ status }) {
-  const s = STATUS_STYLE[status] || { bg: "var(--card-bg)", color: "var(--ink-dim)", label: status };
-  return <span className="badge" style={{ background: s.bg, color: s.color }}>{s.label}</span>;
+// The server decides the state (backend/src/modules/tests/attemptLifecycle.js). The fallback only covers a response from an older server that has no lifecycle field.
+const stateOf = (a) => a.lifecycle?.state || (a.status === "IN_PROGRESS" ? "IN_PROGRESS" : "COMPLETED");
+
+function StatusBadge({ attempt }) {
+  const state = stateOf(attempt);
+  const s = state === "COMPLETED" ? (STATUS_STYLE[attempt.status] || STATUS_STYLE.SUBMITTED) : STATE_STYLE[state] || STATE_STYLE.UNKNOWN;
+  return <span className="badge" style={{ background: s.bg, color: s.color }} title={attempt.lifecycle?.detail}>{s.label}</span>;
 }
 
 function StatCard({ label, value, accent }) {
@@ -123,13 +133,15 @@ export default function TestResults() {
 
   // Rank reflects position in the full (already score-sorted) list, so it
   // stays stable regardless of the search below.
-  const ranked = attempts.map((a, idx) => ({ ...a, rank: idx + 1 }));
+  const ranked = attempts.map((a, idx) => ({ ...a, rank: a.lifecycle ? a.rank : stateOf(a) === "COMPLETED" ? idx + 1 : null }));
   const filtered = searchQuery.trim() ? ranked.filter((a) => matchesStudentQuery(a.student, searchQuery)) : ranked;
 
-  const completedCount = attempts.filter((a) => a.status !== "IN_PROGRESS").length;
+  const completedCount = attempts.filter((a) => stateOf(a) === "COMPLETED").length;
+  const inProgressCount = attempts.filter((a) => stateOf(a) === "IN_PROGRESS").length;
+  const expiredCount = attempts.filter((a) => stateOf(a) === "TIME_EXPIRED").length;
 
   const summary = useMemo(() => {
-    const completed = attempts.filter((a) => a.status !== "IN_PROGRESS");
+    const completed = attempts.filter((a) => stateOf(a) === "COMPLETED");
     const percentages = completed
       .map((a) => {
         const max = maxScoreOf(a);
@@ -184,6 +196,8 @@ export default function TestResults() {
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12, marginTop: 20 }}>
           <StatCard label="Completed" value={`${completedCount} / ${attempts.length}`} />
+          {inProgressCount > 0 && <StatCard label="In progress" value={inProgressCount} />}
+          {expiredCount > 0 && <StatCard label="Time expired, not closed" value={expiredCount} accent="var(--amber-dark)" />}
           <StatCard label="Average Score" value={summary.avg !== null ? `${summary.avg.toFixed(1)}%` : "—"} accent="var(--mint)" />
           {summary.passCount !== null && <StatCard label="Passed" value={`${summary.passCount} / ${completedCount}`} accent="var(--mint)" />}
           <StatCard
@@ -281,12 +295,12 @@ export default function TestResults() {
                 const percent = maxScore > 0 ? Math.round((a.totalScore / maxScore) * 100) : null;
                 const total = assignedIds(a).length;
                 const attempted = attemptedCountOf(a);
-                const incomplete = a.status !== "IN_PROGRESS" && attempted < total;
+                const incomplete = stateOf(a) === "COMPLETED" && attempted < total;
                 return (
                   <>
                     <tr key={a.id} style={{ borderBottom: "1px solid var(--line)" }}>
                       <td className="mono" style={{ padding: "10px 8px", fontWeight: 700 }}>
-                        {RANK_MEDAL[a.rank] ? `${RANK_MEDAL[a.rank]} ${a.rank}` : a.rank}
+                        {a.rank == null ? "—" : RANK_MEDAL[a.rank] ? `${RANK_MEDAL[a.rank]} ${a.rank}` : a.rank}
                       </td>
                       <td className="mono" style={{ padding: "10px 8px" }}>{a.student.rollNumber || "—"}</td>
                       <td style={{ padding: "10px 8px", maxWidth: 170 }}>
@@ -318,7 +332,7 @@ export default function TestResults() {
                       <td className="mono" style={{ padding: "10px 8px", fontSize: 13, color: incomplete ? "var(--rust)" : "var(--ink-dim)", fontWeight: incomplete ? 700 : 400 }}>
                         {attempted} / {total || defaultTotalQuestions}
                       </td>
-                      <td style={{ padding: "10px 8px" }}><StatusBadge status={a.status} /></td>
+                      <td style={{ padding: "10px 8px" }}><StatusBadge attempt={a} /></td>
                       <td className="mono" style={{ padding: "10px 8px", fontSize: 12 }}>
                         {a.tabSwitchCount > 0 ? (
                           <button

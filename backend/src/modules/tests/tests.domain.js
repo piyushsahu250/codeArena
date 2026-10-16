@@ -334,18 +334,21 @@ function matchesStudentQuery(student, query) {
   return words.every((w) => fields.some((f) => f.includes(w)));
 }
 
-function resultExportRows(attempts, bases, test, roll, search) {
+function resultExportRows(attempts, bases, test, roll, search, now = new Date()) {
   const needle = String(roll || "").trim().toLowerCase();
-  return attempts
-    .map((a, idx) => ({ a, rank: idx + 1 }))
+  // The same lifecycle and rank rule as the on-screen leaderboard (attemptLifecycle.js): only finished attempts are ranked and get a pass or fail.
+  const { lifecycleOf, withRanks, STATE } = require("./attemptLifecycle");
+  const ranked = withRanks(attempts.map((a) => ({ a, lifecycle: lifecycleOf(a, test, now) })));
+  return ranked
+    .map(({ a, lifecycle, rank }) => ({ a, lifecycle, rank }))
     .filter(({ a }) => !needle || (a.student.rollNumber || "").toLowerCase().includes(needle))
     .filter(({ a }) => matchesStudentQuery(a.student, search))
-    .map(({ a, rank }) => {
+    .map(({ a, lifecycle, rank }) => {
       const base = bases.get(a.id);
       const max = base.maxScore;
-      const completed = a.status !== "IN_PROGRESS";
+      const completed = lifecycle.state === STATE.COMPLETED;
       return {
-        Rank: rank,
+        Rank: rank ?? "",
         "Roll No.": a.student.rollNumber || "",
         Student: a.student.name || "",
         "Registration No. (PRN)": a.student.registrationNumber || "",
@@ -356,7 +359,7 @@ function resultExportRows(attempts, bases, test, roll, search) {
         Result: !completed || test.passingMarks == null ? "" : (a.totalScore ?? 0) >= test.passingMarks ? "Pass" : "Fail",
         Attempted: new Set(a.submissions.map((s) => s.questionId)).size,
         "Total Questions": base.expectedCount,
-        Status: STATUS_LABEL[a.status] || a.status,
+        Status: lifecycle.state === STATE.COMPLETED ? lifecycle.detail : lifecycle.label,
         "Tab Switches / Violations": a.tabSwitchCount ?? 0,
         "Started At": isoSeconds(a.startedAt),
         "Submitted At": isoSeconds(a.submittedAt),

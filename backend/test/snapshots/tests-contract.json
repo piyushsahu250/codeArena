@@ -4046,12 +4046,14 @@
                      {
                          "expectedQuestionCount":  2,
                          "id":  "\u003cid\u003e",
+                         "lifecycle":  {"detail": "Auto-submitted", "label": "Completed", "state": "COMPLETED"},
                          "manifestVersion":  1,
                          "optionOrder":  null,
                          "questionOrder":  [
                                                "\u003cid\u003e",
                                                "\u003cid\u003e"
                                            ],
+                         "rank":  1,
                          "sessionId":  "\u003csession\u003e",
                          "startedAt":  "\u003ctime\u003e",
                          "status":  "AUTO_SUBMITTED",
@@ -4079,12 +4081,14 @@
                      {
                          "expectedQuestionCount":  2,
                          "id":  "\u003cid\u003e",
+                         "lifecycle":  {"detail": "Auto-submitted", "label": "Completed", "state": "COMPLETED"},
                          "manifestVersion":  1,
                          "optionOrder":  null,
                          "questionOrder":  [
                                                "\u003cid\u003e",
                                                "\u003cid\u003e"
                                            ],
+                         "rank":  1,
                          "sessionId":  "\u003csession\u003e",
                          "startedAt":  "\u003ctime\u003e",
                          "status":  "AUTO_SUBMITTED",
@@ -4112,12 +4116,14 @@
                      {
                          "expectedQuestionCount":  2,
                          "id":  "\u003cid\u003e",
+                         "lifecycle":  {"detail": "Submitted", "label": "Completed", "state": "COMPLETED"},
                          "manifestVersion":  1,
                          "optionOrder":  null,
                          "questionOrder":  [
                                                "\u003cid\u003e",
                                                "\u003cid\u003e"
                                            ],
+                         "rank":  1,
                          "sessionId":  "\u003csession\u003e",
                          "startedAt":  "\u003ctime\u003e",
                          "status":  "SUBMITTED",
@@ -4141,12 +4147,14 @@
                      {
                          "expectedQuestionCount":  2,
                          "id":  "\u003cid\u003e",
+                         "lifecycle":  {"detail": "Submitted", "label": "Completed", "state": "COMPLETED"},
                          "manifestVersion":  1,
                          "optionOrder":  null,
                          "questionOrder":  [
                                                "\u003cid\u003e",
                                                "\u003cid\u003e"
                                            ],
+                         "rank":  2,
                          "sessionId":  "\u003csession\u003e",
                          "startedAt":  "\u003ctime\u003e",
                          "status":  "SUBMITTED",
@@ -4170,12 +4178,14 @@
                      {
                          "expectedQuestionCount":  2,
                          "id":  "\u003cid\u003e",
+                         "lifecycle":  {"detail": "Submitted", "label": "Completed", "state": "COMPLETED"},
                          "manifestVersion":  1,
                          "optionOrder":  null,
                          "questionOrder":  [
                                                "\u003cid\u003e",
                                                "\u003cid\u003e"
                                            ],
+                         "rank":  3,
                          "sessionId":  "\u003csession\u003e",
                          "startedAt":  "\u003ctime\u003e",
                          "status":  "SUBMITTED",
@@ -4205,12 +4215,14 @@
                      {
                          "expectedQuestionCount":  2,
                          "id":  "\u003cid\u003e",
+                         "lifecycle":  {"detail": "Submitted", "label": "Completed", "state": "COMPLETED"},
                          "manifestVersion":  1,
                          "optionOrder":  null,
                          "questionOrder":  [
                                                "\u003cid\u003e",
                                                "\u003cid\u003e"
                                            ],
+                         "rank":  1,
                          "sessionId":  "\u003csession\u003e",
                          "startedAt":  "\u003ctime\u003e",
                          "status":  "SUBMITTED",
@@ -4234,12 +4246,14 @@
                      {
                          "expectedQuestionCount":  2,
                          "id":  "\u003cid\u003e",
+                         "lifecycle":  {"detail": "Submitted", "label": "Completed", "state": "COMPLETED"},
                          "manifestVersion":  1,
                          "optionOrder":  null,
                          "questionOrder":  [
                                                "\u003cid\u003e",
                                                "\u003cid\u003e"
                                            ],
+                         "rank":  2,
                          "sessionId":  "\u003csession\u003e",
                          "startedAt":  "\u003ctime\u003e",
                          "status":  "SUBMITTED",
@@ -4269,12 +4283,14 @@
                      {
                          "expectedQuestionCount":  2,
                          "id":  "\u003cid\u003e",
+                         "lifecycle":  {"detail": "Submitted", "label": "Completed", "state": "COMPLETED"},
                          "manifestVersion":  1,
                          "optionOrder":  null,
                          "questionOrder":  [
                                                "\u003cid\u003e",
                                                "\u003cid\u003e"
                                            ],
+                         "rank":  1,
                          "sessionId":  "\u003csession\u003e",
                          "startedAt":  "\u003ctime\u003e",
                          "status":  "SUBMITTED",
@@ -4304,12 +4320,14 @@
                      {
                          "expectedQuestionCount":  2,
                          "id":  "\u003cid\u003e",
+                         "lifecycle":  {"detail": "Submitted", "label": "Completed", "state": "COMPLETED"},
                          "manifestVersion":  1,
                          "optionOrder":  null,
                          "questionOrder":  [
                                                "\u003cid\u003e",
                                                "\u003cid\u003e"
                                            ],
+                         "rank":  1,
                          "sessionId":  "\u003csession\u003e",
                          "startedAt":  "\u003ctime\u003e",
                          "status":  "SUBMITTED",
@@ -4333,12 +4351,14 @@
                      {
                          "expectedQuestionCount":  2,
                          "id":  "\u003cid\u003e",
+                         "lifecycle":  {"detail": "Submitted", "label": "Completed", "state": "COMPLETED"},
                          "manifestVersion":  1,
                          "optionOrder":  null,
                          "questionOrder":  [
                                                "\u003cid\u003e",
                                                "\u003cid\u003e"
                                            ],
+                         "rank":  2,
                          "sessionId":  "\u003csession\u003e",
                          "startedAt":  "\u003ctime\u003e",
                          "status":  "SUBMITTED",
