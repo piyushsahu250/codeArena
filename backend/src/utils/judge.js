@@ -34,7 +34,10 @@ const { judgeSqlSubmission } = require("./sqlJudge");
 // what the submitted code does or which endpoint returns the output.
 const JUDGE_ENV = {
   PATH: process.env.PATH,
-  HOME: process.env.HOME || os.tmpdir(),
+  // NOT the server's HOME. In production that is /root, which the dropped-privilege sandbox user cannot read: the wrapper shell (its stdin is a socket pair, so bash
+  // behaves as if started by a network daemon) then tries /root/.bashrc and prints "Permission denied" as the FIRST line of stderr. That line became the headline of
+  // every Java runtime error and of C crashes, hiding the real error. The temp dir is world-readable and holds no startup files.
+  HOME: os.tmpdir(),
   LANG: process.env.LANG || "C.UTF-8",
   LC_ALL: process.env.LC_ALL || "C.UTF-8",
   TMPDIR: os.tmpdir(),

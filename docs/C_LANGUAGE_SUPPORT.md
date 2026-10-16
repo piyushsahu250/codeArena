@@ -53,3 +53,20 @@ Compiler: `gcc` (the production image installs Debian `build-essential`; the exa
 * Load: ten concurrent submissions in CI only. No claim for 200 to 2,000 users; the judge is a small fixed-concurrency queue on one host.
 * Bulk import of a C question and reference-solution validation before publishing were audited by reading, not exercised with C data.
 * Nothing in this change is deployed. The fixes in `judge.js` and `functionHarness.js` reach students only after a backend deploy.
+
+## Production verification (2026-10-16, commit bf37809 deployed)
+
+Run inside the production container (`docker exec codearena-backend ...`), non-destructive, no database writes:
+
+| Check | Result |
+|---|---|
+| Compiler in the running image | PASS: gcc (Debian 12.2.0-14+deb12u1) 12.2.0; `-std=gnu17` gives `__STDC_VERSION__` 201710 (C17) |
+| C compiles with `-lm` and runs | PASS |
+| Sandbox: secret environment variables hidden, runs as uid 10001 not root, cannot read `/etc/shadow`, `/app/.env`, `/proc/1/environ`, root AWS files, cannot write to `/app`, `/etc`, `/usr/local/bin`, no outbound network, process limit 64 | PASS (all) |
+| 2 GB allocation denied or killed; infinite loop is TLE; output flood is OLE | PASS |
+| Python, JavaScript, Java, C++, C trivial programs still judged ACCEPTED | PASS |
+| Judge workspace cleanup after failure paths (TLE, OLE, crash, compile error, 2 GB, Python TLE), waiting for the background cleanup | PASS: nothing left behind. The probe's own "leftover" check FAILED on its first production run because it counted immediately, before the judge's background cleanup finished; the check now waits |
+| Crash and runtime-error message text | FAIL found, fixed on a separate branch: every Java runtime error and every C crash showed `/root/.bashrc: Permission denied` instead of the real error. Cause: the sandbox environment passed the server HOME (/root) to a user that cannot read it. Python and JavaScript were unaffected because their error type is found anywhere in stderr. Fix: `JUDGE_ENV.HOME` is the temp dir; the probe now fails if a crash or Java exception shows shell noise |
+| `unshare -n` | Not available in the production container (expected); the iptables rule for the sandbox uid is the active network defense, and the "no outbound network" check passed |
+
+Still not tested: the mobile editor, browser journeys for code editing, refresh or reconnect during execution.

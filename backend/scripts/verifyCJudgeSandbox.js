@@ -54,8 +54,23 @@ const probe = async (code, input = "") => {
   report("an infinite loop ends as TLE", tle.verdict === "TLE" ? "PASS" : "FAIL", tle.verdict);
   const ole = await judgeSubmission({ language: "c", code: '#include <stdio.h>\nint main(void){for(;;)puts("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");}', testCases: [{ input: "", expected: "" }], timeLimitMs: 6000 });
   report("an output flood is cut off (OLE or TLE)", ["OLE", "TLE"].includes(ole.verdict) ? "PASS" : "FAIL", ole.verdict);
-  const left = spawnSync("sh", ["-c", "ls /tmp 2>/dev/null | grep -c '^judge-'"], { encoding: "utf8" });
-  report("no judge workspace is left behind after failures", Number((left.stdout || "0").trim()) === 0 ? "PASS" : "FAIL", `leftover judge-* directories: ${(left.stdout || "?").trim()}`);
+  // Crash and runtime-error messages must show the program's own failure, never wrapper-shell noise (REGRESSION: "/root/.bashrc: Permission denied" was the first
+  // line of every Java runtime error and C crash when the sandbox user could not read the server's HOME).
+  const crash = await judgeSubmission({ language: "c", code: '#include <stdio.h>\nint main(void){int *p=0;printf("%d\\n",*p);return 0;}', testCases: [{ input: "", expected: "" }], timeLimitMs: 6000 });
+  const crashText = JSON.stringify(crash.errorSummary || crash.details || "");
+  report("a crashing C program reports a crash, not shell noise", !/\.bashrc|Permission denied/.test(crashText) && /Segmentation|Invalid Operation|Illegal instruction|Aborted|signal \d+/i.test(crashText) ? "PASS" : "FAIL", crashText.slice(0, 140));
+  const jv = await judgeSubmission({ language: "java", code: "public class Main{public static void main(String[] a){int[] x=new int[1];System.out.println(x[3]);}}", testCases: [{ input: "", expected: "" }], timeLimitMs: 8000 });
+  const jvText = JSON.stringify(jv.errorSummary || jv.details || "");
+  report("a Java runtime error shows the exception, not shell noise", !/\.bashrc|Permission denied/.test(jvText) && /ArrayIndexOutOfBounds|Index 3/.test(jvText) ? "PASS" : "FAIL", jvText.slice(0, 140));
+  // The judge removes a run's workspace and stats file in the BACKGROUND after the verdict is returned, so counting immediately races that cleanup (an earlier version of
+  // this check reported the last run's own files as a leak). Allow it a few seconds and only fail if the folders are still there.
+  let leftover = "?";
+  for (let i = 0; i < 6; i++) {
+    await new Promise((r) => setTimeout(r, 1500));
+    leftover = (spawnSync("sh", ["-c", "ls /tmp 2>/dev/null | grep -c '^judge-'"], { encoding: "utf8" }).stdout || "?").trim();
+    if (Number(leftover) === 0) break;
+  }
+  report("no judge workspace is left behind after failures", Number(leftover) === 0 ? "PASS" : "FAIL", `leftover judge-* entries after waiting for cleanup: ${leftover}`);
 
   console.log(`\n${failures === 0 ? "C JUDGE SANDBOX: no failures" : failures + " FAILURE(S)"}${notApplicable ? `; ${notApplicable} check(s) not applicable here` : ""}`);
   process.exit(failures ? 1 : 0);
