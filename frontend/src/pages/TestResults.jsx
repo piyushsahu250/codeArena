@@ -3,16 +3,27 @@ import { Link, useParams } from "react-router-dom";
 import api from "../api";
 import Navbar from "../components/Navbar";
 import { downloadFromApi } from "../utils/downloadFile";
+import { matchesStudentQuery } from "../utils/studentSearch";
 
 const STATUS_STYLE = {
   SUBMITTED: { bg: "var(--success-bg)", color: "var(--mint)", label: "Submitted" },
   AUTO_SUBMITTED: { bg: "var(--warning-bg)", color: "var(--amber-dark)", label: "Auto-submitted" },
   IN_PROGRESS: { bg: "var(--card-bg)", color: "var(--ink-dim)", label: "In progress" },
 };
+// States that are not a finished attempt. Time expired is neither live nor finished: the student ran out of time and the server has not closed the attempt yet.
+const STATE_STYLE = {
+  IN_PROGRESS: { bg: "var(--card-bg)", color: "var(--ink-dim)", label: "In progress" },
+  TIME_EXPIRED: { bg: "var(--warning-bg)", color: "var(--amber-dark)", label: "Time expired" },
+  UNKNOWN: { bg: "var(--card-bg)", color: "var(--ink-dim)", label: "Unknown" },
+};
 
-function StatusBadge({ status }) {
-  const s = STATUS_STYLE[status] || { bg: "var(--card-bg)", color: "var(--ink-dim)", label: status };
-  return <span className="badge" style={{ background: s.bg, color: s.color }}>{s.label}</span>;
+// The server decides the state (backend/src/modules/tests/attemptLifecycle.js). The fallback only covers a response from an older server that has no lifecycle field.
+const stateOf = (a) => a.lifecycle?.state || (a.status === "IN_PROGRESS" ? "IN_PROGRESS" : "COMPLETED");
+
+function StatusBadge({ attempt }) {
+  const state = stateOf(attempt);
+  const s = state === "COMPLETED" ? (STATUS_STYLE[attempt.status] || STATUS_STYLE.SUBMITTED) : STATE_STYLE[state] || STATE_STYLE.UNKNOWN;
+  return <span className="badge" style={{ background: s.bg, color: s.color }} title={attempt.lifecycle?.detail}>{s.label}</span>;
 }
 
 function StatCard({ label, value, accent }) {
@@ -28,13 +39,15 @@ const RANK_MEDAL = { 1: "🥇", 2: "🥈", 3: "🥉" };
 
 // Mirrors backend/src/utils/proctoringSeverity.js's 4-level taxonomy purely for display.
 const SEVERITY_COLOR = { INTERRUPTION: "var(--ink-dim)", SUSPICIOUS: "var(--amber)", CONFIRMED_VIOLATION: "var(--rust)" };
+// What the server can honestly say about a browser-reported event (utils/evidenceClassification.js). Nothing here is a confirmed finding: only a reviewer can confirm.
+const EVIDENCE_LABEL = { OBSERVED_EVENT: "Observed (browser signal)", SUSPECTED_ACTIVITY: "Suspected — review needed", INCONCLUSIVE: "Inconclusive", POLICY_VIOLATION: "Policy violation", CONFIRMED_VIOLATION: "Confirmed by reviewer" };
 
 export default function TestResults() {
   const { id } = useParams();
   const [test, setTest] = useState(null);
   const [attempts, setAttempts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [rollFilter, setRollFilter] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [expandedId, setExpandedId] = useState(null);
   // "Tab switches" was previously just a bare count with nowhere to see what actually happened --
   // GET /tests/admin/attempts/:id/violations (added alongside the exam severity taxonomy) already
@@ -121,16 +134,16 @@ export default function TestResults() {
   }
 
   // Rank reflects position in the full (already score-sorted) list, so it
-  // stays stable regardless of the roll-number filter below.
-  const ranked = attempts.map((a, idx) => ({ ...a, rank: idx + 1 }));
-  const filtered = rollFilter.trim()
-    ? ranked.filter((a) => (a.student.rollNumber || "").toLowerCase().includes(rollFilter.trim().toLowerCase()))
-    : ranked;
+  // stays stable regardless of the search below.
+  const ranked = attempts.map((a, idx) => ({ ...a, rank: a.lifecycle ? a.rank : stateOf(a) === "COMPLETED" ? idx + 1 : null }));
+  const filtered = searchQuery.trim() ? ranked.filter((a) => matchesStudentQuery(a.student, searchQuery)) : ranked;
 
-  const completedCount = attempts.filter((a) => a.status !== "IN_PROGRESS").length;
+  const completedCount = attempts.filter((a) => stateOf(a) === "COMPLETED").length;
+  const inProgressCount = attempts.filter((a) => stateOf(a) === "IN_PROGRESS").length;
+  const expiredCount = attempts.filter((a) => stateOf(a) === "TIME_EXPIRED").length;
 
   const summary = useMemo(() => {
-    const completed = attempts.filter((a) => a.status !== "IN_PROGRESS");
+    const completed = attempts.filter((a) => stateOf(a) === "COMPLETED");
     const percentages = completed
       .map((a) => {
         const max = maxScoreOf(a);
@@ -144,15 +157,15 @@ export default function TestResults() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [attempts, test]);
 
-  // Real .xlsx built by the server (typed numbers, text roll/PRN, formula-injection guard). The roll
-  // filter is passed through so the file matches what's on screen; clear the filter to export everyone.
+  // Real .xlsx built by the server (typed numbers, text roll/PRN, formula-injection guard). The search
+  // query is passed through so the file matches what's on screen; clear the search to export everyone.
   const [downloadingResults, setDownloadingResults] = useState(false);
   const [downloadError, setDownloadError] = useState("");
   async function downloadResults(format = "xlsx") {
     setDownloadingResults(true);
     setDownloadError("");
     try {
-      await downloadFromApi(`/tests/${id}/results/export`, { params: { format, ...(rollFilter.trim() ? { roll: rollFilter.trim() } : {}) }, fallbackName: `test-results.${format}` });
+      await downloadFromApi(`/tests/${id}/results/export`, { params: { format, ...(searchQuery.trim() ? { q: searchQuery.trim() } : {}) }, fallbackName: `test-results.${format}` });
     } catch (err) {
       setDownloadError(err.message);
     } finally {
@@ -181,10 +194,12 @@ export default function TestResults() {
           </div>
         </div>
         {downloadError && <p style={{ color: "var(--rust)", marginTop: 10, fontSize: 13 }}>⚠ {downloadError}</p>}
-        {rollFilter.trim() && <p style={{ color: "var(--ink-dim)", marginTop: 6, fontSize: 12 }}>The download only includes rows matching the roll filter "{rollFilter.trim()}" — clear it to export everyone.</p>}
+        {searchQuery.trim() && <p style={{ color: "var(--ink-dim)", marginTop: 6, fontSize: 12 }}>The download only includes rows matching "{searchQuery.trim()}" — clear the search to export everyone.</p>}
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12, marginTop: 20 }}>
           <StatCard label="Completed" value={`${completedCount} / ${attempts.length}`} />
+          {inProgressCount > 0 && <StatCard label="In progress" value={inProgressCount} />}
+          {expiredCount > 0 && <StatCard label="Time expired, not closed" value={expiredCount} accent="var(--amber-dark)" />}
           <StatCard label="Average Score" value={summary.avg !== null ? `${summary.avg.toFixed(1)}%` : "—"} accent="var(--mint)" />
           {summary.passCount !== null && <StatCard label="Passed" value={`${summary.passCount} / ${completedCount}`} accent="var(--mint)" />}
           <StatCard
@@ -242,13 +257,21 @@ export default function TestResults() {
           </div>
         )}
 
-        <input
-          type="text"
-          placeholder="Filter by roll number…"
-          value={rollFilter}
-          onChange={(e) => setRollFilter(e.target.value)}
-          style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid var(--line)", fontSize: 14, marginTop: 20 }}
-        />
+        <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 20 }}>
+          <input
+            type="search"
+            aria-label="Search the leaderboard by name, roll number, PRN or e-mail"
+            placeholder="Search by name, roll number, PRN or e-mail…"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            autoComplete="off"
+            style={{ flex: 1, minWidth: 0, padding: "10px 12px", borderRadius: 8, border: "1px solid var(--line)", fontSize: 14 }}
+          />
+          {searchQuery && <button type="button" className="btn btn-ghost" onClick={() => setSearchQuery("")}>Clear</button>}
+        </div>
+        {searchQuery.trim() && !loading && attempts.length > 0 && (
+          <p className="mono" style={{ color: "var(--ink-dim)", marginTop: 6, fontSize: 12 }} aria-live="polite">Showing {filtered.length} of {attempts.length} — ranks stay as on the full leaderboard.</p>
+        )}
 
         <div className="card" style={{ marginTop: 16, overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 760 }}>
@@ -274,12 +297,12 @@ export default function TestResults() {
                 const percent = maxScore > 0 ? Math.round((a.totalScore / maxScore) * 100) : null;
                 const total = assignedIds(a).length;
                 const attempted = attemptedCountOf(a);
-                const incomplete = a.status !== "IN_PROGRESS" && attempted < total;
+                const incomplete = stateOf(a) === "COMPLETED" && attempted < total;
                 return (
                   <>
                     <tr key={a.id} style={{ borderBottom: "1px solid var(--line)" }}>
                       <td className="mono" style={{ padding: "10px 8px", fontWeight: 700 }}>
-                        {RANK_MEDAL[a.rank] ? `${RANK_MEDAL[a.rank]} ${a.rank}` : a.rank}
+                        {a.rank == null ? "—" : RANK_MEDAL[a.rank] ? `${RANK_MEDAL[a.rank]} ${a.rank}` : a.rank}
                       </td>
                       <td className="mono" style={{ padding: "10px 8px" }}>{a.student.rollNumber || "—"}</td>
                       <td style={{ padding: "10px 8px", maxWidth: 170 }}>
@@ -311,7 +334,7 @@ export default function TestResults() {
                       <td className="mono" style={{ padding: "10px 8px", fontSize: 13, color: incomplete ? "var(--rust)" : "var(--ink-dim)", fontWeight: incomplete ? 700 : 400 }}>
                         {attempted} / {total || defaultTotalQuestions}
                       </td>
-                      <td style={{ padding: "10px 8px" }}><StatusBadge status={a.status} /></td>
+                      <td style={{ padding: "10px 8px" }}><StatusBadge attempt={a} /></td>
                       <td className="mono" style={{ padding: "10px 8px", fontSize: 12 }}>
                         {a.tabSwitchCount > 0 ? (
                           <button
@@ -371,16 +394,15 @@ export default function TestResults() {
                             {violationsById[a.id] && !violationsById[a.id].error && (
                               <>
                                 <p className="mono" style={{ fontSize: 11, color: "var(--ink-dim)", marginBottom: 8 }}>
-                                  Only <span style={{ color: SEVERITY_COLOR.CONFIRMED_VIOLATION }}>confirmed violations</span> count toward
-                                  the {a.tabSwitchCount} shown in the table — <span style={{ color: SEVERITY_COLOR.SUSPICIOUS }}>suspicious</span> events
-                                  only escalate into one after repeating, and <span style={{ color: SEVERITY_COLOR.INTERRUPTION }}>interruptions</span> never do.
+                                  {violationsById[a.id].evidenceNote || "Browser signals are observations, not proof."} "Counted" means the event
+                                  added to the {a.tabSwitchCount} strike(s) in the table under the exam's counting rule — it is not a finding of misconduct.
                                 </p>
                                 <table style={{ width: "100%", fontSize: 12 }}>
                                   <thead>
                                     <tr style={{ textAlign: "left", color: "var(--ink-dim)" }}>
                                       <th style={{ padding: "2px 8px" }}>Time</th>
                                       <th>Event</th>
-                                      <th>Severity</th>
+                                      <th>Evidence</th>
                                       <th>Counted?</th>
                                     </tr>
                                   </thead>
@@ -389,7 +411,9 @@ export default function TestResults() {
                                       <tr key={ev.id} className="mono">
                                         <td style={{ padding: "2px 8px" }}>{new Date(ev.createdAt).toLocaleTimeString()}</td>
                                         <td>{ev.type.replace(/_/g, " ")}</td>
-                                        <td style={{ color: SEVERITY_COLOR[ev.severity] || "inherit" }}>{ev.severity.replace(/_/g, " ")}</td>
+                                        <td title={ev.evidence ? `${ev.evidence.rationale} Limits: ${ev.evidence.limits}` : undefined} style={{ color: ev.evidence?.classification === "SUSPECTED_ACTIVITY" ? SEVERITY_COLOR.SUSPICIOUS : "inherit" }}>
+                                          {EVIDENCE_LABEL[ev.evidence?.classification] || "Observed (browser signal)"}
+                                        </td>
                                         <td>{ev.penalized ? "Yes" : "No"}</td>
                                       </tr>
                                     ))}
@@ -409,7 +433,7 @@ export default function TestResults() {
               })}
               {!loading && filtered.length === 0 && (
                 <tr><td colSpan={9} style={{ padding: 32, textAlign: "center", color: "var(--ink-dim)" }}>
-                  {attempts.length === 0 ? "No attempts yet." : "No student matches that roll number."}
+                  {attempts.length === 0 ? "No attempts yet." : `No student matches "${searchQuery.trim()}". Try part of a name, roll number, PRN or e-mail.`}
                 </td></tr>
               )}
             </tbody>

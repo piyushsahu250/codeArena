@@ -24,6 +24,7 @@ import { createFocusLossSignal, createSplitScreenWatch, runSecurityCheck } from 
 import { createOverlaySignal } from "../utils/viewportOverlaySignal";
 import { applyPlainTextInputHints, watchForNonAsciiInput } from "../utils/monacoSetup";
 import { classifyKeyEvent } from "../utils/keyboardShortcuts";
+import useAiShortcutSignals from "../hooks/useAiShortcutSignals";
 import { manifestProblem } from "../utils/assessmentManifest";
 
 const FACE_CHECK_INTERVAL_MS = 2000;
@@ -1110,6 +1111,13 @@ export default function TestTaking() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [started]);
+
+  // Copilot key / AI-assistant launcher signals: observed and reported only when this test's server policy turns it on (see hooks/useAiShortcutSignals.js).
+  useAiShortcutSignals({
+    enabled: started && (test?.security || testMeta?.security)?.blockAiShortcuts === true,
+    getAttemptId: () => attemptIdRef.current,
+    isFinished: () => finalizedRef.current,
+  });
 
   // DEVTOOLS heuristic (desktop only — mobile browsers don't expose a docked devtools panel the
   // same way, and are already covered by the SCREEN_OVERLAY_DETECTED viewport heuristic above).

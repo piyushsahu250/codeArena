@@ -34,7 +34,10 @@ const { judgeSqlSubmission } = require("./sqlJudge");
 // what the submitted code does or which endpoint returns the output.
 const JUDGE_ENV = {
   PATH: process.env.PATH,
-  HOME: process.env.HOME || os.tmpdir(),
+  // NOT the server's HOME. In production that is /root, which the dropped-privilege sandbox user cannot read: the wrapper shell (its stdin is a socket pair, so bash
+  // behaves as if started by a network daemon) then tries /root/.bashrc and prints "Permission denied" as the FIRST line of stderr. That line became the headline of
+  // every Java runtime error and of C crashes, hiding the real error. The temp dir is world-readable and holds no startup files.
+  HOME: os.tmpdir(),
   LANG: process.env.LANG || "C.UTF-8",
   LC_ALL: process.env.LC_ALL || "C.UTF-8",
   TMPDIR: os.tmpdir(),
@@ -171,7 +174,10 @@ const RUNNERS = {
   },
   c: {
     srcName: "sol.c",
-    compile: (file, dir) => ({ cmd: "gcc", args: [file, "-O2", "-o", path.join(dir, "sol_bin")] }),
+    // Compiled as C (gcc, not g++): -std=gnu17 is the explicit form of the default dialect (C17 plus GNU extensions, so POSIX functions such as strdup keep working), and
+    // -lm links the math library, which gcc does NOT do implicitly: without it any program calling sqrt/pow/floor/... on a runtime value failed to link.
+    // The library goes AFTER the source file so the linker can resolve symbols the object needs. Arguments are an array, never a shell string.
+    compile: (file, dir) => ({ cmd: "gcc", args: ["-std=gnu17", "-O2", "-pipe", file, "-o", path.join(dir, "sol_bin"), "-lm"] }),
     run: (_file, dir) => ({ cmd: path.join(dir, "sol_bin"), args: [] }),
   },
   cpp: {
@@ -295,6 +301,9 @@ const RUNTIME_ERROR_PATTERNS = {
     [/[Ff]loating point exception/, "Division by Zero", "Your program divided by zero (or used an invalid modulo) — check your divisor before dividing."],
     [/double free|free\(\): invalid/, "Memory Error", "Your program freed memory incorrectly — check for a duplicate or invalid free() call."],
     [/[Aa]borted/, "Aborted", "Your program called abort() or hit a runtime-checked failure — check assertions and error-handling paths."],
+    // gcc -O2 turns a provable null dereference into a trap instruction (SIGILL) instead of a segfault, so students see this for classic null-pointer bugs too.
+    [/Illegal instruction/, "Invalid Operation", "Your program executed an invalid operation — most often dereferencing a null or invalid pointer, or other undefined behavior. Check pointers before using them."],
+    [/Bus error/, "Bus Error", "Your program accessed memory in an invalid way — check pointer arithmetic and array bounds."],
   ],
   python: [
     [/ZeroDivisionError/, "Division by Zero", "Your code divided by zero — check your divisor before dividing."],
@@ -331,6 +340,16 @@ function classifyRuntimeError(language, rawMessage) {
 // exceeds it gets allocation failures, not just a number we report after the fact) and under
 // `/usr/bin/time -v`, which writes real peak-RSS to a separate file (statsFile) so its report
 // never gets mixed into the submitted program's own stderr.
+// A wrapper shell that waits for the program reports 128+N as its own exit status instead of GNU time seeing the signal, so that form is decoded too.
+// Text a crashed process would have printed in a terminal, so the existing RUNTIME_ERROR_PATTERNS (and their student-facing hints) recognise it. Only appended
+// when the program's own stderr does not already say it.
+const SIGNAL_TEXT = { 4: "Illegal instruction", 6: "Aborted", 7: "Bus error", 8: "Floating point exception", 11: "Segmentation fault" };
+function withSignalText(stderr, signal) {
+  const text = SIGNAL_TEXT[signal];
+  if (!text || new RegExp(text, "i").test(stderr || "")) return stderr;
+  return `${stderr ? stderr + "\n" : ""}${text} (signal ${signal})`;
+}
+
 async function spawnWithTimeout(cmd, args, options, input, timeLimitMs, { enforceLimits = true, enforceMemory = true, memoryLimitKb = MEMORY_LIMIT_KB } = {}) {
   const networkDenied = enforceLimits && await checkNetworkDenialAvailable(); // only for actual execution, not compilation
   return new Promise((resolve) => {
@@ -433,12 +452,17 @@ async function spawnWithTimeout(cmd, args, options, input, timeLimitMs, { enforc
     child.stdout.on("data", (d) => { stdout = trackOutput(d, stdout); });
     child.stderr.on("data", (d) => { stderr = trackOutput(d, stderr); });
 
+    // GNU time (-v -o file) records "Command terminated by signal N" in the STATS FILE, not on stderr, and the shell that would print "Segmentation fault" is
+    // replaced by exec. Without reading it, a crashing C program had an empty stderr and was classified as a generic "Runtime Error".
+    let exitSignal = null;
     function readStatsAndCleanup() {
       let memoryKb = null;
       try {
         const raw = fs.readFileSync(statsFile, "utf8");
         const match = raw.match(/Maximum resident set size \(kbytes\):\s*(\d+)/);
         if (match) memoryKb = Number(match[1]);
+        const sig = raw.match(/Command terminated by signal (\d+)/);
+        if (sig) exitSignal = Number(sig[1]);
       } catch { /* stats file may not exist if the process never actually started */ }
       // Same DROP_PRIVILEGES ownership gap as cleanupTmpDir() above -- /usr/bin/time itself runs
       // as `sandbox` under the dropped-privilege spawn, so statsFile is sandbox-owned; confirmed
@@ -460,7 +484,7 @@ async function spawnWithTimeout(cmd, args, options, input, timeLimitMs, { enforc
       if (codeExit !== 0) {
         const memoryExceeded = memoryKb != null && memoryKb >= memoryLimitKb * 0.97;
         const oom = memoryExceeded || OOM_PATTERNS.test(stderr);
-        return resolve({ ok: false, error: stderr || "Runtime error", oom, timeMs, memoryKb });
+        return resolve({ ok: false, error: withSignalText(stderr, exitSignal || (codeExit > 128 && codeExit < 160 ? codeExit - 128 : null)) || "Runtime error", oom, timeMs, memoryKb });
       }
       resolve({ ok: true, stdout, timeMs, memoryKb });
     });
