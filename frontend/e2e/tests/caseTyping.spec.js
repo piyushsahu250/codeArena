@@ -130,11 +130,15 @@ test("autosave sends exactly what was typed, and a resumed attempt restores it u
   await page.locator("select.mono").first().selectOption("java");
   await focusEditorAndClear(page);
   const code = 'String userName = "piyush"; int studentAge = 20; // Resume CASE check';
-  const saved = page.waitForRequest((r) => /\/submissions\/autosave/.test(r.url()) && r.method() === "POST" && (r.postData() || "").includes("Resume"), { timeout: 20000 });
+  // Wait for the autosave that carries the COMPLETE typed code (an earlier autosave can fire mid-typing with a partial draft), and for the server to answer it, so the
+  // reload below really is a resume of the finished text.
+  const isFullSave = (r) => /\/submissions\/autosave/.test(r.url()) && r.method() === "POST" && (() => { try { return JSON.parse(r.postData() || "{}").code === code; } catch { return false; } })();
+  const saved = page.waitForResponse((res) => isFullSave(res.request()), { timeout: 30000 });
   await page.keyboard.type(code);
   await expectText(page, code);
-  expect(JSON.parse((await saved).postData()).code, "the server receives exactly what was typed").toBe(code);
-  await page.waitForTimeout(1500); // let the debounced save settle, then reload = resume
+  const response = await saved;
+  expect(JSON.parse(response.request().postData()).code, "the server receives exactly what was typed").toBe(code);
+  expect(response.ok(), "the server accepted the autosave").toBe(true);
   await page.reload();
   await expect(page.getByRole("button", { name: /Begin Assessment/ })).toBeVisible({ timeout: 20000 });
   const check = page.getByRole("button", { name: "Run security check" });
