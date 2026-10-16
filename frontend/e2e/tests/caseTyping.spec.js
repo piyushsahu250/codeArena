@@ -146,7 +146,10 @@ test("autosave sends exactly what was typed, and a resumed attempt restores it u
   await page.getByLabel("I have read and understood the instructions.").check();
   await page.getByRole("button", { name: /Begin Assessment/ }).click();
   await expect(page.locator("h2", { hasText: /Code (Full|Function)/ }).first()).toBeVisible({ timeout: 20000 });
-  // the shuffled order is fixed per attempt, so the same question is shown first again
+  // The shuffled order is fixed per attempt, but the question typed into is not necessarily the one shown first: go to it the same way openTest did.
+  const wanted = page.locator("h2", { hasText: /Code Full/ }).first();
+  if (!(await wanted.isVisible())) await page.getByRole("button", { name: /Next/ }).first().click();
+  await expect(wanted).toBeVisible({ timeout: 10000 });
   await expect.poll(async () => (await stableText(page)).includes("Resume CASE check"), { timeout: 15000 }).toBe(true);
   expect(await stableText(page)).toBe(code);
 });
