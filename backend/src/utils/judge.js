@@ -458,7 +458,7 @@ async function spawnWithTimeout(cmd, args, options, input, timeLimitMs, { enforc
         const raw = fs.readFileSync(statsFile, "utf8");
         const match = raw.match(/Maximum resident set size \(kbytes\):\s*(\d+)/);
         if (match) memoryKb = Number(match[1]);
-        const sig = raw.match(/Command terminated by signal (d+)/);
+        const sig = raw.match(/Command terminated by signal (\d+)/);
         if (sig) exitSignal = Number(sig[1]);
       } catch { /* stats file may not exist if the process never actually started */ }
       // Same DROP_PRIVILEGES ownership gap as cleanupTmpDir() above -- /usr/bin/time itself runs
