@@ -86,9 +86,11 @@ async function createAccount(actor, body) {
       departmentSection: academicGroup ? `Department: ${academicGroup.department.name} · Section: ${academicGroup.section}` : null, batchYear,
     })
     : accountCredentialsTemplate({ name: user.name, email: user.email, password: generatedPassword });
-  const mailResult = await sendMailLogged(prisma, {
+  const mailSend = sendMailLogged(prisma, {
     to: user.email, name: user.name, studentId: user.id, emailType: "CREDENTIALS", subject: "Your CodeArena Account Has Been Created", html: template,
   }).catch((e) => ({ ok: false, error: e.message }));
+  // Bounded wait: the response must not depend on how busy the mail server is (see MAIL_WAIT_MS in the domain). The send itself is never cancelled.
+  const mailResult = await d.withDeadline(mailSend, d.MAIL_WAIT_MS, { ok: false, error: d.MAIL_STILL_SENDING });
   const emailSent = !!mailResult.ok;
   const emailError = mailResult.error || null;
 
