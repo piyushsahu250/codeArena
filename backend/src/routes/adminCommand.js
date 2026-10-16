@@ -11,6 +11,7 @@
 const express = require("express");
 const { Prisma } = require("@prisma/client");
 const prisma = require("../prisma");
+const { countLiveTestAttempts } = require("../utils/liveAttempts");
 const { authenticate } = require("../middleware/auth");
 const { requirePermission } = require("../utils/permissions");
 const { attachRequesterInstitute } = require("../middleware/institute");
@@ -309,7 +310,7 @@ router.get("/super", authenticate, requirePermission("platform.console"), attach
         prisma.emailLog.groupBy({ by: ["status"], where: { createdAt: { gte: since } }, _count: { _all: true } }),
         prisma.emailLog.findMany({ where: { status: "FAILED", createdAt: { gte: since } }, orderBy: { createdAt: "desc" }, take: 5, select: { id: true, emailType: true, errorMessage: true, createdAt: true, instituteId: true, recipientEmail: true } }),
         prisma.aiUsageLog.groupBy({ by: ["success"], where: { createdAt: { gte: new Date(new Date().setUTCHours(0, 0, 0, 0)) } }, _count: { _all: true } }),
-        prisma.testAttempt.count({ where: { status: "IN_PROGRESS" } }),
+        countLiveTestAttempts(prisma),
       ]);
       const byRole = (rows) => Object.fromEntries(rows.map((r) => [r.role, r.n]));
       const mask = (e) => { const [u, d] = String(e || "").split("@"); return d ? `${u.slice(0, 2)}***@${d}` : "***"; };
@@ -405,7 +406,7 @@ router.get("/staff", authenticate, requirePermission("staff.workspace"), attachR
       ids.length ? prisma.attendanceRecord.count({ where: { status: "ABSENT", studentId: { in: ids }, session: { markedAt: { gte: dayStart, lt: dayEnd } } } }) : 0,
       prisma.test.findMany({ where: { instituteId, isPublished: true, startTime: { gt: now, lt: new Date(now.getTime() + 7 * DAY) } }, orderBy: { startTime: "asc" }, take: 5, select: { id: true, title: true, startTime: true } }),
       prisma.resultExamination.count({ where: { instituteId, status: { in: ["DRAFT", "IN_REVIEW", "READY_TO_PUBLISH"] } } }),
-      prisma.testAttempt.count({ where: { status: "IN_PROGRESS", studentId: { in: ids } } }),
+      countLiveTestAttempts(prisma, { studentId: { in: ids } }),
       prisma.notification.count({ where: { recipientId: me.id, read: false } }),
     ]);
 

@@ -155,7 +155,20 @@ const previewSummary = (rows) => ({
   rows,
 });
 
+// How long the account-creation request waits for the credentials e-mail before answering. The account already exists by then; a slow or queued SMTP server
+// (the sender is a single pooled, rate-limited connection) used to hold the request past the browser's 45 s limit, so the admin saw "Failed to create user"
+// for an account that had in fact been created. The send keeps going in the background and its outcome is still written to the e-mail log.
+const MAIL_WAIT_MS = Number(process.env.ACCOUNT_CREATE_MAIL_WAIT_MS) || 10000;
+const MAIL_STILL_SENDING = "The account was created. The credentials e-mail is still being sent and may be delayed; use Resend if it does not arrive.";
+
+// Resolves with `fallback` if `promise` has not settled within `ms`; never rejects and never leaves a timer running.
+function withDeadline(promise, ms, fallback) {
+  let timer;
+  const deadline = new Promise((resolve) => { timer = setTimeout(() => resolve(fallback), ms); });
+  return Promise.race([promise, deadline]).finally(() => clearTimeout(timer));
+}
+
 module.exports = {
   MOBILE_RE, BULK_MAX_ROWS, EDITABLE_FIELDS, creatableRoles, filled, auditActionForEdit, changedFields, rollClash, uniqueViolation, deleteBlocked,
-  normalizeHeader, buildHeaderMap, parseBulkFile, validateBulkRow, previewSummary,
+  normalizeHeader, buildHeaderMap, parseBulkFile, validateBulkRow, previewSummary, withDeadline, MAIL_WAIT_MS, MAIL_STILL_SENDING,
 };
