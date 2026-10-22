@@ -28,6 +28,11 @@ const {
   resolveLessonCourseInstituteId, resolvePracticeQuestionCourseInstituteId,
   resolveProjectCourseInstituteId, resolveProjectTaskCourseInstituteId,
 } = require("../utils/lmsOwnership");
+
+// Read gate for non-student roles on course content (lessons, practice questions): the requester's own institute's courses and global (platform-authored) courses,
+// never another institute's. An unscoped platform admin (no institute) reads everything. This is the same rule GET /courses/:slug applies; the by-id reads below
+// return answer keys and hidden test cases, so they must not be any less protected than the course page.
+const canReadCourseContent = (req, courseInstituteId) => !req.requesterInstituteId || courseInstituteId == null || courseInstituteId === req.requesterInstituteId;
 const { cached } = require("../utils/cache");
 const { computeLearningRecommendations } = require("../utils/learningRecommendations");
 const { computeConceptMastery } = require("../utils/conceptMastery");
@@ -257,13 +262,16 @@ router.get("/courses/:slug", authenticate, attachRequesterInstitute, async (req,
 // course must still pass the same eligibility gate, and a locked module's lessons are not
 // returned (matches the intent of the lock — a student shouldn't even see what's inside a
 // module they can't access yet).
-router.get("/courses/:slug/modules/:moduleId/lessons", authenticate, async (req, res) => {
+router.get("/courses/:slug/modules/:moduleId/lessons", authenticate, attachRequesterInstitute, async (req, res) => {
   const where = { slug: req.params.slug };
   if (req.user.role === "STUDENT") {
     const student = await prisma.user.findUnique({ where: { id: req.user.id }, select: { instituteId: true, academicGroupId: true } });
     if (isEligibilityUnresolvable(student?.instituteId, student?.academicGroupId)) return res.status(404).json({ error: "Course not found" });
     where.status = "PUBLISHED";
     Object.assign(where, courseEligibilityWhere(student.instituteId, student.academicGroupId));
+  } else if (req.requesterInstituteId) {
+    // Same own-institute-or-global gate as GET /courses/:slug: a course slug (e.g. "java") is guessable, so it must not list another institute's private course.
+    where.OR = [{ instituteId: req.requesterInstituteId }, { instituteId: null }];
   }
   const course = await prisma.course.findFirst({ where, select: { id: true } });
   if (!course) return res.status(404).json({ error: "Course not found" });
@@ -299,7 +307,7 @@ router.get("/courses/:slug/modules/:moduleId/lessons", authenticate, async (req,
 
 // Any authenticated user: single lesson detail, with prev/next lesson ids for in-course
 // navigation and (for a STUDENT) their own progress record.
-router.get("/lessons/:id", authenticate, async (req, res) => {
+router.get("/lessons/:id", authenticate, attachRequesterInstitute, async (req, res) => {
   const lesson = await prisma.lesson.findUnique({
     where: { id: req.params.id },
     include: {
@@ -339,6 +347,9 @@ router.get("/lessons/:id", authenticate, async (req, res) => {
     if (lockMap.get(lesson.module.id)?.locked) {
       return res.status(403).json({ error: "This module is locked. Complete the previous module's practice test to unlock it." });
     }
+  } else if (!canReadCourseContent(req, lesson.module.course.instituteId)) {
+    // Staff and admins get the full question data (answers, hidden test cases) below, so another institute's private course content is refused here.
+    return res.status(403).json({ error: "You can only view courses under your own institute" });
   }
 
   const allModules = await prisma.courseModule.findMany({
@@ -2294,9 +2305,12 @@ router.delete("/practice/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN",
 
 // ADMIN/STAFF: full question detail (with correctAnswer/explanation) for the CMS edit form —
 // distinct from the sanitized shape /lessons/:id returns to students.
-router.get("/practice/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), async (req, res) => {
+router.get("/practice/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   const q = await prisma.practiceQuestion.findUnique({ where: { id: req.params.id } });
   if (!q) return res.status(404).json({ error: "Question not found" });
+  // IDOR guard: the response carries the answer key and hidden test cases, so another institute's private course content must not be readable by id.
+  const instituteId = await resolvePracticeQuestionCourseInstituteId(req.params.id);
+  if (!canReadCourseContent(req, instituteId)) return res.status(403).json({ error: "You can only view courses under your own institute" });
   res.json(q);
 });
 
