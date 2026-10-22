@@ -1,5 +1,6 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
+const rateLimit = require("express-rate-limit");
 const prisma = require("../prisma");
 const { countLiveTestAttempts } = require("../utils/liveAttempts");
 const { authenticate, requireRole } = require("../middleware/auth");
@@ -576,6 +577,16 @@ router.get("/security-dashboard", authenticate, requireRole("SUPER_ADMIN"), asyn
 });
 
 const ANNOUNCEMENT_EMAIL_CONCURRENCY = Number(process.env.EMAIL_CONCURRENCY) || 5;
+// One announcement writes a notification row (holding the whole message) for every recipient and can e-mail all of them, so an unlimited message length or an unlimited number of
+// announcements was a way to fill the database and use up the day's e-mail allowance (the sender's own daily limit is what delayed credential e-mails before). These caps are well
+// above any real notice; the form enforces the same lengths.
+const ANNOUNCEMENT_MAX_MESSAGE = 2000;
+const ANNOUNCEMENT_MAX_SUBJECT = 150;
+// skipFailedRequests: a request that is refused (a typo, a message that is too long) has sent nothing, so it does not use up the hour's allowance.
+const announcementLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, max: Number(process.env.ANNOUNCEMENTS_PER_HOUR) || 5, keyGenerator: (req) => req.user.id, standardHeaders: false, legacyHeaders: false, skipFailedRequests: true,
+  message: { error: "You have sent several announcements in the last hour. Please wait before sending another." },
+});
 
 // ADMIN/SUPER_ADMIN/INSTITUTE_ADMIN: System Announcements (platform-maturity spec item #14, the
 // one notification type this platform genuinely didn't have -- every other listed type (test
@@ -589,10 +600,12 @@ const ANNOUNCEMENT_EMAIL_CONCURRENCY = Number(process.env.EMAIL_CONCURRENCY) || 
 // (req.requesterInstituteId set) can only ever reach their own institute's users regardless of
 // what `audience` claims; only a platform-level SUPER_ADMIN (requesterInstituteId null) can
 // actually reach every institute at once.
-router.post("/announcements", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.post("/announcements", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, announcementLimiter, async (req, res) => {
   try {
     const { audience, message, subject, sendEmail } = req.body;
-    if (!message || !message.trim()) return res.status(400).json({ error: "message is required" });
+    if (typeof message !== "string" || !message.trim()) return res.status(400).json({ error: "message is required" });
+    if (message.trim().length > ANNOUNCEMENT_MAX_MESSAGE) return res.status(400).json({ error: `message must be at most ${ANNOUNCEMENT_MAX_MESSAGE} characters` });
+    if (subject !== undefined && subject !== null && (typeof subject !== "string" || subject.length > ANNOUNCEMENT_MAX_SUBJECT)) return res.status(400).json({ error: `subject must be text of at most ${ANNOUNCEMENT_MAX_SUBJECT} characters` });
     if (!["ALL_STUDENTS", "ALL_STAFF", "EVERYONE"].includes(audience)) {
       return res.status(400).json({ error: "audience must be ALL_STUDENTS, ALL_STAFF, or EVERYONE" });
     }

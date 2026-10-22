@@ -5,7 +5,7 @@ const { verifyLimiter } = require("../middleware/publicLimiters");
 const { normalizeVerifyCode } = require("../utils/secureCode");
 const { authenticate, requireRole } = require("../middleware/auth");
 const { judgeSubmission } = require("../utils/judgeGateway");
-const { runQueued } = require("../utils/queue");
+const { runQueued, mapWithConcurrency } = require("../utils/queue");
 const { guardStarterCodeIsNotSolution } = require("../utils/starterCodeGuard");
 const { resolveCodingFields } = require("../utils/functionHarness");
 const { generateCertificatePdf } = require("../utils/certificatePdf");
@@ -1541,12 +1541,14 @@ router.post("/courses/assignments/bulk", authenticate, requireRole("ADMIN", "SUP
     // Fire-and-forget, after the response — one notifyCourseAssigned per course (not per
     // student-course pair collapsed into one email) so each email is specific about which course
     // it's for, matching notifyTestAssigned/notifyCourseAssigned's existing single-entity shape.
+    // One course at a time: each course's fan-out is already bounded, and running the courses side by
+    // side would multiply that bound by the number of courses (10 courses x 3,000 students at once).
     if (instituteIds.length || academicGroupIds.length) {
       prisma.user.findMany({
         where: { role: "STUDENT", OR: [{ instituteId: { in: instituteIds } }, { academicGroupId: { in: academicGroupIds } }] },
         select: { id: true, name: true, email: true },
       })
-        .then((students) => Promise.all(courses.map((course) => notifyCourseAssigned(prisma, students, course))))
+        .then((students) => mapWithConcurrency(courses, 1, (course) => notifyCourseAssigned(prisma, students, course).catch((err) => console.error(`[learning.courses.assignments.bulk] notification for "${course.name}" failed:`, err))))
         .catch((err) => console.error("[learning.courses.assignments.bulk] notification failed:", err));
     }
   } catch (err) {

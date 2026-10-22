@@ -123,7 +123,8 @@ export default function Login() {
           <p style={{ marginTop: 20, fontSize: 14, color: "var(--ink-dim)" }}>
             Don't have an account? Contact your admin to get one created.
           </p>
-          <p style={{ marginTop: 32, fontSize: 12, color: "var(--ink-dim)", opacity: 0.75, textAlign: "center" }}>
+          {/* No opacity here: --ink-dim at 75% opacity measured about 3.1:1 on the light page (AA needs 4.5:1 for text this small); at full strength it is about 5.2:1 light and 7.0:1 dark. */}
+          <p style={{ marginTop: 32, fontSize: 12, color: "var(--ink-dim)", textAlign: "center" }}>
             Powered by Acrosoft Webtech Solution Pvt. Ltd.
           </p>
         </form>

@@ -74,7 +74,7 @@ function classifyError(err) {
 // `quotaExceeded`, `queueBusy`, `blocked`, `status`) so routes can map it to the right HTTP status
 // and message without string-matching.
 async function callProvider({ feature, userId, instituteId, system, prompt, maxTokens, temperature, jsonMode, injectionGuard }) {
-  await assertWithinDailyQuota({ instituteId });
+  await assertWithinDailyQuota({ instituteId, userId });
 
   const finalSystem = injectionGuard ? systemWithInjectionGuard(system) : system;
   const started = Date.now();

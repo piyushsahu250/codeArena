@@ -15,7 +15,7 @@ const { sendExport } = require("../utils/exportFile");
 const { generateMarksheetPdf } = require("../utils/resultMarksheetPdf");
 const { buildMarksheetData } = require("../utils/resultMarksheetData");
 const { generateMarksheetCode } = require("../utils/resultCode");
-const { notifyResultPublished } = require("../utils/notifications");
+const { notifyResultPublished, notifyInBackground } = require("../utils/notifications");
 const { computeGrade, invalidateGradeCache } = require("../utils/resultGrading");
 const { computeResultTag, invalidateTagCache, validateRemarkBands } = require("../utils/resultTagging");
 const { validateExamThresholds } = require("../utils/resultThresholds");
@@ -593,22 +593,15 @@ router.patch("/admin/examinations/:id/publish", authenticate, requireRole("ADMIN
       where: { examinationId: req.params.id },
       include: { student: { select: { id: true, name: true, email: true } } },
     });
-    // Chunked, not one big Promise.all: notifyResultPublished itself fires 2 concurrent ops
-    // (in-app notify + email) per student, so publishing an institute-wide exam with hundreds of
-    // entries unchunked would burst hundreds of simultaneous DB writes + email sends from this
-    // one 0.1vCPU instance. 15 students (30 concurrent ops) per batch, batches run in sequence.
-    const NOTIFY_BATCH_SIZE = 15;
-    for (let i = 0; i < entries.length; i += NOTIFY_BATCH_SIZE) {
-      const batch = entries.slice(i, i + NOTIFY_BATCH_SIZE);
-      await Promise.all(batch.map((e) => notifyResultPublished(prisma, e.student, examination)));
-    }
-
     await logAudit({
       req, action: AUDIT_ACTIONS.RESULT_EXAMINATION_PUBLISHED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
       instituteId: existing.instituteId, details: { examinationId: examination.id, title: examination.title, studentsNotified: entries.length },
     });
     invalidateResultCaches(examination.id);
     res.json(examination);
+    // After the response, a few students at a time. This used to be awaited here in chunks of 15: 15 e-mails at once through the single mail account (the kind of burst that can trip its
+    // login throttle for password-reset e-mails too), with the publish request held open until every e-mail had gone. notifyInBackground sends 5 at a time and never throws into the request.
+    notifyInBackground("results.publish", entries.map((e) => e.student).filter(Boolean), (student) => notifyResultPublished(prisma, student, examination));
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to publish examination" });

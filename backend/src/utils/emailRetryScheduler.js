@@ -1,5 +1,5 @@
 const prisma = require("../prisma");
-const { sendMail, retryEmailLogged, wrapBranded, escapeHtml } = require("./mailer");
+const { sendMail, retryEmailLogged, wrapBranded, escapeHtml, sweepStalePendingEmails } = require("./mailer");
 const { sessionTypeLabel } = require("../routes/interview");
 
 const FRONTEND_URL = process.env.FRONTEND_URL || "https://codearena.site";
@@ -90,4 +90,16 @@ function startEmailRetryScheduler() {
   }, intervalMs);
 }
 
-module.exports = { startEmailRetryScheduler, runOnce };
+// Always on, unlike the retry scheduler above (off by default): this only corrects rows that can no longer change by themselves. An EmailLog row is created PENDING just before its send, so a row
+// still PENDING after half an hour is an orphan of a restart (see sweepStalePendingEmails in mailer.js). The first run waits two minutes so it never competes with start-up.
+// DISABLE_STALE_EMAIL_SWEEP=true turns it off.
+function startStaleEmailSweeper() {
+  if (process.env.DISABLE_STALE_EMAIL_SWEEP === "true") return;
+  const run = () => sweepStalePendingEmails(prisma)
+    .then((count) => { if (count > 0) console.warn(`[emailSweeper] marked ${count} stale PENDING e-mail row(s) as FAILED (their send was interrupted)`); })
+    .catch((err) => console.error("[emailSweeper] run failed:", err.message));
+  setTimeout(run, 2 * 60 * 1000).unref();
+  setInterval(run, 10 * 60 * 1000).unref();
+}
+
+module.exports = { startEmailRetryScheduler, startStaleEmailSweeper, runOnce };

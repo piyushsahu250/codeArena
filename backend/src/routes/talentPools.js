@@ -13,7 +13,7 @@ const { isStudentTalentPoolMember } = require("../utils/talentPoolEligibility");
 const { canStaffAccessTest } = require("../utils/testOwnership");
 const { computeTalentPoolRank, computeTalentPoolInterviewRank } = require("../utils/talentPoolRank");
 const { previewAutoSelection, runAutoSelection } = require("../utils/talentPoolAutoSelect");
-const { notifyPoolAdded, notifyPoolRemoved, notifyAssessmentAssigned } = require("../utils/notifications");
+const { notifyPoolAdded, notifyPoolRemoved, notifyAssessmentAssigned, notifyInBackground } = require("../utils/notifications");
 const { generateTalentPoolPdf } = require("../utils/talentPoolPdf");
 const { spreadsheetFileFilter } = require("../utils/uploadFilters");
 
@@ -453,7 +453,7 @@ router.post("/:id/members", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "I
         data: toAdd.map((s) => ({ poolId: pool.id, studentId: s.id, addedVia: "MANUAL", addedByName: req.user.name })),
         skipDuplicates: true,
       });
-      await Promise.all(toAdd.map((s) => notifyPoolAdded(prisma, s, pool)));
+      notifyInBackground("talent-pools", toAdd, (s) => notifyPoolAdded(prisma, s, pool));
       await logAudit({
         req, action: AUDIT_ACTIONS.TALENT_POOL_MEMBERS_CHANGED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
         instituteId: req.requesterInstituteId || poolInstituteIds(pool)[0] || null,
@@ -531,14 +531,14 @@ router.post("/:id/members/transfer", authenticate, requireRole("ADMIN", "SUPER_A
         data: toAdd.map((s) => ({ poolId: targetPoolId, studentId: s.id, addedVia: "MANUAL", addedByName: req.user.name })),
         skipDuplicates: true,
       });
-      await Promise.all(toAdd.map((s) => notifyPoolAdded(prisma, s, targetPool)));
+      notifyInBackground("talent-pools", toAdd, (s) => notifyPoolAdded(prisma, s, targetPool));
     }
 
     let removedCount = 0;
     if (mode === "MOVE" && students.length) {
       const removed = await prisma.talentPoolMember.deleteMany({ where: { poolId: sourcePool.id, studentId: { in: students.map((s) => s.id) } } });
       removedCount = removed.count;
-      await Promise.all(students.map((s) => notifyPoolRemoved(prisma, s, sourcePool)));
+      notifyInBackground("talent-pools", students, (s) => notifyPoolRemoved(prisma, s, sourcePool));
     }
 
     await logAudit({
@@ -691,7 +691,7 @@ router.post("/:id/bulk-import", authenticate, requireRole("ADMIN", "SUPER_ADMIN"
     if (toCreate.length) {
       await prisma.talentPoolMember.createMany({ data: toCreate, skipDuplicates: true });
       const addedStudents = await prisma.user.findMany({ where: { id: { in: toCreate.map((t) => t.studentId) } }, select: MEMBER_SELECT });
-      await Promise.all(addedStudents.map((s) => notifyPoolAdded(prisma, s, pool)));
+      notifyInBackground("talent-pools", addedStudents, (s) => notifyPoolAdded(prisma, s, pool));
     }
 
     await logAudit({
@@ -770,7 +770,7 @@ router.post("/:id/auto-rule/run", authenticate, requireRole("ADMIN", "SUPER_ADMI
     const result = await runAutoSelection(prisma, pool.id);
     if (result.addedIds.length) {
       const added = await prisma.user.findMany({ where: { id: { in: result.addedIds } }, select: MEMBER_SELECT });
-      await Promise.all(added.map((s) => notifyPoolAdded(prisma, s, pool)));
+      notifyInBackground("talent-pools", added, (s) => notifyPoolAdded(prisma, s, pool));
     }
     await logAudit({
       req, action: AUDIT_ACTIONS.TALENT_POOL_AUTO_RULE_RUN, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,

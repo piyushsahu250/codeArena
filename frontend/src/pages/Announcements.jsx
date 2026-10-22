@@ -67,6 +67,7 @@ export default function Announcements() {
             <span style={{ fontSize: 13, fontWeight: 600 }}>Message</span>
             <textarea
               value={message}
+              maxLength={2000}
               onChange={(e) => setMessage(e.target.value)}
               rows={5}
               placeholder="What do you want to tell them?"
@@ -85,6 +86,7 @@ export default function Announcements() {
               <input
                 type="text"
                 value={subject}
+                maxLength={150}
                 onChange={(e) => setSubject(e.target.value)}
                 placeholder="Announcement from CodeArena"
                 style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid var(--line)" }}

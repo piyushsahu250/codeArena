@@ -57,6 +57,7 @@ async function groupCountsForStudents(studentIds) {
 
 const createNotificationSend = (data) => prisma.testNotificationSend.create({ data });
 const findNotificationSendByKey = (idempotencyKey) => prisma.testNotificationSend.findUnique({ where: { idempotencyKey } });
+const latestEmailSendSince = (testId, since) => prisma.testNotificationSend.findFirst({ where: { testId, sendEmail: true, createdAt: { gte: since } }, orderBy: { createdAt: "desc" } });
 const listNotificationSends = (testId) => prisma.testNotificationSend.findMany({ where: { testId }, orderBy: { createdAt: "desc" } });
 const emailLogsForBatch = (batchId) => prisma.emailLog.findMany({ where: { batchId }, select: { status: true, recipientEmail: true, errorMessage: true } });
 
@@ -72,7 +73,7 @@ const removeShare = (testId, staffId) => prisma.testShare.deleteMany({ where: { 
 module.exports = {
   findWithShares, findForDuplicate, findForPublish, findForNotify, findOwnership, findInstituteAndTitle, findFull, findSameTitle, instituteExists, groupsByIds,
   bankCodingQuestionIds, createTest, deleteTest, setPublished, updateTest, groupCountsForStudents, createNotificationSend, findNotificationSendByKey,
-  listNotificationSends, emailLogsForBatch, listStaff, staffInScope, addShares, removeShare,
+  latestEmailSendSince, listNotificationSends, emailLogsForBatch, listStaff, staffInScope, addShares, removeShare,
 };
 
 // ================= batch 2: reading tests and the student attempt flow =================

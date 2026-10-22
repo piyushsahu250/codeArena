@@ -1,4 +1,5 @@
 const { sendMailLogged, wrapBranded, escapeHtml } = require("./mailer");
+const { mapWithConcurrency } = require("./queue");
 const cache = require("./cache");
 
 const FRONTEND_URL = process.env.FRONTEND_URL || "https://codearena.site";
@@ -52,6 +53,22 @@ async function emailStudent(prisma, student, subject, bodyHtml, emailType, batch
   }).catch(() => {});
 }
 
+// One e-mail per person with at most EMAIL_FANOUT_CONCURRENCY sends in flight. These fan-outs used to be `Promise.all(people.map(emailStudent))`, so assigning a course to 3,000 students
+// started 3,000 sends against one mail account at once: 3,000 PENDING log rows, the provider's login throttle tripped (which also failed password-reset and credential e-mails), and
+// thousands of rows orphaned when the server restarted mid-flight (2026-09 and 2026-10 production logs). The other bulk senders (bulk users, test notify, announcements) were already bounded.
+const EMAIL_FANOUT_CONCURRENCY = Number(process.env.EMAIL_CONCURRENCY) || 5;
+const emailEach = (people, sendOne) => mapWithConcurrency(people, EMAIL_FANOUT_CONCURRENCY, sendOne);
+
+// The same bounded fan-out for callers that must not hold their HTTP request open while hundreds of e-mails go out. Best-effort: a failure is logged, never thrown into the request, and one
+// person's failure does not stop the people after them (mapWithConcurrency alone would end that worker's run at the first rejection).
+function notifyInBackground(label, people, fn) {
+  if (!people || people.length === 0) return;
+  let failed = 0;
+  emailEach(people, (person, index) => Promise.resolve().then(() => fn(person, index)).catch(() => { failed += 1; }))
+    .then(() => { if (failed > 0) console.error(`[${label}] ${failed} of ${people.length} background notifications failed`); })
+    .catch((err) => console.error(`[${label}] background notification batch failed:`, err));
+}
+
 async function notifyPoolAdded(prisma, student, pool) {
   const link = "/talent-pools";
   await Promise.all([
@@ -92,13 +109,13 @@ async function notifyAssessmentAssigned(prisma, members, pool, assessmentLabel, 
       message: `New exclusive assessment "${assessmentLabel}" assigned to your "${pool.name}" Talent Pool`,
       link,
     }),
-    ...(sendEmail ? members.map((m) =>
+    sendEmail ? emailEach(members, (m) =>
       emailStudent(
         prisma, m, `New assessment for "${pool.name}"`,
         `<p>Hi ${escapeHtml(m.name)},</p><p>A new exclusive assessment, <strong>${escapeHtml(assessmentLabel)}</strong>, has been assigned to your <strong>${escapeHtml(pool.name)}</strong> Talent Pool.</p><p><a href="${FRONTEND_URL}${link}">View your Talent Pools</a></p>`,
         "TALENT_POOL_ASSESSMENT_ASSIGNED"
       )
-    ) : []),
+    ) : null,
   ]);
 }
 
@@ -239,13 +256,13 @@ async function notifyTestAssigned(prisma, students, test, { sendEmail = false } 
       message: `New test "${test.title}" has been assigned to you`,
       link,
     }),
-    ...(sendEmail ? students.map((s) =>
+    sendEmail ? emailEach(students, (s) =>
       emailStudent(
         prisma, s, `New test assigned: "${test.title}"`,
         `<p>Hi ${escapeHtml(s.name)},</p><p>A new test, <strong>${escapeHtml(test.title)}</strong>, has been assigned to you.</p><p><a href="${FRONTEND_URL}${link}">View your Tests</a></p>`,
         "TEST_ASSIGNED"
       )
-    ) : []),
+    ) : null,
   ]);
 }
 
@@ -260,7 +277,7 @@ async function notifyCourseAssigned(prisma, students, course) {
       message: `New course "${course.name}" has been assigned to you`,
       link,
     }),
-    ...students.map((s) =>
+    emailEach(students, (s) =>
       emailStudent(
         prisma, s, `New course assigned: "${course.name}"`,
         `<p>Hi ${escapeHtml(s.name)},</p><p>A new course, <strong>${escapeHtml(course.name)}</strong>, has been assigned to you.</p><p><a href="${FRONTEND_URL}${link}">View your Courses</a></p>`,
@@ -282,7 +299,7 @@ async function notifyReadinessTestAssigned(prisma, students, subject) {
       message: `New readiness test "${subject.name}" has been assigned to you`,
       link,
     }),
-    ...students.map((s) =>
+    emailEach(students, (s) =>
       emailStudent(
         prisma, s, `New readiness test assigned: "${subject.name}"`,
         `<p>Hi ${escapeHtml(s.name)},</p><p>A new readiness test, <strong>${escapeHtml(subject.name)}</strong>, has been assigned to you.</p><p><a href="${FRONTEND_URL}${link}">View your Readiness Tests</a></p>`,
@@ -317,4 +334,6 @@ module.exports = {
   // but with its own idempotency/logging around the batch rather than going through a notifyX
   // wrapper shaped for one specific event type.
   emailStudent,
+  // Bounded fan-out helpers (see their definitions): for any caller sending one e-mail per person to a list.
+  emailEach, notifyInBackground,
 };

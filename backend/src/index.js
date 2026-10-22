@@ -323,8 +323,9 @@ startTestScheduledPublishScheduler();
 const { startTestAttemptAutoFinalizeScheduler } = require("./utils/testAttemptAutoFinalizeScheduler");
 startTestAttemptAutoFinalizeScheduler();
 
-const { startEmailRetryScheduler } = require("./utils/emailRetryScheduler");
+const { startEmailRetryScheduler, startStaleEmailSweeper } = require("./utils/emailRetryScheduler");
 startEmailRetryScheduler();
+startStaleEmailSweeper();
 
 // Mirror the default permission grants into the database (adds only what is missing; never overwrites an administrator's changes). Best effort: checks fall back to the code registry.
 require("./utils/permissions").seedPermissions()

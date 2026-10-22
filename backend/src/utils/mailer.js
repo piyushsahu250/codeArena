@@ -234,6 +234,45 @@ async function sendMail({ to, subject, html }) {
   }
 }
 
+// ---- keeping critical e-mail deliverable -------------------------------------------------------------------------------------------------------------------
+// Every e-mail leaves through one provider account with a rolling daily allowance (it has delivered about 1,900 in a day, and its "daily sending limit" error has fired on much quieter
+// days that followed a flood). A bulk notice (a course assigned to a whole institute) could use all of it, or trip the provider's login throttle, and then password-reset and credential
+// e-mails fail in the same window (on 2026-10-06 a 219-student credentials batch and its resend hit the account's limits and 352 credential e-mails failed). Non-critical e-mail therefore
+// has a rolling 24-hour budget; the types in CRITICAL_EMAIL_TYPES are never counted against it or refused by it. Once the budget is used up a non-critical e-mail is NOT attempted: its log
+// row is written as FAILED with the reason. BULK_EMAIL_DAILY_BUDGET changes the budget (0 turns the check off). The check never blocks mail by failing itself.
+const CRITICAL_EMAIL_TYPES = new Set(["PASSWORD_RESET", "PASSWORD_RESET_BY_ADMIN", "CREDENTIALS", "CREDENTIALS_RESEND", "EMAIL_VERIFICATION"]);
+const isCriticalEmailType = (type) => CRITICAL_EMAIL_TYPES.has(String(type || ""));
+const BULK_EMAIL_DAILY_BUDGET = process.env.BULK_EMAIL_DAILY_BUDGET === undefined || process.env.BULK_EMAIL_DAILY_BUDGET === "" ? 1400 : Number(process.env.BULK_EMAIL_DAILY_BUDGET);
+const BUDGET_CACHE_MS = 30 * 1000; // the count is re-read at most this often
+let budgetCache = { count: 0, at: 0 };
+const resetBudgetCacheForTests = () => { budgetCache = { count: 0, at: 0 }; };
+
+async function bulkBudgetExhausted(prisma, now = Date.now()) {
+  if (!(BULK_EMAIL_DAILY_BUDGET > 0)) return false;
+  try {
+    if (now - budgetCache.at > BUDGET_CACHE_MS) {
+      const count = await prisma.emailLog.count({
+        where: { createdAt: { gte: new Date(now - 24 * 3600 * 1000) }, status: { in: ["SENT", "PENDING", "RETRYING"] }, emailType: { notIn: [...CRITICAL_EMAIL_TYPES] } },
+      });
+      budgetCache = { count, at: now };
+    }
+    return budgetCache.count >= BULK_EMAIL_DAILY_BUDGET;
+  } catch {
+    return false; // fail open: never hold back mail because the budget check itself failed
+  }
+}
+
+// A row is created PENDING just before its send, so one still PENDING after this long can only be an orphan: the server restarted (a deploy, a crash) while the send was in flight, and nothing
+// else would ever update the row. 2,768 such rows from a single restart on 2026-10-07 sat as "pending" for weeks. They are marked FAILED with the reason, so they are visible and retryable.
+const STALE_PENDING_MS = Number(process.env.MAIL_STALE_PENDING_MS) || 30 * 60 * 1000;
+async function sweepStalePendingEmails(prisma, { olderThanMs = STALE_PENDING_MS } = {}) {
+  const result = await prisma.emailLog.updateMany({
+    where: { status: "PENDING", createdAt: { lt: new Date(Date.now() - olderThanMs) } },
+    data: { status: "FAILED", errorMessage: "Not sent: the server restarted, or the send was interrupted, before this e-mail went out. It can be retried from Email Logs." },
+  });
+  return result.count;
+}
+
 // Same as sendMail(), but writes an EmailLog row so admins can see real delivery status/history
 // per student instead of a fire-and-forget send. `prisma` is passed in rather than required at
 // module load, since utils/mailer.js has no other dependency on the Prisma client.
@@ -249,9 +288,15 @@ async function sendMailLogged(prisma, { to, name, subject, html, emailType, stud
     const student = await prisma.user.findUnique({ where: { id: studentId }, select: { instituteId: true } }).catch(() => null);
     resolvedInstituteId = student?.instituteId || null;
   }
-  const log = await prisma.emailLog.create({
-    data: { studentId: studentId || null, instituteId: resolvedInstituteId, recipientName: name || "", recipientEmail: to || "", emailType, status: "PENDING", batchId: batchId || null, sourceId: sourceId || null },
-  });
+  const baseData = { studentId: studentId || null, instituteId: resolvedInstituteId, recipientName: name || "", recipientEmail: to || "", emailType, batchId: batchId || null, sourceId: sourceId || null };
+  const critical = isCriticalEmailType(emailType);
+  if (!critical && (await bulkBudgetExhausted(prisma))) {
+    const error = `Not sent: the daily allowance for non-essential e-mails (${BULK_EMAIL_DAILY_BUDGET} in 24 hours) is used up. It is kept so password-reset and credential e-mails can still be delivered. Any in-app notification is unaffected.`;
+    await prisma.emailLog.create({ data: { ...baseData, status: "FAILED", errorMessage: error } }).catch(() => {});
+    return { ok: false, skipped: true, error };
+  }
+  const log = await prisma.emailLog.create({ data: { ...baseData, status: "PENDING" } });
+  if (!critical) budgetCache.count += 1; // sends between two re-reads of the count are added locally
   const result = await sendMail({ to, subject, html });
   await prisma.emailLog.update({
     where: { id: log.id },
@@ -294,4 +339,7 @@ async function retryEmailLogged(prisma, logId, sendFn) {
   return { ...result, retryCount: log.retryCount + 1 };
 }
 
-module.exports = { sendMail, sendMailLogged, retryEmailLogged, wrapBranded, escapeHtml, MAX_EMAIL_RETRIES };
+module.exports = {
+  sendMail, sendMailLogged, retryEmailLogged, wrapBranded, escapeHtml, MAX_EMAIL_RETRIES,
+  isCriticalEmailType, CRITICAL_EMAIL_TYPES, BULK_EMAIL_DAILY_BUDGET, sweepStalePendingEmails, resetBudgetCacheForTests,
+};

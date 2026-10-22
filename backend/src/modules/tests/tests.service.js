@@ -16,6 +16,8 @@ const d = require("./tests.domain");
 const repo = require("./tests.repository");
 
 const NOTIFY_EMAIL_CONCURRENCY = Number(process.env.EMAIL_CONCURRENCY) || 5;
+// Minutes before the SAME test can be e-mailed to its students again (in-app notifications are not limited). TEST_EMAIL_NOTIFY_COOLDOWN_MIN overrides it.
+const EMAIL_NOTIFY_COOLDOWN_MIN = Number(process.env.TEST_EMAIL_NOTIFY_COOLDOWN_MIN) || 10;
 const FRONTEND_URL = process.env.FRONTEND_URL || "https://codearena.site";
 
 // A service result that also needs work done AFTER the response has been sent (the background e-mail batch).
@@ -212,7 +214,27 @@ async function notify(actor, id, body) {
 
   const recipients = await getTestRecipients(prisma, test.id);
 
-  // Idempotency: create the record first; a unique-key collision means this exact click was already processed.
+  // Idempotency: a key already used for THIS test means this exact click was already processed. A key that belongs to a different test is a collision, never an answer to hand
+  // back: the lookup is by key alone, so it used to return another test's (possibly another institute's) send details and silently skip this send.
+  const answerFor = (existing) => {
+    if (existing.testId !== test.id) throw new ServiceError(409, "This request key was already used for a different notification. Please try again.");
+    return { alreadySent: true, recipientCount: existing.recipientCount, sentAt: existing.createdAt, sendEmail: existing.sendEmail, sendInApp: existing.sendInApp };
+  };
+  const earlier = await repo.findNotificationSendByKey(idempotencyKey);
+  if (earlier) return answerFor(earlier);
+
+  // E-mail cooldown per test. The idempotency key only stops a double click: a dialog opened again, or a new key per request, e-mailed every eligible student again each time,
+  // and the mail sender's daily allowance is shared with password and credential e-mails. In-app notifications are not affected.
+  if (sendEmail && recipients.length > 0) {
+    const cooldownMs = EMAIL_NOTIFY_COOLDOWN_MIN * 60 * 1000;
+    const recent = await repo.latestEmailSendSince(test.id, new Date(Date.now() - cooldownMs));
+    if (recent) {
+      const waitMin = Math.max(1, Math.ceil((recent.createdAt.getTime() + cooldownMs - Date.now()) / 60000));
+      throw new ServiceError(429, `An e-mail notification for this test was already sent a few minutes ago. To avoid flooding students, wait about ${waitMin} more minute${waitMin === 1 ? "" : "s"} before e-mailing again (an in-app notification can still be sent).`);
+    }
+  }
+
+  // Create the record; a unique-key collision here is a concurrent request with the same key.
   let sendRecord;
   try {
     sendRecord = await repo.createNotificationSend({
@@ -222,7 +244,7 @@ async function notify(actor, id, body) {
   } catch (err) {
     if (err.code === "P2002") {
       const existing = await repo.findNotificationSendByKey(idempotencyKey);
-      return { alreadySent: true, recipientCount: existing.recipientCount, sentAt: existing.createdAt, sendEmail: existing.sendEmail, sendInApp: existing.sendInApp };
+      if (existing) return answerFor(existing);
     }
     throw err;
   }

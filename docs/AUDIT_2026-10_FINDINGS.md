@@ -219,3 +219,64 @@ contrast 1.77:1 (AA needs 4.5:1). Now `--chalk-dim`, the secondary colour made f
 Verification of batch 5: all four CI jobs passed on 667d0fe. The accessibility annotation that listed one serious finding on each of the five dashboards no longer appears in that run, so the axe scan now reports
 none; the scan therefore fails the build on serious findings as well as critical ones (the five scanned dashboards only: other screens are not covered by it). V-1 is verified by unit tests of the validator; the edit
 route itself is not exercised by a database-backed test.
+
+## Batch 6 changes (branch ci/audit-batch-6): messaging, AI quota, accessibility
+
+The evidence for this batch is read-only queries against production on 2026-10-22 (AI usage log and e-mail log; no data was changed) plus the code. Nothing below has run in CI or production yet, so every
+status is FIXED, NOT VERIFIED until the CI result is added at the end of this section.
+
+**Q-1 (P3, FIXED, NOT VERIFIED) AI usage had no per-user cap, and bookkeeping rows were counted as calls.** `services/ai/rateLimits.js` had an institute budget (300 a day) and a platform budget (2,000 a day) but
+nothing per person; the only per-person limit is 5 calls a minute on each route. At that rate one account can use an institute's whole day in about an hour, and a handful of accounts the platform's, leaving every
+other student without AI. Separately, `INVALID_RESPONSE` rows (bookkeeping written when a response that did arrive fails our own validation) were counted as calls although the provider call already has its own row,
+so a spell of unusable output used each quota slot twice. *Fix:* a per-user cap (`AI_DAILY_LIMIT_PER_USER`, default 100 per UTC day; the 101st call gets the existing 429 `AI_QUOTA_EXCEEDED` with "You have reached
+your daily AI usage limit. Please try again tomorrow."), and `INVALID_RESPONSE` rows no longer count. *Why 100:* the busiest user-day on the production record since August was 34 calls, so nobody who used it
+before is blocked. *Tests:* `backend/test/aiQuota.test.js` (decision order and boundaries); `backend/scripts/verifyAiQuota.js` (the real table: one below the cap, at the cap, other users unaffected, failed
+calls count, invalid-response rows and two-day-old rows do not).
+
+**M-1 (P2, FIXED, NOT VERIFIED) `POST /admin/announcements` accepted any size and any type.** A non-text `message` crashed the handler (500), there was no length cap, and nothing limited how often one admin
+could broadcast to a whole institute (an in-app notification per recipient, optionally an e-mail each). *Fix:* message at most 2,000 and subject at most 150 characters, non-text is a 400, and 5 accepted announcements per
+admin per hour (`ANNOUNCEMENTS_PER_HOUR`; a refused request, such as a typo, does not use the allowance); the form has matching `maxLength`. Test: `backend/scripts/verifyMessagingGuards.js`.
+
+**M-2 (P2/P3, FIXED, NOT VERIFIED) `POST /tests/:id/notify` could e-mail the same test to all its students again and again, and its idempotency key was not tied to a test.** The key stopped only a double
+click: with a fresh key each press sent another full round from the shared mail allowance. The key was also looked up without checking the test, so a key replayed against a different test answered "already sent"
+with the other test's counts and skipped the real send (P3: it needs a repeated client key). *Fix:* an e-mail notification for a test is refused with 429 for `TEST_EMAIL_NOTIFY_COOLDOWN_MIN` (default 10)
+minutes after the last one (in-app notifications stay allowed); a key that belongs to another test is a 409; the same key for the same test still returns the original "already sent" answer. Test:
+`backend/scripts/verifyMessagingGuards.js`.
+
+**N-1 (P2, FIXED, NOT VERIFIED) Bulk notices started one e-mail per person all at once.** Course and readiness-test assignments (and the opt-in e-mail forms of test and talent-pool assessment assignments),
+talent-pool add and remove, and the publishing of a result examination (in chunks of 15) sent one e-mail per person with no bound, built on `Promise.all(people.map(...))`. Assigning one course to an institute
+starts one send per student at the same moment: for example 3,000 simultaneous sends and 3,000 log rows through one Gmail account. The same burst pattern is what tripped the provider's login throttle on
+2026-10-06 (a 219-student credentials batch and its resend; 352 credential e-mails failed), and while the throttle is active every send fails, password-reset e-mails included. Stuck PENDING rows (N-3) are the other
+visible result of a restart in the middle of such a burst. The talent-pool and result-publish ones also ran inside the HTTP request. *Fix:* `emailEach` and `notifyInBackground` in `utils/notifications.js` (5 in flight,
+`EMAIL_CONCURRENCY`); the talent-pool and result-publish fan-outs now run after the response; a bulk course assignment handles one course at a time. Test: `backend/test/emailFanout.test.js` (peak concurrency
+never above the bound, order kept, one failure does not stop the rest, and a source scan that fails the build if `Promise.all(list.map(... send ...))` or `forEach(... send ...)` comes back).
+The talent-pool "assessment assigned" and "mock interview assigned" notices are in-app only (`sendEmail` defaults to false), so they were left as they are.
+
+**N-2 (P2, FIXED, NOT VERIFIED) Critical e-mail had no protection from bulk e-mail.** Everything leaves through one provider account with a daily allowance (about 1,900 delivered in one day, and its
+"daily sending limit" error has fired on quieter days after a flood), so bulk notices and password-reset or credential e-mails draw on the same allowance. *Fix:* a rolling 24-hour allowance for non-critical e-mail (`BULK_EMAIL_DAILY_BUDGET`, default 1,400; 0 turns it off). The types
+`PASSWORD_RESET`, `PASSWORD_RESET_BY_ADMIN`, `CREDENTIALS`, `CREDENTIALS_RESEND` and `EMAIL_VERIFICATION` never count against it and are never refused by it. Once it is used up a non-critical e-mail is not
+attempted: its log row is written FAILED with the reason, so it is visible and can be retried, and the in-app notification is unaffected. The check fails open if the count cannot be read.
+*1,400 is a policy number, not a measurement of the provider's limit; please confirm or change it.* **Behaviour change:** after 1,400 non-critical e-mails in 24 hours (login alerts, announcements,
+assignment notices) further ones are logged FAILED instead of sent. Tests: `backend/test/emailFanout.test.js` (decision logic against a fake database) and `backend/scripts/verifyEmailProtection.js` (the real
+table: the last allowed e-mail, the first refused, critical types attempted at the limit, credential, over-24-hour and FAILED rows not counted). No e-mail is sent by either: every send uses an invalid address.
+
+**N-3 (P3, FIXED, NOT VERIFIED) E-mail rows stuck PENDING for ever.** A log row is created PENDING just before the send; if the server restarts mid-send nothing ever updates it. Production holds 2,768 such
+rows from one restart on 2026-10-07, still shown as pending weeks later, which also makes any "is mail working?" view misleading. *Fix:* `sweepStalePendingEmails`, run from
+`utils/emailRetryScheduler.js` two minutes after start and every 10 minutes after that (`DISABLE_STALE_EMAIL_SWEEP=true` turns it off; `MAIL_STALE_PENDING_MS`, default 30 minutes, sets the age), marks PENDING
+rows older than 30 minutes FAILED with "Not sent: the server restarted, or the send was interrupted, before this e-mail went out. It can be retried from Email Logs." Nothing else on the row changes.
+**Deployment note, a production data change:** the first run after deploy will mark those roughly 2,768 historical rows FAILED. That is their true state, but it is a write to production data, so it needs an
+explicit OK as part of the deploy approval (or deploy with `DISABLE_STALE_EMAIL_SWEEP=true` and enable it later). Rows stuck in RETRYING (a manual retry interrupted by a restart) are not swept; I did not look
+for any. Tests: `emailFanout.test.js` (the query it issues) and `verifyEmailProtection.js` (the real table: only the old PENDING row changes; fresh PENDING, SENT and FAILED rows are untouched; a second sweep
+changes nothing).
+
+**U-2 (P3, FIXED, NOT VERIFIED) Login page footer contrast.** The "Powered by Acrosoft..." line used `--ink-dim` at 75% opacity, about 3.1:1 on the light page by calculation (AA needs 4.5:1). The opacity is gone.
+This was found by reading the style, not by a scan: the public pages had not been scanned.
+
+**Accessibility coverage (report only).** `frontend/e2e/tests/a11yExtended.spec.js` scans 23 public pages in light mode, four of them also in dark mode, and the five dashboards in dark mode (32 scans), and
+prints every serious or critical axe finding; CI publishes them as one warning annotation. It cannot fail the build. The first annotation is the baseline; nothing is claimed about those pages until it has been read.
+
+**Observed, not changed (decisions for you).** (1) `OTHER_SYSTEM_EMAIL` is the type of both the "your password was changed" security notice (`modules/auth/auth.service.js`) and the admin test e-mail, so the
+notice cannot be exempted from the allowance without a new type, and the auth contract snapshot lists the existing one. (2) `LOGIN_ALERT` (first login, new device) counts as non-critical, so a large first-login
+day can use part of the allowance; say if any of these should be critical. (3) One Gmail account stays the ceiling; Amazon SES remains the earlier recommendation.
+
+**Verification of batch 6:** pending (to be added from the CI run).
