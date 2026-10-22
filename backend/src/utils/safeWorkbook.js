@@ -48,10 +48,21 @@ function assertSafeZip(buffer) {
   }
 }
 
+const isCfb = (buf) => buf.length > 8 && buf[0] === 0xd0 && buf[1] === 0xcf && buf[2] === 0x11 && buf[3] === 0xe0; // legacy binary .xls
+
+// CSV and other text input: the library ignores its row limit for these, so the lines are counted directly (a cheap scan, no parsing).
+function assertTextRows(buffer, maxRows) {
+  let lines = 0;
+  for (let i = buffer.indexOf(10); i !== -1; i = buffer.indexOf(10, i + 1)) {
+    if (++lines > maxRows + 1) throw new WorkbookTooLargeError(`This spreadsheet has more than ${maxRows} rows. Split it into smaller files.`);
+  }
+}
+
 // Same result as XLSX.read(buffer, { type: "buffer" }), or throws. `maxRows` counts rows per sheet, header included.
 function readWorkbook(buffer, { maxRows = DEFAULT_MAX_ROWS } = {}) {
   if (!Buffer.isBuffer(buffer)) throw new Error("A file buffer is required");
   if (isZip(buffer)) assertSafeZip(buffer);
+  else if (!isCfb(buffer)) assertTextRows(buffer, maxRows);
   const workbook = XLSX.read(buffer, { type: "buffer", sheetRows: maxRows + 1 });
   for (const name of workbook.SheetNames) {
     const sheet = workbook.Sheets[name];
