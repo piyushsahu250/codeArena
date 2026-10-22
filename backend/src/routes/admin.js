@@ -10,7 +10,7 @@ const { notifyMany } = require("../utils/notifications");
 const { getQueueStatus: getAiQueueStatus } = require("../utils/aiQueue");
 const { cached } = require("../utils/cache");
 const { estimateAiCostUsd } = require("../utils/aiCostEstimate");
-const { sendMail, sendMailLogged, retryEmailLogged, wrapBranded, MAX_EMAIL_RETRIES } = require("../utils/mailer");
+const { sendMail, sendMailLogged, retryEmailLogged, wrapBranded, escapeHtml, MAX_EMAIL_RETRIES } = require("../utils/mailer");
 const { credentialsResendTemplate } = require("../utils/emailTemplates");
 const { generateTempPassword, recordPasswordChange } = require("../utils/password");
 const { revokeAllSessions } = require("../utils/sessions");
@@ -269,7 +269,7 @@ router.post("/email-logs/test", authenticate, requireRole("ADMIN", "SUPER_ADMIN"
       emailType: "OTHER_SYSTEM_EMAIL",
       instituteId: req.requesterInstituteId || null,
       subject: "CodeArena Test Email",
-      html: wrapBranded(`<p>This is a test email sent from the CodeArena admin panel by ${admin?.name || req.user.email} to confirm the mail system is working.</p>`),
+      html: wrapBranded(`<p>This is a test email sent from the CodeArena admin panel by ${escapeHtml(admin?.name || req.user.email)} to confirm the mail system is working.</p>`),
     });
     await logAudit({
       req, action: AUDIT_ACTIONS.EMAIL_TEST_SENT,
@@ -627,7 +627,7 @@ router.post("/announcements", authenticate, requireRole("ADMIN", "SUPER_ADMIN", 
         sendMailLogged(prisma, {
           to: r.email, name: r.name, studentId: r.id, emailType: "SYSTEM_ANNOUNCEMENT",
           subject: subject?.trim() || "Announcement from CodeArena",
-          html: wrapBranded(`<p>Hi ${r.name},</p><p>${message.trim().replace(/\n/g, "<br/>")}</p>`, r.institute?.name),
+          html: wrapBranded(`<p>Hi ${escapeHtml(r.name)},</p><p>${escapeHtml(message.trim()).replace(/\n/g, "<br/>")}</p>`, r.institute?.name),
         }).catch((e) => ({ ok: false, error: e.message }))
       ).catch((err) => console.error("[admin.announcements] background email batch failed:", err));
     }

@@ -1,4 +1,4 @@
-const { sendMailLogged, wrapBranded } = require("./mailer");
+const { sendMailLogged, wrapBranded, escapeHtml } = require("./mailer");
 const cache = require("./cache");
 
 const FRONTEND_URL = process.env.FRONTEND_URL || "https://codearena.site";
@@ -58,7 +58,7 @@ async function notifyPoolAdded(prisma, student, pool) {
     notify(prisma, { recipientId: student.id, type: "TALENT_POOL_ADDED", message: `You've been added to the "${pool.name}" Talent Pool`, link }),
     emailStudent(
       prisma, student, `You've been added to "${pool.name}"`,
-      `<p>Hi ${student.name},</p><p>You've been added to the <strong>${pool.name}</strong> Talent Pool. You may now have access to exclusive assessments and interviews reserved for this group.</p><p><a href="${FRONTEND_URL}${link}">View your Talent Pools</a></p>`,
+      `<p>Hi ${escapeHtml(student.name)},</p><p>You've been added to the <strong>${escapeHtml(pool.name)}</strong> Talent Pool. You may now have access to exclusive assessments and interviews reserved for this group.</p><p><a href="${FRONTEND_URL}${link}">View your Talent Pools</a></p>`,
       "TALENT_POOL_ADDED"
     ),
   ]);
@@ -69,7 +69,7 @@ async function notifyPoolRemoved(prisma, student, pool) {
     notify(prisma, { recipientId: student.id, type: "TALENT_POOL_REMOVED", message: `You've been removed from the "${pool.name}" Talent Pool` }),
     emailStudent(
       prisma, student, `You've been removed from "${pool.name}"`,
-      `<p>Hi ${student.name},</p><p>You've been removed from the <strong>${pool.name}</strong> Talent Pool. Any exclusive assessments assigned to that pool are no longer available to you.</p>`,
+      `<p>Hi ${escapeHtml(student.name)},</p><p>You've been removed from the <strong>${escapeHtml(pool.name)}</strong> Talent Pool. Any exclusive assessments assigned to that pool are no longer available to you.</p>`,
       "TALENT_POOL_REMOVED"
     ),
   ]);
@@ -95,7 +95,7 @@ async function notifyAssessmentAssigned(prisma, members, pool, assessmentLabel, 
     ...(sendEmail ? members.map((m) =>
       emailStudent(
         prisma, m, `New assessment for "${pool.name}"`,
-        `<p>Hi ${m.name},</p><p>A new exclusive assessment, <strong>${assessmentLabel}</strong>, has been assigned to your <strong>${pool.name}</strong> Talent Pool.</p><p><a href="${FRONTEND_URL}${link}">View your Talent Pools</a></p>`,
+        `<p>Hi ${escapeHtml(m.name)},</p><p>A new exclusive assessment, <strong>${escapeHtml(assessmentLabel)}</strong>, has been assigned to your <strong>${escapeHtml(pool.name)}</strong> Talent Pool.</p><p><a href="${FRONTEND_URL}${link}">View your Talent Pools</a></p>`,
         "TALENT_POOL_ASSESSMENT_ASSIGNED"
       )
     ) : []),
@@ -114,7 +114,7 @@ async function notifyDeadlineReminder(prisma, student, pool, testTitle, startTim
     }),
     emailStudent(
       prisma, student, `Reminder: "${testTitle}" starts soon`,
-      `<p>Hi ${student.name},</p><p>Your exclusive assessment <strong>${testTitle}</strong> from the <strong>${pool.name}</strong> Talent Pool starts at ${formattedStart}.</p>`,
+      `<p>Hi ${escapeHtml(student.name)},</p><p>Your exclusive assessment <strong>${escapeHtml(testTitle)}</strong> from the <strong>${escapeHtml(pool.name)}</strong> Talent Pool starts at ${formattedStart}.</p>`,
       "TALENT_POOL_DEADLINE_REMINDER"
     ),
   ]);
@@ -126,7 +126,7 @@ async function notifyResultsPublished(prisma, student, pool, testTitle) {
     notify(prisma, { recipientId: student.id, type: "TALENT_POOL_RESULTS_PUBLISHED", message: `Results published for "${testTitle}" (${pool.name})`, link }),
     emailStudent(
       prisma, student, `Results published: "${testTitle}"`,
-      `<p>Hi ${student.name},</p><p>Results for <strong>${testTitle}</strong> (${pool.name} Talent Pool) are now available.</p><p><a href="${FRONTEND_URL}${link}">View your Talent Pools</a></p>`,
+      `<p>Hi ${escapeHtml(student.name)},</p><p>Results for <strong>${escapeHtml(testTitle)}</strong> (${escapeHtml(pool.name)} Talent Pool) are now available.</p><p><a href="${FRONTEND_URL}${link}">View your Talent Pools</a></p>`,
       "TALENT_POOL_RESULTS_PUBLISHED"
     ),
   ]);
@@ -141,7 +141,7 @@ async function notifyResultPublished(prisma, student, examination) {
     notify(prisma, { recipientId: student.id, type: "RESULT_PUBLISHED", message: `Result published for "${examination.title}"`, link }),
     emailStudent(
       prisma, student, `Result published: "${examination.title}"`,
-      `<p>Hi ${student.name},</p><p>Your result for <strong>${examination.title}</strong> is now available on your dashboard.</p><p><a href="${FRONTEND_URL}${link}">View your Results</a></p>`,
+      `<p>Hi ${escapeHtml(student.name)},</p><p>Your result for <strong>${escapeHtml(examination.title)}</strong> is now available on your dashboard.</p><p><a href="${FRONTEND_URL}${link}">View your Results</a></p>`,
       "RESULT_PUBLISHED"
     ),
   ]);
@@ -158,7 +158,7 @@ async function notifyAccountStatusChanged(prisma, user, { type, label, adminName
     notify(prisma, { recipientId: user.id, type, message, link }),
     emailStudent(
       prisma, user, `Your CodeArena account has been ${label}`,
-      `<p>Hi ${user.name},</p><p>${message}</p>${label === "locked" || label === "suspended" ? "<p>Contact your administrator if you believe this is a mistake.</p>" : ""}`,
+      `<p>Hi ${escapeHtml(user.name)},</p><p>${escapeHtml(message)}</p>${label === "locked" || label === "suspended" ? "<p>Contact your administrator if you believe this is a mistake.</p>" : ""}`,
       type
     ),
   ]);
@@ -174,7 +174,7 @@ async function notifyPermissionUpdated(prisma, user, { adminName, change }) {
     notify(prisma, { recipientId: user.id, type: "PERMISSION_UPDATED", message, link }),
     emailStudent(
       prisma, user, "Your CodeArena assignment was updated",
-      `<p>Hi ${user.name},</p><p>${message}</p>`,
+      `<p>Hi ${escapeHtml(user.name)},</p><p>${escapeHtml(message)}</p>`,
       "PERMISSION_UPDATED"
     ),
   ]);
@@ -188,7 +188,7 @@ async function notifyPasswordResetByAdmin(prisma, user, { adminName }) {
     notify(prisma, { recipientId: user.id, type: "PASSWORD_RESET_BY_ADMIN", message, link: "/account" }),
     emailStudent(
       prisma, user, "Your CodeArena password was reset",
-      `<p>Hi ${user.name},</p><p>${message}</p><p>If you didn't expect this, contact your administrator immediately.</p>`,
+      `<p>Hi ${escapeHtml(user.name)},</p><p>${escapeHtml(message)}</p><p>If you didn't expect this, contact your administrator immediately.</p>`,
       "PASSWORD_RESET_BY_ADMIN"
     ),
   ]);
@@ -204,12 +204,12 @@ async function notifyDocumentVerification(prisma, student, { document, status, v
   if (status === "VERIFIED") {
     message = `Your document "${label}" has been verified by ${verifierName}`;
     subject = `Document verified: "${label}"`;
-    bodyHtml = `<p>Hi ${student.name},</p><p>Your document <strong>${label}</strong> has been verified by ${verifierName}.</p><p><a href="${FRONTEND_URL}${link}">View your Documents</a></p>`;
+    bodyHtml = `<p>Hi ${escapeHtml(student.name)},</p><p>Your document <strong>${escapeHtml(label)}</strong> has been verified by ${escapeHtml(verifierName)}.</p><p><a href="${FRONTEND_URL}${link}">View your Documents</a></p>`;
   } else {
     const actionLabel = status === "REJECTED" ? "rejected" : "sent back for re-upload";
     message = `Your document "${label}" was ${actionLabel} by ${verifierName}${reason ? ` — ${reason}` : ""}`;
     subject = `Document requires your attention: "${label}"`;
-    bodyHtml = `<p>Hi ${student.name},</p><p>Your document <strong>${label}</strong> was ${actionLabel} by ${verifierName}.</p>${reason ? `<p><strong>Remarks:</strong> ${reason}</p>` : ""}<p><a href="${FRONTEND_URL}${link}">View your Documents</a></p>`;
+    bodyHtml = `<p>Hi ${escapeHtml(student.name)},</p><p>Your document <strong>${escapeHtml(label)}</strong> was ${actionLabel} by ${escapeHtml(verifierName)}.</p>${reason ? `<p><strong>Remarks:</strong> ${escapeHtml(reason)}</p>` : ""}<p><a href="${FRONTEND_URL}${link}">View your Documents</a></p>`;
   }
   await Promise.all([
     notify(prisma, { recipientId: student.id, type: "DOCUMENT_VERIFICATION", message, link }),
@@ -242,7 +242,7 @@ async function notifyTestAssigned(prisma, students, test, { sendEmail = false } 
     ...(sendEmail ? students.map((s) =>
       emailStudent(
         prisma, s, `New test assigned: "${test.title}"`,
-        `<p>Hi ${s.name},</p><p>A new test, <strong>${test.title}</strong>, has been assigned to you.</p><p><a href="${FRONTEND_URL}${link}">View your Tests</a></p>`,
+        `<p>Hi ${escapeHtml(s.name)},</p><p>A new test, <strong>${escapeHtml(test.title)}</strong>, has been assigned to you.</p><p><a href="${FRONTEND_URL}${link}">View your Tests</a></p>`,
         "TEST_ASSIGNED"
       )
     ) : []),
@@ -263,7 +263,7 @@ async function notifyCourseAssigned(prisma, students, course) {
     ...students.map((s) =>
       emailStudent(
         prisma, s, `New course assigned: "${course.name}"`,
-        `<p>Hi ${s.name},</p><p>A new course, <strong>${course.name}</strong>, has been assigned to you.</p><p><a href="${FRONTEND_URL}${link}">View your Courses</a></p>`,
+        `<p>Hi ${escapeHtml(s.name)},</p><p>A new course, <strong>${escapeHtml(course.name)}</strong>, has been assigned to you.</p><p><a href="${FRONTEND_URL}${link}">View your Courses</a></p>`,
         "COURSE_ASSIGNED"
       )
     ),
@@ -285,7 +285,7 @@ async function notifyReadinessTestAssigned(prisma, students, subject) {
     ...students.map((s) =>
       emailStudent(
         prisma, s, `New readiness test assigned: "${subject.name}"`,
-        `<p>Hi ${s.name},</p><p>A new readiness test, <strong>${subject.name}</strong>, has been assigned to you.</p><p><a href="${FRONTEND_URL}${link}">View your Readiness Tests</a></p>`,
+        `<p>Hi ${escapeHtml(s.name)},</p><p>A new readiness test, <strong>${escapeHtml(subject.name)}</strong>, has been assigned to you.</p><p><a href="${FRONTEND_URL}${link}">View your Readiness Tests</a></p>`,
         "READINESS_TEST_ASSIGNED"
       )
     ),
@@ -302,7 +302,7 @@ async function notifyCertificateIssued(prisma, student, certificate) {
     notify(prisma, { recipientId: student.id, type: "CERTIFICATE_ISSUED", message: `Certificate issued: "${certificate.title}"`, link }),
     emailStudent(
       prisma, student, `Certificate issued: "${certificate.title}"`,
-      `<p>Hi ${student.name},</p><p>Congratulations! You've been issued a certificate: <strong>${certificate.title}</strong>.</p><p>Certificate ID: ${certificate.certificateCode}</p><p><a href="${FRONTEND_URL}${link}">View your Certificates</a></p>`,
+      `<p>Hi ${escapeHtml(student.name)},</p><p>Congratulations! You've been issued a certificate: <strong>${escapeHtml(certificate.title)}</strong>.</p><p>Certificate ID: ${escapeHtml(certificate.certificateCode)}</p><p><a href="${FRONTEND_URL}${link}">View your Certificates</a></p>`,
       "CERTIFICATE_ISSUED"
     ),
   ]);

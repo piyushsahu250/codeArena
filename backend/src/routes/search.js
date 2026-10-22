@@ -137,7 +137,12 @@ router.get("/", authenticate, attachRequesterInstitute, async (req, res) => {
 
       // Unlike the student branch, no `isActive` restriction here — staff/admin manage draft
       // courses too, not just published ones.
-      const courses = await prisma.course.findMany({ where: { name: insensitive(q) }, take: LIMIT });
+      // Institute-scoped accounts search their own institute's courses and the ones assigned to it, as the admin-tier branch above does. This search used to match
+      // every institute's course names (including another institute's private and draft courses) for any staff account.
+      const courses = await prisma.course.findMany({
+        where: { name: insensitive(q), ...(req.requesterInstituteId ? { OR: [{ instituteId: req.requesterInstituteId }, { instituteAssignments: { some: { instituteId: req.requesterInstituteId } } }] } : {}) },
+        take: LIMIT,
+      });
       results.push(...courses.map((c) => ({ type: "Course", label: c.name, url: `/learning/${c.slug}` })));
 
       // Reuses the exact same rule questions.js's own list/edit routes enforce (institute PLUS,

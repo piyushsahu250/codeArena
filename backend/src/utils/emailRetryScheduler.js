@@ -1,5 +1,5 @@
 const prisma = require("../prisma");
-const { sendMail, retryEmailLogged, wrapBranded } = require("./mailer");
+const { sendMail, retryEmailLogged, wrapBranded, escapeHtml } = require("./mailer");
 const { sessionTypeLabel } = require("../routes/interview");
 
 const FRONTEND_URL = process.env.FRONTEND_URL || "https://codearena.site";
@@ -43,7 +43,7 @@ async function rebuildInterviewReportReady(log) {
     return { ok: false, error: "Source interview session, report, or student no longer exists" };
   }
   const html = wrapBranded(`
-    <p>Hi ${session.student.name},</p>
+    <p>Hi ${escapeHtml(session.student.name)},</p>
     <p>Your ${sessionTypeLabel(session)} interview has been evaluated.</p>
     <p><strong>Overall Score: ${session.report.overallScore}%</strong></p>
     <p>Log in to view your full report, question-by-question feedback, and improvement suggestions at <a href="${FRONTEND_URL}/interview/report/${session.id}">${FRONTEND_URL}</a>.</p>

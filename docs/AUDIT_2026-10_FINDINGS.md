@@ -41,6 +41,15 @@ route already had an explicit IDOR guard; these three did not. Ids are UUIDs, so
 
 ### P2/P3 — other
 
+**A-2 (P2, FIXED, NOT VERIFIED) Staff could export results for tests they had no access to.** `GET /export/results` returned every test attempt in the institute (scores, student
+names, e-mails, roll numbers, PRNs) to any STAFF account. The tests module's own rule is that staff see results only for tests they created or that were shared with them
+(`utils/testOwnership.js`, enforced on every per-test results route); the export centre bypassed it. *Fix:* `staffTestAccessWhere(req)` applied to the export's query (admins unchanged).
+*Test:* `backend/scripts/verifyStaffScopeIsolation.js` (owner, other staff, after sharing, institute admin, platform admin, other institute).
+
+**A-3 (P3, FIXED, NOT VERIFIED) Staff search matched every institute's course names.** In `routes/search.js` the staff/legacy-admin branch searched `course` with no institute filter,
+so a staff account could discover another institute's private and draft course names and slugs. The admin-tier branch of the same file already scoped it. *Fix:* the same
+own-or-assigned filter. *Test:* the same script.
+
 **E-2 (P2, FIXED, VERIFIED in CI) Spreadsheet formula injection in the audit-log CSV and the result-entry template.**
 `auditCsv` (`modules/users/users.domain.js`) quoted each value but did not neutralise a leading `=`, `+`, `-` or `@`. Its Device column is the login request's
 `User-Agent` header, which any user controls, so a crafted header such as `=HYPERLINK(...)` became a live formula when an administrator opened the export in
@@ -51,15 +60,15 @@ Excel. The result-entry template (`routes/resultManagement.js`) wrote student an
 The contract snapshot had pinned the broken output. *Fix:* quotes are doubled once; `users-contract.json` updated for the one affected line. *Test:* the same unit test
 reads Details back as JSON.
 
-**S-1 (P2, OPEN) SSRF guard on the document download proxy has a DNS-rebinding gap.** `utils/safeFetch.js` resolves the host, checks the IP, then calls `fetch`,
+**S-1 (P2, FIXED, NOT VERIFIED) SSRF guard on the document download proxy has a DNS-rebinding gap.** `utils/safeFetch.js` resolves the host, checks the IP, then calls `fetch`,
 which resolves again. A hostile DNS server can answer a public address first and a private one second. Exposure is limited (the link is student-supplied, the
 fetch is triggered by staff, the response goes to the staff member), and whether the EC2 metadata endpoint is reachable depends on IMDSv2 settings (not checked).
 *Proposed fix:* connect to the validated IP (pinned `lookup`), keep the Host/SNI. Needs its own tests; not done in this batch.
 
-**S-2 (P3, OPEN) The same proxy has no response-size or total-time limit.** The 20 s timeout is cleared once the headers arrive; the body then streams without a
+**S-2 (P3, FIXED, NOT VERIFIED) The same proxy has no response-size or total-time limit.** The 20 s timeout is cleared once the headers arrive; the body then streams without a
 cap. A staff member downloading a hostile link could tie up a connection or bandwidth. *Proposed fix:* cap bytes and abort after a total time.
 
-**E-1 (P3, OPEN) About 25 transactional e-mails put names and titles into HTML without escaping** (`<p>Hi ${user.name}`, test titles, pool names; see
+**E-1 (P3, FIXED, NOT VERIFIED) About 25 transactional e-mails put names and titles into HTML without escaping** (`<p>Hi ${user.name}`, test titles, pool names; see
 `auth.service.js`, `tests.service.js`, `utils/notifications.js`, `users.account.service.js`, `routes/admin.js` custom messages). Only privileged users author these
 values, but a crafted title could inject links into mail sent to students. *Proposed fix:* escape at interpolation (the mailer already has `escapeHtml`).
 
@@ -109,13 +118,13 @@ day to IST behind one shared helper (also removes the triplicated logic). Needs 
 
 ## Reliability
 
-**R-1 (P2, OPEN) `GET /api/backup/database` buffers the entire `pg_dump` output in memory and has no one-at-a-time guard.** (`routes/backup.js`) As the database grows (code
+**R-1 (P2, PARTLY FIXED, NOT VERIFIED) `GET /api/backup/database` buffers the entire `pg_dump` output in memory and has no one-at-a-time guard.** (`routes/backup.js`) As the database grows (code
 submissions, audit and email logs), one click holds the whole dump in the API process's heap, and several clicks run several dumps at once; either can exhaust memory or CPU on the single
 host that also serves exam traffic. The role gate is correct (platform-level admin only, institute admins refused) and every download is audit-logged.
 *Proposed change:* a single-flight lock (second request gets 409/429), a size ceiling that aborts the dump with a clear error, and ideally scheduled server-side backups to private storage instead of
 browser downloads. Trade-off to decide: the code buffers on purpose so a mid-dump failure never gives a truncated file; streaming would need a checksum or trailer for the same guarantee.
 
-**R-2 (P3, OPEN) The `pg_dump` child inherits the whole server environment** (`env: { ...process.env, PGPASSWORD, ... }`), including the JWT secret and API keys it has no use for.
+**R-2 (P3, FIXED, NOT VERIFIED) The `pg_dump` child inherits the whole server environment** (`env: { ...process.env, PGPASSWORD, ... }`), including the JWT secret and API keys it has no use for.
 Pass only `PATH`, `HOME` and the `PG*` variables.
 
 ## Dependency triage (npm audit, production dependencies; CI run on 975250e)
@@ -151,3 +160,17 @@ MFA window had lapsed. The CI numbers use the same `npm install` resolution as t
 
 Everything left is in the "Accepted" rows above, with the reason. Verification: all four CI jobs passed on 306984a (unit tests including the new ZIP tests, production build, database-backed scripts, browser suite
 and the tenant/role isolation gate). Not verified: behaviour on the production host after deploy.
+
+## Batch 3 changes (branch ci/audit-batch-3)
+
+* **A-2, A-3** (staff export and search scope): see their entries above. Test: `backend/scripts/verifyStaffScopeIsolation.js`, added to the CI verification loop.
+* **S-1, S-2** (document-download proxy): `utils/safeFetch.js` now resolves each hop once, checks every returned address, and connects to that same address (a pinned `lookup`), so a second DNS answer is never
+  consulted. It also caps the body at 25 MB and the whole download at 60 s (the old 20 s limit ended when the headers arrived), and blocks more reserved ranges (NAT64, 6to4, benchmarking,
+  documentation, IPv4-embedded IPv6 in hex form). `routes/studentDocuments.js` streams with `pipeline` so a mid-stream error ends the response. Test: `backend/test/safeFetch.test.js` (local server,
+  injected resolver: pinning, one lookup per hop, redirect re-validation, byte and time ceilings, the address table).
+* **E-1** (e-mail HTML): every user-supplied value on an HTML e-mail line goes through `escapeHtml` (names, test, pool and course titles, document labels and remarks, the admin broadcast message, the device
+  summary). Test: `backend/test/emailEscaping.test.js` (the helper, and a source scan that fails if an unescaped interpolation returns). Behaviour change to know about: the admin broadcast message is now treated
+  as plain text, so any HTML typed into it is shown literally rather than rendered.
+* **R-1 (partly), R-2** (`routes/backup.js`): one dump at a time (a second request gets 429), a memory ceiling (`BACKUP_MAX_BYTES`, default 1 GiB, then 413), the dump stops if the client disconnects, stderr is capped,
+  and `pg_dump` receives only `PATH`, `LANG`, `HOME` and the `PG*` variables. Not done: streaming or scheduled server-side backups (needs a decision). Not verified: no automated test (CI has no matching `pg_dump`),
+  so this one is checked by review only.

@@ -4,7 +4,7 @@
 const bcrypt = require("bcryptjs");
 const prisma = require("../../prisma");
 const { ServiceError } = require("../../utils/serviceError");
-const { sendMailLogged, wrapBranded } = require("../../utils/mailer");
+const { sendMailLogged, wrapBranded, escapeHtml } = require("../../utils/mailer");
 const { createSession, endSession, revokeAllSessions } = require("../../utils/sessions");
 const { logAudit, parseDevice, AUDIT_ACTIONS } = require("../../utils/auditLog");
 const { validatePasswordComplexity, isPasswordReused, recordPasswordChange } = require("../../utils/password");
@@ -29,9 +29,9 @@ async function maybeSendLoginAlert(user, req, isFirstLogin, isNewDevice) {
     studentId: user.id,
     subject: isFirstLogin ? "Welcome — first login to your CodeArena account" : "New device signed in to your CodeArena account",
     html: wrapBranded(`
-      <p>Hi ${user.name},</p>
-      <p>${reason}</p>
-      <p><strong>Device:</strong> ${summary}<br/><strong>Time:</strong> ${new Date().toLocaleString()}</p>
+      <p>Hi ${escapeHtml(user.name)},</p>
+      <p>${escapeHtml(reason)}</p>
+      <p><strong>Device:</strong> ${escapeHtml(summary)}<br/><strong>Time:</strong> ${new Date().toLocaleString()}</p>
       <p>If this wasn't you, reset your password immediately and contact your administrator.</p>
     `),
   }).catch((err) => console.error("[auth] login alert email failed:", err.message));
@@ -118,7 +118,7 @@ async function forgotPassword(req, { email }) {
           studentId: user.id,
           emailType: "PASSWORD_RESET",
           subject: "Reset your CodeArena password",
-          html: wrapBranded(`<p>Hi ${user.name},</p><p>Click the link below to reset your password. This link expires in 1 hour.</p><p><a href="${link}">${link}</a></p><p>If you didn't request this, you can ignore this email.</p>`),
+          html: wrapBranded(`<p>Hi ${escapeHtml(user.name)},</p><p>Click the link below to reset your password. This link expires in 1 hour.</p><p><a href="${link}">${link}</a></p><p>If you didn't request this, you can ignore this email.</p>`),
         });
         // sendMailLogged never throws on a delivery failure (that lands in the EmailLog row), so reaching here means the request was queued and the claim stands.
         auditFor(req, user, AUDIT_ACTIONS.PASSWORD_RESET_REQUESTED, {});
@@ -167,7 +167,7 @@ async function resetPassword(req, { token, newPassword }) {
     studentId: user.id,
     emailType: "OTHER_SYSTEM_EMAIL",
     subject: "Your CodeArena password was changed",
-    html: wrapBranded(`<p>Hi ${user.name},</p><p>Your password was just changed via the "forgot password" link, and any devices you were previously signed in on have been signed out. If this wasn't you, contact your administrator immediately.</p>`),
+    html: wrapBranded(`<p>Hi ${escapeHtml(user.name)},</p><p>Your password was just changed via the "forgot password" link, and any devices you were previously signed in on have been signed out. If this wasn't you, contact your administrator immediately.</p>`),
   }).catch((err) => console.error("[auth] password-change alert email failed:", err.message));
 
   return { message: d.MESSAGES.resetDone };

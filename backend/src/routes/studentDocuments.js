@@ -1,5 +1,5 @@
 const express = require("express");
-const { Readable } = require("stream");
+const { pipeline } = require("stream");
 const prisma = require("../prisma");
 const { authenticate, requireRole } = require("../middleware/auth");
 const { attachRequesterInstitute } = require("../middleware/institute");
@@ -321,7 +321,8 @@ router.get("/:id/download", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "I
     } finally {
       clearTimeout(timeout);
     }
-    if (!upstream.ok || !upstream.body) {
+    if (!upstream.ok || !upstream.nodeStream) {
+      if (upstream.destroy) upstream.destroy();
       return res.status(502).json({ error: "Could not fetch the document from its source link" });
     }
 
@@ -332,7 +333,8 @@ router.get("/:id/download", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "I
 
     res.setHeader("Content-Type", contentType);
     res.setHeader("Content-Disposition", `attachment; filename="${baseName}${ext}"`);
-    Readable.fromWeb(upstream.body).pipe(res);
+    // pipeline (not pipe): the download is byte-capped and time-capped in utils/safeFetch.js, and an error mid-stream must end the response instead of leaving it hanging.
+    pipeline(upstream.nodeStream, res, (err) => { if (err && !res.destroyed) res.destroy(err); });
   } catch (err) {
     console.error(err);
     if (!res.headersSent) res.status(500).json({ error: "Failed to download document" });

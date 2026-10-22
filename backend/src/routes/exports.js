@@ -6,6 +6,7 @@ const { requireFeature } = require("../middleware/featureGate");
 const { sendExport } = require("../utils/exportFile");
 const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 const { questionVisibilityWhere } = require("../utils/questionVisibility");
+const { staffTestAccessWhere } = require("../utils/testOwnership");
 const { dedupe } = require("../utils/requestDedup");
 
 const router = express.Router();
@@ -113,9 +114,12 @@ const ENTITIES = {
     }));
   },
 
-  results: async (instituteId, query = {}) => {
+  results: async (instituteId, query = {}, req) => {
+    // A STAFF member sees results only for tests they created or that were shared with them -- the same rule every per-test results route applies
+    // (utils/testOwnership.js). Without it this export returned every attempt in the institute, scores and student details included.
+    const staffTests = staffTestAccessWhere(req);
     const rows = await prisma.testAttempt.findMany({
-      where: { ...(instituteId ? { student: { instituteId } } : {}), ...dateRangeWhere("startedAt", query) },
+      where: { ...(instituteId ? { student: { instituteId } } : {}), ...(Object.keys(staffTests).length ? { test: staffTests } : {}), ...dateRangeWhere("startedAt", query) },
       take: MAX_ROWS,
       orderBy: { startedAt: "desc" },
       include: { student: { select: { name: true, email: true, rollNumber: true, registrationNumber: true } }, test: { select: { title: true } } },

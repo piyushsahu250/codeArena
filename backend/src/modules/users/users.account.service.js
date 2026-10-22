@@ -5,7 +5,7 @@ const bcrypt = require("bcryptjs");
 const prisma = require("../../prisma");
 const cache = require("../../utils/cache");
 const { ServiceError } = require("../../utils/serviceError");
-const { sendMailLogged, wrapBranded } = require("../../utils/mailer");
+const { sendMailLogged, wrapBranded, escapeHtml } = require("../../utils/mailer");
 const { createSession } = require("../../utils/sessions");
 const { logAudit, AUDIT_ACTIONS } = require("../../utils/auditLog");
 const { validatePasswordComplexity, isPasswordReused, recordPasswordChange } = require("../../utils/password");
@@ -19,7 +19,7 @@ const studentIdOf = (u) => (u.role === "STUDENT" ? u.id : null);
 const verificationMail = (user, to, link, closing) => sendMailLogged(prisma, {
   to, name: user.name, emailType: "EMAIL_VERIFICATION", studentId: studentIdOf(user),
   subject: "Confirm your new CodeArena email address",
-  html: wrapBranded(`<p>Hi ${user.name},</p><p>Click the link below to confirm this is your new sign-in email address. This link expires in 24 hours.</p><p><a href="${link}">${link}</a></p><p>Your current sign-in email stays active until you confirm this one.${closing}</p>`),
+  html: wrapBranded(`<p>Hi ${escapeHtml(user.name)},</p><p>Click the link below to confirm this is your new sign-in email address. This link expires in 24 hours.</p><p><a href="${link}">${link}</a></p><p>Your current sign-in email stays active until you confirm this one.${closing}</p>`),
 }).catch((e) => ({ ok: false, error: e.message }));
 
 async function updateOwnAccount(req, { currentPassword, newEmail: rawNewEmail, newPassword }) {
@@ -67,7 +67,7 @@ async function updateOwnAccount(req, { currentPassword, newEmail: rawNewEmail, n
     sendMailLogged(prisma, {
       to: updated.email, name: updated.name, emailType: "LOGIN_ALERT", studentId: studentIdOf(updated),
       subject: "Your CodeArena password was changed",
-      html: wrapBranded(`<p>Hi ${updated.name},</p><p>Your password was just changed from your account settings. If this wasn't you, contact your administrator immediately.</p>`),
+      html: wrapBranded(`<p>Hi ${escapeHtml(updated.name)},</p><p>Your password was just changed from your account settings. If this wasn't you, contact your administrator immediately.</p>`),
     }).catch((err) => console.error("[users] password-change alert email failed:", err.message));
   }
   let verificationEmailSent = null; // null = no e-mail change requested
@@ -76,7 +76,7 @@ async function updateOwnAccount(req, { currentPassword, newEmail: rawNewEmail, n
     const result = await sendMailLogged(prisma, {
       to: newEmailNormalized, name: updated.name, emailType: "EMAIL_VERIFICATION", studentId: studentIdOf(updated),
       subject: "Confirm your new CodeArena email address",
-      html: wrapBranded(`<p>Hi ${updated.name},</p><p>Click the link below to confirm this is your new sign-in email address. This link expires in 24 hours.</p><p><a href="${link}">${link}</a></p><p>Your current sign-in email stays active until you confirm this one. If you didn't request this change, you can ignore this email.</p>`),
+      html: wrapBranded(`<p>Hi ${escapeHtml(updated.name)},</p><p>Click the link below to confirm this is your new sign-in email address. This link expires in 24 hours.</p><p><a href="${link}">${link}</a></p><p>Your current sign-in email stays active until you confirm this one. If you didn't request this change, you can ignore this email.</p>`),
     }).catch((e) => ({ ok: false, error: e.message }));
     verificationEmailSent = !!result.ok;
   }

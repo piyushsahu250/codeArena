@@ -9,6 +9,7 @@ const { parseSecurityInput } = require("../../utils/testExamSecurity");
 const { validateTestForPublish } = require("../../utils/testPublishValidation");
 const { getTestRecipients } = require("../../utils/testEligibility");
 const { notifyTestAssigned, notifyMany, emailStudent } = require("../../utils/notifications");
+const { escapeHtml } = require("../../utils/mailer");
 const { mapWithConcurrency } = require("../../utils/queue");
 const prisma = require("../../prisma");
 const d = require("./tests.domain");
@@ -240,7 +241,7 @@ async function notify(actor, id, body) {
     mapWithConcurrency(recipients, NOTIFY_EMAIL_CONCURRENCY, (s) =>
       emailStudent(
         prisma, s, `Notification: "${test.title}"`,
-        `<p>Hi ${s.name},</p><p>You have a notification about <strong>${test.title}</strong>.</p><p><a href="${FRONTEND_URL}/tests">View your Tests</a></p>`,
+        `<p>Hi ${escapeHtml(s.name)},</p><p>You have a notification about <strong>${escapeHtml(test.title)}</strong>.</p><p><a href="${FRONTEND_URL}/tests">View your Tests</a></p>`,
         "TEST_NOTIFICATION", sendRecord.id
       ).catch((e) => ({ ok: false, error: e.message }))
     ).catch((err) => console.error("[tests.notify] background email batch failed:", err));

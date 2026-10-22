@@ -21,7 +21,7 @@ const { generateResumeQuestions } = require("../utils/resumeInterviewQuestions")
 const { generateInterviewCertificatePdf } = require("../utils/interviewCertificatePdf");
 const { shuffleQuestionOptions, toOriginalSelection } = require("../utils/optionShuffle");
 const { generateInterviewReportPdf } = require("../utils/interviewReportPdf");
-const { sendMailLogged, wrapBranded } = require("../utils/mailer");
+const { sendMailLogged, wrapBranded, escapeHtml } = require("../utils/mailer");
 const aiService = require("../services/ai/aiService");
 const { sendAiError } = require("../utils/aiErrors");
 const { cached, invalidate } = require("../utils/cache");
@@ -1039,7 +1039,7 @@ async function finalizeSession(session, { status = "COMPLETED", terminationReaso
         emailType: "INTERVIEW_REPORT_READY", sourceId: updated.id,
         subject: "Your AI Mock Interview Report is Ready",
         html: wrapBranded(`
-          <p>Hi ${student.name},</p>
+          <p>Hi ${escapeHtml(student.name)},</p>
           <p>Your ${sessionTypeLabel(updated)} interview has been evaluated.</p>
           <p><strong>Overall Score: ${report.overallScore}%</strong></p>
           <p>Log in to view your full report, question-by-question feedback, and improvement suggestions at <a href="${FRONTEND_URL}/interview/report/${updated.id}">${FRONTEND_URL}</a>.</p>

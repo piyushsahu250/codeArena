@@ -294,4 +294,4 @@ async function retryEmailLogged(prisma, logId, sendFn) {
   return { ...result, retryCount: log.retryCount + 1 };
 }
 
-module.exports = { sendMail, sendMailLogged, retryEmailLogged, wrapBranded, MAX_EMAIL_RETRIES };
+module.exports = { sendMail, sendMailLogged, retryEmailLogged, wrapBranded, escapeHtml, MAX_EMAIL_RETRIES };
