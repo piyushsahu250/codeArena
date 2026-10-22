@@ -41,12 +41,12 @@ route already had an explicit IDOR guard; these three did not. Ids are UUIDs, so
 
 ### P2/P3 — other
 
-**A-2 (P2, FIXED, NOT VERIFIED) Staff could export results for tests they had no access to.** `GET /export/results` returned every test attempt in the institute (scores, student
+**A-2 (P2, FIXED, VERIFIED in CI) Staff could export results for tests they had no access to.** `GET /export/results` returned every test attempt in the institute (scores, student
 names, e-mails, roll numbers, PRNs) to any STAFF account. The tests module's own rule is that staff see results only for tests they created or that were shared with them
 (`utils/testOwnership.js`, enforced on every per-test results route); the export centre bypassed it. *Fix:* `staffTestAccessWhere(req)` applied to the export's query (admins unchanged).
 *Test:* `backend/scripts/verifyStaffScopeIsolation.js` (owner, other staff, after sharing, institute admin, platform admin, other institute).
 
-**A-3 (P3, FIXED, NOT VERIFIED) Staff search matched every institute's course names.** In `routes/search.js` the staff/legacy-admin branch searched `course` with no institute filter,
+**A-3 (P3, FIXED, VERIFIED in CI) Staff search matched every institute's course names.** In `routes/search.js` the staff/legacy-admin branch searched `course` with no institute filter,
 so a staff account could discover another institute's private and draft course names and slugs. The admin-tier branch of the same file already scoped it. *Fix:* the same
 own-or-assigned filter. *Test:* the same script.
 
@@ -60,15 +60,15 @@ Excel. The result-entry template (`routes/resultManagement.js`) wrote student an
 The contract snapshot had pinned the broken output. *Fix:* quotes are doubled once; `users-contract.json` updated for the one affected line. *Test:* the same unit test
 reads Details back as JSON.
 
-**S-1 (P2, FIXED, NOT VERIFIED) SSRF guard on the document download proxy has a DNS-rebinding gap.** `utils/safeFetch.js` resolves the host, checks the IP, then calls `fetch`,
+**S-1 (P2, FIXED, VERIFIED by unit tests) SSRF guard on the document download proxy has a DNS-rebinding gap.** `utils/safeFetch.js` resolves the host, checks the IP, then calls `fetch`,
 which resolves again. A hostile DNS server can answer a public address first and a private one second. Exposure is limited (the link is student-supplied, the
 fetch is triggered by staff, the response goes to the staff member), and whether the EC2 metadata endpoint is reachable depends on IMDSv2 settings (not checked).
 *Proposed fix:* connect to the validated IP (pinned `lookup`), keep the Host/SNI. Needs its own tests; not done in this batch.
 
-**S-2 (P3, FIXED, NOT VERIFIED) The same proxy has no response-size or total-time limit.** The 20 s timeout is cleared once the headers arrive; the body then streams without a
+**S-2 (P3, FIXED, VERIFIED by unit tests) The same proxy has no response-size or total-time limit.** The 20 s timeout is cleared once the headers arrive; the body then streams without a
 cap. A staff member downloading a hostile link could tie up a connection or bandwidth. *Proposed fix:* cap bytes and abort after a total time.
 
-**E-1 (P3, FIXED, NOT VERIFIED) About 25 transactional e-mails put names and titles into HTML without escaping** (`<p>Hi ${user.name}`, test titles, pool names; see
+**E-1 (P3, FIXED, VERIFIED by unit tests) About 25 transactional e-mails put names and titles into HTML without escaping** (`<p>Hi ${user.name}`, test titles, pool names; see
 `auth.service.js`, `tests.service.js`, `utils/notifications.js`, `users.account.service.js`, `routes/admin.js` custom messages). Only privileged users author these
 values, but a crafted title could inject links into mail sent to students. *Proposed fix:* escape at interpolation (the mailer already has `escapeHtml`).
 
@@ -174,3 +174,6 @@ and the tenant/role isolation gate). Not verified: behaviour on the production h
 * **R-1 (partly), R-2** (`routes/backup.js`): one dump at a time (a second request gets 429), a memory ceiling (`BACKUP_MAX_BYTES`, default 1 GiB, then 413), the dump stops if the client disconnects, stderr is capped,
   and `pg_dump` receives only `PATH`, `LANG`, `HOME` and the `PG*` variables. Not done: streaming or scheduled server-side backups (needs a decision). Not verified: no automated test (CI has no matching `pg_dump`),
   so this one is checked by review only.
+
+Verification of batch 3: all four CI jobs passed on 4af5b8d (unit tests including `safeFetch.test.js`, `emailEscaping.test.js`; the database-backed loop including `verifyStaffScopeIsolation`; the browser suite;
+the tenant/role isolation gate). Not verified by any test: the backup-endpoint changes (R-1, R-2) and the document download against a real remote file.
