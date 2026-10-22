@@ -200,7 +200,7 @@ Test: `backend/scripts/verifyDeepHealth.js` (CI verification loop).
 
 ## Batch 5 changes (branch ci/audit-batch-5): results integrity and accessibility
 
-**V-1 (P2, FIXED, NOT VERIFIED until CI) Examination thresholds were validated on create but not on edit** (`routes/resultManagement.js`). Creating checked only "total marks > 0". `PATCH /admin/examinations/:id`
+**V-1 (P2, FIXED, VERIFIED by unit tests) Examination thresholds were validated on create but not on edit** (`routes/resultManagement.js`). Creating checked only "total marks > 0". `PATCH /admin/examinations/:id`
 coerced the values to numbers and recomputed every entry, so an edit could set total marks to 0, negative or NaN, a passing percentage of 150 or -5, passing marks above the total, or lower the total below marks already
 entered, which stored (and, for a published examination, published) a percentage over 100. *Fix:* `utils/resultThresholds.js` `validateExamThresholds`, used by create and by edit; edit also refuses a total below the
 highest PRESENT mark already entered and names it. Test: `backend/test/resultThresholds.test.js`. Mark entry, update and import already enforced `0 <= marks <= total` (read, not changed).
@@ -212,6 +212,10 @@ while the marksheet shows "40.00%". Deciding on the rounded value would be consi
 (`thresholdsChanged`), but nothing restricts it once results are published, although the module's own spec comment asks for restrictions on changes to published results. Options: (a) keep as is, (b) block threshold edits
 once published (unpublish first), (c) allow with an explicit confirmation and a notification to affected students. Not changed.
 
-**U-1 (P2, FIXED, NOT VERIFIED until CI) Colour contrast of the sidebar footer on every dashboard** (axe, serious): "Powered by ..." used `--ink-dim` (the light-page dim colour) at 65% opacity on the dark sidebar,
+**U-1 (P2, FIXED, VERIFIED in CI) Colour contrast of the sidebar footer on every dashboard** (axe, serious): "Powered by ..." used `--ink-dim` (the light-page dim colour) at 65% opacity on the dark sidebar,
 contrast 1.77:1 (AA needs 4.5:1). Now `--chalk-dim`, the secondary colour made for that background (about 7.5:1). The CI annotation from the previous batch named the element
 (`aside > div:nth-child(2)`), so this was found from evidence, not by guessing.
+
+Verification of batch 5: all four CI jobs passed on 667d0fe. The accessibility annotation that listed one serious finding on each of the five dashboards no longer appears in that run, so the axe scan now reports
+none; the scan therefore fails the build on serious findings as well as critical ones (the five scanned dashboards only: other screens are not covered by it). V-1 is verified by unit tests of the validator; the edit
+route itself is not exercised by a database-backed test.
