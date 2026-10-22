@@ -17,7 +17,7 @@
     "@aws-sdk/cloudfront-signer": "^3.679.0",
     "@aws-sdk/s3-request-presigner": "^3.679.0",
     "@prisma/client": "^5.19.1",
-    "adm-zip": "^0.5.16",
+    "adm-zip": "^0.6.1",
     "bcryptjs": "^2.4.3",
     "better-sqlite3": "^11.3.0",
     "canvas": "^2.11.0",
@@ -25,7 +25,7 @@
     "cors": "^2.8.5",
     "docx": "^9.0.2",
     "dotenv": "^16.4.5",
-    "express": "^4.19.2",
+    "express": "^4.22.3",
     "express-rate-limit": "^7.4.0",
     "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
@@ -45,6 +45,8 @@
     "prisma": "^5.19.1"
   },
   "overrides": {
-    "qs": "6.16.0"
+    "qs": "6.16.0",
+    "proxy-addr": "^2.0.8",
+    "body-parser": "^1.20.8"
   }
 }

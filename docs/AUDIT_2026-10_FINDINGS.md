@@ -116,3 +116,25 @@ browser downloads. Trade-off to decide: the code buffers on purpose so a mid-dum
 
 **R-2 (P3, OPEN) The `pg_dump` child inherits the whole server environment** (`env: { ...process.env, PGPASSWORD, ... }`), including the JWT secret and API keys it has no use for.
 Pass only `PATH`, `HOME` and the `PG*` variables.
+
+## Dependency triage (npm audit, production dependencies; CI run on 975250e)
+
+The audit output used to sit behind a GitHub sign-in; CI now publishes it as an annotation (`backend/scripts/auditSummary.js`). Result: backend critical 2, high 4, moderate 3,
+low 1; frontend high 4, moderate 6, low 1. Triage below separates what the application can actually reach from what it cannot. "Fixed" means a patched release exists on the npm
+registry (checked) and this branch moves to it; it does not mean exercised in production.
+
+| Package (where) | Severity | Reachable here? | Disposition |
+| --- | --- | --- | --- |
+| `adm-zip` (backend, direct): crafted ZIP allocates GBs; understated declared size | HIGH | **Yes.** The question-import images ZIP is uploaded by staff and extracted in memory (`utils/bulkImageZip.js`), and the code trusted the declared size | **Fixed**: `^0.6.1`, and extraction now inflates with a hard output ceiling and counts real bytes. Test: `backend/test/bulkImageZipBounds.test.js` |
+| `dompurify` (frontend, direct): XSS bypasses | MODERATE (4 advisories) | **Yes.** `LessonView` sanitises admin-authored lesson HTML for students with it | **Fixed**: `^3.4.17`. Monaco ships its own internal copy (fix is a major Monaco release); that copy sanitises the editor's own UI, not our content: accepted |
+| `proxy-addr` (backend, via express): IP spoofing via IPv4-mapped IPv6 trust *subnet* | CRITICAL | Not as configured: `trust proxy` is a hop count (`TRUST_PROXY_HOPS`, default 1), not a subnet list | **Fixed anyway**: `overrides` `^2.0.8`, express `^4.22.3` |
+| `body-parser` (via express): an invalid `limit` value silently disables the cap | LOW | No: `express.json({ limit: "1mb" })` is valid | **Fixed anyway**: `overrides` `^1.20.8` |
+| `axios` (frontend, direct): prototype-pollution gadgets, Node-side ReDoS | HIGH | Browser use only; the gadgets need a pollution source and the ReDoS path is Node-only | **Fixed**: `^1.20.0`. `follow-redirects` (Node-only, transitive) not reachable in a browser: left |
+| `react-router(-dom)` (frontend): RSC-mode CSRF bypass | HIGH | No: the app is a client-side SPA, not RSC mode | **Fixed**: `^7.18.4` |
+| `tar`, `@mapbox/node-pre-gyp`, `canvas` 2.x (backend): arbitrary file overwrite when extracting a hostile tarball | CRITICAL/HIGH | Install time only (`canvas` downloads its prebuilt binary); nothing extracts an untrusted tar at runtime | **Accepted**. Real fix is `canvas` 3.x (major); it is used by the PDF/OCR render worker, so it needs its own validation pass. Not changed |
+| `pdfjs-dist` 3.11.174 (backend, pinned): script execution on a malicious PDF | HIGH | Only inside the sandboxed PDF-render/OCR worker, which `utils/resumeOcr.js` documents as running under the unprivileged sandbox user with resource limits | **Accepted, documented risk.** Newer releases are ESM-only (major change). Revisit with the OCR worker |
+| `mammoth` / `argparse` / `sprintf-js`, `@tensorflow/tfjs` (via argparse) | MODERATE | No: the DoS needs an attacker-controlled format string; neither library formats document text | **Accepted** |
+| `katex` (frontend, direct): bypass of its `trust` restrictions | LOW | No: `trust` is off (`MathText.jsx`) | **Accepted** (fix is a major release) |
+
+Not verified: whether production's image resolved the same versions as CI (the lockfiles do not track every package); the host's own `npm audit` could not be read because the AWS deploy role's
+MFA window had lapsed. The CI numbers use the same `npm install` resolution as the Dockerfile.
