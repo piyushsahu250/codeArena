@@ -24,6 +24,7 @@ Running record of the end-to-end audit. Status words are used strictly:
 | HTML injection in the UI | `dangerouslySetInnerHTML` sites | PASS: lesson content is sanitised with DOMPurify; KaTeX runs with trust off |
 | LMS content isolation (`learning.js`) | Read of the by-id reads | **FAIL then FIXED, PASS in CI** (A-1) |
 | Staff-facing by-id routes in the other 44 route files | Heuristic scan, plus a manual read of ten handlers (attendance, challenges, staffClerk, interview, interviewDrafts, resume, resultManagement, placementOffers, companyQuestions, studentDocuments) | PASS (static, partial): each of those calls an institute-scope helper before acting; the helper bodies were read for studentDocuments, resultManagement and learning only. `learning.js` was the one route file with unscoped reads (A-1). Not every handler in every file was read |
+| Exam submission integrity and idempotency (`submissions.service.js`, schema) | Read of submit/finalize and the constraints | PASS (static): unique `(attemptId, questionId)` and `(testId, studentId)`; answers replace rather than append; the answered question must belong to the attempt; finalise is an atomic claim so completion XP is granted once; deadline checks are server-side. Not load-tested |
 | Spreadsheet exports (formula injection) | Read of every XLSX/CSV writer | **FAIL then FIXED, PASS in CI** (E-2); the other writers use `spreadsheetSafe` |
 
 ## Findings
@@ -138,3 +139,15 @@ registry (checked) and this branch moves to it; it does not mean exercised in pr
 
 Not verified: whether production's image resolved the same versions as CI (the lockfiles do not track every package); the host's own `npm audit` could not be read because the AWS deploy role's
 MFA window had lapsed. The CI numbers use the same `npm install` resolution as the Dockerfile.
+
+**Before and after (CI annotations, same `npm install` resolution as the Dockerfile):**
+
+| | critical | high | moderate | low |
+| --- | --- | --- | --- | --- |
+| Backend before (975250e) | 2 | 4 | 3 | 1 |
+| Backend after (306984a) | 1 (`tar`, install-time only) | 3 (`node-pre-gyp`, `canvas`, `pdfjs-dist`) | 3 (`mammoth` chain) | 0 |
+| Frontend before | 0 | 4 | 6 | 1 |
+| Frontend after | 0 | 0 | 3 (`tfjs` chain) | 1 (`katex`) |
+
+Everything left is in the "Accepted" rows above, with the reason. Verification: all four CI jobs passed on 306984a (unit tests including the new ZIP tests, production build, database-backed scripts, browser suite
+and the tenant/role isolation gate). Not verified: behaviour on the production host after deploy.
