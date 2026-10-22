@@ -285,8 +285,9 @@ export default function Sidebar({ role, profileGateActive = false }) {
             </div>
           ))}
         </div>
+        {/* The footer uses --chalk-dim, the secondary text colour made for this dark sidebar (about 7.5:1 on it). It used --ink-dim at 65% opacity, which axe measured at 1.77:1 on every dashboard. */}
         {!collapsed && (
-          <div style={{ fontSize: 10.5, color: "var(--ink-dim)", opacity: 0.65, textAlign: "center", padding: "0 12px 8px" }}>
+          <div style={{ fontSize: 10.5, color: "var(--chalk-dim)", textAlign: "center", padding: "0 12px 8px" }}>
             Powered by Acrosoft Webtech Solution Pvt. Ltd.
           </div>
         )}

@@ -18,6 +18,7 @@ const { generateMarksheetCode } = require("../utils/resultCode");
 const { notifyResultPublished } = require("../utils/notifications");
 const { computeGrade, invalidateGradeCache } = require("../utils/resultGrading");
 const { computeResultTag, invalidateTagCache, validateRemarkBands } = require("../utils/resultTagging");
+const { validateExamThresholds } = require("../utils/resultThresholds");
 const QRCode = require("qrcode");
 const { mapWithConcurrency } = require("../utils/queue");
 
@@ -402,6 +403,8 @@ router.post("/admin/examinations", authenticate, requireRole("ADMIN", "SUPER_ADM
     if (data.passingMarks == null && data.passingPercent == null) {
       return res.status(400).json({ error: "Provide either Passing Marks or Passing Percentage" });
     }
+    const thresholdError = validateExamThresholds(data);
+    if (thresholdError) return res.status(400).json({ error: thresholdError });
     // Spec section 1: "select either Academic Groups or Talent Pool" — one or the other, and at
     // least one specific group/pool, not a wide-open exam with neither ever chosen.
     if (data.groupSelectionMode === "TALENT_POOL") {
@@ -487,6 +490,14 @@ router.patch("/admin/examinations/:id", authenticate, requireRole("ADMIN", "SUPE
 
     const thresholdsChanged = ["totalMarks", "passingMarks", "passingPercent"].some((k) => data[k] !== undefined);
     const nextExam = { ...existing, ...data };
+    if (thresholdsChanged) {
+      // The edit recomputes every entry, so the new thresholds must be sane AND must not put any already-entered mark over 100%.
+      const highest = data.totalMarks !== undefined
+        ? (await prisma.resultEntry.aggregate({ where: { examinationId: req.params.id, status: "PRESENT" }, _max: { obtainedMarks: true } }))._max.obtainedMarks
+        : null;
+      const thresholdError = validateExamThresholds({ totalMarks: nextExam.totalMarks, passingMarks: nextExam.passingMarks, passingPercent: nextExam.passingPercent }, { highestEnteredMarks: highest });
+      if (thresholdError) return res.status(400).json({ error: thresholdError });
+    }
 
     // examinationUpdate + one update-op per entry are batched into a single prisma.$transaction
     // array rather than an interactive tx callback with a sequential for-await loop: Prisma

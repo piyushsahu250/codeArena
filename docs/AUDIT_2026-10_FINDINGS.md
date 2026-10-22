@@ -197,3 +197,21 @@ Test: `backend/scripts/verifyDeepHealth.js` (CI verification loop).
 
 **Accessibility visibility:** the existing axe scan (five dashboards) fails the build on critical issues only and printed "serious" ones to a log that needs a sign-in. CI now publishes them as one warning annotation
 (report only). No accessibility defects are claimed fixed; the first annotation is the baseline to work from.
+
+## Batch 5 changes (branch ci/audit-batch-5): results integrity and accessibility
+
+**V-1 (P2, FIXED, NOT VERIFIED until CI) Examination thresholds were validated on create but not on edit** (`routes/resultManagement.js`). Creating checked only "total marks > 0". `PATCH /admin/examinations/:id`
+coerced the values to numbers and recomputed every entry, so an edit could set total marks to 0, negative or NaN, a passing percentage of 150 or -5, passing marks above the total, or lower the total below marks already
+entered, which stored (and, for a published examination, published) a percentage over 100. *Fix:* `utils/resultThresholds.js` `validateExamThresholds`, used by create and by edit; edit also refuses a total below the
+highest PRESENT mark already entered and names it. Test: `backend/test/resultThresholds.test.js`. Mark entry, update and import already enforced `0 <= marks <= total` (read, not changed).
+
+**B-2 (P3, OPEN, decision needed) Pass/fail is decided on the unrounded percentage, but the stored and displayed percentage is rounded to two decimals** (`computeResult`). With fractional marks, 39.996% fails a 40% pass mark
+while the marksheet shows "40.00%". Deciding on the rounded value would be consistent with what students see but would pass a borderline score the current rule fails: a scoring rule, so unchanged.
+
+**B-3 (P2, OPEN, decision needed) Editing thresholds of a PUBLISHED examination silently rewrites students' published pass/fail, grade and tag.** The edit recomputes every entry and is audit-logged
+(`thresholdsChanged`), but nothing restricts it once results are published, although the module's own spec comment asks for restrictions on changes to published results. Options: (a) keep as is, (b) block threshold edits
+once published (unpublish first), (c) allow with an explicit confirmation and a notification to affected students. Not changed.
+
+**U-1 (P2, FIXED, NOT VERIFIED until CI) Colour contrast of the sidebar footer on every dashboard** (axe, serious): "Powered by ..." used `--ink-dim` (the light-page dim colour) at 65% opacity on the dark sidebar,
+contrast 1.77:1 (AA needs 4.5:1). Now `--chalk-dim`, the secondary colour made for that background (about 7.5:1). The CI annotation from the previous batch named the element
+(`aside > div:nth-child(2)`), so this was found from evidence, not by guessing.
