@@ -231,10 +231,9 @@ jobs:
             frontend/e2e/results.json
           if-no-files-found: ignore
           retention-days: 7
-      # Observe-only: two older isolation scripts that were never wired into CI. They finish by using up the per-IP public-verification budget, so they run last.
-      # Promote them into the main verification loop once they are known to pass here.
-      - name: Older isolation scripts (observe only)
-        continue-on-error: true
+      # Two isolation scripts that earlier audit fixes were written against but no pipeline ran (when first run as an observe-only step, no failure was reported; this step is now a hard gate, which is the real test). They finish by using up the per-IP
+      # public-verification budget, so they run last, after the browser suite.
+      - name: Older isolation scripts (tenant and role isolation)
         working-directory: backend
         env:
           SECURE_BROWSER_SECRET: ci-only-secure-browser-secret-0123456789
