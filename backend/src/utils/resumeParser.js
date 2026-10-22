@@ -1,5 +1,20 @@
 const pdfParse = require("pdf-parse");
 const mammoth = require("mammoth");
+const { checkZip } = require("./safeZip");
+
+// A .docx is a ZIP. mammoth unpacks every part into memory inside the API process (which also serves exam traffic) and the 10 MB upload limit says nothing about how far it inflates: a few
+// kilobytes can describe gigabytes of XML (2026-10 audit). A real resume's document.xml is well under 2 MB, so these ceilings are generous. An archive this check cannot open is refused
+// too: it cannot be vouched for, and mammoth's reader is not guaranteed to stumble over the same damage before it has inflated everything.
+const DOCX_LIMITS = { maxPartBytes: 32 * 1024 * 1024, maxTotalBytes: 64 * 1024 * 1024, maxParts: 2000 };
+function assertSafeDocx(buffer) {
+  const problem = checkZip(buffer, DOCX_LIMITS);
+  if (problem === "too-large" || problem === "too-many-parts") {
+    throw new Error("This document is too large to read once unpacked. Please save your resume as a normal .docx or .pdf and try again.");
+  }
+  if (problem === "unreadable") {
+    throw new Error("This document could not be opened. Please save your resume as a normal .docx or .pdf and try again.");
+  }
+}
 
 // Heuristic, regex-based resume parsing — NOT a real NLP/AI model. This works well for
 // single-column, text-based resumes (which is also what's ATS-recommended in the first place —
@@ -89,6 +104,7 @@ async function extractTextFromFile(buffer, mimetype, filename) {
     mimetype === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
     ext === "docx"
   ) {
+    assertSafeDocx(buffer); // before mammoth unpacks anything
     // extractRawText() only returns visible text — a "LinkedIn"/"GitHub" icon or label
     // hyperlinked to the actual profile URL (a very common resume pattern) has no visible URL
     // text at all, so the link target would otherwise vanish entirely. convertToHtml() preserves

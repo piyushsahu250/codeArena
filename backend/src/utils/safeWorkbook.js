@@ -3,9 +3,8 @@
 //  * a ZIP-based workbook is checked by inflating every part with a hard output ceiling (the sizes a ZIP header declares are only a claim),
 //  * the row count is capped (a legitimate import is thousands of rows, not millions),
 // and anything over a limit is rejected with one clear error instead of being truncated silently. CSV and other non-ZIP inputs only get the row cap.
-const zlib = require("zlib");
-const AdmZip = require("adm-zip");
 const XLSX = require("xlsx");
+const { checkZip } = require("./safeZip");
 
 const MAX_PART_BYTES = 64 * 1024 * 1024; // one inflated XML part (a worksheet)
 const MAX_TOTAL_BYTES = 200 * 1024 * 1024; // all parts together
@@ -18,34 +17,12 @@ class WorkbookTooLargeError extends Error {
 
 const isZip = (buf) => buf.length > 3 && buf[0] === 0x50 && buf[1] === 0x4b;
 
-// Real inflated size of one ZIP part, or Infinity when it exceeds `max`. Never allocates more than `max` bytes. 0 for a part this check cannot interpret (the library then
-// reports it as unreadable).
-function inflatedSize(entry, max) {
-  const method = entry.header && entry.header.method;
-  let raw;
-  try { raw = entry.getCompressedData(); } catch { return 0; }
-  if (!raw) return 0;
-  if (method === 0) return raw.length > max ? Infinity : raw.length;
-  if (method !== 8) return 0;
-  try {
-    return zlib.inflateRawSync(raw, { maxOutputLength: max }).length;
-  } catch (err) {
-    if (err && (err.code === "ERR_BUFFER_TOO_LARGE" || err instanceof RangeError)) return Infinity;
-    return 0; // corrupt stream: the library will say so
-  }
-}
-
+// The archive check itself is shared with the .docx resume upload (utils/safeZip.js); this only words the errors for a spreadsheet.
 function assertSafeZip(buffer) {
-  let zip;
-  try { zip = new AdmZip(buffer); } catch { throw new WorkbookTooLargeError("Could not read this file. Please upload a valid .xlsx or .csv file."); }
-  const parts = zip.getEntries().filter((e) => !e.isDirectory);
-  if (parts.length > MAX_PARTS) throw new WorkbookTooLargeError("This spreadsheet is too large to import.");
-  let total = 0;
-  for (const part of parts) {
-    const size = inflatedSize(part, MAX_PART_BYTES);
-    total += size === Infinity ? MAX_PART_BYTES + 1 : size;
-    if (size === Infinity || total > MAX_TOTAL_BYTES) throw new WorkbookTooLargeError("This spreadsheet is too large to import once unpacked. Split it into smaller files.");
-  }
+  const problem = checkZip(buffer, { maxPartBytes: MAX_PART_BYTES, maxTotalBytes: MAX_TOTAL_BYTES, maxParts: MAX_PARTS });
+  if (problem === "unreadable") throw new WorkbookTooLargeError("Could not read this file. Please upload a valid .xlsx or .csv file.");
+  if (problem === "too-many-parts") throw new WorkbookTooLargeError("This spreadsheet is too large to import.");
+  if (problem) throw new WorkbookTooLargeError("This spreadsheet is too large to import once unpacked. Split it into smaller files.");
 }
 
 const isCfb = (buf) => buf.length > 8 && buf[0] === 0xd0 && buf[1] === 0xcf && buf[2] === 0x11 && buf[3] === 0xe0; // legacy binary .xls

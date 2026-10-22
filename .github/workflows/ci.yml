@@ -201,6 +201,18 @@ jobs:
           npm run build
           nohup npx vite preview --port 5173 --strictPort --host 127.0.0.1 > ../preview.log 2>&1 &
           for i in $(seq 1 30); do curl -fs http://127.0.0.1:5173/ >/dev/null && break; sleep 1; done
+      # What the browser has to download, measured on the build above and published as one notice (readable without a GitHub sign-in). Never a gate.
+      - name: Frontend bundle size (report only)
+        continue-on-error: true
+        working-directory: frontend
+        run: |
+          lines=""
+          for f in $(ls -S dist/assets/*.js | head -12); do
+            raw=$(stat -c%s "$f"); gz=$(gzip -c "$f" | wc -c)
+            lines="${lines}$(basename "$f"): $((raw / 1024)) KB ($((gz / 1024)) KB gzipped)%0A"
+          done
+          allraw=$(cat dist/assets/*.js | wc -c); allgz=$(cat dist/assets/*.js | gzip -c | wc -c)
+          echo "::notice title=frontend bundle size (report only)::All JavaScript: $((allraw / 1024)) KB, $((allgz / 1024)) KB gzipped. Largest files:%0A${lines}"
       - name: Seed disposable E2E accounts
         working-directory: backend
         run: node scripts/e2eSeed.js --seed > ../frontend/e2e/users.json

@@ -280,3 +280,22 @@ notice cannot be exempted from the allowance without a new type, and the auth co
 day can use part of the allowance; say if any of these should be critical. (3) One Gmail account stays the ceiling; Amazon SES remains the earlier recommendation.
 
 **Verification of batch 6:** pending (to be added from the CI run).
+
+## Batch 7 changes (branch ci/audit-batch-7): resume upload bounds, bundle-size report
+
+**R-3 (P2, FIXED, NOT VERIFIED until CI) The student resume upload unpacked a `.docx` with no limit.** After batch 4 every spreadsheet upload went through `safeWorkbook.js`, but `POST /resume/me/upload`
+(any STUDENT account, 10 MB limit) still handed the file straight to `mammoth`, which unpacks every part of the ZIP into memory inside the API process (twice, because `extractRawText` and `convertToHtml` run in
+parallel). A `.docx` is a ZIP, so a few kilobytes of upload can describe gigabytes of XML; a hostile account could exhaust the memory of the process that also serves exam traffic. Students are the largest group of
+accounts on the platform, so this is the most reachable of the unbounded readers. `mammoth` was the only one left (a search of `backend/src` for ZIP-based readers: `safeWorkbook.js`, `bulkImageZip.js` and the
+resume parser). *Fix:* the archive check moved to a shared `utils/safeZip.js` (`checkZip`: every part is inflated with a hard output ceiling and the sizes the headers declare are never trusted);
+`safeWorkbook.js` now calls it with its own limits and unchanged messages, and `utils/resumeParser.js` calls it before mammoth with 32 MB per part, 64 MB in total and 2,000 parts (a real resume's `document.xml` is
+well under 2 MB). A file the check cannot open at all is refused with a plain message rather than being left to mammoth. *Tests:* `backend/test/safeZip.test.js` (the check with small limits: ordinary file, part over the
+ceiling, total over the ceiling, too many parts, not an archive, a bomb whose headers understate its size; and the resume path: an ordinary generated `.docx` still reads, a 33 MB-of-spaces `.docx` of under
+1 MB is refused promptly, and so is one with understated headers); `safeWorkbook.test.js` is unchanged and still covers the spreadsheet side of the shared code.
+**Observed, not changed:** the PDF half of the same upload (`pdf-parse`, which bundles an old pdf.js) also runs inside the API process. A hostile PDF can keep the event loop busy for a long time, which a size check
+cannot prevent. The OCR fallback already runs in a separate, privilege-dropped child process (`resumeOcr.js`); running the first-pass parse there too is the proper fix, and is a larger change than this batch.
+
+**Frontend bundle size (report only).** CI now publishes the total size of the built JavaScript and the twelve largest files (raw and gzipped) as one notice on the integration job, so that a future
+bundle-size change starts from a measurement. It cannot fail the build. Until the first run has been read, no claim is made about the bundle.
+
+**Verification of batch 7:** pending (to be added from the CI run).
