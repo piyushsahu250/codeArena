@@ -22,6 +22,12 @@ export default class ErrorBoundary extends Component {
     console.error("ErrorBoundary caught:", error);
   }
 
+  // A boundary that wraps a whole set of routes passes `resetKey` (the current path): when it changes, the person has navigated away from the page that failed, so the error is cleared.
+  // Boundaries that do not pass one (undefined both times) behave exactly as before.
+  componentDidUpdate(prevProps) {
+    if (this.state.hasError && this.props.resetKey !== prevProps.resetKey) this.setState({ hasError: false });
+  }
+
   render() {
     if (this.state.hasError) {
       const title = this.props.title || "We hit a temporary problem";

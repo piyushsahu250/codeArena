@@ -242,6 +242,17 @@ function Home() {
   return <Navigate to={HOME_BY_ROLE[user.role] || "/login"} replace />;
 }
 
+// Last line of defence for the routes that have no boundary of their own (most of them): an uncaught render error, or a page chunk that cannot be loaded, shows a Reload card instead of a
+// blank white screen. The boundary lets go of the error when the address changes, so moving to another page works without a reload.
+function RouteErrorBoundary({ children }) {
+  const { pathname } = useLocation();
+  return (
+    <ErrorBoundary resetKey={pathname} message="Something on this page failed to load. Reloading usually fixes this; if it keeps happening, tell your faculty or administrator.">
+      {children}
+    </ErrorBoundary>
+  );
+}
+
 export default function App() {
   // Announces this tab's presence on a same-origin BroadcastChannel for the whole app lifetime, so
   // TestTaking's pre-start "other tabs open?" check (see utils/tabPresence.js) can detect a
@@ -258,6 +269,7 @@ export default function App() {
       <FeatureProvider>
       <GamificationProvider>
       <BrowserRouter>
+        <RouteErrorBoundary>
         <Suspense fallback={<LoadingScreen />}>
         <Routes>
           <Route path="/" element={<Home />} />
@@ -515,6 +527,7 @@ export default function App() {
           <Route path="*" element={<NotFound />} />
         </Routes>
         </Suspense>
+        </RouteErrorBoundary>
         <FullscreenExitNotice />
         <RequestFailedNotice />
       </BrowserRouter>

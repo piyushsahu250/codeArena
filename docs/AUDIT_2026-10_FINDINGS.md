@@ -295,6 +295,13 @@ ceiling, total over the ceiling, too many parts, not an archive, a bomb whose he
 **Observed, not changed:** the PDF half of the same upload (`pdf-parse`, which bundles an old pdf.js) also runs inside the API process. A hostile PDF can keep the event loop busy for a long time, which a size check
 cannot prevent. The OCR fallback already runs in a separate, privilege-dropped child process (`resumeOcr.js`); running the first-pass parse there too is the proper fix, and is a larger change than this batch.
 
+**F-1 (P3, FIXED, NOT VERIFIED for the error path) Most pages had no error boundary, so an uncaught render error or an unloadable page chunk left a blank white screen.** `ErrorBoundary` existed but wrapped
+only about ten routes (interview session, daily and weekly challenge, lessons and a few others) plus the panels inside the student and admin dashboards; the other 140 or so routes had none, and the file's own header comment
+records the original symptom ("unmounted straight to a blank white screen with no recovery"). *Fix:* one boundary around the whole route tree (`RouteErrorBoundary` in `App.jsx`) that shows the existing Reload card with a
+generic message, and clears itself when the address changes (a new optional `resetKey` on `ErrorBoundary`; boundaries that do not pass one behave exactly as before). Routes with their own boundary still use it first.
+*Verification:* the browser suite visits every page of every role, so it shows that the normal path still renders; there is no automated test that forces a render error (it would need a deliberately broken page or a blocked
+chunk, which is fragile), so the error path itself is checked by review only.
+
 **Frontend bundle size (report only).** CI now publishes the total size of the built JavaScript and the twelve largest files (raw and gzipped) as one notice on the integration job, so that a future
 bundle-size change starts from a measurement. It cannot fail the build. Until the first run has been read, no claim is made about the bundle.
 
