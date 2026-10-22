@@ -73,7 +73,7 @@ jobs:
       # Report only (continue-on-error): shows high and critical advisories in production dependencies as a warning without blocking a release. It is not a gate.
       - name: Dependency audit (report only)
         continue-on-error: true
-        run: npm audit --omit=dev --audit-level=high
+        run: npm audit --omit=dev --json | node scripts/auditSummary.js backend
 
   frontend:
     runs-on: ubuntu-latest
@@ -106,7 +106,7 @@ jobs:
         run: node scripts/studentSearchRegression.mjs
       - name: Dependency audit (report only)
         continue-on-error: true
-        run: npm audit --omit=dev --audit-level=high
+        run: npm audit --omit=dev --json | node ../backend/scripts/auditSummary.js frontend
 
   # Static gate, no installs needed. A variable that is used but never declared only fails when that line runs (a blank page for the one screen that reaches it,
   # or a 500 for one request); three such bugs reached production before this existed (lesson page, project page, AI voice interview).
