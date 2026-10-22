@@ -156,7 +156,17 @@ app.get("/api/health", (req, res) => res.json({ status: "ok", service: "CodeAren
 // path at all) shows up here instead of only being discovered when a student hits it live. No
 // secret VALUES are ever returned — only booleans/status strings, per the explicit "do not expose
 // sensitive configuration" requirement this was built against.
-app.get("/api/health/deep", async (req, res) => {
+// Public callers get only the overall status (and the 200/503 code an uptime monitor needs). The per-dependency detail -- which optional services are configured, which required
+// environment variables are missing, judge mode -- is returned only to a caller that sends the HEALTH_DEEP_TOKEN secret in the X-Health-Token header. The route is mounted before the
+// global rate limiter, and each call runs a database query, so it has its own per-IP limit.
+const deepHealthLimiter = rateLimit({ windowMs: 60 * 1000, max: 30, standardHeaders: false, legacyHeaders: false });
+const deepHealthAllowed = (req) => {
+  const expected = process.env.HEALTH_DEEP_TOKEN || "";
+  const given = String(req.get("x-health-token") || "");
+  if (!expected || given.length !== expected.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(given), Buffer.from(expected));
+};
+app.get("/api/health/deep", deepHealthLimiter, async (req, res) => {
   const checks = {};
 
   try {
@@ -189,7 +199,9 @@ app.get("/api/health/deep", async (req, res) => {
   };
 
   const overallOk = Object.values(checks).every((c) => c.ok);
-  res.status(overallOk ? 200 : 503).json({ status: overallOk ? "ok" : "degraded", checks, checkedAt: new Date().toISOString() });
+  const body = { status: overallOk ? "ok" : "degraded", checkedAt: new Date().toISOString() };
+  if (deepHealthAllowed(req)) body.checks = checks;
+  res.status(overallOk ? 200 : 503).json(body);
 });
 
 // Public, boolean-only — lets any page check whether GEMINI_API_KEY is set before showing an

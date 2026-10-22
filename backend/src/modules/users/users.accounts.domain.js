@@ -2,6 +2,7 @@
 // validation) and the messages that explain why a delete is blocked. Behaviour and messages are those of the routes this replaced
 // (see backend/test/snapshots/users-write-contract.json).
 const XLSX = require("xlsx");
+const { readWorkbook } = require("../../utils/safeWorkbook");
 const { isValidEmail } = require("../../utils/emailValidation");
 const { initRollNumberFromRegistration, REGISTRATION_NUMBER_RE } = require("../../utils/studentIdentifiers");
 
@@ -79,7 +80,7 @@ function buildHeaderMap(headers) {
 function parseBulkFile(buffer) {
   let workbook;
   try {
-    workbook = XLSX.read(buffer, { type: "buffer" });
+    workbook = readWorkbook(buffer);
   } catch {
     return { error: "Could not read this file. Please upload a valid .xlsx or .csv file." };
   }
@@ -147,6 +148,28 @@ function validateBulkRow(row, { instituteByName, requesterInstituteId, existingE
   return { status: "valid", rollNumberPreview, institute };
 }
 
+// The confirm step receives its rows from the request body, not from the parsed file, so they are normalised here exactly as parseBulkFile normalises them (trimmed,
+// e-mail lower-cased) and reduced to the known columns. Without this, "Foo@X.com" slipped past the duplicate check against an existing "foo@x.com" (validation compares
+// lower-case values), a row could carry arbitrary extra keys, and an omitted isActive made an account INACTIVE while its flag stayed true.
+const clean = (value, max = 200) => String(value ?? "").trim().slice(0, max);
+function normalizeConfirmRow(raw) {
+  const r = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
+  return {
+    rowNum: Number.isInteger(r.rowNum) ? r.rowNum : null,
+    name: clean(r.name, 120),
+    registrationNumber: clean(r.registrationNumber, 40),
+    email: clean(r.email, 254).toLowerCase(),
+    mobile: clean(r.mobile, 20),
+    department: clean(r.department),
+    program: clean(r.program),
+    batchYear: clean(r.batchYear, 20),
+    section: clean(r.section, 60),
+    instituteName: clean(r.instituteName),
+    gender: clean(r.gender, 20),
+    isActive: r.isActive === undefined ? true : r.isActive === true || r.isActive === "true",
+  };
+}
+
 const previewSummary = (rows) => ({
   totalRows: rows.length,
   validCount: rows.filter((r) => r.status === "valid").length,
@@ -170,5 +193,5 @@ function withDeadline(promise, ms, fallback) {
 
 module.exports = {
   MOBILE_RE, BULK_MAX_ROWS, EDITABLE_FIELDS, creatableRoles, filled, auditActionForEdit, changedFields, rollClash, uniqueViolation, deleteBlocked,
-  normalizeHeader, buildHeaderMap, parseBulkFile, validateBulkRow, previewSummary, withDeadline, MAIL_WAIT_MS, MAIL_STILL_SENDING,
+  normalizeHeader, buildHeaderMap, parseBulkFile, validateBulkRow, normalizeConfirmRow, previewSummary, withDeadline, MAIL_WAIT_MS, MAIL_STILL_SENDING,
 };

@@ -2,6 +2,7 @@
 // file is read into rows, the Roman-numeral unit matching, and how the export sheet is built. The templates and alias tables are exactly the ones the routes this
 // replaced served; the contract snapshot (backend/test/snapshots/question-import-export-contract.json) reads every template back.
 const XLSX = require("xlsx");
+const { readWorkbook } = require("../../utils/safeWorkbook");
 const { parseNotepadMcqText, parseNotepadCodingText } = require("../../utils/bulkQuestionParser");
 
 
@@ -363,7 +364,7 @@ function parseUploadedFile(file, { coding }) {
     return { rows, error: null };
   }
   try {
-    const workbook = XLSX.read(file.buffer, { type: "buffer" });
+    const workbook = readWorkbook(file.buffer);
     // The Combined template (bulk-template?type=combined) has BOTH an "MCQ" and a "CODING" sheet
     // in one workbook — whichever import route the file was posted to (this route always knows
     // which, via `coding`) must read the sheet actually matching that, not just "whatever comes
@@ -426,7 +427,7 @@ function parseUploadedFileBothSheets(file) {
     return { error: "Combined import needs a spreadsheet file (.xlsx/.csv) with separate MCQ and CODING sheets — Notepad format only holds one question type per file. Use the Quiz or Coding option instead for a .txt upload." };
   }
   try {
-    const workbook = XLSX.read(file.buffer, { type: "buffer" });
+    const workbook = readWorkbook(file.buffer);
     const mcqSheetName = workbook.SheetNames.find((n) => ["mcq", "questions", "quiz"].includes(normalizeHeader(n)));
     const codingSheetName = workbook.SheetNames.find((n) => ["coding", "code"].includes(normalizeHeader(n)));
     if (!mcqSheetName && !codingSheetName) {

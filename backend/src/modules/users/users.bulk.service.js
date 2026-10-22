@@ -56,7 +56,7 @@ const problem = (row, result, rollNumber) => ({ row: row.rowNum, name: row.name,
 
 async function confirm(actor, body) {
   const { req, user: admin, requesterInstituteId } = actor;
-  const rows = Array.isArray(body.rows) ? body.rows : [];
+  const rows = (Array.isArray(body.rows) ? body.rows : []).map(d.normalizeConfirmRow);
   if (rows.length === 0) throw new ServiceError(400, "No rows to import");
   if (rows.length > d.BULK_MAX_ROWS) throw new ServiceError(400, "Too many rows in one confirm request");
   const sendCredentials = !!body.sendCredentials;

@@ -1,6 +1,7 @@
 const express = require("express");
 const multer = require("multer");
 const XLSX = require("xlsx");
+const { readWorkbook } = require("../utils/safeWorkbook");
 const { safeCell } = require("../utils/spreadsheetSafe");
 const prisma = require("../prisma");
 const { verifyLimiter } = require("../middleware/publicLimiters");
@@ -1418,7 +1419,7 @@ router.post("/admin/examinations/:id/bulk-import", authenticate, requireRole("AD
 
     let workbook;
     try {
-      workbook = XLSX.read(req.file.buffer, { type: "buffer" });
+      workbook = readWorkbook(req.file.buffer);
     } catch {
       return res.status(400).json({ error: "Could not read this file. Please upload a valid .xlsx or .csv file." });
     }

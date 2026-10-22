@@ -1,6 +1,7 @@
 const express = require("express");
 const multer = require("multer");
 const XLSX = require("xlsx");
+const { readWorkbook } = require("../utils/safeWorkbook");
 const prisma = require("../prisma");
 const { scoreBases } = require("../utils/attemptManifest");
 const { authenticate, requireRole } = require("../middleware/auth");
@@ -605,7 +606,7 @@ router.post("/:id/bulk-import", authenticate, requireRole("ADMIN", "SUPER_ADMIN"
     if (!req.file) return res.status(400).json({ error: "A file is required" });
     let workbook;
     try {
-      workbook = XLSX.read(req.file.buffer, { type: "buffer" });
+      workbook = readWorkbook(req.file.buffer);
     } catch {
       return res.status(400).json({ error: "Could not read this file. Please upload a valid .xlsx or .csv file." });
     }

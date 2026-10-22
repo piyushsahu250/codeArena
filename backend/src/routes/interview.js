@@ -2,6 +2,7 @@ const express = require("express");
 const multer = require("multer");
 const rateLimit = require("express-rate-limit");
 const XLSX = require("xlsx");
+const { readWorkbook } = require("../utils/safeWorkbook");
 const { safeRow, safeCell } = require("../utils/spreadsheetSafe");
 const prisma = require("../prisma");
 const { requirePlatformLevel } = require("../utils/draftOwnership");
@@ -1718,7 +1719,7 @@ router.post("/admin/questions/import", authenticate, requireRole("ADMIN", "SUPER
     if (!req.file) return res.status(400).json({ error: "No file uploaded" });
     let workbook;
     try {
-      workbook = XLSX.read(req.file.buffer, { type: "buffer" });
+      workbook = readWorkbook(req.file.buffer);
     } catch {
       return res.status(400).json({ error: "Could not read this file. Please upload a valid .csv or .xlsx file." });
     }

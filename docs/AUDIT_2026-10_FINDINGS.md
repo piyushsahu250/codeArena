@@ -72,7 +72,7 @@ cap. A staff member downloading a hostile link could tie up a connection or band
 `auth.service.js`, `tests.service.js`, `utils/notifications.js`, `users.account.service.js`, `routes/admin.js` custom messages). Only privileged users author these
 values, but a crafted title could inject links into mail sent to students. *Proposed fix:* escape at interpolation (the mailer already has `escapeHtml`).
 
-**L-2 (P3, OPEN) `/api/health/deep` is public** and reveals which optional services are configured and which required environment variable names are missing.
+**L-2 (P3, FIXED, NOT VERIFIED) `/api/health/deep` is public** and reveals which optional services are configured and which required environment variable names are missing.
 No secret values. *Proposed fix:* keep `/api/health` public, require a platform admin or a shared header for `/deep` (check what monitors call it first).
 
 **L-3 (P2, OPEN) `uncaughtException` and `unhandledRejection` are logged and the process keeps running.** After an uncaught exception Node's state can be
@@ -177,3 +177,23 @@ and the tenant/role isolation gate). Not verified: behaviour on the production h
 
 Verification of batch 3: all four CI jobs passed on 4af5b8d (unit tests including `safeFetch.test.js`, `emailEscaping.test.js`; the database-backed loop including `verifyStaffScopeIsolation`; the browser suite;
 the tenant/role isolation gate). Not verified by any test: the backup-endpoint changes (R-1, R-2) and the document download against a real remote file.
+
+## Batch 4 changes (branch ci/audit-batch-4): imports and health
+
+**I-1 (P2, FIXED, NOT VERIFIED until CI) Spreadsheet uploads had no decompression or row limit.** Eight upload endpoints (bulk users, bulk questions x2, attendance, interview questions, module-coding
+questions, result entry, talent pools) called `XLSX.read(buffer)` directly. An `.xlsx` is a ZIP of XML, so an upload under the 5 MB multer limit can describe gigabytes of cells, and the library inflates all of
+it into memory inside the API process that also serves exam traffic. All eight now go through `utils/safeWorkbook.js`: every ZIP part is inflated with a hard ceiling (64 MB per part, 200 MB total, sizes the
+header declares are not trusted), and a sheet over 50,000 rows is refused outright rather than truncated silently. Test: `backend/test/safeWorkbook.test.js` (ordinary files, CSV, row cap, oversize part, a bomb whose headers
+lie, total cap).
+
+**I-2 (P3, FIXED, NOT VERIFIED until CI) The bulk-student confirm step trusted its rows.** `confirm` re-validates the rows in the request body but did not normalise them as the file parser does. Effects: a mixed-case
+e-mail ("Foo@X.com") passed the duplicate check against an existing "foo@x.com" (validation compares lower-case values); extra keys rode along; an omitted `isActive` created an account with status INACTIVE but the
+active flag still true. Role was already hard-coded to STUDENT and the institute is derived server-side, so there was no privilege escalation. *Fix:* `normalizeConfirmRow` (trim, lower-case e-mail, known columns
+only, length caps, explicit isActive). Test: `backend/test/bulkConfirmRows.test.js`.
+
+**L-2 (above) fixed:** `/api/health/deep` returns only `status` and `checkedAt` unless the caller sends the `HEALTH_DEEP_TOKEN` secret in `X-Health-Token`; it has its own per-IP limit (30/min) because it was
+mounted before the global limiter and runs a database query per call. Nothing in the repository called it; if an external monitor needs the detail it must send the token (set `HEALTH_DEEP_TOKEN` on the host).
+Test: `backend/scripts/verifyDeepHealth.js` (CI verification loop).
+
+**Accessibility visibility:** the existing axe scan (five dashboards) fails the build on critical issues only and printed "serious" ones to a log that needs a sign-in. CI now publishes them as one warning annotation
+(report only). No accessibility defects are claimed fixed; the first annotation is the baseline to work from.
