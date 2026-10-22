@@ -33,6 +33,7 @@ silently fail there (confirmed via `grep` of `backend/src/**/*.js` — zero `ANT
 | `GEMINI_THINKING_LEVEL` | Optional reasoning-effort override for Gemini calls that support it. |
 | `AI_CONCURRENCY`, `AI_MAX_QUEUE_SIZE` | Platform-wide concurrency/queue limits for AI calls. |
 | `AI_DAILY_LIMIT_GLOBAL`, `AI_DAILY_LIMIT_PER_INSTITUTE` | Daily AI-call caps, platform-wide and per institute. |
+| `AI_DAILY_LIMIT_PER_USER` | Daily AI-call cap for one account (default 100, counted per UTC day; added in the 2026-10 audit, batch 6). |
 
 ## Security / PII
 
@@ -74,6 +75,17 @@ unset.
 If neither transport is configured, the mailer runs in a safe "not configured" mode — every send
 attempt is logged and recorded in `EmailLog` as `FAILED` with a clear reason, never silently
 reported as successful.
+
+**Protections for the shared mail account (2026-10 audit, batch 6)** — every e-mail leaves through one account with a daily allowance, so bulk notices must not starve password-reset and credential e-mails:
+
+| Variable | Purpose |
+|---|---|
+| `EMAIL_CONCURRENCY` | Most e-mails in flight at once for any one-per-person notice, announcement or batch (default 5). |
+| `BULK_EMAIL_DAILY_BUDGET` | Rolling 24-hour allowance for **non-critical** e-mail (default 1400; `0` turns it off). Password-reset, admin password-reset, credentials and e-mail-verification e-mail never count against it and are never refused by it. Once it is used up a non-critical e-mail is not attempted; its `EmailLog` row is written `FAILED` with the reason. |
+| `MAIL_STALE_PENDING_MS` | Age after which an `EmailLog` row still `PENDING` is treated as orphaned by a restart (default 30 minutes). |
+| `DISABLE_STALE_EMAIL_SWEEP` | `true` turns off the sweeper that marks such rows `FAILED` (it runs two minutes after start, then every 10 minutes). |
+| `ANNOUNCEMENTS_PER_HOUR` | Accepted announcements per administrator per hour (default 5). |
+| `TEST_EMAIL_NOTIFY_COOLDOWN_MIN` | Minutes before the same test can be e-mailed to its students again (default 10; in-app notifications are not limited). |
 
 **Setting these on Render**: Dashboard → the backend service → Environment tab → Add Environment
 Variable, one row per name above. On Render specifically, set `APPS_SCRIPT_WEB_APP_URL` +

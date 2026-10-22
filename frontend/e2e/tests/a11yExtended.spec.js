@@ -11,9 +11,14 @@ const PUBLIC = ["/", "/about", "/contact", "/privacy", "/terms", "/for-instituti
 const PUBLIC_DARK = ["/", "/login", "/forgot-password", "/register"];
 const DASHBOARDS = [["student", "/dashboard"], ["staff", "/staff"], ["clerk", "/clerk"], ["instAdmin", "/admin"], ["platform", "/admin"]];
 
+function withTimeout(promise, ms) {
+  let timer;
+  const limit = new Promise((_, reject) => { timer = setTimeout(() => reject(new Error(`timed out after ${ms} ms`)), ms); });
+  return Promise.race([promise, limit]).finally(() => clearTimeout(timer));
+}
 async function scan(page, label) {
   try {
-    const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze();
+    const results = await withTimeout(new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze(), 25000);
     const found = results.violations
       .filter((v) => v.impact === "serious" || v.impact === "critical")
       .map((v) => `${v.impact} ${v.id} (${v.nodes.length}): ${v.help} -> ${v.nodes.slice(0, 2).map((n) => `${n.target.join(" ")} [${((n.any[0] && n.any[0].message) || (n.all[0] && n.all[0].message) || "").slice(0, 120)}]`).join(" ; ")}`);
@@ -22,10 +27,12 @@ async function scan(page, label) {
     console.log(`[a11y-ext] ${label}: scan failed: ${String(err && err.message).slice(0, 160)}`);
   }
 }
+// Every wait is bounded (a page that never goes network-idle, such as one that polls, must cost seconds, not the whole 60 s test timeout, which WOULD fail the test).
+const settle = (page) => page.waitForLoadState("networkidle", { timeout: 8000 }).catch(() => {});
 async function open(page, path, theme) {
   await page.addInitScript((t) => { try { localStorage.setItem("caTheme", t); } catch { /* storage blocked */ } }, theme);
-  await page.goto(path);
-  await page.waitForLoadState("networkidle").catch(() => {});
+  await page.goto(path, { timeout: 20000 });
+  await settle(page);
 }
 
 for (const path of PUBLIC) {
@@ -43,8 +50,8 @@ for (const [who, path] of DASHBOARDS) {
     try {
       await page.addInitScript(() => { try { localStorage.setItem("caTheme", "dark"); } catch { /* storage blocked */ } });
       await login(page, users[who]);
-      await page.goto(path);
-      await page.waitForLoadState("networkidle").catch(() => {});
+      await page.goto(path, { timeout: 20000 });
+      await settle(page);
       await scan(page, `${who} ${path} dark`);
     } catch (err) { console.log(`[a11y-ext] ${who} ${path} dark: could not load: ${String(err && err.message).slice(0, 120)}`); }
   });

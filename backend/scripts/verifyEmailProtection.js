@@ -48,7 +48,8 @@ const windowCount = () => prisma.emailLog.count({ where: { createdAt: { gte: new
       { ...base, recipientName: `${MARK}sweep stale-failed`, status: "FAILED", errorMessage: "the original reason", createdAt: old },
     ] });
     const swept = await sweepStalePendingEmails(prisma);
-    check("the sweep changes exactly one row: the PENDING row that is two hours old", swept === 1, `${swept} row(s)`);
+    // The API server this runs beside has its own sweeper on a ten-minute timer, so in the rare case it ticks between the insert above and this call it has already done the work: 0 is then correct.
+    check("the sweep changes at most one row: the PENDING row that is two hours old", swept <= 1, `${swept} row(s)`);
     const stale = await rowOf(`${MARK}sweep stale-pending`);
     check("that row is now FAILED, with the reason and the way to retry it", stale.status === "FAILED" && /restarted|interrupted/.test(stale.errorMessage || "") && /Email Logs/.test(stale.errorMessage || ""), `${stale.status} / ${stale.errorMessage}`);
     check("its retry count and sent time are untouched", stale.retryCount === 0 && stale.sentAt === null);
