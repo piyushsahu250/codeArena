@@ -3,6 +3,7 @@
 const crypto = require("crypto");
 const XLSX = require("xlsx");
 const { AUDIT_ACTIONS } = require("../../utils/auditLog");
+const { safeCell } = require("../../utils/spreadsheetSafe");
 
 const VERIFICATION_TOKEN_TTL_MS = 24 * 60 * 60 * 1000; // longer than the 1h password reset: a new personal address may not be checked as promptly
 const ROLES = ["STUDENT", "STAFF", "CLERK", "ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"];
@@ -95,8 +96,10 @@ function auditCsv(logs) {
   const header = "Timestamp,Action,Actor,Role,IP Address,Device,Student ID,Institute ID,Details\n";
   const rows = logs.map((l) => [
     l.createdAt.toISOString(), l.action, l.adminName, l.adminRole || "", l.ipAddress || "", l.deviceInfo || "",
-    l.studentId || "", l.instituteId || "", JSON.stringify(l.details || {}).replace(/"/g, '""'),
-  ].map((v) => `"${String(v).replace(/"/g, '""')}"`).join(","));
+    l.studentId || "", l.instituteId || "", JSON.stringify(l.details || {}),
+  // safeCell: the Device column is the browser's User-Agent header and the actor is a user-chosen name, so a value starting with = + - @ would run as a formula when
+  // an admin opens the export in Excel. The quotes inside a value are doubled exactly once (they were doubled twice for the Details column, which made it unreadable JSON).
+  ].map((v) => `"${safeCell(String(v)).replace(/"/g, '""')}"`).join(","));
   return header + rows.join("\n");
 }
 

@@ -23,6 +23,8 @@ Running record of the end-to-end audit. Status words are used strictly:
 | Raw SQL / eval | grep | PASS: no `$queryRawUnsafe`/`$executeRawUnsafe`; `child_process` only in backup (pg_dump), judge and resume OCR |
 | HTML injection in the UI | `dangerouslySetInnerHTML` sites | PASS: lesson content is sanitised with DOMPurify; KaTeX runs with trust off |
 | LMS content isolation (`learning.js`) | Read of the by-id reads | **FAIL then FIXED, NOT VERIFIED** (A-1) |
+| Staff-facing by-id routes in the other 44 route files | Heuristic scan, plus a manual read of ten handlers (attendance, challenges, staffClerk, interview, interviewDrafts, resume, resultManagement, placementOffers, companyQuestions, studentDocuments) | PASS (static, partial): each of those calls an institute-scope helper before acting; the helper bodies were read for studentDocuments, resultManagement and learning only. `learning.js` was the one route file with unscoped reads (A-1). Not every handler in every file was read |
+| Spreadsheet exports (formula injection) | Read of every XLSX/CSV writer | **FAIL then FIXED, NOT VERIFIED** (E-2); the other writers use `spreadsheetSafe` |
 
 ## Findings
 
@@ -37,6 +39,16 @@ route already had an explicit IDOR guard; these three did not. Ids are UUIDs, so
 *Regression test:* `backend/scripts/verifyLmsContentIsolation.js` (added to the CI verification loop). Result: pending the CI run of this branch.
 
 ### P2/P3 — other
+
+**E-2 (P2, FIXED, NOT VERIFIED) Spreadsheet formula injection in the audit-log CSV and the result-entry template.**
+`auditCsv` (`modules/users/users.domain.js`) quoted each value but did not neutralise a leading `=`, `+`, `-` or `@`. Its Device column is the login request's
+`User-Agent` header, which any user controls, so a crafted header such as `=HYPERLINK(...)` became a live formula when an administrator opened the export in
+Excel. The result-entry template (`routes/resultManagement.js`) wrote student and institute names the same way. Other exports already use `utils/spreadsheetSafe.js`.
+*Fix:* `safeCell` applied to every audit CSV value and to the two template name cells. *Test:* `backend/test/spreadsheetFormulaSafety.test.js` (unit, CI backend job).
+
+**E-3 (P3, FIXED, NOT VERIFIED) The audit-log CSV doubled the quotes of its Details column twice,** so the JSON inside the cell could not be parsed back (`""""title""""`).
+The contract snapshot had pinned the broken output. *Fix:* quotes are doubled once; `users-contract.json` updated for the one affected line. *Test:* the same unit test
+reads Details back as JSON.
 
 **S-1 (P2, OPEN) SSRF guard on the document download proxy has a DNS-rebinding gap.** `utils/safeFetch.js` resolves the host, checks the IP, then calls `fetch`,
 which resolves again. A hostile DNS server can answer a public address first and a private one second. Exposure is limited (the link is student-supplied, the

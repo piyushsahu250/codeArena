@@ -1,6 +1,7 @@
 const express = require("express");
 const multer = require("multer");
 const XLSX = require("xlsx");
+const { safeCell } = require("../utils/spreadsheetSafe");
 const prisma = require("../prisma");
 const { verifyLimiter } = require("../middleware/publicLimiters");
 const { normalizeVerifyCode } = require("../utils/secureCode");
@@ -1369,7 +1370,7 @@ router.get("/admin/examinations/:id/bulk-template", authenticate, requireRole("A
       // Marks Obtained/Status/Remarks left blank — this is what the admin fills in before
       // re-uploading. Blank Status defaults to Present on import, so leaving it blank for
       // everyone is normal.
-      dataRows = students.map((s) => [examination.institute.name, s.name, s.registrationNumber || "", "", "", ""]);
+      dataRows = students.map((s) => [safeCell(examination.institute.name), safeCell(s.name), s.registrationNumber || "", "", "", ""]);
     } else if (poolId) {
       if (examination.groupSelectionMode !== "TALENT_POOL" || !examination.talentPools.some((tp) => tp.poolId === poolId)) {
         return res.status(400).json({ error: "That Talent Pool isn't associated with this examination." });
@@ -1382,7 +1383,7 @@ router.get("/admin/examinations/:id/bulk-template", authenticate, requireRole("A
       if (students.length === 0) return res.status(400).json({ error: "That Talent Pool has no students from this institute yet." });
       dataRows = students
         .sort((a, b) => a.name.localeCompare(b.name))
-        .map((s) => [examination.institute.name, s.name, s.registrationNumber || "", "", "", ""]);
+        .map((s) => [safeCell(examination.institute.name), safeCell(s.name), s.registrationNumber || "", "", "", ""]);
     } else {
       dataRows = [[examination.institute.name, "", "2024COMP001", Math.round(examination.totalMarks * 0.8), "Present", ""]];
     }
