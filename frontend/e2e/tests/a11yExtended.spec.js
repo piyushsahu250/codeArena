@@ -16,13 +16,18 @@ function withTimeout(promise, ms) {
   const limit = new Promise((_, reject) => { timer = setTimeout(() => reject(new Error(`timed out after ${ms} ms`)), ms); });
   return Promise.race([promise, limit]).finally(() => clearTimeout(timer));
 }
+// One line per page has to fit a CI annotation (about 4 KB for the whole report), so a colour-contrast message is reduced to its numbers:
+// "Element has insufficient color contrast of 4.35 (foreground color: #c7852a, background color: #123528, font size: 9.0pt (12px), ...)" becomes "4.35 fg #c7852a on #123528 9.0pt".
+const compactMessage = (message) => String(message || "")
+  .replace(/^Element has insufficient color contrast of /, "")
+  .replace(/\(foreground color: (#[0-9a-f]+), background color: (#[0-9a-f]+), font size: ([\d.]+pt)[^)]*\)?[\s\S]*$/i, "fg $1 on $2 $3");
 async function scan(page, label) {
   try {
     const results = await withTimeout(new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze(), 25000);
     const found = results.violations
       .filter((v) => v.impact === "serious" || v.impact === "critical")
-      .map((v) => `${v.impact} ${v.id} (${v.nodes.length}): ${v.help} -> ${v.nodes.slice(0, 2).map((n) => `${n.target.join(" ")} [${((n.any[0] && n.any[0].message) || (n.all[0] && n.all[0].message) || "").slice(0, 120)}]`).join(" ; ")}`);
-    if (found.length) console.log(`[a11y-ext] ${label}: ${found.join(" | ")}`.slice(0, 900));
+      .map((v) => `${v.impact} ${v.id} (${v.nodes.length}): ${v.nodes.slice(0, 2).map((n) => `${n.target.join(" ").slice(0, 60)} [${compactMessage((n.any[0] && n.any[0].message) || (n.all[0] && n.all[0].message) || "").slice(0, 70)}]`).join(" ; ")}`);
+    if (found.length) console.log(`[a11y-ext] ${label}: ${found.join(" | ")}`.slice(0, 430));
   } catch (err) {
     console.log(`[a11y-ext] ${label}: scan failed: ${String(err && err.message).slice(0, 160)}`);
   }

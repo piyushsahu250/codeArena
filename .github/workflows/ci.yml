@@ -228,9 +228,18 @@ jobs:
           # Accessibility findings that are serious but not critical: published as one warning annotation (readable without a sign-in), never a gate.
           a11y=$(grep -h "\[a11y\]" /tmp/pw.out | sort -u | head -40 | sed "s/%/%25/g" | awk 'BEGIN{ORS="%0A"} {print}')
           if [ -n "$a11y" ]; then echo "::warning title=accessibility: serious findings (report only)::$a11y"; fi
-          # Wider scan (a11yExtended.spec.js): public pages, and dark mode. Same report-only treatment.
-          a11yext=$(grep -h "\[a11y-ext\]" /tmp/pw.out | sort -u | head -60 | cut -c1-900 | sed "s/%/%25/g" | awk 'BEGIN{ORS="%0A"} {print}')
-          if [ -n "$a11yext" ]; then echo "::warning title=accessibility (public pages and dark mode): serious findings (report only)::$a11yext"; fi
+          # Wider scan (a11yExtended.spec.js): public pages, and dark mode. Same report-only treatment. One annotation holds about 4 KB (the first version of this was cut off), so the
+          # findings go out in parts of 8 lines, at most 8 parts.
+          grep -h "\[a11y-ext\]" /tmp/pw.out | sort -u | cut -c1-440 > /tmp/a11yext.txt || true
+          rm -f /tmp/a11yext.part.*; split -l 8 -d /tmp/a11yext.txt /tmp/a11yext.part. || true
+          part=0
+          for f in /tmp/a11yext.part.*; do
+            [ -f "$f" ] || continue
+            part=$((part + 1)); [ "$part" -gt 8 ] && break
+            msg=$(sed "s/%/%25/g" "$f" | awk 'BEGIN{ORS="%0A"} {print}')
+            echo "::warning title=accessibility (public pages and dark mode) part $part (report only)::$msg"
+          done
+          if [ -s /tmp/a11yext.txt ]; then echo "::notice title=accessibility scan (public pages and dark mode)::$(wc -l < /tmp/a11yext.txt) finding line(s) in total; shown in parts of 8 (8 parts at most)"; fi
           if [ "$code" != 0 ]; then
             msg=$(grep -E "^ +[0-9]+\) |Error:|expect\(|Expected|Received|locator" /tmp/pw.out | head -16 | tr -s '[:space:]' ' ' | cut -c1-1800)
             echo "::error title=browser suite failed::$msg"

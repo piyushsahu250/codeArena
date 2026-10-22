@@ -279,7 +279,25 @@ prints every serious or critical axe finding; CI publishes them as one warning a
 notice cannot be exempted from the allowance without a new type, and the auth contract snapshot lists the existing one. (2) `LOGIN_ALERT` (first login, new device) counts as non-critical, so a large first-login
 day can use part of the allowance; say if any of these should be critical. (3) One Gmail account stays the ceiling; Amazon SES remains the earlier recommendation.
 
-**Verification of batch 6:** pending (to be added from the CI run).
+**U-3 (P2, OPEN) Public pages fail colour contrast: the baseline from the new report-only scan on 92b5018.** The scan (23 public pages in light mode, four in dark mode, five dashboards in dark mode) reports every serious or critical finding, and every
+finding that is visible is a serious colour-contrast one. The CI annotation is cut at about 4 KB, so only the first dozen findings (alphabetical, `/about` to `/login`) are readable: the remaining public pages, the
+dark-mode runs and the dashboards in dark mode are NOT yet visible, and nothing is claimed about them. What is visible: the marketing eyebrow label (gold #c7852a on dark green #123528, 9 pt) at 4.35:1 on every marketing page;
+inline links (green #4f9d6e on cream #fbf9f4, 11.6 to 12.8 pt) at 3.12:1 on `/about`, `/coding-challenges`, `/coding-platform`, `/contact`, `/employability-readiness`, `/for-institutions` and `/lms`; gold links
+(#c7852a on #fbf9f4, 10.5 pt) at 2.92:1 on `/login` and `/forgot-password`; gold track pills (#c7852a on #f9efde, 9 pt) at 2.7:1 on `/ai-mock-interview`. AA needs 4.5:1 for text this size. Not fixed yet: the fix is darker
+text variants of the two accent colours on light backgrounds (a brand-colour choice), and the annotation must be split so that every finding is visible before the work can be called complete.
+
+**Deployment and verification of batch 6.** All four CI jobs passed on 92b5018 (lint; backend with the new unit tests; frontend; integration with `verifyEmailProtection`, `verifyMessagingGuards`, `verifyAiQuota` and the
+browser suite). It was merged to `main` by fast-forward and deployed on 2026-10-22 (container started 18:11 UTC). Checked on the live host afterwards: `/api/health` reports 92b5018; both containers are running with 0
+restarts; 0 error lines in the application log; the running code carries the new settings (allowance 1,400, five critical types, AI cap 100); the 33 unit tests of this batch pass inside the production image; unauthenticated
+requests to protected routes return 401. The schema guard found no destructive change (only the nine trigram-index lines it ignores by design; batch 6 has no schema change). The sweeper's first run, about two minutes after
+start, changed exactly the 2,768 rows predicted beforehand (all created 2026-10-07: COURSE_ASSIGNED 1,925, LOGIN_ALERT 843); PENDING rows older than 30 minutes are now 0, SENT is unchanged at 11,486 and no other row carries
+the sweeper's message. Rollback image: `codearena-backend:rollback-20261022181042`. **Not verified in production:** the allowance refusing an e-mail, the announcement limiter and the test-notify cooldown (covered by the
+database-backed CI scripts only); main's own re-run of the integration job was still running when this was written (the identical commit had passed all four jobs on its branch run).
+
+**Calibration of the allowance (production, read-only, 2026-10-22).** In the last 60 days non-critical e-mail stayed under 1,400 in every rolling 24 hours except two spells: the busiest rolling 24 hours of e-mail that was
+actually sent (leaving out the 2,768 orphans) was 1,970 (ending 2026-10-11 07:00), and 2026-10-07 had about 1,700 once the orphans are removed; both were mass course-assignment and first-login floods (COURSE_ASSIGNED and
+LOGIN_ALERT). The next busiest day had 904. On a day like 2026-10-10 the allowance now refuses roughly the last 570 notices (logged FAILED with the reason; in-app notices are unaffected). AI: the busiest user-day since August
+is 33 calls under the new counting (34 counting every row), the busiest institute-day 37 and the busiest platform-day 39, far below the caps of 100, 300 and 2,000.
 
 ## Batch 7 changes (branch ci/audit-batch-7): resume upload bounds, bundle-size report
 
@@ -304,5 +322,8 @@ chunk, which is fragile), so the error path itself is checked by review only.
 
 **Frontend bundle size (report only).** CI now publishes the total size of the built JavaScript and the twelve largest files (raw and gzipped) as one notice on the integration job, so that a future
 bundle-size change starts from a measurement. It cannot fail the build. Until the first run has been read, no claim is made about the bundle.
+
+**Accessibility report made complete (report only).** The first run of the public-page scan was cut off at about 4 KB of annotation text (U-3). Each finding is now one compact line (a contrast message reduced to the
+ratio, the two colours and the type size), and CI publishes the lines in up to eight annotations of eight lines each, plus a notice with the total, so the next run shows every page that has a finding.
 
 **Verification of batch 7:** pending (to be added from the CI run).
