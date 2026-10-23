@@ -6,7 +6,7 @@ const { readWorkbook } = require("../utils/safeWorkbook");
 const { sendTable } = require("../utils/spreadsheetSafe");
 const prisma = require("../prisma");
 const { Prisma } = require("@prisma/client");
-const { authenticate, requireRole } = require("../middleware/auth");
+const { authenticate, requireRole, logUnauthorizedAttempt } = require("../middleware/auth");
 const { judgeSubmission } = require("../utils/judgeGateway");
 const { runQueued } = require("../utils/queue");
 const { gradeModuleCodingAttempt, gradeOneModuleCodingSubmission } = require("../utils/gradeModuleCodingAttempt");
@@ -1462,11 +1462,20 @@ router.delete("/admin/tests/:id/students/:studentId/attempts", authenticate, req
     if (!test) return res.status(404).json({ error: "Assessment not found" });
     const student = await prisma.user.findUnique({
       where: { id: req.params.studentId },
-      select: { id: true, name: true, instituteId: true, institute: { select: { name: true } } },
+      select: { id: true, name: true, instituteId: true, academicGroupId: true, institute: { select: { name: true } } },
     });
     if (!student) return res.status(404).json({ error: "Student not found" });
     if (req.requesterInstituteId && student.instituteId !== req.requesterInstituteId) {
       return res.status(403).json({ error: "You can only manage students in your own institute" });
+    }
+    // Staff are held to the classes (academic groups: batch, department and section) assigned to them, not to the whole institute: resetting attempts is a grant of extra
+    // attempts. An institute admin or a platform admin is not scoped by class. The refusal is recorded, like every other refused privileged action.
+    if (req.user.role === "STAFF") {
+      const assigned = student.academicGroupId ? await prisma.staffClassAssignment.count({ where: { staffId: req.user.id, academicGroupId: student.academicGroupId } }) : 0;
+      if (!assigned) {
+        logUnauthorizedAttempt(req, ["STAFF assigned to the student's class"]).catch(() => {});
+        return res.status(403).json({ error: "You can only reset attempts for students in classes assigned to you" });
+      }
     }
 
     const { mode, attemptsRemaining, reason } = req.body || {};

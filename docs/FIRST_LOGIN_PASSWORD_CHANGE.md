@@ -121,7 +121,7 @@ Done: the standard form semantics above. **Not claimed:** that a save/update pro
 
 ## Limitations and observations
 
-* *Self-service "forgot password" does not clear `mustChangePassword`* (`replacePasswordFromReset` in `auth.repository.js`): a student who set their own password through the e-mailed link is asked to choose another one at their next sign-in. Pre-existing; not changed here because the reset contract is pinned by `auth-contract.json`.
+* *Self-service "forgot password"*: requesting a link never changes the flag; COMPLETING a reset (the person chose their own password through the e-mailed link and the server confirmed it) clears `mustChangePassword` in the same transaction as the new hash (`replacePasswordFromReset`; `backend/scripts/verifyResetClearsFlag.js`). Until a reset or a change is completed, a flagged account is held to the first-login step at sign-in.
 * bcrypt reads only the first 72 bytes of a password, so two passwords that share their first 72 bytes are the same password. There is no maximum length rule; one would be a policy decision.
 * The older `/change-password` page (`ForceChangePassword.jsx`) still checks only `length >= 6` in the browser; the server refuses weaker passwords either way. It is reachable only by a session created before this change.
 * `backend/scripts/reproduceProfilePatch400.js` (a one-off diagnostic) signs in as a flagged account and used to receive a token; it no longer does.

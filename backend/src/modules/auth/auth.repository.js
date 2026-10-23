@@ -23,10 +23,12 @@ const claimResetCooldown = (userId, now, cutoff) => prisma.user.updateMany({
 const storeResetToken = (userId, tokenHash, expiry) => prisma.user.update({ where: { id: userId }, data: { resetTokenHash: tokenHash, resetTokenExpiry: expiry } });
 const releaseResetCooldown = (userId) => prisma.user.update({ where: { id: userId }, data: { lastPasswordResetRequestedAt: null } });
 
-// The new hash and its history/expiry stamp succeed or fail together; the token is cleared in the same write so it is single-use.
+// The new hash and its history/expiry stamp succeed or fail together; the token is cleared in the same write so it is single-use. A completed reset means the person chose
+// their own password through the e-mailed link, so the "must change password" flag is cleared in the same transaction, and only here: REQUESTING a reset
+// (forgotPassword) never touches it, and a flagged account that has not completed a reset or a change is still held to the first-login step at sign-in.
 function replacePasswordFromReset(userId, passwordHash, recordChange) {
   return prisma.$transaction(async (tx) => {
-    await tx.user.update({ where: { id: userId }, data: { passwordHash, resetTokenHash: null, resetTokenExpiry: null } });
+    await tx.user.update({ where: { id: userId }, data: { passwordHash, mustChangePassword: false, resetTokenHash: null, resetTokenExpiry: null } });
     await recordChange(tx);
   });
 }
