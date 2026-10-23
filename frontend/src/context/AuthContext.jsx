@@ -32,7 +32,11 @@ export function AuthProvider({ children }) {
     // Best-effort — closes the server-side LoginSession row so an admin's "active sessions" view
     // and the audit log reflect a real logout, not just the token going stale after 12h. Local
     // state is cleared unconditionally regardless of whether this call succeeds.
-    api.post("/auth/logout").catch(() => {});
+    // The token is read and sent explicitly BEFORE storage is cleared: axios runs request interceptors asynchronously, so by the time api.js's interceptor looked for the
+    // token it was already gone, the request went out without credentials and was refused, and the server session stayed open for its full 12 hours (found by signing a
+    // test student out on the live site and finding the session still active).
+    const token = localStorage.getItem("token");
+    if (token) api.post("/auth/logout", null, { headers: { Authorization: `Bearer ${token}` } }).catch(() => {});
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     setUser(null);
