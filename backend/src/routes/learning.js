@@ -33,6 +33,17 @@ const {
 // never another institute's. An unscoped platform admin (no institute) reads everything. This is the same rule GET /courses/:slug applies; the by-id reads below
 // return answer keys and hidden test cases, so they must not be any less protected than the course page.
 const canReadCourseContent = (req, courseInstituteId) => !req.requesterInstituteId || courseInstituteId == null || courseInstituteId === req.requesterInstituteId;
+
+// The student-side rule for the WRITE routes on a lesson: its course must be Published and assigned to the student's institute or academic group, exactly what the lesson read route
+// (GET /lessons/:id) and the practice-question routes (loadEligiblePracticeQuestion) already require. POST /lessons/:id/progress and /lessons/:id/test-submit checked the module lock
+// but not this, so a student who knew a lesson id of another institute's private course (or of one never assigned to them, or not yet published) could mark it complete, earning XP, and
+// could submit its practice test and read back every correct answer and explanation. `course` is { id, status }.
+async function studentMayUseCourseOf(userId, course) {
+  if (!course || course.status !== "PUBLISHED") return false;
+  const student = await prisma.user.findUnique({ where: { id: userId }, select: { instituteId: true, academicGroupId: true } });
+  if (!student || isEligibilityUnresolvable(student.instituteId, student.academicGroupId)) return false;
+  return studentCanAccessCourse(prisma, course.id, student.instituteId, student.academicGroupId);
+}
 const { cached } = require("../utils/cache");
 const { computeLearningRecommendations } = require("../utils/learningRecommendations");
 const { computeConceptMastery } = require("../utils/conceptMastery");
@@ -399,9 +410,10 @@ router.get("/lessons/:id", authenticate, attachRequesterInstitute, async (req, r
 // GET /lessons/:id auto-creates an IN_PROGRESS row) still works.
 router.post("/lessons/:id/progress", authenticate, requireRole("STUDENT"), attachRequesterInstitute, requireFeature("lms"), async (req, res) => {
   try {
-    const lesson = await prisma.lesson.findUnique({ where: { id: req.params.id }, include: { module: { select: { id: true, courseId: true } } } });
+    const lesson = await prisma.lesson.findUnique({ where: { id: req.params.id }, include: { module: { select: { id: true, courseId: true, course: { select: { id: true, status: true } } } } } });
     if (!lesson) return res.status(404).json({ error: "Lesson not found" });
     if (!(await prisma.lesson.findFirst({ where: { id: lesson.id, ...liveLessonWhere }, select: { id: true } }))) return res.status(404).json({ error: "Lesson not found" }); // Draft/Archived anywhere up the chain
+    if (!(await studentMayUseCourseOf(req.user.id, lesson.module.course))) return res.status(404).json({ error: "Lesson not found" }); // not published, or not assigned to this student: same answer as an unknown id
 
     // Backend-authoritative lock check — GET /lessons/:id already refuses to even show the
     // content of a locked module's lesson (see below), but this write-side route had no
@@ -474,9 +486,10 @@ router.post("/lessons/:id/progress", authenticate, requireRole("STUDENT"), attac
 // point of a learning-module practice test, unlike the exam submission flow.
 router.post("/lessons/:id/test-submit", authenticate, requireRole("STUDENT"), attachRequesterInstitute, requireFeature("lms"), async (req, res) => {
   try {
-    const lesson = await prisma.lesson.findUnique({ where: { id: req.params.id }, include: { module: { select: { id: true, courseId: true } } } });
+    const lesson = await prisma.lesson.findUnique({ where: { id: req.params.id }, include: { module: { select: { id: true, courseId: true, course: { select: { id: true, status: true } } } } } });
     if (!lesson) return res.status(404).json({ error: "Lesson not found" });
     if (!(await prisma.lesson.findFirst({ where: { id: lesson.id, ...liveLessonWhere }, select: { id: true } }))) return res.status(404).json({ error: "Lesson not found" }); // Draft/Archived anywhere up the chain
+    if (!(await studentMayUseCourseOf(req.user.id, lesson.module.course))) return res.status(404).json({ error: "Lesson not found" }); // checked before the practice test is described or graded
     if (!lesson.isModuleTest) return res.status(400).json({ error: "This lesson is not a practice test" });
 
     // Same backend-authoritative lock check as /lessons/:id/progress just above — a locked

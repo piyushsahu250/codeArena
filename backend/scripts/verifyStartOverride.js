@@ -28,6 +28,8 @@ async function main() {
   const s1 = await mk("Alice", "STUDENT", instI.id), s2 = await mk("Bob", "STUDENT", instI.id), s3 = await mk("Cara", "STUDENT", instI.id), sJ = await mk("Zed", "STUDENT", instJ.id);
   const adminI = await mk("Admin I", "INSTITUTE_ADMIN", instI.id), adminJ = await mk("Admin J", "INSTITUTE_ADMIN", instJ.id), staffI = await mk("Staff I", "STAFF", instI.id);
   const course = await prisma.course.create({ data: { slug: `verify-so-${ts}`, name: "Verify Override Course", status: "PUBLISHED", instituteId: instI.id } });
+  // A student reaches a coding assessment only through a course assigned to their institute (or group), as in real use.
+  await prisma.courseInstituteAssignment.create({ data: { courseId: course.id, instituteId: instI.id, assignedByUserId: adminI.id, assignedByName: "Verify" } });
   const mod = await prisma.courseModule.create({ data: { courseId: course.id, title: "Verify Override Module", isActive: true } });
   const lesson = await prisma.lesson.create({ data: { moduleId: mod.id, title: "Verify Override Lesson", content: "x", order: 0, isActive: true } });
   for (const s of [s1, s2, s3]) await prisma.lessonProgress.create({ data: { studentId: s.id, lessonId: lesson.id, status: "COMPLETED", completedAt: new Date() } });

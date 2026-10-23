@@ -23,8 +23,8 @@ const SecureExam = require("../utils/secureExam");
 const S_CHECKS_OFF = (pol) => SecureExam.capabilityChecks(pol, {});
 const crypto = require("crypto");
 
-// Chapter Levels are reachable by id, so the course's institute/group assignment must be enforced here (a student
-// from another institute must get the same "not found" as a nonexistent id). Module-direct tests keep their old rule.
+// Coding assessments are reachable by id, so the course's institute/group assignment must be enforced here (a student
+// from another institute must get the same "not found" as a nonexistent id). Applies to chapter Levels and, since audit batch 10, to module-direct tests too.
 async function studentMayUseCourse(studentId, courseId) {
   const s = await prisma.user.findUnique({ where: { id: studentId }, select: { instituteId: true, academicGroupId: true } });
   return !!s && studentCanAccessCourse(prisma, courseId, s.instituteId, s.academicGroupId);
@@ -227,6 +227,9 @@ async function resolveAssessment(req) {
   }
   const mod = await prisma.courseModule.findUnique({ where: { id: req.params.moduleId }, include: { codingTest: true, course: { select: { status: true } } } });
   if (!mod || !mod.codingTest) return null;
+  // The same course-assignment rule as the Level path above. This path used to rely on "lessons complete" alone, and POST /learning/lessons/:id/progress did not check that the
+  // lesson's course was the student's either, so a student could complete another institute's lessons and then start (and read the questions of) its module coding test.
+  if (!(await studentMayUseCourse(req.user.id, mod.courseId))) return null;
   const test = mod.codingTest;
   const live = statusOf(test) === "PUBLISHED" && statusOf(mod) === "PUBLISHED" && mod.course.status === "PUBLISHED";
   const lockMap = await getModuleLockMap(prisma, req.user.id, mod.courseId);

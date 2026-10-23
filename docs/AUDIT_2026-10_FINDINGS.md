@@ -365,3 +365,33 @@ page and both talent-pool reports.
 * **Module coding.** The attempt score is the mean of per-question percentages that were each rounded first, and the pass decision uses that rounded mean (the same family as B-2).
 
 **Verification of batch 9:** pending (to be added from the CI run).
+
+## Batch 10 changes (branch ci/audit-batch-10): students and courses that are not theirs
+
+Method: the by-id access review continued from the route files with the most by-id parameters and the fewest institute checks, reading each student-facing write route and comparing it with the read route for the same
+object.
+
+**LMS-1 (P2, FIXED, NOT VERIFIED until CI) Three student routes did not check that the course was theirs.** The lesson read route (`GET /learning/lessons/:id`), the practice-question routes
+(`loadEligiblePracticeQuestion`), the project task routes and the readiness start all require the course to be Published and assigned to the student's institute or group. Their siblings did not:
+* `POST /learning/lessons/:id/progress` and `POST /learning/lessons/:id/test-submit` checked only the module lock. A student who knew the id of a lesson in another institute's private course, a course never assigned to
+  them, or one not yet published could mark it complete (earning XP, including the module-complete award), and `test-submit` returned the practice test's prompts, options, correct answers and explanations: the same
+  content that finding A-1 closed for staff reads.
+* `GET /module-coding/module/:id` and `POST /module-coding/module/:id/start` (the module-direct coding test) had no course check at all; the comment said these "keep their old rule", which was "all lessons complete".
+  The progress route above let anyone satisfy that, so the test's configuration and questions of another institute's course could be read, and an attempt started that counts toward that course's coding certificate.
+Exploiting any of it needs the id of a lesson or module in a course the student cannot see (ids are UUIDs; the lists that used to reveal them were closed in batch 2). Whether it was ever used has not been checked in
+production yet (a query is prepared for the deploy, below). *Fix:* `studentMayUseCourseOf` in `routes/learning.js` (the course is Published and `studentCanAccessCourse`), applied by both lesson routes before anything is
+described or graded, answering "Lesson not found" exactly as for an unknown id; and `resolveAssessment` in `routes/moduleCoding.js` applies `studentMayUseCourse` to the module-direct path, as it already did for chapter
+Levels. *Behaviour change to know about:* a student whose course is not assigned to them (or was unassigned, or unpublished) can no longer record progress, take its practice test, or start or resume its module coding
+test; reading the lessons was already refused. Attempts already in progress are unaffected (the attempt routes are checked by ownership of the attempt). *Tests:* `backend/scripts/verifyLmsWriteIsolation.js` (database-backed,
+in the CI loop): the assigned student still works; the other institute's student gets "not found", nothing is written and no answer or explanation is returned; the module coding test is "not found" even with every lesson
+already marked complete; access follows the assignment and not the institute that owns the course; a course that is not Published is closed to writes. `verifyStartOverride.js` and `verifySecureAndroid.js` built their
+course without assigning it and then started module-direct tests as students, which is exactly what the old rule allowed; they now assign the course to the institute, as real use does.
+
+**Reviewed, no defect found.** `routes/placementOffers.js` (all routes: students act on their own offers only; staff and clerks are held to their institute, STAFF eligibility to groups they are assigned to; the analytics
+are institute-scoped and cached per institute), the readiness assessment start (assignment check, attempt cap re-verified in a serializable transaction), the project task routes (access helper), and the module-coding
+attempt routes (ownership of the attempt).
+
+**Prepared for the deploy (read-only, not yet run, needs an AWS sign-in):** count module-direct coding attempts, and lesson-progress rows, belonging to students whose institute and group have no assignment to the course.
+A non-zero count would mean either that the gap was used or that courses were unassigned after students worked on them; either way those students lose access to continue, so the numbers should be seen before deploy.
+
+**Verification of batch 10:** pending (to be added from the CI run).

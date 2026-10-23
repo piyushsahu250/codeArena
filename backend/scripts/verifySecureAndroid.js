@@ -57,6 +57,8 @@ async function cleanup() {
   const admin = await mk("Admin", "ADMIN", null);
   // Own fixtures, no dependence on seeded courses: Course > Module > completed Lesson > coding test > one question.
   const course = await prisma.course.create({ data: { slug: `verify-sa-${ts}`, name: "Verify Android Course", status: "PUBLISHED" } });
+  // A student reaches a coding assessment only through a course assigned to their institute (or group), as in real use.
+  await prisma.courseInstituteAssignment.create({ data: { courseId: course.id, instituteId, assignedByUserId: instAdmin.id, assignedByName: "Verify" } });
   const mod = await prisma.courseModule.create({ data: { courseId: course.id, title: "Verify Android Module", isActive: true } });
   const lesson = await prisma.lesson.create({ data: { moduleId: mod.id, title: "Verify Android Lesson", content: "x", order: 0, isActive: true } });
   for (const s of [s1, s2]) await prisma.lessonProgress.create({ data: { studentId: s.id, lessonId: lesson.id, status: "COMPLETED", completedAt: new Date() } });
