@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import api from "../api";
 import Navbar from "../components/Navbar";
 import ChalkUnderline from "../components/ChalkUnderline";
+import { useAuth } from "../context/AuthContext";
+import { useConfirm } from "../context/ConfirmContext";
 
 const STATUSES = ["PENDING", "TRIAGED", "IN_PROGRESS", "RESOLVED", "DUPLICATE", "WONT_FIX"];
 const STATUS_COLOR = {
@@ -18,6 +20,8 @@ export default function IssueReports({ basePath }) {
   const [error, setError] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [savingId, setSavingId] = useState(null);
+  const { user } = useAuth();
+  const confirmDialog = useConfirm();
 
   function load() {
     api.get("/issue-reports", { params: statusFilter ? { status: statusFilter } : {} })
@@ -34,6 +38,25 @@ export default function IssueReports({ basePath }) {
       load();
     } catch (err) {
       setError(err.response?.data?.error || "Failed to update report");
+    } finally {
+      setSavingId(null);
+    }
+  }
+
+  async function deleteReport(id) {
+    const ok = await confirmDialog({
+      title: "Delete report",
+      message: "Permanently delete this reported problem? This cannot be undone.",
+      confirmLabel: "Delete",
+      danger: true,
+    });
+    if (!ok) return;
+    setSavingId(id);
+    try {
+      await api.delete(`/issue-reports/${id}`);
+      load();
+    } catch (err) {
+      setError(err.response?.data?.error || "Failed to delete report");
     } finally {
       setSavingId(null);
     }
@@ -101,6 +124,16 @@ export default function IssueReports({ basePath }) {
                     Mark {s.replace("_", " ")}
                   </button>
                 ))}
+                {user?.role === "SUPER_ADMIN" && (
+                  <button
+                    className="btn btn-ghost"
+                    style={{ fontSize: 12, padding: "6px 10px", color: "var(--rust)", marginLeft: "auto" }}
+                    disabled={savingId === issue.id}
+                    onClick={() => deleteReport(issue.id)}
+                  >
+                    Delete
+                  </button>
+                )}
               </div>
             </div>
           ))}

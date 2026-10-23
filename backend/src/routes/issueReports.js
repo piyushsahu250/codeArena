@@ -7,6 +7,7 @@ const express = require("express");
 const prisma = require("../prisma");
 const { authenticate, requireRole } = require("../middleware/auth");
 const { attachRequesterInstitute } = require("../middleware/institute");
+const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 
 const router = express.Router();
 
@@ -92,6 +93,27 @@ router.patch("/:id", ...reviewGuard, async (req, res) => {
   }
   const updated = await prisma.userReportedIssue.update({ where: { id: req.params.id }, data });
   res.json(updated);
+});
+
+// Permanent removal of one report. SUPER_ADMIN only (platform-level data housekeeping): institute admins and ADMIN can triage but not delete. The role check is the
+// route's own guard, not a UI hint. Other reports that were marked as a duplicate of this one lose that pointer so none refers to a row that no longer exists. Audited.
+router.delete("/:id", authenticate, requireRole("SUPER_ADMIN"), async (req, res) => {
+  const existing = await prisma.userReportedIssue.findUnique({ where: { id: req.params.id } });
+  if (!existing) return res.status(404).json({ error: "Report not found" });
+  await prisma.$transaction([
+    prisma.userReportedIssue.updateMany({ where: { duplicateOfId: existing.id }, data: { duplicateOfId: null } }),
+    prisma.userReportedIssue.delete({ where: { id: existing.id } }),
+  ]);
+  await logAudit({
+    req,
+    action: AUDIT_ACTIONS.USER_MANAGEMENT_CHANGED,
+    actorId: req.user.id,
+    actorName: req.user.name,
+    actorRole: req.user.role,
+    instituteId: existing.instituteId || null,
+    details: { subAction: "ISSUE_REPORT_DELETED", issueReportId: existing.id, status: existing.status, page: existing.page, reportedByRole: existing.reportedByRole },
+  });
+  res.json({ ok: true });
 });
 
 module.exports = router;
