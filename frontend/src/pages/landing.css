@@ -21,11 +21,18 @@
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--amber-dark);
+  /* Text colours, not the accent fills: --amber-dark measured 2.9:1 on the cream page and 4.35:1 on the dark banner (AA needs 4.5:1 at this size).
+     --warning-text is the darker variant made for text on light surfaces (it falls back to --amber-dark in dark mode, where the page is dark). */
+  color: var(--warning-text);
   display: inline-flex;
   align-items: center;
   gap: 8px;
 }
+/* On the always-dark bands the lighter accent reads best (6.2:1 on the blackboard green). */
+.ca-landing .ca-hero .ca-eyebrow,
+.ca-landing .ca-stats-band .ca-eyebrow,
+.ca-landing .ca-cta-band .ca-eyebrow,
+.ca-landing .ca-mkt-banner .ca-eyebrow { color: var(--amber); }
 
 .ca-landing .ca-section-head { max-width: 640px; margin-bottom: 48px; }
 .ca-landing .ca-section-head h2 { font-size: 34px; line-height: 1.15; margin-top: 10px; }
@@ -191,7 +198,7 @@
   color: var(--chalk-dim);
 }
 .ca-hero-mockup-code .kw { color: var(--amber); }
-.ca-hero-mockup-code .fn { color: var(--mint); }
+.ca-hero-mockup-code .fn { color: var(--mint-on-dark); }
 
 .ca-hero-float-card {
   position: absolute;
@@ -296,7 +303,7 @@
 .ca-feature-learn-more {
   display: inline-flex; align-items: center; gap: 6px;
   margin-top: 22px; font-weight: 700; font-size: 14px;
-  color: var(--mint); text-decoration: none;
+  color: var(--success-text); text-decoration: none; /* --mint on the cream page is 3.1:1; --success-text is the AA-safe text variant */
 }
 .ca-feature-learn-more:hover { text-decoration: underline; }
 
@@ -326,19 +333,19 @@
   line-height: 1.8;
 }
 .ca-code-block .kw { color: var(--amber); }
-.ca-code-block .str { color: var(--mint); }
+.ca-code-block .str { color: var(--mint-on-dark); }
 .ca-testcase-row {
   display: flex; align-items: center; justify-content: space-between;
   padding: 8px 12px; border-radius: 8px; background: var(--paper); border: 1px solid var(--line);
   font-size: 12.5px; margin-top: 8px;
 }
-.ca-testcase-pass { color: var(--mint); font-weight: 700; }
+.ca-testcase-pass { color: var(--success-text); font-weight: 700; }
 .ca-mini-bar-track { height: 8px; border-radius: 999px; background: var(--paper); border: 1px solid var(--line); overflow: hidden; margin-top: 6px; }
 .ca-mini-bar-fill { height: 100%; border-radius: 999px; background: var(--mint); }
 .ca-track-pill-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
 .ca-track-pill {
   font-size: 12px; font-weight: 600; padding: 6px 11px; border-radius: 999px;
-  background: rgba(232,163,61,0.12); color: var(--amber-dark);
+  background: rgba(232,163,61,0.12); color: var(--warning-text); /* --amber-dark on this tint was 2.7:1 */
 }
 .ca-erp-tree { font-size: 13px; line-height: 2.1; }
 .ca-erp-tree .lvl1 { font-weight: 700; }
@@ -428,7 +435,7 @@
 .ca-mkt-body p { color: var(--ink-dim); font-size: 15.5px; line-height: 1.7; margin-bottom: 14px; }
 .ca-mkt-body ul, .ca-mkt-body ol { margin: 0 0 14px; padding-left: 22px; }
 .ca-mkt-body li { color: var(--ink-dim); font-size: 15.5px; line-height: 1.7; margin-bottom: 6px; }
-.ca-mkt-body a { color: var(--mint); }
+.ca-mkt-body a { color: var(--success-text); }
 .ca-mkt-body strong { color: var(--ink); }
 .ca-mkt-updated { font-size: 13px; color: var(--ink-dim); font-family: var(--font-mono); margin-bottom: 8px; }
 

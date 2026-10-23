@@ -41,7 +41,7 @@ export default function ResetPassword() {
     return (
       <div style={{ display: "flex", justifyContent: "center", padding: "64px 24px", minHeight: "100vh", background: "var(--paper)" }}>
         <div style={{ maxWidth: 380 }}>
-          <p>This reset link is missing its token. Request a new one from the <Link to="/forgot-password" style={{ color: "var(--amber-dark)", fontWeight: 600 }}>forgot password</Link> page.</p>
+          <p>This reset link is missing its token. Request a new one from the <Link to="/forgot-password" style={{ color: "var(--warning-text)", fontWeight: 600 }}>forgot password</Link> page.</p>
         </div>
       </div>
     );
@@ -53,7 +53,7 @@ export default function ResetPassword() {
         <h2>Reset your password</h2>
 
         {success ? (
-          <p style={{ color: "var(--mint)", fontSize: 14, marginTop: 12 }}>Password reset successfully. Please log in with your new password — you'll need to sign in again on any other devices too.</p>
+          <p style={{ color: "var(--success-text)", fontSize: 14, marginTop: 12 }}>Password reset successfully. Please log in with your new password — you'll need to sign in again on any other devices too.</p>
         ) : (
           <>
             <label style={labelStyle} htmlFor="rp-new-password">New password</label>

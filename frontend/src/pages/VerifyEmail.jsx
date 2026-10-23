@@ -39,7 +39,7 @@ export default function VerifyEmail() {
         )}
         {status === "success" && (
           <>
-            <p style={{ color: "var(--mint)", fontSize: 14, marginTop: 16 }}>{message}</p>
+            <p style={{ color: "var(--success-text)", fontSize: 14, marginTop: 16 }}>{message}</p>
             <Link to="/login" className="btn btn-primary" style={{ display: "inline-block", marginTop: 18, padding: "10px 24px" }}>Sign in</Link>
           </>
         )}

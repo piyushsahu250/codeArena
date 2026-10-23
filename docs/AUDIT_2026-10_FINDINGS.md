@@ -279,12 +279,12 @@ prints every serious or critical axe finding; CI publishes them as one warning a
 notice cannot be exempted from the allowance without a new type, and the auth contract snapshot lists the existing one. (2) `LOGIN_ALERT` (first login, new device) counts as non-critical, so a large first-login
 day can use part of the allowance; say if any of these should be critical. (3) One Gmail account stays the ceiling; Amazon SES remains the earlier recommendation.
 
-**U-3 (P2, OPEN) Public pages fail colour contrast: the baseline from the new report-only scan on 92b5018.** The scan (23 public pages in light mode, four in dark mode, five dashboards in dark mode) reports every serious or critical finding, and every
-finding that is visible is a serious colour-contrast one. The CI annotation is cut at about 4 KB, so only the first dozen findings (alphabetical, `/about` to `/login`) are readable: the remaining public pages, the
-dark-mode runs and the dashboards in dark mode are NOT yet visible, and nothing is claimed about them. What is visible: the marketing eyebrow label (gold #c7852a on dark green #123528, 9 pt) at 4.35:1 on every marketing page;
-inline links (green #4f9d6e on cream #fbf9f4, 11.6 to 12.8 pt) at 3.12:1 on `/about`, `/coding-challenges`, `/coding-platform`, `/contact`, `/employability-readiness`, `/for-institutions` and `/lms`; gold links
-(#c7852a on #fbf9f4, 10.5 pt) at 2.92:1 on `/login` and `/forgot-password`; gold track pills (#c7852a on #f9efde, 9 pt) at 2.7:1 on `/ai-mock-interview`. AA needs 4.5:1 for text this size. Not fixed yet: the fix is darker
-text variants of the two accent colours on light backgrounds (a brand-colour choice), and the annotation must be split so that every finding is visible before the work can be called complete.
+**U-3 (P2, FIXED, NOT VERIFIED until this branch's CI run; see batch 8) Public pages failed colour contrast.** The scan added in batch 6 (23 public pages in light mode, four in dark mode, five dashboards in dark mode) first produced a
+baseline on 92b5018 that the annotation limit cut off after about a dozen findings; batch 7 split the report into parts so that every finding is visible. The complete list was 17 serious colour-contrast findings on 17 public
+pages in light mode, and none listed for the dark-mode runs or the dashboards, in four colour combinations: the marketing eyebrow label (gold #c7852a on dark green #123528, 9 pt) at 4.35:1 on every marketing page; inline
+links (green #4f9d6e on cream #fbf9f4, 11.6 to 12.8 pt) at 3.12:1 on `/about`, `/coding-challenges`, `/coding-platform`, `/contact`, `/employability-readiness`, `/for-institutions` and `/lms`; gold links (#c7852a on
+#fbf9f4, 10.5 pt) at 2.92:1 on `/login` and `/forgot-password`; gold track pills (#c7852a on #f9efde, 9 pt) at 2.7:1 on `/ai-mock-interview`. AA needs 4.5:1 for text this size. *Cause:* the accent FILL colours had been
+used as TEXT colours. The "none listed for dark mode" turned out to be a limit of what the scan could see, not a clean result: see batch 8 for that and for the fix.
 
 **Deployment and verification of batch 6.** All four CI jobs passed on 92b5018 (lint; backend with the new unit tests; frontend; integration with `verifyEmailProtection`, `verifyMessagingGuards`, `verifyAiQuota` and the
 browser suite). It was merged to `main` by fast-forward and deployed on 2026-10-22 (container started 18:11 UTC). Checked on the live host afterwards: `/api/health` reports 92b5018; both containers are running with 0
@@ -321,12 +321,51 @@ generic message, and clears itself when the address changes (a new optional `res
 chunk, which is fragile), so the error path itself is checked by review only.
 
 **Frontend bundle size (report only).** CI now publishes the total size of the built JavaScript and the twelve largest files (raw and gzipped) as one notice on the integration job, so that a future
-bundle-size change starts from a measurement. It cannot fail the build. Until the first run has been read, no claim is made about the bundle.
+bundle-size change starts from a measurement. It cannot fail the build. **First measurement (CI run on the batch 7 branch):** all JavaScript is 16,972 KB raw and 4,057 KB gzipped across the build; the two largest files are the Monaco editor's TypeScript worker (about 6.7 MB raw) and the Monaco editor itself (about 4.1 MB raw), the pages that use the editor are lazily loaded routes and `vite.config.js` keeps the editor in its own chunk, but what a visitor to a page without the editor actually downloads was not measured. Nothing was changed in response; it is the starting point for any later bundle work.
 
 **Accessibility report made complete (report only).** The first run of the public-page scan was cut off at about 4 KB of annotation text (U-3). Each finding is now one compact line (a contrast message reduced to the
-ratio, the two colours and the type size), and CI publishes the lines in up to eight annotations of eight lines each, plus a notice with the total, so the next run shows every page that has a finding.
+ratio, the two colours and the type size), and CI publishes the lines in up to eight annotations of eight lines each, plus a notice with the total, so the next run shows every page that has a finding. That run did: 17 findings, all colour contrast, all on public pages in light mode (see U-3 and batch 8).
 
-**Verification of batch 7:** pending (to be added from the CI run).
+**Verification of batch 7.** All four CI jobs passed on 0b8de24. It was merged to `main` by fast-forward and deployed on 2026-10-22 (container started 18:31 UTC). Checked on the live host afterwards: `/api/health` reports 0b8de24; both containers are running with 0 restarts; 0 error lines in the application log; inside the running image a synthetic 41,028-byte `.docx` that inflates to 40 MB is refused in 18 ms with the plain "too large to read once unpacked" message, and an ordinary generated `.docx` still reads (in memory only, nothing stored); the 40 unit tests of batches 6 and 7 pass in the production image; unauthenticated requests to the resume upload and to three protected lists return 401. The frontend build on Vercel carries the new error-boundary text. Rollback image: `codearena-backend:rollback-20261022183029`. **Not verified in production:** the error boundary's error path (no automated test forces a render error; see F-1) and the PDF half of the resume upload (unchanged).
+
+## Batch 8 changes (branch ci/audit-batch-8): public-page colour contrast, a dark-theme token fault, and the wider accessibility scan becomes a gate
+
+**U-3 fix, light mode (FIXED, NOT VERIFIED until this branch's CI run).** All four failing combinations came from using the accent FILL colours as TEXT colours. `theme.css` already defined text-safe variants for badges
+(`--warning-text` #8A5A12 and `--success-text` #14703A in light mode, from the 2026-09-17 accessibility pass); the public pages simply did not use them. Changes: the marketing eyebrow uses `--warning-text` on light sections
+and the lighter `--amber` on the always-dark bands (hero, stats, call to action, page banners); inline links in the marketing body, the "learn more" links, the test-case pass label and the "Live" badge use
+`--success-text`; the track pills use `--warning-text`; and the sign-in, forgot-password, reset-password and verify-email pages use the same tokens for their links and messages (`/register` shows the sign-in page).
+Computed contrast (WCAG formula; the same arithmetic reproduces the scan's numbers for the old colours to within 0.01: 4.35, 3.13, 2.93, 2.70): `--warning-text` on cream 5.62:1 and on the pill tint 5.19:1;
+`--success-text` on cream 5.86:1; `--amber` on the blackboard green #123528 6.22:1 (7.14:1 on the footer green).
+
+**What the scan could not see.** The home page paints each section only when it scrolls into view (`.ca-reveal` starts at opacity 0), and a contrast check cannot measure text that is not painted, so every run until now
+examined only the top of `/`. The scan now scrolls the page in steps, as a visitor does, before it measures. Three things below the fold were computed to fail and are fixed in advance: code-sample strings and function names
+in the blackboard mock-ups (`--mint` is 4.08:1 on #123528 and 3.37:1 on #1B4332; they now use the new `--mint-on-dark` #6FBF8F, 6.08:1 and 5.02:1), the test-case "pass" label, and the "Live" badge (2.81:1).
+
+**U-4 (P2, FIXED, NOT VERIFIED until this branch's CI run) The dark theme's status text colours were below AA.** The scan with the whole page in view failed on the dark-mode home page: the badge at 3.49:1 and the track pill at
+3.74:1. The cause was not those two components. The comment in `theme.css` said the dark-mode status text colours (`--success-text`, `--warning-text`, `--danger-text`, `--info-text`) "already contrast well"; measured against
+their own tinted backgrounds they do not: 3.77:1 (#4F9D6E on #1E3A2A), 4.22:1 (#C7852A on #3D2F16), 3.13:1 (#C0533B on #3A2420) and 2.67:1 (#3D6FA8 on #1E2E3D). So every use of those four tokens outside the student and
+admin dashboards, which carry their own lighter dark-mode tones, was below AA in dark mode; `Badge` is the main user. *Fix:* the dark-mode values are now #7FD6A2, #F2C16B, #F4A08C and #8CB8F2, the tones the dashboards
+already use (6.78 to 7.80:1 on their tints, 7.01 to 9.80:1 on the dark page and card). Light mode is unchanged, and the stale comment in the light block is corrected. *Test:* `frontend/scripts/themeContrastRegression.mjs`
+(frontend CI job; arithmetic on `theme.css` only, no browser) requires 4.5:1 for every status text colour on its tint, on the page and on the card, and for the main text colours, in BOTH themes, plus the fixed blackboard and
+accent pairs; it also checks its own arithmetic against the 21:1 of black on white and the 3.12:1 and 4.35:1 that the browser scan reported.
+
+**The wider scan is now a gate.** `frontend/e2e/tests/a11yExtended.spec.js` fails a test on any serious or critical finding (it was report-only). A page that cannot be loaded or analysed is tried twice and then fails as
+well, because a gate that passes when it saw nothing is worse than none. Waits are bounded (navigation 15 s, network-idle 6 s, analysis 20 s, 100 s per test). The details still go to the CI annotations (up to eight parts).
+The gate covers 23 public pages in light mode, four in dark mode and the five dashboards in dark mode, on top of the existing gate on the five dashboards in light mode.
+
+**What the CI runs of the first attempt showed (history, kept because it changed the CI settings).** The first two runs of this batch were cancelled at the integration job's 25-minute limit. The public Actions API
+(`GET /repos/<owner>/<repo>/actions/jobs/<check-run id>`, no sign-in) lists the time of every step, which settled the cause: in both runs the package downloads were slow (`apt-get` 446 s and 376 s; in the five green runs on
+0b8de24, d9fbfd6 and 73bd0ad the same step took 14 to 29 s), and the browser step, which installs the browser's system packages through the same mirrors, took 910 s (cancelled) and 984 s, of which the browser tests
+themselves were 496 s (the green runs' whole browser step took 471 to 531 s). The second of those runs also reached the new gate and failed it, correctly, on the dark-mode finding above, and everything else the scan
+covered had no finding. So the scan is not the cause of the overrun, but the old 25-minute limit left little room for a slow mirror: it is now 35 minutes. The browser tests keep a separate hard cap of 14 minutes (a hang ends
+that step with everything printed so far, instead of costing the whole job), and CI now publishes the duration of the verification scripts, the duration of the browser tests and the eight slowest browser tests as notices.
+
+**Observed, not changed.** (1) `.exam-option.selected .exam-option-badge` (the letter in a selected answer option on the exam screen) is white on `--mint`: 3.29:1 by calculation, in both themes. The letter is
+decorative (`aria-hidden`; the option text is what is read out) and the scan does not enter an exam, so nothing would have caught it; a fix changes how the selected option looks, so it is left for you to decide. (2) The
+scans cover the 23 public pages and the five dashboards. Other logged-in pages (exam, lessons, admin tools) use `--mint`, `--amber-dark` and `--rust` directly as text colours in places (for example the AI interview error
+banner, `--rust` on the danger tint); they are not measured, and nothing is claimed about them. A systematic pass would need either a wider browser scan with seeded data or a static search with arithmetic.
+
+**Verification of batch 8:** pending (to be added from the CI run).
 
 ## Batch 9 changes (branch ci/audit-batch-9): scoring consistency
 

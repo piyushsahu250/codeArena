@@ -35,14 +35,14 @@ export default function ForgotPassword() {
         <input id="forgot-email" style={inputStyle} type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@codearena.edu.in" />
 
         {error && <p style={{ color: "var(--rust)", fontSize: 13, marginTop: 8 }}>{error}</p>}
-        {message && <p style={{ color: "var(--mint)", fontSize: 13, marginTop: 8 }}>{message}</p>}
+        {message && <p style={{ color: "var(--success-text)", fontSize: 13, marginTop: 8 }}>{message}</p>}
 
         <button className="btn btn-primary" style={{ width: "100%", marginTop: 18, padding: "12px 0" }} disabled={loading}>
           {loading ? "Sending…" : "Send reset link"}
         </button>
 
         <p style={{ marginTop: 20, fontSize: 14, color: "var(--ink-dim)" }}>
-          <Link to="/login" style={{ color: "var(--amber-dark)", fontWeight: 600 }}>Back to sign in</Link>
+          <Link to="/login" style={{ color: "var(--warning-text)", fontWeight: 600 }}>Back to sign in</Link>
         </p>
       </form>
     </div>

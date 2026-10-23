@@ -104,6 +104,8 @@ jobs:
         run: node scripts/aiShortcutRegression.mjs
       - name: Student search regression (leaderboard search matches name, roll number, PRN)
         run: node scripts/studentSearchRegression.mjs
+      - name: Theme contrast regression (status and text colours reach AA in both themes)
+        run: node scripts/themeContrastRegression.mjs
       - name: Dependency audit (report only)
         continue-on-error: true
         run: npm audit --omit=dev --json | node ../backend/scripts/auditSummary.js frontend
@@ -127,7 +129,7 @@ jobs:
   # dashboards, exam journeys, fullscreen, accessibility, dark-mode contrast, every lesson) and the database-backed verification scripts.
   integration:
     runs-on: ubuntu-latest
-    timeout-minutes: 25 # measured runs take 9.5 to 10.6 minutes; a hung run now fails in 25 instead of 40
+    timeout-minutes: 35 # runs took 9.5 to 10.6 minutes before the wider accessibility scan (audit batch 8) was added to the browser suite. A run during a slow package-mirror spell (2026-10-23: apt-get 376 s, then about 490 s installing browser dependencies, plus 496 s of tests) used 25 minutes and was cancelled; a hang inside the browser tests is capped separately (14 minutes)
     services:
       postgres:
         image: postgres:16
@@ -182,6 +184,7 @@ jobs:
           SECURE_BROWSER_SECRET: ci-only-secure-browser-secret-0123456789
         run: |
           fail=0
+          verification_started=$(date +%s)
           for s in verifyPermissions verifyAsyncErrors verifyRouteMetrics verifyAttemptManifest verifySubmissionsContract verifyStaffAnalytics verifyTestsContract verifyAuthContract verifyUsersContract verifyUsersWriteContract verifyAutoFinalizeDeadline verifyAiShortcutIntake verifyLeaderboardStatus verifyStartOverride verifyQuestionsContract verifyQuestionFoldersContract verifyQuestionImportExportContract verifySecureAndroid verifyCEndToEnd verifyLmsContentIsolation verifyStaffScopeIsolation verifyDeepHealth verifyAiQuota verifyMessagingGuards verifyEmailProtection verifyScoreDenominators verifyLmsWriteIsolation; do
             echo "=== $s"
             code=0; node scripts/$s.js > "/tmp/$s.out" 2>&1 || code=$?
@@ -193,6 +196,7 @@ jobs:
               fail=1
             fi
           done
+          echo "::notice title=verification scripts duration::$(( $(date +%s) - verification_started )) seconds"
           exit $fail
       - name: Build the SPA and serve it
         working-directory: frontend
@@ -223,12 +227,19 @@ jobs:
         run: |
           npm install
           npx playwright install --with-deps chromium
-          code=0; npx playwright test --reporter=line,list > /tmp/pw.out 2>&1 || code=$?
+          # A hard cap, so that a hang in one test ends THIS step (exit 124, with everything printed so far) instead of consuming the job's 25 minutes and losing every annotation below.
+          started=$(date +%s)
+          code=0; timeout 14m npx playwright test --reporter=line,list > /tmp/pw.out 2>&1 || code=$?
+          echo "::notice title=browser suite duration::$(( $(date +%s) - started )) seconds (exit code $code)"
           tail -n 60 /tmp/pw.out
+          # Where the time went: the eight slowest tests, as one notice (readable without a GitHub sign-in).
+          slow=$(grep -E "\[chromium\] .*\([0-9.]+(ms|s|m)\)$" /tmp/pw.out | awk '{ d=$NF; gsub(/[()]/,"",d); v=d; if (d ~ /ms$/) { sub(/ms$/,"",v); v=v/1000 } else if (d ~ /m$/) { sub(/m$/,"",v); v=v*60 } else { sub(/s$/,"",v) } printf "%.1fs %s\n", v, $0 }' | sort -rn | head -8 | cut -c1-200 | sed "s/%/%25/g" | awk 'BEGIN{ORS="%0A"} {print}')
+          if [ -n "$slow" ]; then echo "::notice title=slowest browser tests::$slow"; fi
+          if [ "$code" = 124 ]; then echo "::error title=browser suite stopped after 14 minutes::see the slowest tests and the last lines of the log"; fi
           # Accessibility findings that are serious but not critical: published as one warning annotation (readable without a sign-in), never a gate.
           a11y=$(grep -h "\[a11y\]" /tmp/pw.out | sort -u | head -40 | sed "s/%/%25/g" | awk 'BEGIN{ORS="%0A"} {print}')
           if [ -n "$a11y" ]; then echo "::warning title=accessibility: serious findings (report only)::$a11y"; fi
-          # Wider scan (a11yExtended.spec.js): public pages, and dark mode. Same report-only treatment. One annotation holds about 4 KB (the first version of this was cut off), so the
+          # Wider scan (a11yExtended.spec.js): public pages, and dark mode. A gate since audit batch 8 (the spec fails on a finding); the annotations carry the details. One annotation holds about 4 KB (the first version of this was cut off), so the
           # findings go out in parts of 8 lines, at most 8 parts.
           grep -h "\[a11y-ext\]" /tmp/pw.out | sort -u | cut -c1-440 > /tmp/a11yext.txt || true
           rm -f /tmp/a11yext.part.*; split -l 8 -d /tmp/a11yext.txt /tmp/a11yext.part. || true
@@ -237,7 +248,7 @@ jobs:
             [ -f "$f" ] || continue
             part=$((part + 1)); [ "$part" -gt 8 ] && break
             msg=$(sed "s/%/%25/g" "$f" | awk 'BEGIN{ORS="%0A"} {print}')
-            echo "::warning title=accessibility (public pages and dark mode) part $part (report only)::$msg"
+            echo "::warning title=accessibility (public pages and dark mode) part $part::$msg"
           done
           if [ -s /tmp/a11yext.txt ]; then echo "::notice title=accessibility scan (public pages and dark mode)::$(wc -l < /tmp/a11yext.txt) finding line(s) in total; shown in parts of 8 (8 parts at most)"; fi
           if [ "$code" != 0 ]; then
