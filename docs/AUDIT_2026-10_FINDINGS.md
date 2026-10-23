@@ -327,3 +327,41 @@ bundle-size change starts from a measurement. It cannot fail the build. Until th
 ratio, the two colours and the type size), and CI publishes the lines in up to eight annotations of eight lines each, plus a notice with the total, so the next run shows every page that has a finding.
 
 **Verification of batch 7:** pending (to be added from the CI run).
+
+## Batch 9 changes (branch ci/audit-batch-9): scoring consistency
+
+Method: read every place that turns attempts into a score, a percentage or a rank (`gradeAttempt`, `submissions`, `attemptManifest`, `studentPerformance`, `groupRank`, `talentPoolRank`, `talentPoolAutoSelect`, the tests
+results service and repository, `gradeModuleCodingAttempt`), then measured each suspicion against production with read-only queries (2026-10-22) before deciding how much it matters.
+
+**SC-3 (P3, latent; FIXED, NOT VERIFIED until CI) Three rankings divided by the wrong maximum.** `attemptManifest.js` states the rule: an attempt's total is out of the questions IT was given (its saved list), "never ... the
+test's CURRENT question list". `studentPerformance`, the results screen, the export and two talent-pool reports follow it, but `groupRank.js` (class rank on the student dashboard and the TOP_10_CLASS badge),
+`talentPoolRank.js` (pool rank) and `talentPoolAutoSelect.js` (the "minimum average score" rule) summed each test's current question list instead. For a RANDOM test that is the whole bank, so a student with full marks on the
+two questions they drew is scored 20 of 60 and ranks below a student with 75% on a fixed test; for a test edited after students sat it, old results move. *Production impact today: none.* All 56 tests are FIXED mode, 0 of
+the 1,743 students with finished attempts would change by 5 percentage points or more, and the only auto-selection rule does not use a minimum average. It would bite the first RANDOM test. *Fix:* `sumScores` /
+`scoreSumsByStudent` in `attemptManifest.js`, used by all three. *Tests:* `backend/test/scoreSums.test.js` (the arithmetic, and a source scan that fails the build if a maximum is summed from a test's question list again);
+`backend/scripts/verifyScoreDenominators.js` (database-backed: class rank, pool rank and the selection rule for a RANDOM draw, a fixed test, an old attempt with no saved list, and a test edited after the attempts; added to
+the CI verification loop).
+
+**SC-2 (P2, order FIXED, NOT VERIFIED until CI; the rank rule itself is a decision) Students with equal scores were ordered by the database on the leaderboard and by start time in the export.** Ties are not rare: 44 of the 56
+tests have at least one (475 tied groups), the largest being 138 students on the same 80 marks and 127 on 0. The on-screen leaderboard (`attemptsForResults`) sorted by score alone, so tied students appeared in whatever
+order the database returned (it can change between page loads), while the spreadsheet export sorted by score then start time, so the same student could carry different ranks on screen and in the sheet. Both now sort by score,
+then earlier start, then id. Ranks are still POSITIONS in that order, so 138 students on one mark receive ranks 1 to 138. Whether tied students should share a rank (1, 1, 1, ..., 139), or be separated by time taken, is a
+scoring-policy question and is not changed here (decision B-4 below). *Test:* `verifyScoreDenominators.js` (attempts inserted in the reverse of their start order; screen and export must agree and follow start order).
+
+**Checked, no defect found.** The stored attempt total equals the sum of the best score per question for all 3,689 finished attempts; no attempt scores above what its questions are worth today; none of the 42,035 fully
+accepted answers has a stored score that differs from the question's current points, so there is no sign of marks edited after grading; the manifest-based maximum is used by the student result page, the export, the performance
+page and both talent-pool reports.
+
+**Observed, not changed (decisions for you).**
+* **B-4 Ties.** See SC-2. Options: (a) leave positions; (b) tied students share the best rank; (c) break ties by time taken. (b) is the usual convention for exam results.
+* **B-5 Two meanings of "average".** The performance page and PDF show both "Average Score" (the mean of each test's percentage) and "Overall Percentage" (total marks over total possible); the pool rule called "minimum average
+  score" and the class rank use the second. A student with 100% on a 10-mark quiz and 50% on a 100-mark exam has an Average Score of 75% and an Overall Percentage of 54.5%.
+* **B-6 Editing a question after students answered it is not blocked.** 184 of the 507 questions that have answers were updated after their first answer (any edit counts: an image, a folder move, a status change), but none
+  shows a scoring difference today. Editing points, correct options or test cases would change future grading and the denominators of old attempts; options are to block those fields once a question has answers, or to
+  copy the question on edit.
+* **Pass/fail on a fixed mark.** `passingMarks` is compared with the raw score whatever the attempt was out of; this matters only for RANDOM tests where students can be out of different totals.
+* **Pool rule "minimum completion".** `minCompletionPercent` divides lessons completed by every lesson on the platform (`lesson.count()` with no filter), including other institutes' private courses, so almost no one could
+  reach a high threshold. The only rule in production does not use it. It needs a definition of "completion" (which courses count) before it can be fixed.
+* **Module coding.** The attempt score is the mean of per-question percentages that were each rounded first, and the pass decision uses that rounded mean (the same family as B-2).
+
+**Verification of batch 9:** pending (to be added from the CI run).

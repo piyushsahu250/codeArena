@@ -182,7 +182,10 @@ const testForResults = (id) => prisma.test.findUnique({ where: { id }, select: {
 const attemptsForResults = (testId, studentWhere) => prisma.testAttempt.findMany({
   where: { testId, ...studentWhere },
   include: { student: { select: { name: true, email: true, rollNumber: true, registrationNumber: true } }, submissions: { select: { questionId: true } } },
-  orderBy: { totalScore: "desc" },
+  // The SAME order as the spreadsheet export below. This used to sort by score alone, so students with equal scores (44 of the 56 tests in production have ties, one with 138 students on
+  // the same mark) appeared in whatever order the database returned them, and the screen and the export could give the same student different ranks. Ranks are still positions in this
+  // order (see attemptLifecycle.js withRanks); whether tied students should share a rank is a policy question, not decided here.
+  orderBy: [{ totalScore: "desc" }, { startedAt: "asc" }, { id: "asc" }],
   take: 20000,
 });
 const testForExport = (id) => prisma.test.findUnique({
@@ -192,7 +195,7 @@ const testForExport = (id) => prisma.test.findUnique({
 const attemptsForExport = (testId, studentWhere) => prisma.testAttempt.findMany({
   where: { testId, ...studentWhere },
   include: { student: { select: { name: true, email: true, rollNumber: true, registrationNumber: true } }, submissions: { select: { questionId: true } } },
-  orderBy: [{ totalScore: "desc" }, { startedAt: "asc" }],
+  orderBy: [{ totalScore: "desc" }, { startedAt: "asc" }, { id: "asc" }], // the last key makes the order fully fixed when two attempts also started at the same instant
   take: 20000,
 });
 const testForAnalytics = (id) => prisma.test.findUnique({

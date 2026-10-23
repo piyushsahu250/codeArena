@@ -1,5 +1,6 @@
 const prisma = require("../prisma");
 const { cached } = require("./cache");
+const { scoreSumsByStudent } = require("./attemptManifest");
 
 // The expensive, per-GROUP half of computeGroupRank below (load every groupmate + every
 // completed attempt + every attempt's test, compute each student's overall percentage) — this
@@ -11,32 +12,20 @@ async function computeRankedGroup(academicGroupId) {
   const ids = groupmates.map((c) => c.id);
   if (ids.length === 0) return [];
 
+  // Each attempt is scored out of the questions IT was given (its manifest, utils/attemptManifest.js), exactly as the student's own performance page does. This used to divide by
+  // each test's current question list, which for a RANDOM test is the whole bank, so the class rank disagreed with the percentage the student sees on their dashboard.
   const attempts = await prisma.testAttempt.findMany({
     where: { studentId: { in: ids }, status: { not: "IN_PROGRESS" } },
-    select: { studentId: true, testId: true, totalScore: true },
+    select: { id: true, studentId: true, testId: true, totalScore: true, questionOrder: true },
   });
-  const testIds = [...new Set(attempts.map((a) => a.testId))];
-  const tests = testIds.length
-    ? await prisma.test.findMany({
-        where: { id: { in: testIds } },
-        select: { id: true, questions: { select: { question: { select: { points: true } } } } },
-      })
-    : [];
-  const maxByTest = new Map(tests.map((t) => [t.id, t.questions.reduce((s, q) => s + q.question.points, 0)]));
-
-  const scoreSum = new Map(), maxSum = new Map();
-  for (const a of attempts) {
-    const max = maxByTest.get(a.testId) || 0;
-    scoreSum.set(a.studentId, (scoreSum.get(a.studentId) || 0) + a.totalScore);
-    maxSum.set(a.studentId, (maxSum.get(a.studentId) || 0) + max);
-  }
+  const sums = await scoreSumsByStudent(prisma, attempts);
 
   return ids
     .map((id) => {
-      const s = scoreSum.get(id) || 0, m = maxSum.get(id) || 0;
-      return { id, pct: m > 0 ? (s / m) * 100 : -1 };
+      const s = sums.get(id);
+      return { id, pct: s && s.max > 0 ? (s.score / s.max) * 100 : -1 };
     })
-    .sort((a, b) => b.pct - a.pct);
+    .sort((a, b) => b.pct - a.pct || (a.id < b.id ? -1 : 1)); // equal percentages keep a fixed order (by id) rather than whatever order the database returned
 }
 
 // Ranks a student against groupmates (same academic group: Institute+Batch+Department+Section) by

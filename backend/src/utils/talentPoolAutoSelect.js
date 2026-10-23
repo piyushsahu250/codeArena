@@ -1,4 +1,5 @@
 const prisma = require("../prisma");
+const { scoreSumsByStudent } = require("./attemptManifest");
 
 // Mirrors attendance.js's computeAttendancePercent exactly (present+late over present+absent+late)
 // — re-derived here rather than imported, since that function lives in a route file and this
@@ -63,29 +64,18 @@ async function evaluateCandidates(prismaClient, rule, candidateIds) {
   }
 
   if (rule.minAverageScorePercent != null) {
+    // Scored out of each attempt's own manifest (utils/attemptManifest.js). The test's current question list, used before, is the whole bank for a RANDOM test, so a student whose
+    // RANDOM-test results were excellent could fail "minimum average score" and be left out of a pool they qualified for (and the preview showed the wrong count).
     const attempts = await prismaClient.testAttempt.findMany({
       where: { studentId: { in: candidateIds }, status: { not: "IN_PROGRESS" } },
-      select: { studentId: true, testId: true, totalScore: true },
+      select: { id: true, studentId: true, testId: true, totalScore: true, questionOrder: true },
     });
-    const testIds = [...new Set(attempts.map((a) => a.testId))];
-    const tests = testIds.length
-      ? await prismaClient.test.findMany({
-          where: { id: { in: testIds } },
-          select: { id: true, questions: { select: { question: { select: { points: true } } } } },
-        })
-      : [];
-    const maxByTest = new Map(tests.map((t) => [t.id, t.questions.reduce((s, q) => s + q.question.points, 0)]));
-    const scoreSum = new Map(), maxSum = new Map();
-    for (const a of attempts) {
-      const max = maxByTest.get(a.testId) || 0;
-      scoreSum.set(a.studentId, (scoreSum.get(a.studentId) || 0) + a.totalScore);
-      maxSum.set(a.studentId, (maxSum.get(a.studentId) || 0) + max);
-    }
+    const sums = await scoreSumsByStudent(prismaClient, attempts);
     checks.push({
       key: "minAverageScorePercent",
       pass: (id) => {
-        const s = scoreSum.get(id) || 0, m = maxSum.get(id) || 0;
-        return m > 0 && (s / m) * 100 >= rule.minAverageScorePercent;
+        const s = sums.get(id);
+        return !!s && s.max > 0 && (s.score / s.max) * 100 >= rule.minAverageScorePercent;
       },
     });
   }

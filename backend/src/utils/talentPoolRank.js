@@ -1,5 +1,6 @@
 const prisma = require("../prisma");
 const { cached } = require("./cache");
+const { scoreSumsByStudent } = require("./attemptManifest");
 
 // Mirrors groupRank.js's computeRankedGroup/computeGroupRank split: the expensive part (load every
 // pool member + every completed attempt on the pool's exclusive tests, compute each member's
@@ -19,32 +20,22 @@ async function computeRankedPool(poolId) {
   if (memberIds.length === 0) return [];
   const testIds = poolTests.map((t) => t.testId);
 
-  const [attempts, tests] = await Promise.all([
-    testIds.length
-      ? prisma.testAttempt.findMany({
-          where: { studentId: { in: memberIds }, testId: { in: testIds }, status: { not: "IN_PROGRESS" } },
-          select: { studentId: true, testId: true, totalScore: true },
-        })
-      : [],
-    testIds.length
-      ? prisma.test.findMany({ where: { id: { in: testIds } }, select: { id: true, questions: { select: { question: { select: { points: true } } } } } })
-      : [],
-  ]);
-  const maxByTest = new Map(tests.map((t) => [t.id, t.questions.reduce((s, q) => s + q.question.points, 0)]));
-
-  const scoreSum = new Map(), maxSum = new Map();
-  for (const a of attempts) {
-    const max = maxByTest.get(a.testId) || 0;
-    scoreSum.set(a.studentId, (scoreSum.get(a.studentId) || 0) + a.totalScore);
-    maxSum.set(a.studentId, (maxSum.get(a.studentId) || 0) + max);
-  }
+  // Scored out of each attempt's own manifest (utils/attemptManifest.js), not the test's current question list: for a RANDOM test that list is the whole bank, which understated
+  // every member's percentage and ranked a member who took a RANDOM test below one who took a fixed test with the same real result.
+  const attempts = testIds.length
+    ? await prisma.testAttempt.findMany({
+        where: { studentId: { in: memberIds }, testId: { in: testIds }, status: { not: "IN_PROGRESS" } },
+        select: { id: true, studentId: true, testId: true, totalScore: true, questionOrder: true },
+      })
+    : [];
+  const sums = await scoreSumsByStudent(prisma, attempts);
 
   return memberIds
     .map((id) => {
-      const s = scoreSum.get(id) || 0, m = maxSum.get(id) || 0;
-      return { id, pct: m > 0 ? (s / m) * 100 : -1 };
+      const s = sums.get(id);
+      return { id, pct: s && s.max > 0 ? (s.score / s.max) * 100 : -1 };
     })
-    .sort((a, b) => b.pct - a.pct);
+    .sort((a, b) => b.pct - a.pct || (a.id < b.id ? -1 : 1)); // equal percentages keep a fixed order (by id)
 }
 
 // Ranks a student against fellow pool members by percentage on the pool's own exclusive

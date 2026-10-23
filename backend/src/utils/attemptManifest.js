@@ -79,6 +79,26 @@ async function scoreBase(client, attempt) {
   return (await scoreBases(client, [attempt])).get(attempt.id);
 }
 
+// Pure: per student, the sum of what they scored and the sum of what each of their attempts was scored OUT OF. `attempts` are { id, studentId, totalScore }; `bases` is the
+// Map that scoreBases returns. An attempt with no known base counts 0 toward the maximum (never a guess).
+function sumScores(attempts, bases) {
+  const out = new Map();
+  for (const a of attempts) {
+    const cur = out.get(a.studentId) || { score: 0, max: 0 };
+    cur.score += a.totalScore || 0;
+    cur.max += (bases.get(a.id) && bases.get(a.id).maxScore) || 0;
+    out.set(a.studentId, cur);
+  }
+  return out;
+}
+
+// Overall score per student across finished attempts, for every rule that turns several attempts into one percentage (class rank, talent-pool rank, pool auto-selection).
+// Those three used to take the denominator from each test's CURRENT question list: in RANDOM mode that is the whole bank (every student's percentage understated, and a student
+// who took a RANDOM test compared unfairly with one who took a fixed test), and it changes whenever a test is edited. attempts: { id, studentId, testId, totalScore, questionOrder }.
+async function scoreSumsByStudent(client, attempts) {
+  return sumScores(attempts, await scoreBases(client, attempts));
+}
+
 // Structured, greppable record of any disagreement between the counts for one attempt. Returns true when they all agree.
 function logCountMismatch(context, { attemptId, testId, expected, manifest, delivered }) {
   if (expected === manifest && manifest === delivered) return true;
@@ -86,4 +106,4 @@ function logCountMismatch(context, { attemptId, testId, expected, manifest, deli
   return false;
 }
 
-module.exports = { MANIFEST_VERSION, configuredCount, validateManifest, hasManifest, loadPoints, scoreBases, scoreBase, logCountMismatch };
+module.exports = { MANIFEST_VERSION, configuredCount, validateManifest, hasManifest, loadPoints, scoreBases, scoreBase, sumScores, scoreSumsByStudent, logCountMismatch };
