@@ -225,7 +225,7 @@ route itself is not exercised by a database-backed test.
 The evidence for this batch is read-only queries against production on 2026-10-22 (AI usage log and e-mail log; no data was changed) plus the code. Nothing below has run in CI or production yet, so every
 status is FIXED, NOT VERIFIED until the CI result is added at the end of this section.
 
-**Q-1 (P3, FIXED, NOT VERIFIED) AI usage had no per-user cap, and bookkeeping rows were counted as calls.** `services/ai/rateLimits.js` had an institute budget (300 a day) and a platform budget (2,000 a day) but
+**Q-1 (P3, FIXED, VERIFIED in CI and deployed; the cap itself not observed in production) AI usage had no per-user cap, and bookkeeping rows were counted as calls.** `services/ai/rateLimits.js` had an institute budget (300 a day) and a platform budget (2,000 a day) but
 nothing per person; the only per-person limit is 5 calls a minute on each route. At that rate one account can use an institute's whole day in about an hour, and a handful of accounts the platform's, leaving every
 other student without AI. Separately, `INVALID_RESPONSE` rows (bookkeeping written when a response that did arrive fails our own validation) were counted as calls although the provider call already has its own row,
 so a spell of unusable output used each quota slot twice. *Fix:* a per-user cap (`AI_DAILY_LIMIT_PER_USER`, default 100 per UTC day; the 101st call gets the existing 429 `AI_QUOTA_EXCEEDED` with "You have reached
@@ -233,17 +233,17 @@ your daily AI usage limit. Please try again tomorrow."), and `INVALID_RESPONSE` 
 before is blocked. *Tests:* `backend/test/aiQuota.test.js` (decision order and boundaries); `backend/scripts/verifyAiQuota.js` (the real table: one below the cap, at the cap, other users unaffected, failed
 calls count, invalid-response rows and two-day-old rows do not).
 
-**M-1 (P2, FIXED, NOT VERIFIED) `POST /admin/announcements` accepted any size and any type.** A non-text `message` crashed the handler (500), there was no length cap, and nothing limited how often one admin
+**M-1 (P2, FIXED, VERIFIED in CI and deployed; not observed in production) `POST /admin/announcements` accepted any size and any type.** A non-text `message` crashed the handler (500), there was no length cap, and nothing limited how often one admin
 could broadcast to a whole institute (an in-app notification per recipient, optionally an e-mail each). *Fix:* message at most 2,000 and subject at most 150 characters, non-text is a 400, and 5 accepted announcements per
 admin per hour (`ANNOUNCEMENTS_PER_HOUR`; a refused request, such as a typo, does not use the allowance); the form has matching `maxLength`. Test: `backend/scripts/verifyMessagingGuards.js`.
 
-**M-2 (P2/P3, FIXED, NOT VERIFIED) `POST /tests/:id/notify` could e-mail the same test to all its students again and again, and its idempotency key was not tied to a test.** The key stopped only a double
+**M-2 (P2/P3, FIXED, VERIFIED in CI and deployed; not observed in production) `POST /tests/:id/notify` could e-mail the same test to all its students again and again, and its idempotency key was not tied to a test.** The key stopped only a double
 click: with a fresh key each press sent another full round from the shared mail allowance. The key was also looked up without checking the test, so a key replayed against a different test answered "already sent"
 with the other test's counts and skipped the real send (P3: it needs a repeated client key). *Fix:* an e-mail notification for a test is refused with 429 for `TEST_EMAIL_NOTIFY_COOLDOWN_MIN` (default 10)
 minutes after the last one (in-app notifications stay allowed); a key that belongs to another test is a 409; the same key for the same test still returns the original "already sent" answer. Test:
 `backend/scripts/verifyMessagingGuards.js`.
 
-**N-1 (P2, FIXED, NOT VERIFIED) Bulk notices started one e-mail per person all at once.** Course and readiness-test assignments (and the opt-in e-mail forms of test and talent-pool assessment assignments),
+**N-1 (P2, FIXED, VERIFIED by unit tests in CI and in the production image; not observed under a real bulk send) Bulk notices started one e-mail per person all at once.** Course and readiness-test assignments (and the opt-in e-mail forms of test and talent-pool assessment assignments),
 talent-pool add and remove, and the publishing of a result examination (in chunks of 15) sent one e-mail per person with no bound, built on `Promise.all(people.map(...))`. Assigning one course to an institute
 starts one send per student at the same moment: for example 3,000 simultaneous sends and 3,000 log rows through one Gmail account. The same burst pattern is what tripped the provider's login throttle on
 2026-10-06 (a 219-student credentials batch and its resend; 352 credential e-mails failed), and while the throttle is active every send fails, password-reset e-mails included. Stuck PENDING rows (N-3) are the other
@@ -252,7 +252,7 @@ visible result of a restart in the middle of such a burst. The talent-pool and r
 never above the bound, order kept, one failure does not stop the rest, and a source scan that fails the build if `Promise.all(list.map(... send ...))` or `forEach(... send ...)` comes back).
 The talent-pool "assessment assigned" and "mock interview assigned" notices are in-app only (`sendEmail` defaults to false), so they were left as they are.
 
-**N-2 (P2, FIXED, NOT VERIFIED) Critical e-mail had no protection from bulk e-mail.** Everything leaves through one provider account with a daily allowance (about 1,900 delivered in one day, and its
+**N-2 (P2, FIXED, VERIFIED in CI and deployed; the allowance refusing an e-mail not observed in production) Critical e-mail had no protection from bulk e-mail.** Everything leaves through one provider account with a daily allowance (about 1,900 delivered in one day, and its
 "daily sending limit" error has fired on quieter days after a flood), so bulk notices and password-reset or credential e-mails draw on the same allowance. *Fix:* a rolling 24-hour allowance for non-critical e-mail (`BULK_EMAIL_DAILY_BUDGET`, default 1,400; 0 turns it off). The types
 `PASSWORD_RESET`, `PASSWORD_RESET_BY_ADMIN`, `CREDENTIALS`, `CREDENTIALS_RESEND` and `EMAIL_VERIFICATION` never count against it and are never refused by it. Once it is used up a non-critical e-mail is not
 attempted: its log row is written FAILED with the reason, so it is visible and can be retried, and the in-app notification is unaffected. The check fails open if the count cannot be read.
@@ -260,7 +260,7 @@ attempted: its log row is written FAILED with the reason, so it is visible and c
 assignment notices) further ones are logged FAILED instead of sent. Tests: `backend/test/emailFanout.test.js` (decision logic against a fake database) and `backend/scripts/verifyEmailProtection.js` (the real
 table: the last allowed e-mail, the first refused, critical types attempted at the limit, credential, over-24-hour and FAILED rows not counted). No e-mail is sent by either: every send uses an invalid address.
 
-**N-3 (P3, FIXED, NOT VERIFIED) E-mail rows stuck PENDING for ever.** A log row is created PENDING just before the send; if the server restarts mid-send nothing ever updates it. Production holds 2,768 such
+**N-3 (P3, FIXED, VERIFIED in CI and in production: the first sweep changed exactly the 2,768 rows predicted) E-mail rows stuck PENDING for ever.** A log row is created PENDING just before the send; if the server restarts mid-send nothing ever updates it. Production holds 2,768 such
 rows from one restart on 2026-10-07, still shown as pending weeks later, which also makes any "is mail working?" view misleading. *Fix:* `sweepStalePendingEmails`, run from
 `utils/emailRetryScheduler.js` two minutes after start and every 10 minutes after that (`DISABLE_STALE_EMAIL_SWEEP=true` turns it off; `MAIL_STALE_PENDING_MS`, default 30 minutes, sets the age), marks PENDING
 rows older than 30 minutes FAILED with "Not sent: the server restarted, or the send was interrupted, before this e-mail went out. It can be retried from Email Logs." Nothing else on the row changes.
@@ -269,7 +269,7 @@ explicit OK as part of the deploy approval (or deploy with `DISABLE_STALE_EMAIL_
 for any. Tests: `emailFanout.test.js` (the query it issues) and `verifyEmailProtection.js` (the real table: only the old PENDING row changes; fresh PENDING, SENT and FAILED rows are untouched; a second sweep
 changes nothing).
 
-**U-2 (P3, FIXED, NOT VERIFIED) Login page footer contrast.** The "Powered by Acrosoft..." line used `--ink-dim` at 75% opacity, about 3.1:1 on the light page by calculation (AA needs 4.5:1). The opacity is gone.
+**U-2 (P3, FIXED, VERIFIED in CI: the sign-in page is in the accessibility gate in both themes and passes) Login page footer contrast.** The "Powered by Acrosoft..." line used `--ink-dim` at 75% opacity, about 3.1:1 on the light page by calculation (AA needs 4.5:1). The opacity is gone.
 This was found by reading the style, not by a scan: the public pages had not been scanned.
 
 **Accessibility coverage (report only).** `frontend/e2e/tests/a11yExtended.spec.js` scans 23 public pages in light mode, four of them also in dark mode, and the five dashboards in dark mode (32 scans), and
@@ -279,7 +279,7 @@ prints every serious or critical axe finding; CI publishes them as one warning a
 notice cannot be exempted from the allowance without a new type, and the auth contract snapshot lists the existing one. (2) `LOGIN_ALERT` (first login, new device) counts as non-critical, so a large first-login
 day can use part of the allowance; say if any of these should be critical. (3) One Gmail account stays the ceiling; Amazon SES remains the earlier recommendation.
 
-**U-3 (P2, FIXED, NOT VERIFIED until this branch's CI run; see batch 8) Public pages failed colour contrast.** The scan added in batch 6 (23 public pages in light mode, four in dark mode, five dashboards in dark mode) first produced a
+**U-3 (P2, FIXED, VERIFIED in CI: all 23 public pages pass the accessibility gate in light mode; see batch 8) Public pages failed colour contrast.** The scan added in batch 6 (23 public pages in light mode, four in dark mode, five dashboards in dark mode) first produced a
 baseline on 92b5018 that the annotation limit cut off after about a dozen findings; batch 7 split the report into parts so that every finding is visible. The complete list was 17 serious colour-contrast findings on 17 public
 pages in light mode, and none listed for the dark-mode runs or the dashboards, in four colour combinations: the marketing eyebrow label (gold #c7852a on dark green #123528, 9 pt) at 4.35:1 on every marketing page; inline
 links (green #4f9d6e on cream #fbf9f4, 11.6 to 12.8 pt) at 3.12:1 on `/about`, `/coding-challenges`, `/coding-platform`, `/contact`, `/employability-readiness`, `/for-institutions` and `/lms`; gold links (#c7852a on
@@ -301,7 +301,7 @@ is 33 calls under the new counting (34 counting every row), the busiest institut
 
 ## Batch 7 changes (branch ci/audit-batch-7): resume upload bounds, bundle-size report
 
-**R-3 (P2, FIXED, NOT VERIFIED until CI) The student resume upload unpacked a `.docx` with no limit.** After batch 4 every spreadsheet upload went through `safeWorkbook.js`, but `POST /resume/me/upload`
+**R-3 (P2, FIXED, VERIFIED in CI and in production: a 41 KB .docx that inflates to 40 MB is refused in 18 ms) The student resume upload unpacked a `.docx` with no limit.** After batch 4 every spreadsheet upload went through `safeWorkbook.js`, but `POST /resume/me/upload`
 (any STUDENT account, 10 MB limit) still handed the file straight to `mammoth`, which unpacks every part of the ZIP into memory inside the API process (twice, because `extractRawText` and `convertToHtml` run in
 parallel). A `.docx` is a ZIP, so a few kilobytes of upload can describe gigabytes of XML; a hostile account could exhaust the memory of the process that also serves exam traffic. Students are the largest group of
 accounts on the platform, so this is the most reachable of the unbounded readers. `mammoth` was the only one left (a search of `backend/src` for ZIP-based readers: `safeWorkbook.js`, `bulkImageZip.js` and the
@@ -330,7 +330,7 @@ ratio, the two colours and the type size), and CI publishes the lines in up to e
 
 ## Batch 8 changes (branch ci/audit-batch-8): public-page colour contrast, a dark-theme token fault, and the wider accessibility scan becomes a gate
 
-**U-3 fix, light mode (FIXED, NOT VERIFIED until this branch's CI run).** All four failing combinations came from using the accent FILL colours as TEXT colours. `theme.css` already defined text-safe variants for badges
+**U-3 fix, light mode (FIXED, VERIFIED in CI).** All four failing combinations came from using the accent FILL colours as TEXT colours. `theme.css` already defined text-safe variants for badges
 (`--warning-text` #8A5A12 and `--success-text` #14703A in light mode, from the 2026-09-17 accessibility pass); the public pages simply did not use them. Changes: the marketing eyebrow uses `--warning-text` on light sections
 and the lighter `--amber` on the always-dark bands (hero, stats, call to action, page banners); inline links in the marketing body, the "learn more" links, the test-case pass label and the "Live" badge use
 `--success-text`; the track pills use `--warning-text`; and the sign-in, forgot-password, reset-password and verify-email pages use the same tokens for their links and messages (`/register` shows the sign-in page).
@@ -341,7 +341,7 @@ Computed contrast (WCAG formula; the same arithmetic reproduces the scan's numbe
 examined only the top of `/`. The scan now scrolls the page in steps, as a visitor does, before it measures. Three things below the fold were computed to fail and are fixed in advance: code-sample strings and function names
 in the blackboard mock-ups (`--mint` is 4.08:1 on #123528 and 3.37:1 on #1B4332; they now use the new `--mint-on-dark` #6FBF8F, 6.08:1 and 5.02:1), the test-case "pass" label, and the "Live" badge (2.81:1).
 
-**U-4 (P2, FIXED, NOT VERIFIED until this branch's CI run) The dark theme's status text colours were below AA.** The scan with the whole page in view failed on the dark-mode home page: the badge at 3.49:1 and the track pill at
+**U-4 (P2, FIXED, VERIFIED in CI; the live theme stylesheet carries the new values) The dark theme's status text colours were below AA.** The scan with the whole page in view failed on the dark-mode home page: the badge at 3.49:1 and the track pill at
 3.74:1. The cause was not those two components. The comment in `theme.css` said the dark-mode status text colours (`--success-text`, `--warning-text`, `--danger-text`, `--info-text`) "already contrast well"; measured against
 their own tinted backgrounds they do not: 3.77:1 (#4F9D6E on #1E3A2A), 4.22:1 (#C7852A on #3D2F16), 3.13:1 (#C0533B on #3A2420) and 2.67:1 (#3D6FA8 on #1E2E3D). So every use of those four tokens outside the student and
 admin dashboards, which carry their own lighter dark-mode tones, was below AA in dark mode; `Badge` is the main user. *Fix:* the dark-mode values are now #7FD6A2, #F2C16B, #F4A08C and #8CB8F2, the tones the dashboards
@@ -365,14 +365,14 @@ decorative (`aria-hidden`; the option text is what is read out) and the scan doe
 scans cover the 23 public pages and the five dashboards. Other logged-in pages (exam, lessons, admin tools) use `--mint`, `--amber-dark` and `--rust` directly as text colours in places (for example the AI interview error
 banner, `--rust` on the danger tint); they are not measured, and nothing is claimed about them. A systematic pass would need either a wider browser scan with seeded data or a static search with arithmetic.
 
-**Verification of batch 8:** pending (to be added from the CI run).
+**Verification of batch 8.** All four CI jobs passed on 4ee5f64 (run #918: lint 12 s, backend 53 s, frontend 26 s, integration 11 m 27 s). In that run the browser suite exited 0 in 516 s with the wider accessibility scan as a gate, no accessibility finding was annotated, and the theme contrast test ran in the frontend job. All four jobs passed again on 97f09b0, the commit that went to `main`: the same change rebased onto batch 10, differing only in the `ci.yml` script list and in the tracker. It was merged to `main` by fast-forward on 2026-10-23 (06:03 UTC). Vercel rebuilt the frontend, and the live stylesheet now serves the new values: `--mint-on-dark:#6fbf8f` and the dark theme's `#7fd6a2`, `#f2c16b`, `#f4a08c` and `#8cb8f2` for the four status text colours (the old dark values are gone from it). No backend deploy was needed. **Not verified:** the live pages as rendered (the CI scan ran on the built app of the same commit, not on the live site), and the exam-screen option letter (see "Observed, not changed" above).
 
 ## Batch 9 changes (branch ci/audit-batch-9): scoring consistency
 
 Method: read every place that turns attempts into a score, a percentage or a rank (`gradeAttempt`, `submissions`, `attemptManifest`, `studentPerformance`, `groupRank`, `talentPoolRank`, `talentPoolAutoSelect`, the tests
 results service and repository, `gradeModuleCodingAttempt`), then measured each suspicion against production with read-only queries (2026-10-22) before deciding how much it matters.
 
-**SC-3 (P3, latent; FIXED, NOT VERIFIED until CI) Three rankings divided by the wrong maximum.** `attemptManifest.js` states the rule: an attempt's total is out of the questions IT was given (its saved list), "never ... the
+**SC-3 (P3, latent; FIXED, VERIFIED in CI and deployed; the effect on real percentages not observed) Three rankings divided by the wrong maximum.** `attemptManifest.js` states the rule: an attempt's total is out of the questions IT was given (its saved list), "never ... the
 test's CURRENT question list". `studentPerformance`, the results screen, the export and two talent-pool reports follow it, but `groupRank.js` (class rank on the student dashboard and the TOP_10_CLASS badge),
 `talentPoolRank.js` (pool rank) and `talentPoolAutoSelect.js` (the "minimum average score" rule) summed each test's current question list instead. For a RANDOM test that is the whole bank, so a student with full marks on the
 two questions they drew is scored 20 of 60 and ranks below a student with 75% on a fixed test; for a test edited after students sat it, old results move. *Production impact today: none.* All 56 tests are FIXED mode, 0 of
@@ -381,7 +381,7 @@ the 1,743 students with finished attempts would change by 5 percentage points or
 `backend/scripts/verifyScoreDenominators.js` (database-backed: class rank, pool rank and the selection rule for a RANDOM draw, a fixed test, an old attempt with no saved list, and a test edited after the attempts; added to
 the CI verification loop).
 
-**SC-2 (P2, order FIXED, NOT VERIFIED until CI; the rank rule itself is a decision) Students with equal scores were ordered by the database on the leaderboard and by start time in the export.** Ties are not rare: 44 of the 56
+**SC-2 (P2, order FIXED, VERIFIED in CI and deployed; the rank rule itself is a decision) Students with equal scores were ordered by the database on the leaderboard and by start time in the export.** Ties are not rare: 44 of the 56
 tests have at least one (475 tied groups), the largest being 138 students on the same 80 marks and 127 on 0. The on-screen leaderboard (`attemptsForResults`) sorted by score alone, so tied students appeared in whatever
 order the database returned (it can change between page loads), while the spreadsheet export sorted by score then start time, so the same student could carry different ranks on screen and in the sheet. Both now sort by score,
 then earlier start, then id. Ranks are still POSITIONS in that order, so 138 students on one mark receive ranks 1 to 138. Whether tied students should share a rank (1, 1, 1, ..., 139), or be separated by time taken, is a
@@ -403,14 +403,14 @@ page and both talent-pool reports.
   reach a high threshold. The only rule in production does not use it. It needs a definition of "completion" (which courses count) before it can be fixed.
 * **Module coding.** The attempt score is the mean of per-question percentages that were each rounded first, and the pass decision uses that rounded mean (the same family as B-2).
 
-**Verification of batch 9:** pending (to be added from the CI run).
+**Verification of batch 9.** All four CI jobs passed on d9fbfd6 (the new `scoreSums.test.js` with its source scan, `verifyScoreDenominators` in the database-backed loop, and the browser suite). It was merged to `main` by fast-forward and deployed on 2026-10-23 (container started 05:49 UTC). Checked on the live host afterwards: `/api/health` reports d9fbfd6; both containers are running with 0 restarts; 0 error lines in the application log; the 21 unit tests of this batch and the code it builds on pass in the production image; unauthenticated requests to four protected routes return 401. The schema guard found no destructive change (batch 9 has no schema change). The new class-rank and pool-rank code was also run read-only against production data: the class rank of one student in each of the three largest groups (124, 121 and 120 students) and the pool rank of one member in each of the two largest pools (174 and 108 members) computed without error in 9 to 52 ms. Rollback image: `codearena-backend:rollback-20261023054916`. **Not verified in production:** that any real student's percentage changed. All 56 tests in production were in FIXED mode when last counted (2026-10-22), so for that data the old and the new denominators are expected to agree; the fix matters when RANDOM-mode tests are used. The rank decisions B-4 to B-6 are unchanged and wait for you.
 
 ## Batch 10 changes (branch ci/audit-batch-10): students and courses that are not theirs
 
 Method: the by-id access review continued from the route files with the most by-id parameters and the fewest institute checks, reading each student-facing write route and comparing it with the read route for the same
 object.
 
-**LMS-1 (P2, FIXED, NOT VERIFIED until CI) Three student routes did not check that the course was theirs.** The lesson read route (`GET /learning/lessons/:id`), the practice-question routes
+**LMS-1 (P2, FIXED, VERIFIED in CI and deployed; a real student's request not observed in production) Three student routes did not check that the course was theirs.** The lesson read route (`GET /learning/lessons/:id`), the practice-question routes
 (`loadEligiblePracticeQuestion`), the project task routes and the readiness start all require the course to be Published and assigned to the student's institute or group. Their siblings did not:
 * `POST /learning/lessons/:id/progress` and `POST /learning/lessons/:id/test-submit` checked only the module lock. A student who knew the id of a lesson in another institute's private course, a course never assigned to
   them, or one not yet published could mark it complete (earning XP, including the module-complete award), and `test-submit` returned the practice test's prompts, options, correct answers and explanations: the same
@@ -430,7 +430,6 @@ course without assigning it and then started module-direct tests as students, wh
 are institute-scoped and cached per institute), the readiness assessment start (assignment check, attempt cap re-verified in a serializable transaction), the project task routes (access helper), and the module-coding
 attempt routes (ownership of the attempt).
 
-**Prepared for the deploy (read-only, not yet run, needs an AWS sign-in):** count module-direct coding attempts, and lesson-progress rows, belonging to students whose institute and group have no assignment to the course.
-A non-zero count would mean either that the gap was used or that courses were unassigned after students worked on them; either way those students lose access to continue, so the numbers should be seen before deploy.
+**Exposure check before the deploy (production, read-only, 2026-10-23).** Counts only, in one read-only transaction. Of 4,456 student lesson-progress rows, 1,367 (279 students; 1,126 completed; 68 with a quiz score) are on a course that the student's institute and group are not assigned to, and all of them are on one course, "Java". Of 137 module-direct coding attempts, 26 (15 students) are on such a course, again only "Java". The audit log explains both: on 2026-10-10 a SUPER_ADMIN removed one institute's assignment to "Java" (the affected students are all from that institute, SCOE, in batches 2024-28 and 2025-29), and every one of the 1,367 rows and 26 attempts was written on or before that moment; none was written afterwards. No progress was written on a course that is not Published in the last 30 days. So the numbers are history from an assignment that was legitimate at the time, not use of the gap. What batch 10 changes for those students: they can no longer record progress or start module coding tests for that course (reading its lessons has been closed to them since 2026-10-10); two of the 26 attempts are still IN_PROGRESS (started 2026-09-04 and 2026-09-24) and can still be resumed, because the attempt routes check ownership of the attempt. **Worth confirming:** that removing SCOE from "Java" on 2026-10-10 was intended; it took the course away from 279 students who had progress in it.
 
-**Verification of batch 10:** pending (to be added from the CI run).
+**Verification of batch 10.** All four CI jobs passed on 73bd0ad on its branch run (the unit tests, the database-backed loop including the new `verifyLmsWriteIsolation`, and the browser suite). It was merged to `main` by fast-forward and deployed on 2026-10-23 (container started 05:55 UTC); the host's release gate passed while `main`'s own run of the same commit had only just started (it saw the branch run's green results); that run (#920) later passed too, in 10 m 20 s. Checked on the live host afterwards: `/api/health` reports 73bd0ad; both containers are running with 0 restarts; 0 error lines in the application log; the new helper is present in the running routes; the 30 unit tests pass in the production image; and, run read-only against production data, the access rule the new routes use says that of the 570 students with progress on "Java", 291 can open it and 279 cannot, matching the 279 counted in SQL before the deploy. Unauthenticated requests to the two lesson write routes and the module-coding route return 401. The schema guard found no destructive change (batch 10 has no schema change). Rollback image: `codearena-backend:rollback-20261023055516`. **Not verified in production:** the routes' answer to a real student's request ("Lesson not found", nothing written). That is covered only by `verifyLmsWriteIsolation` in CI, because checking it in production would need a student session, and creating one changes production data, which was not requested.
