@@ -102,7 +102,7 @@ function accountCredentialsTemplate({ name, email, password, registrationNumber,
     bodyHtml: body,
     instructions: [
       "Use the temporary password for your first login.",
-      "Change your password immediately after logging in.",
+      "For your account security, please create your personal password the first time you log in.",
       "Keep your credentials confidential.",
       "If you encounter any issue, contact your faculty or administrator.",
     ],
@@ -129,7 +129,7 @@ function credentialsResendTemplate({ name, email, password }) {
     bodyHtml: body,
     instructions: [
       "Use the temporary password for your next login.",
-      "Change your password immediately after logging in.",
+      "For your account security, please create your personal password the first time you log in.",
       "Keep your credentials confidential.",
       "If you didn't expect this, contact your institute administrator right away.",
     ],
