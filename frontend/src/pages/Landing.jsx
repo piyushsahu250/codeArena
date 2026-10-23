@@ -358,7 +358,7 @@ function AssessmentVisual() {
     <div className="ca-feature-visual">
       <div className="ca-panel-row">
         <span style={{ fontWeight: 700, fontSize: 14 }}>Data Structures — Mid Term</span>
-        <span className="badge" style={{ background: "rgba(79,157,110,0.15)", color: "var(--mint)" }}>Live</span>
+        <span className="badge" style={{ background: "rgba(79,157,110,0.15)", color: "var(--success-text)" }}>Live</span>
       </div>
       <div style={{ fontSize: 12.5, color: "var(--ink-dim)" }}>Proctoring signals — this attempt</div>
       {[

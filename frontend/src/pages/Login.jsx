@@ -80,7 +80,7 @@ export default function Login() {
           </p>
 
           {sessionExpired && (
-            <p style={{ color: "var(--amber-dark)", fontSize: 13, marginTop: 4, marginBottom: 8 }}>
+            <p style={{ color: "var(--warning-text)", fontSize: 13, marginTop: 4, marginBottom: 8 }}>
               Your session expired or was signed out elsewhere — please sign in again.
             </p>
           )}
@@ -98,7 +98,7 @@ export default function Login() {
 
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
             <label style={{ ...labelStyle, marginTop: 14 }} htmlFor="login-password">Password</label>
-            <Link to="/forgot-password" style={{ fontSize: 12, color: "var(--amber-dark)", fontWeight: 600 }}>
+            <Link to="/forgot-password" style={{ fontSize: 12, color: "var(--warning-text)", fontWeight: 600 }}>
               Forgot password?
             </Link>
           </div>
