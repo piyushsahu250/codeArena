@@ -31,6 +31,21 @@ function replacePasswordFromReset(userId, passwordHash, recordChange) {
   });
 }
 
+// A first-login password change. The hash is replaced only if it is still the one the caller has just verified (compare-and-swap in the write itself), so of two
+// simultaneous requests carrying the same temporary password exactly one changes anything; the other gets `false`. The flag, any outstanding reset link, the history
+// row and the expiry stamp all succeed or fail together with the new hash.
+function replaceTemporaryPassword(userId, expectedHash, passwordHash, recordChange) {
+  return prisma.$transaction(async (tx) => {
+    const swapped = await tx.user.updateMany({
+      where: { id: userId, passwordHash: expectedHash },
+      data: { passwordHash, mustChangePassword: false, resetTokenHash: null, resetTokenExpiry: null },
+    });
+    if (swapped.count !== 1) return false;
+    await recordChange(tx);
+    return true;
+  });
+}
+
 const clearPendingEmail = (userId) => prisma.user.update({ where: { id: userId }, data: { pendingEmail: null, pendingEmailTokenHash: null, pendingEmailTokenExpiry: null } });
 const confirmPendingEmail = (userId, email) => prisma.user.update({
   where: { id: userId },
@@ -39,5 +54,5 @@ const confirmPendingEmail = (userId, email) => prisma.user.update({
 
 module.exports = {
   findUserForLogin, findUserByEmail, findUserByResetToken, findUserByPendingEmailToken, countSessions, findSessionOnDevice, findStudentProfile, findResumeSummary, listDocumentIds,
-  markMustChangePassword, claimResetCooldown, storeResetToken, releaseResetCooldown, replacePasswordFromReset, clearPendingEmail, confirmPendingEmail,
+  markMustChangePassword, claimResetCooldown, storeResetToken, releaseResetCooldown, replacePasswordFromReset, replaceTemporaryPassword, clearPendingEmail, confirmPendingEmail,
 };

@@ -89,6 +89,7 @@ This is a **method/path/role index**, not a full request/response schema referen
 |---|---|---|
 | POST | `/register` | **PUBLIC** |
 | POST | `/login` (rate-limited) | **PUBLIC** |
+| POST | `/change-temporary-password` (rate-limited, shares the login budget) | **PUBLIC** (the temporary password in the body is the proof of identity; only for an account that must choose a new password) |
 | POST | `/logout` | any authenticated |
 | POST | `/forgot-password` | **PUBLIC** |
 | POST | `/reset-password` | **PUBLIC** |

@@ -93,3 +93,37 @@ test("the invalid-request message is fixed text that reveals no implementation d
   assert.doesNotMatch(d.MESSAGES.loginRequestInvalid, /prisma|findUnique|undefined|stack|sql/i);
   assert.notEqual(d.MESSAGES.loginRequestInvalid, d.MESSAGES.badCredentials);
 });
+
+test("a first-login password change request must be four text fields before any database lookup", () => {
+  const bad = d.MESSAGES.changeRequestInvalid;
+  const ok = { email: "a@b.c", temporaryPassword: "t", newPassword: "n", confirmPassword: "n" };
+  assert.equal(d.changeRequestProblem(ok), null);
+  for (const body of [undefined, null, "x", [], {}]) assert.equal(d.changeRequestProblem(body), bad);
+  for (const key of Object.keys(ok)) {
+    assert.equal(d.changeRequestProblem({ ...ok, [key]: undefined }), bad, `${key} missing`);
+    assert.equal(d.changeRequestProblem({ ...ok, [key]: 123 }), bad, `${key} not text`);
+    assert.equal(d.changeRequestProblem({ ...ok, [key]: { equals: "x" } }), bad, `${key} as a filter object`);
+  }
+});
+
+test("why an account must change its password: an elapsed expiry window (judged live) wins, otherwise the stored flag means a temporary password", () => {
+  assert.equal(d.passwordChangeReason({ expired: false, mustChangePassword: true, persistFlag: false }), "TEMPORARY_PASSWORD");
+  assert.equal(d.passwordChangeReason({ expired: true, mustChangePassword: true, persistFlag: true }), "PASSWORD_EXPIRED");
+  assert.equal(d.passwordChangeReason({ expired: true, mustChangePassword: true, persistFlag: false }), "PASSWORD_EXPIRED", "still expired after the flag was stored for that very reason");
+  const stale = { mustChangePassword: false, passwordChangedAt: new Date(Date.now() - 3 * day), institute: { passwordExpiryDays: 1 } };
+  assert.equal(d.passwordChangeReason(d.passwordState(stale)), "PASSWORD_EXPIRED");
+  assert.equal(d.passwordChangeReason(d.passwordState({ ...stale, mustChangePassword: true })), "PASSWORD_EXPIRED");
+  assert.equal(d.passwordChangeReason(d.passwordState({ mustChangePassword: true, passwordChangedAt: new Date(), institute: { passwordExpiryDays: 1 } })), "TEMPORARY_PASSWORD");
+});
+
+test("when the password must change, the answer carries no token and nothing about the account beyond the flag", () => {
+  const out = d.passwordChangeRequiredResponse({ expired: false, mustChangePassword: true, persistFlag: false });
+  assert.deepEqual(out, { passwordChangeRequired: true, reason: "TEMPORARY_PASSWORD", token: null, user: { mustChangePassword: true } });
+  assert.equal(d.passwordChangeRequiredResponse({ expired: true, mustChangePassword: true, persistFlag: true }).reason, "PASSWORD_EXPIRED");
+});
+
+test("the messages the first-login step relies on", () => {
+  assert.equal(d.MESSAGES.passwordsDoNotMatch, "Passwords do not match.");
+  assert.equal(d.MESSAGES.sameAsCurrent, "New password cannot be the same as your current password", "the same wording as the signed-in change in users.account.service.js");
+  assert.match(d.MESSAGES.passwordChangedSignInFailed, /password was changed/i);
+});

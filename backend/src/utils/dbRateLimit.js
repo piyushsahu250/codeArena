@@ -12,7 +12,11 @@ const prisma = require("../prisma");
 // only after the response is known, and only if it was a failure (status >= 400). Without it, every
 // request (success or failure) counts, which is what forgot-password needs (it always returns 200
 // by design, for enumeration protection, so skipSuccessful there would mean nothing is ever counted).
-function dbRateLimit({ windowMs, max, keyGenerator, message, skipSuccessful = false }) {
+//
+// `isFailure(res)` decides which responses count when `skipSuccessful` is on; the default is any status >= 400. A route whose 4xx answers are not all guesses can narrow
+// it: the first-login password change counts only 401 (a wrong credential), so a rejected NEW password (400, after the credential was already proved right) never uses up
+// the budget that protects the credential.
+function dbRateLimit({ windowMs, max, keyGenerator, message, skipSuccessful = false, isFailure = (res) => res.statusCode >= 400 }) {
   return async function (req, res, next) {
     let key;
     try {
@@ -51,7 +55,7 @@ function dbRateLimit({ windowMs, max, keyGenerator, message, skipSuccessful = fa
 
     if (skipSuccessful) {
       res.on("finish", () => {
-        if (res.statusCode >= 400) {
+        if (isFailure(res)) {
           prisma.rateLimitHit.create({ data: { key } }).catch((err) => console.error("[dbRateLimit] record failed:", err.message));
         }
       });

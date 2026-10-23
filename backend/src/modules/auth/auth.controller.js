@@ -19,10 +19,11 @@ function handler(fallback, fn, { logFault = true } = {}) {
 const register = (req, res) => res.status(403).json({ error: service.registrationDisabled() });
 
 const login = handler("Login failed", (req) => service.login(req, req.body));
+const changeTemporaryPassword = handler("Failed to change password", (req) => service.changeTemporaryPassword(req, req.body));
 const permissions = handler("Could not load permissions", (req) => service.permissions(req.user), { logFault: false });
 const logout = handler("Logout failed", (req) => service.logout(req));
 const forgotPassword = handler("Failed to process request", (req) => service.forgotPassword(req, req.body));
 const resetPassword = handler("Failed to reset password", (req) => service.resetPassword(req, req.body));
 const verifyEmail = handler("Failed to verify email", (req) => service.verifyEmail(req, req.body));
 
-module.exports = { register, login, permissions, logout, forgotPassword, resetPassword, verifyEmail };
+module.exports = { register, login, changeTemporaryPassword, permissions, logout, forgotPassword, resetPassword, verifyEmail };

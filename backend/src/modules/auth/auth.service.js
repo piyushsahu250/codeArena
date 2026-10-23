@@ -5,7 +5,10 @@ const bcrypt = require("bcryptjs");
 const prisma = require("../../prisma");
 const { ServiceError } = require("../../utils/serviceError");
 const { sendMailLogged, wrapBranded, escapeHtml } = require("../../utils/mailer");
-const { createSession, endSession, revokeAllSessions } = require("../../utils/sessions");
+// `sessions.createSession` is called through the module object (not destructured) so that a verification script can make session creation fail and prove that a
+// password change which succeeded is never reported as a failure (see changeTemporaryPassword).
+const sessions = require("../../utils/sessions");
+const { endSession, revokeAllSessions } = sessions;
 const { logAudit, parseDevice, AUDIT_ACTIONS } = require("../../utils/auditLog");
 const { validatePasswordComplexity, isPasswordReused, recordPasswordChange } = require("../../utils/password");
 const { computeMandatoryCompletion } = require("../../utils/studentProfileCompletion");
@@ -55,6 +58,22 @@ async function login(req, body) {
   const refusal = d.loginRefusal(user);
   if (refusal) throw new ServiceError(refusal.status, refusal.message);
 
+  // An account whose SERVER-SIDE state says "choose a new password first" (an administrator-issued or reset password, or an elapsed institute expiry window) is given no
+  // session and no token here. The correct credentials only unlock the password-change step (changeTemporaryPassword), so the requirement cannot be skipped by editing
+  // the page, replaying the response or calling any other API: there is nothing to call it with. Expiry is computed live, so a newly expired password is caught here.
+  const pw = d.passwordState(user);
+  if (pw.mustChangePassword) {
+    // Fire-and-forget: the response already says so, the client need not wait for the stored flag to persist.
+    if (pw.persistFlag) repo.markMustChangePassword(user.id).catch(() => {});
+    return d.passwordChangeRequiredResponse(pw);
+  }
+
+  return signIn(req, user);
+}
+
+// Opens a session for an account that is allowed in and builds the login response: records the sign-in, sends the first-login / new-device alert and applies the
+// student profile-completion gate. Shared by the normal login and by a completed first-login password change.
+async function signIn(req, user) {
   // Sequential, not Promise.all: the Prisma pool is deliberately small, and parallel queries per login multiply the peak connections needed during a login burst
   // (the cause of "unable to start a transaction in the given time").
   const priorSessionCount = await repo.countSessions(user.id);
@@ -62,11 +81,7 @@ async function login(req, body) {
   const deviceSeenBefore = await repo.findSessionOnDevice(user.id, device.browser, device.os);
   const { isFirstLogin, isNewDevice } = d.deviceSignals(priorSessionCount, deviceSeenBefore);
 
-  const token = await createSession({ user, req, singleSessionOnly: !!user.institute?.singleSessionOnly });
-
-  const pw = d.passwordState(user);
-  // Fire-and-forget: the response already carries the right value, the client need not wait for it to persist.
-  if (pw.persistFlag) repo.markMustChangePassword(user.id).catch(() => {});
+  const token = await sessions.createSession({ user, req, singleSessionOnly: !!user.institute?.singleSessionOnly });
 
   auditFor(req, user, AUDIT_ACTIONS.LOGIN, { isFirstLogin, isNewDevice });
   maybeSendLoginAlert(user, req, isFirstLogin, isNewDevice);
@@ -82,7 +97,67 @@ async function login(req, body) {
     profileComplete = computeMandatoryCompletion(user, decryptProfile(studentProfile), resume, documents).unlocked;
   }
 
-  return d.loginResponse(token, user, { mustChangePassword: pw.mustChangePassword, requireProfileCompletion, profileComplete });
+  return d.loginResponse(token, user, { mustChangePassword: false, requireProfileCompletion, profileComplete });
+}
+
+// ---- first login: replace the temporary (or expired) password ----
+// Public, because the account has no session yet: the caller proves who they are with the temporary password in the request itself, so nothing can be forged by
+// changing frontend state. It is a password-change route ONLY for an account whose stored state requires one; for any other account it answers exactly as for a wrong
+// password (it must not become a way to change a password without signing in). Every check is repeated here: the page's own validation is a convenience.
+//   success       -> the same body as a login (token + user), with the password already changed and a fresh session open
+//   half success  -> { passwordChanged: true, signedIn: false }: the password changed but the session could not be opened; the caller signs in with the new password
+async function changeTemporaryPassword(req, body) {
+  const problem = d.changeRequestProblem(body);
+  if (problem) throw new ServiceError(400, problem);
+  const { email, temporaryPassword, newPassword, confirmPassword } = body;
+
+  // Checks that need no account come first: they say nothing about whether the e-mail is registered.
+  if (newPassword !== confirmPassword) throw new ServiceError(400, d.MESSAGES.passwordsDoNotMatch);
+  const complexityError = validatePasswordComplexity(newPassword);
+  if (complexityError) throw new ServiceError(400, complexityError);
+
+  const user = await repo.findUserForLogin(email);
+  // The same bcrypt work whether or not the account exists, and the same message and status for "no such account", "wrong password" and "nothing to change".
+  const valid = await bcrypt.compare(temporaryPassword, d.hashToCompare(user));
+  if (!user || !valid) {
+    if (user) auditFor(req, user, AUDIT_ACTIONS.LOGIN_FAILED, { email, step: "first_login_password_change" });
+    throw new ServiceError(401, d.MESSAGES.badCredentials);
+  }
+  const refusal = d.loginRefusal(user);
+  if (refusal) throw new ServiceError(refusal.status, refusal.message);
+  const pw = d.passwordState(user);
+  if (!pw.mustChangePassword) throw new ServiceError(401, d.MESSAGES.badCredentials);
+  const reason = d.passwordChangeReason(pw);
+
+  if (newPassword === temporaryPassword) throw new ServiceError(400, d.MESSAGES.sameAsCurrent);
+  const depth = user.institute?.passwordHistoryDepth;
+  if (await isPasswordReused(prisma, user.id, newPassword, depth)) throw new ServiceError(400, d.passwordReusedMessage(depth));
+
+  const passwordHash = await bcrypt.hash(newPassword, 10);
+  const swapped = await repo.replaceTemporaryPassword(user.id, user.passwordHash, passwordHash, (tx) => recordPasswordChange(tx, user.id, passwordHash, depth));
+  // Someone got there first with the same temporary password (a second tab, a double click, a replay): it has just stopped being valid.
+  if (!swapped) throw new ServiceError(401, d.MESSAGES.badCredentials);
+
+  // From here on the password HAS changed, so nothing below may turn into an error response that tells the person it failed.
+  const changed = { ...user, passwordHash, mustChangePassword: false };
+  // Whoever held the temporary password (the person, or someone who saw it) is signed out everywhere before the new session is opened.
+  try { await revokeAllSessions(user.id); } catch (err) { console.error("[auth] could not close the sessions of an account whose password just changed:", err.message); }
+  auditFor(req, changed, AUDIT_ACTIONS.PASSWORD_CHANGED, { self: true, via: reason === "TEMPORARY_PASSWORD" ? "first_login_temporary_password" : "expired_password", sessionsRevoked: true });
+  sendMailLogged(prisma, {
+    to: changed.email,
+    name: changed.name,
+    emailType: "LOGIN_ALERT",
+    studentId: changed.role === "STUDENT" ? changed.id : null,
+    subject: "Your CodeArena password was changed",
+    html: wrapBranded(`<p>Hi ${escapeHtml(changed.name)},</p><p>You just replaced your ${reason === "TEMPORARY_PASSWORD" ? "temporary" : "expired"} CodeArena password with a new one of your own. If this wasn't you, contact your administrator immediately.</p>`),
+  }).catch((err) => console.error("[auth] password-change alert email failed:", err.message));
+
+  try {
+    return await signIn(req, changed);
+  } catch (err) {
+    console.error("[auth] password changed but the new session could not be opened:", err.message);
+    return { passwordChanged: true, signedIn: false, message: d.MESSAGES.passwordChangedSignInFailed };
+  }
 }
 
 async function permissions(user) {
@@ -193,4 +268,4 @@ async function verifyEmail(req, { token }) {
   return { message: d.MESSAGES.verifyDone };
 }
 
-module.exports = { login, permissions, logout, forgotPassword, resetPassword, verifyEmail, registrationDisabled: () => d.MESSAGES.registrationDisabled };
+module.exports = { login, changeTemporaryPassword, permissions, logout, forgotPassword, resetPassword, verifyEmail, registrationDisabled: () => d.MESSAGES.registrationDisabled };

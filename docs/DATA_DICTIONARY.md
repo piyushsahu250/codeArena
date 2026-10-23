@@ -17,7 +17,7 @@ The shared account table for all four roles.
 | `department`, `mobile`, `gender`, `program`, `batchYear`, `section` | String? | Free-text; `department`/`batchYear`/`section` also drive `AcademicGroup` resolution. |
 | `isActive` | Boolean | `false` blocks login. |
 | `profilePhotoUrl` | String? | Stored as a data URL — no external file storage for this field. |
-| `mustChangePassword` | Boolean | Forces `/change-password` redirect. |
+| `mustChangePassword` | Boolean | The account must choose a personal password before it is given a session: sign-in answers `passwordChangeRequired` (no token) and the login page asks for a new password on the same form. See [FIRST_LOGIN_PASSWORD_CHANGE.md](FIRST_LOGIN_PASSWORD_CHANGE.md). |
 | `passwordChangedAt` | DateTime? | Drives per-institute password-expiry. |
 | `accountStatus` | `AccountStatus` enum | Staff/Clerk dashboard status, separate concept from `isActive`. |
 | `employeeId`, `designation` | String? | Staff/Clerk. `employeeId` is `@@unique([instituteId, employeeId])`. |

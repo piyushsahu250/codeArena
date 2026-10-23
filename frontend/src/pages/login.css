@@ -1,0 +1,32 @@
+/* The "create your personal password" step of the sign-in page (first login with an administrator-issued password, or a password past the institute's expiry window).
+   Text colours are the theme's AA-tested status text tokens (see frontend/scripts/themeContrastRegression.mjs), so every state reads in both themes; the
+   check / cross glyphs and the hidden "(requirement met)" phrase mean colour is never the only signal. */
+.ca-login-callout {
+  margin: 0 0 20px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: var(--info-bg);
+  color: var(--info-text);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.ca-pw-rules { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 4px; }
+.ca-pw-rule { display: flex; align-items: baseline; gap: 8px; font-size: 13px; line-height: 1.4; }
+.ca-pw-rule-icon { flex: 0 0 auto; width: 1.1em; text-align: center; font-weight: 700; }
+.ca-pw-rule.met { color: var(--success-text); }
+.ca-pw-rule.unmet { color: var(--danger-text); }
+
+/* Reserves its line so the form does not jump when the message appears. */
+.ca-pw-status { min-height: 20px; margin: 6px 0 0; font-size: 13px; font-weight: 600; display: flex; align-items: baseline; gap: 6px; }
+.ca-pw-status.match { color: var(--success-text); }
+.ca-pw-status.mismatch { color: var(--danger-text); }
+
+.ca-pw-show { display: flex; align-items: center; gap: 8px; margin-top: 14px; font-size: 13px; color: var(--ink); cursor: pointer; }
+.ca-pw-show input { width: 18px; height: 18px; margin: 0; flex: 0 0 auto; }
+
+.ca-login-error { color: var(--danger-text); font-size: 13px; margin: 8px 0 0; line-height: 1.45; }
+.ca-login-notice { color: var(--success-text); font-size: 13px; margin: 8px 0 0; line-height: 1.45; font-weight: 600; }
+
+/* The email shown on the second step is a fact the student confirmed by signing in, not something to edit. */
+.ca-login-readonly { background: var(--card-bg); color: var(--ink-dim); }

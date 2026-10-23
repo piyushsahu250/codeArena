@@ -15,6 +15,10 @@ const MESSAGES = {
   registrationDisabled: "User registration is managed by the administrator. Please contact your institute administrator to receive your login credentials.",
   badCredentials: "Invalid email or password.",
   loginRequestInvalid: "Invalid request. Send your email address and password as text.",
+  changeRequestInvalid: "Invalid request. Send your email address, temporary password, new password and its confirmation as text.",
+  passwordsDoNotMatch: "Passwords do not match.",
+  sameAsCurrent: "New password cannot be the same as your current password",
+  passwordChangedSignInFailed: "Your password was changed, but we could not sign you in automatically. Please sign in with your new password.",
   accountDeactivated: "This account has been deactivated. Contact your administrator.",
   instituteDeactivated: "Your institute's access has been deactivated. Contact the platform administrator.",
   emailRequired: "Email is required",
@@ -55,11 +59,31 @@ function loginRefusal(user) {
   return null;
 }
 
+// The shape a first-login password change must have BEFORE any database lookup: four text fields. Anything else (an object would reach Prisma as a filter, exactly as
+// loginRequestProblem guards against for the login) is a 400 with a fixed message.
+function changeRequestProblem(body) {
+  if (!body || typeof body !== "object" || Array.isArray(body)) return MESSAGES.changeRequestInvalid;
+  for (const key of ["email", "temporaryPassword", "newPassword", "confirmPassword"]) {
+    if (typeof body[key] !== "string") return MESSAGES.changeRequestInvalid;
+  }
+  return null;
+}
+
 // Password expiry is computed live rather than trusted from the stored flag, so a newly expired password is caught the moment the policy window elapses.
 function passwordState(user) {
   const expired = isPasswordExpired(user, user.institute?.passwordExpiryDays);
   return { expired, mustChangePassword: user.mustChangePassword || expired, persistFlag: expired && !user.mustChangePassword };
 }
+
+// Why the account must choose a new password, from passwordState(): the institute's expiry window has elapsed (judged live, so it stays true after the stored flag has
+// been persisted for that very reason), or else the stored flag says an administrator issued or reset the password. The client words its message from this.
+const passwordChangeReason = (state) => (state.expired ? "PASSWORD_EXPIRED" : "TEMPORARY_PASSWORD");
+
+// What a login answers when the credentials were right but the account must choose a new password first: NO session and NO token. Nothing can be called with this
+// answer, so the requirement cannot be skipped by editing the page or calling the API directly; the only way forward is POST /auth/change-temporary-password.
+// `token: null` and the one-key `user` exist so that a copy of the login page cached before this change (it reads data.user and data.token) fails safely, with a
+// "session expired" redirect, instead of writing "undefined" into localStorage, which breaks the app on the next load.
+const passwordChangeRequiredResponse = (state) => ({ passwordChangeRequired: true, reason: passwordChangeReason(state), token: null, user: { mustChangePassword: true } });
 
 // Only students of an institute that has opted in are held to profile completion; everyone else is unaffected.
 const requiresProfileCompletion = (user) => user.role === "STUDENT" && !!user.institute?.requireProfileCompletion;
@@ -85,5 +109,6 @@ const tokenExpired = (expiry, now = new Date()) => !expiry || expiry < now;
 
 module.exports = {
   RESET_TOKEN_TTL_MS, RESET_REQUEST_COOLDOWN_MS, DUMMY_HASH, MESSAGES,
-  hashToken, newResetToken, resetLink, passwordReusedMessage, hashToCompare, loginRequestProblem, loginRefusal, passwordState, requiresProfileCompletion, deviceSignals, loginResponse, tokenExpired,
+  hashToken, newResetToken, resetLink, passwordReusedMessage, hashToCompare, loginRequestProblem, changeRequestProblem, loginRefusal, passwordState, passwordChangeReason, passwordChangeRequiredResponse,
+  requiresProfileCompletion, deviceSignals, loginResponse, tokenExpired,
 };

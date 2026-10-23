@@ -112,22 +112,11 @@
     "name": "login: must change password",
     "status": 200,
     "body": {
-      "token": "<token>",
+      "passwordChangeRequired": true,
+      "reason": "TEMPORARY_PASSWORD",
+      "token": null,
       "user": {
-        "email": "zz-ac-mcp-<ts>@example.invalid",
-        "emailVerified": false,
-        "id": "<id>",
-        "institute": {
-          "logoUrl": null,
-          "name": "ZZ AC P <ts>"
-        },
-        "instituteId": "<id>",
-        "mustChangePassword": true,
-        "name": "ZZ AC mcp",
-        "pendingEmail": null,
-        "profileComplete": true,
-        "requireProfileCompletion": false,
-        "role": "STUDENT"
+        "mustChangePassword": true
       }
     }
   },
@@ -135,22 +124,11 @@
     "name": "login: password past the institute expiry",
     "status": 200,
     "body": {
-      "token": "<token>",
+      "passwordChangeRequired": true,
+      "reason": "PASSWORD_EXPIRED",
+      "token": null,
       "user": {
-        "email": "zz-ac-stale-<ts>@example.invalid",
-        "emailVerified": false,
-        "id": "<id>",
-        "institute": {
-          "logoUrl": null,
-          "name": "ZZ AC E <ts>"
-        },
-        "instituteId": "<id>",
-        "mustChangePassword": true,
-        "name": "ZZ AC stale",
-        "pendingEmail": null,
-        "profileComplete": true,
-        "requireProfileCompletion": false,
-        "role": "STUDENT"
+        "mustChangePassword": true
       }
     }
   },
@@ -871,7 +849,6 @@
       "LOGIN:STUDENT:inst:student:{\"isNewDevice\":false,\"isFirstLogin\":false}",
       "LOGIN:STUDENT:inst:student:{\"isNewDevice\":false,\"isFirstLogin\":true}",
       "LOGIN:STUDENT:inst:student:{\"isNewDevice\":false,\"isFirstLogin\":true}",
-      "LOGIN:STUDENT:inst:student:{\"isNewDevice\":false,\"isFirstLogin\":true}",
       "LOGIN_FAILED:STUDENT:inst:student:{\"email\":\"zz-ac-gone-<ts>@example.invalid\"}",
       "LOGIN_FAILED:STUDENT:inst:student:{\"email\":\"zz-ac-lim-<ts>@example.invalid\"}",
       "LOGIN_FAILED:STUDENT:inst:student:{\"email\":\"zz-ac-lim-<ts>@example.invalid\"}",
@@ -889,7 +866,7 @@
     "db": [
       "stu:1",
       "single:1",
-      "stale:1",
+      "stale:0",
       "prof:1",
       "admin:1"
     ]

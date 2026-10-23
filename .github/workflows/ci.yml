@@ -106,6 +106,8 @@ jobs:
         run: node scripts/studentSearchRegression.mjs
       - name: Theme contrast regression (status and text colours reach AA in both themes)
         run: node scripts/themeContrastRegression.mjs
+      - name: First-login regression (password rules, confirmation, error wording, and the form attributes a password manager reads)
+        run: node scripts/passwordPolicyRegression.mjs
       - name: Dependency audit (report only)
         continue-on-error: true
         run: npm audit --omit=dev --json | node ../backend/scripts/auditSummary.js frontend
@@ -182,10 +184,11 @@ jobs:
         working-directory: backend
         env:
           SECURE_BROWSER_SECRET: ci-only-secure-browser-secret-0123456789
+          VERIFY_API_LOG: ${{ github.workspace }}/api.log # verifyFirstLoginPasswordChange searches it for every password it used
         run: |
           fail=0
           verification_started=$(date +%s)
-          for s in verifyPermissions verifyAsyncErrors verifyRouteMetrics verifyAttemptManifest verifySubmissionsContract verifyStaffAnalytics verifyTestsContract verifyAuthContract verifyUsersContract verifyUsersWriteContract verifyAutoFinalizeDeadline verifyAiShortcutIntake verifyLeaderboardStatus verifyStartOverride verifyQuestionsContract verifyQuestionFoldersContract verifyQuestionImportExportContract verifySecureAndroid verifyCEndToEnd verifyLmsContentIsolation verifyStaffScopeIsolation verifyDeepHealth verifyAiQuota verifyMessagingGuards verifyEmailProtection verifyScoreDenominators verifyLmsWriteIsolation; do
+          for s in verifyPermissions verifyAsyncErrors verifyRouteMetrics verifyAttemptManifest verifySubmissionsContract verifyStaffAnalytics verifyTestsContract verifyAuthContract verifyUsersContract verifyUsersWriteContract verifyAutoFinalizeDeadline verifyAiShortcutIntake verifyLeaderboardStatus verifyStartOverride verifyQuestionsContract verifyQuestionFoldersContract verifyQuestionImportExportContract verifySecureAndroid verifyCEndToEnd verifyLmsContentIsolation verifyStaffScopeIsolation verifyDeepHealth verifyAiQuota verifyMessagingGuards verifyEmailProtection verifyScoreDenominators verifyLmsWriteIsolation verifyFirstLoginPasswordChange; do
             echo "=== $s"
             code=0; node scripts/$s.js > "/tmp/$s.out" 2>&1 || code=$?
             cat "/tmp/$s.out"

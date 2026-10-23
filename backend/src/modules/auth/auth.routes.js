@@ -10,11 +10,24 @@ const router = express.Router();
 
 // Keyed by IP+email (not just IP) so a shared campus or lab address does not share one lockout budget across every student behind it, while still capping how fast
 // one email can be brute-forced from one source. skipSuccessful: only failed attempts count, so a user logging in several times in a row never eats their own budget.
+const loginKey = (req) => `login:${getClientIp(req)}:${String(req.body?.email || "").toLowerCase()}`;
 const loginLimiter = dbRateLimit({
   windowMs: 15 * 60 * 1000,
   max: 5,
   skipSuccessful: true,
-  keyGenerator: (req) => `login:${getClientIp(req)}:${String(req.body?.email || "").toLowerCase()}`,
+  keyGenerator: loginKey,
+  message: { error: "Too many login attempts. Please try again later." },
+});
+
+// The first-login password change checks the temporary password exactly as the login does, so it draws on the SAME budget (same key: a second endpoint must not double the
+// number of guesses an attacker gets). Only a rejected credential (401) counts: a rejected NEW password (400) comes after the credential was proved right, and the page
+// stops most of those before they are sent, so they must not lock a student out of the very step that lets them in.
+const changeTemporaryPasswordLimiter = dbRateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  skipSuccessful: true,
+  isFailure: (res) => res.statusCode === 401,
+  keyGenerator: loginKey,
   message: { error: "Too many login attempts. Please try again later." },
 });
 
@@ -45,6 +58,7 @@ const verifyEmailLimiter = dbRateLimit({
 
 router.post("/register", c.register);
 router.post("/login", loginLimiter, c.login);
+router.post("/change-temporary-password", changeTemporaryPasswordLimiter, c.changeTemporaryPassword);
 router.get("/permissions", authenticate, c.permissions);
 router.post("/logout", authenticate, c.logout);
 router.post("/forgot-password", forgotPasswordLimiter, c.forgotPassword);

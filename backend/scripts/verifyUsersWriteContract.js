@@ -217,6 +217,9 @@ const auditRows = async (where) => (await prisma.auditLog.findMany({ where, sele
   await call("reset: weak custom password", "POST", `/users/${victim.id}/reset-password`, T.instA, { customPassword: "weak" });
   await call("reset: custom password", "POST", `/users/${victim.id}/reset-password`, T.instA, { customPassword: "Custom#Pass1" });
   note("reset: stored", { loginWithCustom: (await fetch(`${API}/auth/login`, { method: "POST", headers: { "content-type": "application/json", "x-forwarded-for": nextIp() }, body: JSON.stringify({ email: victim.email, password: "Custom#Pass1" }) })).status, mustChange: (await prisma.user.findUnique({ where: { id: victim.id }, select: { mustChangePassword: true } })).mustChangePassword, history: await prisma.passwordHistory.count({ where: { userId: victim.id } }) });
+  // An account that must choose a new password is given no session at sign-in (a reset marks it so), and the next check needs an open session that the reset after it closes,
+  // so the mark is lifted for this one sign-in; the reset right below puts it back, exactly as before.
+  await prisma.user.update({ where: { id: victim.id }, data: { mustChangePassword: false } });
   const vTok = await (async () => (await (await fetch(`${API}/auth/login`, { method: "POST", headers: { "content-type": "application/json", "x-forwarded-for": nextIp() }, body: JSON.stringify({ email: victim.email, password: "Custom#Pass1" }) })).json()).token)();
   await call("reset: generated password by staff of the institute", "POST", `/users/${victim.id}/reset-password`, T.staffA, {});
   await call("reset: the account's open session is closed", "GET", "/auth/permissions", vTok);

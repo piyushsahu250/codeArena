@@ -9,7 +9,7 @@ Dashboard (`/dashboard`), Profile (`/profile`), Test-taking (`/test/:id`), Learn
 Every student-facing backend route scopes to `req.user.id` — confirmed clean of IDOR issues (this session's audit). A student can never read or act on another student's data via any observed route.
 
 ## Key Gates
-- **`mustChangePassword`** — blocks everything until cleared.
+- **`mustChangePassword`** — until cleared, sign-in issues no session at all; the student chooses a personal password on the login page first ([FIRST_LOGIN_PASSWORD_CHANGE.md](FIRST_LOGIN_PASSWORD_CHANGE.md)).
 - **Profile completion (80% unlock)** — blocks everything except `/profile` and `/resume` until the mandatory-field threshold is met (institute-toggleable). See [BUSINESS_RULES.md](BUSINESS_RULES.md) §3.
 - **Course visibility** — a student only sees courses explicitly assigned to their institute/academic group. See [BUSINESS_RULES.md](BUSINESS_RULES.md) §4.
 - **Test eligibility** — a formal test only appears if the student's academic group (or class) is assigned to it.

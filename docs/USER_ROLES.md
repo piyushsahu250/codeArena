@@ -38,7 +38,7 @@ Home route: `/admin`.
 
 ## Special Account States (not roles, but affect access)
 
-- `mustChangePassword` (on `User`) — forces redirect to `/change-password` regardless of role, before any other route is reachable.
+- `mustChangePassword` (on `User`) — the account is given no session until it has chosen a personal password, regardless of role (see [FIRST_LOGIN_PASSWORD_CHANGE.md](FIRST_LOGIN_PASSWORD_CHANGE.md)).
 - `requireProfileCompletion` (institute setting) + `profileComplete` (computed) — for STUDENT accounts, blocks all routes except `/profile` and `/resume` until the mandatory profile fields reach 80% (see [BUSINESS_RULES.md](BUSINESS_RULES.md)).
 - `isActive` / `accountStatus` (`AccountStatus` enum) — an inactive account cannot log in (enforced server-side in `auth.js`).
 - `singleSessionOnly` (institute setting) — when enabled, a new login invalidates the account's other active `LoginSession` rows.

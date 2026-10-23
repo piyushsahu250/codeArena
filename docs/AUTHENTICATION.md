@@ -11,7 +11,7 @@ JWT bearer tokens. Issued on `POST /api/auth/login` (and `/register`), sent by t
 ## Password Handling
 - Hashed with `bcryptjs` before storage (`User.passwordHash`).
 - Password complexity, history (`PasswordHistory`, depth configurable per institute via `passwordHistoryDepth`), and expiration (`passwordExpiryDays`) policies are enforced on signup/reset/change routes.
-- `mustChangePassword` flag forces a redirect to `/change-password` on every route until cleared.
+- `mustChangePassword` (set whenever an administrator issues or resets a password) and the institute's `passwordExpiryDays` make the **server** answer a correct sign-in with `passwordChangeRequired` and **no session**; the login page then asks for a personal password on the same form (`POST /api/auth/change-temporary-password`). Full description, API contract, controls and tests: [FIRST_LOGIN_PASSWORD_CHANGE.md](FIRST_LOGIN_PASSWORD_CHANGE.md). (The older `/change-password` page remains only for a session that already existed when this was deployed.)
 
 ## Session / Device Tracking
 - `LoginSession` records active sessions/devices.
