@@ -308,7 +308,7 @@ export default function AcademicGroups() {
           style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", justifyContent: "center", alignItems: "center", padding: 16 }}
           onClick={closeDeleteDialog}
         >
-          <div className="card" style={{ maxWidth: 460, width: "100%", padding: 24, position: "relative" }} onClick={(e) => e.stopPropagation()}>
+          <div className="card" style={{ maxWidth: 460, width: "100%", padding: 24, position: "relative", maxHeight: "calc(100dvh - 32px)", overflowY: "auto", overscrollBehavior: "contain" }} onClick={(e) => e.stopPropagation()}>
             <button type="button" className="btn btn-ghost" style={{ position: "absolute", top: 12, right: 12, padding: 6 }} onClick={closeDeleteDialog} disabled={deleting} aria-label="Close">
               <X size={16} />
             </button>
