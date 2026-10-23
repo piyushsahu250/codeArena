@@ -93,9 +93,9 @@ async function seed() {
   const aiShortcutOffTest = await mkTest(`${TAG} AI Shortcut Off Test`);
   // A finished test with three submitted attempts, for the staff leaderboard search tests.
   const resultsTest = await mkTest(`${TAG} Results Test`);
-  // Lifecycle states on the staff leaderboard: finished, auto-submitted, still inside its own 20 minutes, and past its own time but not yet closed (its running score is the highest).
-  const statusTest = await mkTest(`${TAG} Status Test`);
-  for (const [u, status, startedMinAgo, score] of [[users.student, "SUBMITTED", 15, 9], [users.student2, "IN_PROGRESS", 5, 7], [users.student3, "IN_PROGRESS", 60, 8], [users.student4, "AUTO_SUBMITTED", 40, 4]]) {
+  // Lifecycle states on the staff leaderboard: finished, auto-submitted, still inside its own time, and past its own time but not yet closed (its running score is the highest). The test lasts 60 minutes (it was 20) and the expired attempt began 120 minutes ago, so that a slow CI runner, which can reach this spec 15 minutes or more after seeding, cannot turn the "in progress" attempt (began 5 minutes before seeding) into an expired one.
+  const statusTest = await mkTest(`${TAG} Status Test`, { durationMin: 60 });
+  for (const [u, status, startedMinAgo, score] of [[users.student, "SUBMITTED", 15, 9], [users.student2, "IN_PROGRESS", 5, 7], [users.student3, "IN_PROGRESS", 120, 8], [users.student4, "AUTO_SUBMITTED", 40, 4]]) {
     await prisma.testAttempt.create({ data: { testId: statusTest.id, studentId: u.id, status, totalScore: score, startedAt: new Date(now - startedMinAgo * 60000), submittedAt: status === "IN_PROGRESS" ? null : new Date(now - 60000), questionOrder: questions.map((q) => q.id) } });
   }
   for (const [u, score] of [[users.student, 9], [users.student2, 6], [users.student3, 3]]) {
