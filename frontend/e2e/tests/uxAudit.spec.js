@@ -58,7 +58,7 @@ for (const [who, paths] of GROUPS) {
     await page.addInitScript(() => {
       window.__ux = { lcp: 0, cls: 0, long: 0 };
       try { new PerformanceObserver((l) => { for (const e of l.getEntries()) window.__ux.lcp = e.startTime; }).observe({ type: "largest-contentful-paint", buffered: true }); } catch { /* unsupported */ }
-      try { new PerformanceObserver((l) => { for (const e of l.getEntries()) if (!e.hadRecentInput) window.__ux.cls += e.value; }).observe({ type: "layout-shift", buffered: true }); } catch { /* unsupported */ }
+      try { new PerformanceObserver((l) => { for (const e of l.getEntries()) if (!e.hadRecentInput) { window.__ux.cls += e.value; if (e.value > (window.__ux.top || 0)) { window.__ux.top = e.value; const n = e.sources && e.sources[0] && e.sources[0].node; window.__ux.shift = n && n.nodeType === 1 ? n.tagName.toLowerCase() + (typeof n.className === "string" && n.className ? "." + n.className.split(" ")[0] : "") : (n && n.parentElement ? "text in " + n.parentElement.tagName.toLowerCase() : "?"); } } }).observe({ type: "layout-shift", buffered: true }); } catch { /* unsupported */ }
       try { new PerformanceObserver((l) => { for (const e of l.getEntries()) window.__ux.long += e.duration; }).observe({ type: "longtask", buffered: true }); } catch { /* unsupported */ }
     });
     await login(page, users[who]);
@@ -116,7 +116,7 @@ for (const [who, paths] of GROUPS) {
     for (const [m, ps] of [...agg].sort((a, b) => b[1].length - a[1].length)) console.log(`[ux] ${who}: ${m} :: ${ps.length} page(s): ${ps.slice(0, 4).join(", ")}`.slice(0, 430));
     const lcps = perf.map((x) => x.lcp).filter((x) => x > 0);
     const worstLcp = [...perf].sort((a, b) => b.lcp - a.lcp).slice(0, 3).map((x) => `${x.p}=${Math.round(x.lcp)}ms`).join(", ");
-    const worstCls = [...perf].sort((a, b) => b.cls - a.cls).slice(0, 2).map((x) => `${x.p}=${x.cls.toFixed(3)}`).join(", ");
+    const worstCls = [...perf].sort((a, b) => b.cls - a.cls).slice(0, 2).map((x) => `${x.p}=${x.cls.toFixed(3)} (largest shift: ${x.shift || "?"})`).join(", ");
     const worstLong = [...perf].sort((a, b) => b.long - a.long).slice(0, 2).map((x) => `${x.p}=${Math.round(x.long)}ms`).join(", ");
     const worstDom = [...perf].sort((a, b) => b.nodes - a.nodes).slice(0, 2).map((x) => `${x.p}=${x.nodes}`).join(", ");
     console.log(`[ux-perf] ${who} (${perf.length} pages, 1280x720, cold load, local server): LCP median ${Math.round(quantile(lcps, 0.5))}ms, p90 ${Math.round(quantile(lcps, 0.9))}ms; slowest ${worstLcp}; worst CLS ${worstCls}; most long-task time ${worstLong}; largest DOM ${worstDom}`.slice(0, 430));
