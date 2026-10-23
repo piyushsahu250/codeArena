@@ -25,12 +25,12 @@ function layoutProbe() {
   const scrollers = [];
   for (const el of document.querySelectorAll("body *")) {
     const s = cs(el);
-    if ((s.overflowY === "auto" || s.overflowY === "scroll") && el.scrollHeight > el.clientHeight + 4 && el.clientHeight >= vh * 0.6) scrollers.push(el);
+    if ((s.overflowY === "auto" || s.overflowY === "scroll") && el.scrollHeight > el.clientHeight + 4 && el.clientHeight >= vh * 0.6 && el.clientWidth >= window.innerWidth * 0.5 && !el.closest("aside, nav, [role=navigation], [role=dialog], dialog")) scrollers.push(el);
   }
   const docScrolls = !locked && contentH > vh + 2;
   const out = [];
   if (locked && contentH > vh + 2 && scrollers.length === 0) out.push("cannot scroll to the end (html/body overflow hidden, no inner scroller)");
-  if (docScrolls && scrollers.length > 0) out.push(`two vertical scrollbars (page + ${scrollers[0].tagName.toLowerCase()}.${String(scrollers[0].className).split(" ")[0]})`);
+  if (docScrolls && scrollers.length > 0) out.push(`two vertical scrollbars (page + ${scrollers[0].tagName.toLowerCase()}.${String(scrollers[0].className).split(" ")[0]} inside ${scrollers[0].parentElement ? scrollers[0].parentElement.tagName.toLowerCase() + "." + String(scrollers[0].parentElement.className).split(" ")[0] : "?"})`);
   return out;
 }
 function smallTargets() {
@@ -38,7 +38,7 @@ function smallTargets() {
   for (const el of document.querySelectorAll('button, [role="button"], input[type="checkbox"], input[type="radio"], select, summary')) {
     const r = el.getBoundingClientRect();
     if (r.width === 0 || r.height === 0 || getComputedStyle(el).visibility === "hidden") continue;
-    if (r.width < 24 || r.height < 24) bad.push(`${el.tagName.toLowerCase()}${el.getAttribute("aria-label") ? `[${el.getAttribute("aria-label").slice(0, 20)}]` : ""} ${Math.round(r.width)}x${Math.round(r.height)}`);
+    if (r.width < 24 || r.height < 24) bad.push(`${el.tagName.toLowerCase()}${el.className && typeof el.className === "string" ? "." + el.className.split(" ")[0] : ""}${el.getAttribute("aria-label") ? `[${el.getAttribute("aria-label").slice(0, 20)}]` : ""} "${(el.innerText || el.value || "").trim().slice(0, 14)}" ${Math.round(r.width)}x${Math.round(r.height)}`);
   }
   return bad;
 }
@@ -77,7 +77,7 @@ for (const [who, paths] of GROUPS) {
         await page.waitForTimeout(250);
         for (const f of await page.evaluate(layoutProbe)) note("layout(375x667)", f);
         const small = await page.evaluate(smallTargets);
-        if (small.length) note("targets(375)", `${small.length} below 24x24, e.g. ${small.slice(0, 3).join("; ")}`);
+        for (const d of [...new Set(small)].slice(0, 3)) note("targets(375)", d);
       } catch (err) { note("requests", `probe error: ${String(err.message).slice(0, 80)}`); }
     }
 
@@ -111,7 +111,9 @@ for (const [who, paths] of GROUPS) {
       }
     } catch (err) { note("history", `walk error: ${String(err.message).slice(0, 80)}`); }
 
-    for (const [p, set] of seen) console.log(`[ux] ${who} ${p} :: ${[...set].slice(0, 4).join(" | ")}`.slice(0, 430));
+    const agg = new Map();
+    for (const [p, set] of seen) for (const m of set) { if (!agg.has(m)) agg.set(m, []); agg.get(m).push(p); }
+    for (const [m, ps] of [...agg].sort((a, b) => b[1].length - a[1].length)) console.log(`[ux] ${who}: ${m} :: ${ps.length} page(s): ${ps.slice(0, 4).join(", ")}`.slice(0, 430));
     const lcps = perf.map((x) => x.lcp).filter((x) => x > 0);
     const worstLcp = [...perf].sort((a, b) => b.lcp - a.lcp).slice(0, 3).map((x) => `${x.p}=${Math.round(x.lcp)}ms`).join(", ");
     const worstCls = [...perf].sort((a, b) => b.cls - a.cls).slice(0, 2).map((x) => `${x.p}=${x.cls.toFixed(3)}`).join(", ");
