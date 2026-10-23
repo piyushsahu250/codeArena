@@ -547,7 +547,8 @@ input::placeholder, textarea::placeholder { color: var(--ink-dim); }
   color: var(--ink);
   font-size: 12.5px;
   font-weight: 600;
-  padding: 4px 8px;
+  padding: 4px 10px;
+  min-height: 32px; /* 12.5px text made this 23px tall on every page that has a Back button (about 74): below the 24px minimum touch target (WCAG 2.5.8) */
   border-radius: 6px;
   cursor: pointer;
 }
@@ -890,4 +891,12 @@ input::placeholder, textarea::placeholder { color: var(--ink-dim); }
    of overflowing; nothing is hidden or truncated. */
 @media (max-width: 640px) {
   main, .card { overflow-wrap: anywhere; }
+}
+
+/* Touch targets at phone width (audit batch UI/UX 2). The browser probe (frontend/e2e/tests/uxAudit.spec.js) found these below the 24 x 24 CSS px minimum of WCAG 2.5.8:
+   selects 21px tall, the 13px native checkboxes and radio buttons, and <summary> rows 16px tall. Only phone widths change; the desktop layout is untouched. */
+@media (max-width: 768px) {
+  select { min-height: 32px; }
+  input[type="checkbox"]:not(.ca-switch input), input[type="radio"] { width: 20px; height: 20px; }
+  summary { min-height: 24px; padding-block: 4px; }
 }
