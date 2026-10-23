@@ -73,6 +73,16 @@ async function revokeAllSessions(userId) {
   for (const s of toClose) cache.invalidate(`session-active:${s.token}`);
 }
 
+// Closes every active session of a user EXCEPT the one named (`keepJti`): used when a signed-in person changes their own password, so that a device that already held a
+// session on the old password (possibly the reason for the change) is signed out, while the device that made the change keeps working. With no `keepJti` it closes all.
+async function revokeOtherSessions(userId, keepJti) {
+  const where = { userId, isActive: true, ...(keepJti ? { token: { not: keepJti } } : {}) };
+  const toClose = await prisma.loginSession.findMany({ where, select: { token: true } });
+  if (toClose.length === 0) return;
+  await prisma.loginSession.updateMany({ where, data: { isActive: false, logoutAt: new Date() } });
+  for (const s of toClose) cache.invalidate(`session-active:${s.token}`);
+}
+
 // Same as revokeAllSessions, but for every user of one institute at once — used when an institute
 // is toggled inactive (PATCH /institutes/:id). Institute.isActive previously had no enforcement
 // effect anywhere: auth.js's login route never checked it, and toggling it off didn't touch any
@@ -91,4 +101,4 @@ async function revokeAllSessionsForInstitute(instituteId) {
   for (const s of toClose) cache.invalidate(`session-active:${s.token}`);
 }
 
-module.exports = { createSession, isSessionActive, endSession, revokeAllSessions, revokeAllSessionsForInstitute };
+module.exports = { createSession, isSessionActive, endSession, revokeAllSessions, revokeOtherSessions, revokeAllSessionsForInstitute };

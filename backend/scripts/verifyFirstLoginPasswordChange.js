@@ -258,6 +258,21 @@ async function cleanup() {
       check("that session cannot read an account of another institute", peek.status === 403 || peek.status === 404, `status ${peek.status}`);
     }
 
+    // ---- 12. A signed-in password change ends the account's OTHER sessions (it used to be the one password change that did not)
+    const pwc = await mk("pwc", { flagged: false });
+    const sA = await login(pwc.email, pwc.password, nextIp());
+    const sB = await login(pwc.email, pwc.password, nextIp());
+    check("an ordinary account can hold two sessions", sA.status === 200 && sB.status === 200 && !!sA.json.token && !!sB.json.token && (await activeSessions(pwc.id)) === 2);
+    const pwcNew = newPassword();
+    const patched = await http("PATCH", "/users/me", { token: sA.json.token, body: { currentPassword: pwc.password, newPassword: pwcNew }, ip: nextIp() });
+    check("changing the password from account settings succeeds and returns a new session", patched.status === 200 && !!(patched.json && patched.json.token), `status ${patched.status}`);
+    const stillA = await http("GET", "/auth/permissions", { token: sA.json.token });
+    const goneB = await http("GET", "/auth/permissions", { token: sB.json.token });
+    const freshC = await http("GET", "/auth/permissions", { token: patched.json && patched.json.token });
+    check("the session that made the change keeps working", stillA.status === 200, `status ${stillA.status}`);
+    check("the other session is signed out", goneB.status === 401, `status ${goneB.status}`);
+    check("the new session works, and exactly those two are open", freshC.status === 200 && (await activeSessions(pwc.id)) === 2, `status ${freshC.status}, ${await activeSessions(pwc.id)} active`);
+
     // ---- 11. Passwords never reach the API's log
     if (API_LOG && fs.existsSync(API_LOG)) {
       const log = fs.readFileSync(API_LOG, "utf8");

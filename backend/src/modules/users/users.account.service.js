@@ -6,7 +6,7 @@ const prisma = require("../../prisma");
 const cache = require("../../utils/cache");
 const { ServiceError } = require("../../utils/serviceError");
 const { sendMailLogged, wrapBranded, escapeHtml } = require("../../utils/mailer");
-const { createSession } = require("../../utils/sessions");
+const { createSession, revokeOtherSessions } = require("../../utils/sessions");
 const { logAudit, AUDIT_ACTIONS } = require("../../utils/auditLog");
 const { validatePasswordComplexity, isPasswordReused, recordPasswordChange } = require("../../utils/password");
 const { isValidEmail, normalizeEmail } = require("../../utils/emailValidation");
@@ -81,6 +81,8 @@ async function updateOwnAccount(req, { currentPassword, newEmail: rawNewEmail, n
     verificationEmailSent = !!result.ok;
   }
 
+  // A changed password ends every OTHER session of the account (the one making the change keeps working), as every other password change on the platform already does.
+  if (newPasswordHash) await revokeOtherSessions(user.id, req.user.jti).catch((err) => console.error("[users] could not close the other sessions after a password change:", err.message));
   const token = await createSession({ user: updated, req, singleSessionOnly: false });
   await logAudit({ req, action: AUDIT_ACTIONS.PASSWORD_CHANGED, actorId: user.id, actorName: user.name, actorRole: user.role, studentId: studentIdOf(user), instituteId: user.instituteId, details: { self: true, emailChangeRequested: !!pendingVerifyToken, verificationEmailSent, passwordChanged: !!newPasswordHash } });
 
