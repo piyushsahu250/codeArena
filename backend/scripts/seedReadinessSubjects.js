@@ -1,5 +1,5 @@
 /**
- * Idempotent (upsert-by-code) seed for the Employability & Readiness module's initial subject
+ * Idempotent insert-only (create-if-missing-and-not-deleted, by code) seed for the Employability & Readiness module's initial subject
  * configuration — DSA, Java, and DBMS, matching the module spec's own worked examples for topic
  * taxonomy, BTL distribution, assessment modes, and readiness thresholds. These are standard,
  * well-established computer-science curriculum facts (not fabricated question content or
@@ -104,45 +104,63 @@ const SUBJECTS = [
   },
 ];
 
-async function seedReadinessSubjects() {
-  let created = 0, updated = 0;
-  for (const s of SUBJECTS) {
-    const existing = await prisma.readinessSubject.findFirst({ where: { code: s.code, instituteId: null } });
-    const data = {
-      name: s.name,
-      code: s.code,
-      department: s.department,
-      description: s.description,
-      topics: s.topics,
-      questionTypesAllowed: s.questionTypesAllowed,
-      defaultBtlDistribution: DEFAULT_BTL_DISTRIBUTION,
-      assessmentModes: ASSESSMENT_MODES,
-      employabilityIndicators: s.employabilityIndicators,
-      defaultDurationMin: 45,
-      passingPercent: 50,
-      readinessThresholds: READINESS_THRESHOLDS,
-      isActive: true,
+// A built-in subject is created only if it is missing AND no admin ever deleted it on purpose. An existing row is never touched: this seed used to overwrite name, topics,
+// thresholds and `isActive: true` on every container start, so an admin's edits and deactivation were silently undone at the next deploy, and a deleted subject came back.
+// A deliberate deletion is recorded by DELETE /readiness/admin/subjects/:id in the audit log (action READINESS_SUBJECT_DELETED, subject code and name in `details`),
+// and that record is the "do not recreate" marker.
+async function wasDeletedOnPurpose(s) {
+  const hit = await prisma.auditLog.findFirst({
+    where: {
+      action: "READINESS_SUBJECT_DELETED",
       instituteId: null,
-      createdById: null,
-    };
-    if (existing) {
-      await prisma.readinessSubject.update({ where: { id: existing.id }, data });
-      updated++;
-    } else {
-      await prisma.readinessSubject.create({ data });
-      created++;
-    }
+      OR: [{ details: { path: ["code"], equals: s.code } }, { details: { path: ["name"], equals: s.name } }],
+    },
+    select: { id: true },
+  });
+  return !!hit;
+}
+
+async function seedReadinessSubjects(subjects = SUBJECTS) {
+  let created = 0, kept = 0, skippedDeleted = 0;
+  for (const s of subjects) {
+    const existing = await prisma.readinessSubject.findFirst({ where: { code: s.code, instituteId: null } });
+    if (existing) { kept++; continue; }
+    if (await wasDeletedOnPurpose(s)) { skippedDeleted++; continue; }
+    await prisma.readinessSubject.create({
+      data: {
+        name: s.name,
+        code: s.code,
+        department: s.department,
+        description: s.description,
+        topics: s.topics,
+        questionTypesAllowed: s.questionTypesAllowed,
+        defaultBtlDistribution: DEFAULT_BTL_DISTRIBUTION,
+        assessmentModes: ASSESSMENT_MODES,
+        employabilityIndicators: s.employabilityIndicators,
+        defaultDurationMin: 45,
+        passingPercent: 50,
+        readinessThresholds: READINESS_THRESHOLDS,
+        isActive: true,
+        instituteId: null,
+        createdById: null,
+      },
+    });
+    created++;
   }
-  return { created, updated };
+  return { created, kept, skippedDeleted };
 }
 
 async function main() {
-  const { created, updated } = await seedReadinessSubjects();
-  console.log(`[seedReadinessSubjects] Done. Created ${created}, updated ${updated}.`);
+  const { created, kept, skippedDeleted } = await seedReadinessSubjects();
+  console.log(`[seedReadinessSubjects] Done. Created ${created}, left ${kept} existing untouched, skipped ${skippedDeleted} deleted on purpose.`);
   await prisma.$disconnect();
 }
 
-main().catch((err) => {
-  console.error("[seedReadinessSubjects] failed:", err);
-  process.exit(1);
-});
+module.exports = { seedReadinessSubjects };
+
+if (require.main === module) {
+  main().catch((err) => {
+    console.error("[seedReadinessSubjects] failed:", err);
+    process.exit(1);
+  });
+}

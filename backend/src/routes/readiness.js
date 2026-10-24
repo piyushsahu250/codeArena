@@ -323,7 +323,7 @@ router.delete("/admin/subjects/:id", authenticate, requireRole("ADMIN", "SUPER_A
       return res.status(400).json({ error: `Cannot delete — ${attemptCount} student assessment(s) already reference this subject. Deactivate it instead.` });
     }
     await prisma.readinessSubject.delete({ where: { id: req.params.id } });
-    await logAudit({ req, action: AUDIT_ACTIONS.READINESS_SUBJECT_DELETED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role, instituteId: existing.instituteId, details: { subjectId: existing.id, name: existing.name } });
+    await logAudit({ req, action: AUDIT_ACTIONS.READINESS_SUBJECT_DELETED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role, instituteId: existing.instituteId, details: { subjectId: existing.id, name: existing.name, code: existing.code } });
     res.json({ ok: true });
   } catch (err) {
     console.error(err);
