@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, BookOpen, BarChart3, Mic, FileText, History, Award, Trophy, Settings,
@@ -227,12 +227,12 @@ export default function Sidebar({ role, profileGateActive = false }) {
     }
   }
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     document.body.classList.add("has-sidebar");
     return () => document.body.classList.remove("has-sidebar");
   }, []);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     document.body.classList.toggle("sidebar-collapsed", collapsed);
     localStorage.setItem("caSidebarCollapsed", collapsed ? "1" : "0");
   }, [collapsed]);
@@ -293,7 +293,12 @@ export default function Sidebar({ role, profileGateActive = false }) {
         )}
         <button
           className="ca-sidebar-collapse-btn"
-          onClick={() => setCollapsed((c) => !c)}
+          onClick={() => {
+            // The page's left padding animates only for this deliberate toggle, never when the sidebar first mounts (that read as the whole page sliding in).
+            document.body.classList.add("sidebar-animate");
+            setTimeout(() => document.body.classList.remove("sidebar-animate"), 400);
+            setCollapsed((c) => !c);
+          }}
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
           {collapsed ? <ChevronRight size={16} /> : <><ChevronLeft size={16} /><span style={{ fontSize: 12 }}>Collapse</span></>}
