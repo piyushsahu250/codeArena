@@ -15,6 +15,7 @@ const gemini = require("./geminiProvider");
 const { runQueued } = require("../../utils/aiQueue");
 const { assertWithinDailyQuota } = require("./rateLimits");
 const { wrapUntrusted, systemWithInjectionGuard } = require("./promptSecurity");
+const { parseModelJson } = require("../../utils/aiJson");
 
 // Only Gemini is wired up today (see PRIMARY OBJECTIVE: free-tier usage, no paid fallback
 // required). Adding a second provider later means: write a providerB.js with the same
@@ -107,7 +108,7 @@ async function generateJson({ feature, userId, instituteId, system, prompt, maxT
   for (let attempt = 0; attempt < 2; attempt++) {
     const result = await callProvider({ feature, userId, instituteId, system, prompt, maxTokens, temperature, jsonMode: true, injectionGuard });
     try {
-      const parsed = JSON.parse(result.text);
+      const parsed = parseModelJson(result.text);
       if (validate) {
         const validationError = validate(parsed);
         if (validationError) throw new Error(`AI response failed validation: ${validationError}`);
