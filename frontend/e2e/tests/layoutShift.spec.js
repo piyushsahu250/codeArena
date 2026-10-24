@@ -69,7 +69,7 @@ test("the performance page keeps its width and does not jump when the data repla
   const lefts = await page.evaluate(() => new Promise((resolve) => {
     const out = []; const t0 = performance.now();
     const tick = () => {
-      const el = document.querySelector("main > div > div");
+      const el = document.querySelector("main > div > div[style*=\"max-width\"]");
       if (el) out.push(Math.round(el.getBoundingClientRect().left));
       if (performance.now() - t0 < 2500) requestAnimationFrame(tick); else resolve(out);
     };
