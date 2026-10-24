@@ -912,5 +912,5 @@ input::placeholder, textarea::placeholder { color: var(--ink-dim); }
    "Improve with AI" 22px and the Documents tab 15px tall, all set with inline padding that makes them smaller than the 24 x 24 CSS px minimum of WCAG 2.5.8. A floor on button
    size fixes them all without editing each page; larger buttons and the desktop layout are unchanged. */
 @media (max-width: 768px) {
-  button:not(.ca-switch):not([hidden]) { min-height: 24px; min-width: 24px; }
+  :where(button:not(.ca-switch):not([hidden])) { min-height: 24px; min-width: 24px; } /* :where() = zero specificity, so a page rule such as .sd-btn { min-height: 34px } always wins; this only raises undersized buttons */
 }
