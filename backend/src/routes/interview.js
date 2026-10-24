@@ -26,6 +26,7 @@ const { sendMailLogged, wrapBranded, escapeHtml } = require("../utils/mailer");
 const aiService = require("../services/ai/aiService");
 const { sendAiError } = require("../utils/aiErrors");
 const { cached, invalidate } = require("../utils/cache");
+const { computeInterviewAnalytics } = require("../utils/interviewAnalytics");
 const { dedupe, isInFlight } = require("../utils/requestDedup");
 const { classifyViolation } = require("../utils/proctoringSeverity");
 const { COMPANIES } = require("../utils/companies");
@@ -2094,79 +2095,16 @@ router.get("/admin/analytics", authenticate, requireRole("ADMIN", "SUPER_ADMIN",
     // double-fetches hitting the DB twice for the identical query.
     const cacheKey = `interview:analytics:${req.requesterInstituteId || "all"}:${JSON.stringify(req.query)}`;
     const payload = await cached(cacheKey, 30 * 1000, async () => {
+      // Select only the columns the calculation reads: a full row carries large JSON snapshots (questions, round plan, proctoring), which made this query move far more data than it uses.
       const sessions = await prisma.interviewSession.findMany({
         where,
-        include: {
+        select: {
+          status: true, submittedAt: true, config: true, isMock: true, isResumeBased: true, isCompanyRound: true, category: true,
           student: { select: { batchYear: true, department: true, academicGroup: { select: { batch: true, section: true, department: { select: { name: true } } } } } },
           report: { select: { overallScore: true } },
         },
       });
-
-      const withScore = sessions.filter((s) => s.report);
-      const scores = withScore.map((s) => s.report.overallScore);
-      const totalInterviews = sessions.length;
-      const completedCount = sessions.filter((s) => s.status === "COMPLETED").length;
-      const averageScore = scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
-      const highestScore = scores.length ? Math.max(...scores) : 0;
-      const lowestScore = scores.length ? Math.min(...scores) : 0;
-
-      const now = Date.now();
-      const weekMs = 7 * 24 * 60 * 60 * 1000, monthMs = 30 * 24 * 60 * 60 * 1000;
-      const thisWeekCount = sessions.filter((s) => s.submittedAt && now - new Date(s.submittedAt).getTime() <= weekMs).length;
-      const thisMonthCount = sessions.filter((s) => s.submittedAt && now - new Date(s.submittedAt).getTime() <= monthMs).length;
-
-      function groupAvg(keyFn) {
-        const sums = new Map(), counts = new Map();
-        for (const s of withScore) {
-          const key = keyFn(s);
-          if (!key) continue;
-          sums.set(key, (sums.get(key) || 0) + s.report.overallScore);
-          counts.set(key, (counts.get(key) || 0) + 1);
-        }
-        return [...sums.entries()]
-          .map(([key, sum]) => ({ key, count: counts.get(key), averageScore: Math.round(sum / counts.get(key)) }))
-          .sort((a, b) => b.count - a.count);
-      }
-
-      const companyWise = groupAvg((s) => s.config?.company || null);
-      const byGroup = groupAvg((s) => {
-        const g = s.student.academicGroup;
-        return g ? `${g.department?.name || "—"} - ${g.section}` : null;
-      });
-      const byBatch = groupAvg((s) => s.student.academicGroup?.batch || s.student.batchYear || null);
-      const byType = groupAvg((s) => sessionTypeLabel(s));
-
-      const weekly = new Map(), monthly = new Map();
-      for (const s of withScore) {
-        if (!s.submittedAt) continue;
-        const d = new Date(s.submittedAt);
-        const weekKey = `${d.getFullYear()}-W${String(Math.ceil(d.getDate() / 7)).padStart(2, "0")}-${d.getMonth() + 1}`;
-        const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-        for (const [map, key] of [[weekly, weekKey], [monthly, monthKey]]) {
-          if (!map.has(key)) map.set(key, { sum: 0, count: 0 });
-          const cur = map.get(key);
-          cur.sum += s.report.overallScore; cur.count++;
-        }
-      }
-      const toSeries = (map) => [...map.entries()].map(([period, { sum, count }]) => ({ period, averageScore: Math.round(sum / count), count }));
-
-      // Placement-readiness is a rule-based score bucket (>=75 Ready, 50-74 Needs Improvement,
-      // <50 Not Ready) for a quick-glance distribution chart — a heuristic threshold, not a
-      // predictive model, same spirit as the rest of this platform's "no real AI" scoring.
-      const placementReadiness = { ready: 0, needsImprovement: 0, notReady: 0 };
-      for (const sc of scores) {
-        if (sc >= 75) placementReadiness.ready++;
-        else if (sc >= 50) placementReadiness.needsImprovement++;
-        else placementReadiness.notReady++;
-      }
-
-      return {
-        totalInterviews, completedCount, averageScore, highestScore, lowestScore, thisWeekCount, thisMonthCount,
-        companyWise, byGroup, byBatch, byType,
-        weeklyTrend: toSeries(weekly), monthlyTrend: toSeries(monthly),
-        placementReadiness,
-        defaultDateRangeApplied,
-      };
+      return computeInterviewAnalytics(sessions, { now: Date.now(), typeLabel: sessionTypeLabel, defaultDateRangeApplied });
     });
 
     res.json(payload);
