@@ -31,6 +31,7 @@ export default function InterviewReports() {
   const [groups, setGroups] = useState([]);
   const [companies, setCompanies] = useState([]);
   const [analytics, setAnalytics] = useState(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(true);
   const [rows, setRows] = useState(null);
   const [page, setPage] = useState(1);
   const [pageMeta, setPageMeta] = useState({ totalPages: 1, total: 0 });
@@ -48,7 +49,8 @@ export default function InterviewReports() {
   }, [applied]);
 
   useEffect(() => {
-    api.get("/interview/admin/analytics", { params: queryParams }).then((res) => setAnalytics(res.data)).catch(() => {});
+    setAnalyticsLoading(true);
+    api.get("/interview/admin/analytics", { params: queryParams }).then((res) => setAnalytics(res.data)).catch(() => {}).finally(() => setAnalyticsLoading(false));
   }, [queryParams]);
 
   useEffect(() => {
@@ -122,6 +124,8 @@ export default function InterviewReports() {
           </p>
         )}
 
+        {/* Reserve the stat cards' height while they load, otherwise they pop in later and push the filter form down by ~170px (layout shift, UX-8). */}
+        {!analytics && analyticsLoading && <div aria-hidden="true" style={{ marginTop: 20, minHeight: 148 }} />}
         {analytics && (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12, marginTop: 20 }}>
             <StatCard label="Total Interviews" value={analytics.totalInterviews} />
