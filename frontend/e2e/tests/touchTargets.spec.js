@@ -32,3 +32,25 @@ test("desktop width: the Back button keeps a comfortable size and does not chang
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(overflow).toBeLessThanOrEqual(1);
 });
+
+// REGRESSION (UI/UX audit batch 5): page-specific buttons set with inline padding were 15-22px tall at phone width.
+test("phone width: every button on the pages the probe flagged is at least 24 x 24", async ({ page, browser }) => {
+  await page.setViewportSize({ width: 375, height: 700 });
+  const cases = [
+    [users.student, ["/resume", "/profile"]],
+    [users.staff, ["/staff/interviews", "/staff/questions/new"]],
+    [users.platform, ["/admin/users"]],
+  ];
+  for (const [who, paths] of cases) {
+    await page.context().clearCookies();
+    await page.goto("/login");
+    await page.evaluate(() => localStorage.clear());
+    await login(page, who);
+    for (const p of paths) {
+      await page.goto(p);
+      await page.waitForLoadState("networkidle", { timeout: 8000 }).catch(() => {});
+      const small = (await sizes(page, "button")).filter((s) => s.h < MIN || s.w < MIN);
+      expect(small, `buttons under 24px on ${p}: ${JSON.stringify(small)}`).toEqual([]);
+    }
+  }
+});

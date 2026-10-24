@@ -323,7 +323,7 @@ export default function StudentPerformance({ basePath }) {
     return (
       <div>
         <Navbar />
-        <div style={{ maxWidth: 900, margin: "0 auto", padding: "48px 24px" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto", padding: "48px 24px", minHeight: 620 }}>
           <SkeletonLine width="40%" height={28} />
           <div style={{ marginTop: 24 }}><SkeletonGrid count={4} minWidth={180} /></div>
         </div>

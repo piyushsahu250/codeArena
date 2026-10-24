@@ -907,3 +907,10 @@ input::placeholder, textarea::placeholder { color: var(--ink-dim); }
   input[type="checkbox"]:not(.ca-switch input), input[type="radio"] { width: 20px; height: 20px; }
   summary { min-height: 24px; padding-block: 4px; }
 }
+
+/* Page-specific small buttons at phone width (audit batch UI/UX 5): the probe found Delete 52x18 (/admin/users), Remove 62x18, "View usage" 77x17, the resume zoom +/- 23-25 x 20,
+   "Improve with AI" 22px and the Documents tab 15px tall, all set with inline padding that makes them smaller than the 24 x 24 CSS px minimum of WCAG 2.5.8. A floor on button
+   size fixes them all without editing each page; larger buttons and the desktop layout are unchanged. */
+@media (max-width: 768px) {
+  button:not(.ca-switch):not([hidden]) { min-height: 24px; min-width: 24px; }
+}
