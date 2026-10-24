@@ -118,7 +118,9 @@ body {
 
 /* Pushed right of the fixed Sidebar for authenticated layouts (Sidebar sets this on <html> via
    ThemeContext's companion layout state); 0 on public/pre-auth pages where no sidebar renders. */
-body.has-sidebar { padding-left: var(--sidebar-w); transition: padding-left 0.18s ease, background 0.15s ease; }
+body.has-sidebar { padding-left: var(--sidebar-w); }
+/* Set by the collapse button only. Animating the padding on first mount made every page load slide the content in from the left edge (layout shift). */
+body.has-sidebar.sidebar-animate { transition: padding-left 0.18s ease, background 0.15s ease, color 0.15s ease; }
 body.has-sidebar.sidebar-collapsed { padding-left: var(--sidebar-w-collapsed); }
 @media (max-width: 860px) {
   body.has-sidebar, body.has-sidebar.sidebar-collapsed { padding-left: 0; }
