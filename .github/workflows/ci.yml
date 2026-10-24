@@ -108,6 +108,8 @@ jobs:
         run: node scripts/themeContrastRegression.mjs
       - name: First-login regression (password rules, confirmation, error wording, and the form attributes a password manager reads)
         run: node scripts/passwordPolicyRegression.mjs
+      - name: Double-click protection regression (an identical write in flight is sent once, then can be repeated)
+        run: node scripts/dedupeWritesRegression.mjs
       - name: Dependency audit (report only)
         continue-on-error: true
         run: npm audit --omit=dev --json | node ../backend/scripts/auditSummary.js frontend

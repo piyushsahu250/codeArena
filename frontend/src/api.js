@@ -1,4 +1,5 @@
 import axios from "axios";
+import { withWriteDedupe } from "./utils/dedupeWrites";
 
 // Single source of truth for the backend origin — every environment (local dev, staging,
 // production) sets VITE_API_URL at build time; the localhost fallback only ever applies when
@@ -21,6 +22,9 @@ const api = axios.create({
   baseURL: API_BASE_URL,
   timeout: DEFAULT_TIMEOUT_MS,
 });
+
+// An identical write that is still in flight (a double click) is sent once; see utils/dedupeWrites.js. Opt out per call with `{ allowDuplicate: true }`.
+api.defaults.adapter = withWriteDedupe(axios.getAdapter(api.defaults.adapter || axios.defaults.adapter));
 
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");

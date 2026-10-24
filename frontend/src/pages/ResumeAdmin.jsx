@@ -63,7 +63,7 @@ export default function ResumeAdmin() {
     const next = config.mandatorySections.includes(key)
       ? config.mandatorySections.filter((k) => k !== key)
       : [...config.mandatorySections, key];
-    api.patch("/resume/field-config", { mandatorySections: next }).then((res) => setConfig(res.data));
+    api.patch("/resume/field-config", { mandatorySections: next }).then((res) => setConfig(res.data)).catch((err) => alert(err.response?.data?.error || "Failed to update the setting"));
   }
 
   return (
