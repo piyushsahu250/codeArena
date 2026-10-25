@@ -46,6 +46,7 @@ export default function Login() {
   // the student/staff/admin why they landed back on this page instead of leaving them guessing.
   const [searchParams] = useSearchParams();
   const sessionExpired = searchParams.get("expired") === "1";
+  const registrationNotice = searchParams.get("notice") === "registration";
   const creating = step === "create";
 
   const canSubmit = !creating || canSubmitPasswordChange({ email, temporaryPassword: password, newPassword, confirmPassword });
@@ -187,6 +188,12 @@ export default function Login() {
           )}
           {/* Heard by screen readers when the step changes or the password was changed without a session; the visible text above is not a live region on purpose. */}
           <div className="ca-sr-only" role="status" aria-live="polite" aria-atomic="true">{announcement}</div>
+
+          {registrationNotice && !creating && (
+            <p role="status" data-testid="registration-notice" style={{ color: "var(--ink)", fontSize: 13, marginTop: 4, marginBottom: 8 }}>
+              Accounts are created by your institute administrator. Ask them for your login credentials, then sign in here.
+            </p>
+          )}
 
           {sessionExpired && !creating && (
             <p style={{ color: "var(--warning-text)", fontSize: 13, marginTop: 4, marginBottom: 8 }}>

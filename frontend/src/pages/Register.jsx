@@ -1,13 +1,8 @@
-import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 
+// There is no self-registration: accounts are created by an institute administrator. Anyone who opens /register (an old link, a bookmark) is sent to the sign-in page, which explains this in
+// the page itself. This used to show a browser alert() before redirecting: a modal pop-up that blocks the page, cannot be styled or read reliably by assistive technology, and is suppressed
+// entirely by some browsers.
 export default function Register() {
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    alert("User registration is managed by the administrator. Please contact your institute administrator to receive your login credentials.");
-    navigate("/login", { replace: true });
-  }, [navigate]);
-
-  return null;
+  return <Navigate to="/login?notice=registration" replace />;
 }
