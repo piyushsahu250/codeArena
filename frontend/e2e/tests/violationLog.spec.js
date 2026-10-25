@@ -16,8 +16,8 @@ async function openLog(page) {
 test("the log is clear: summary, honest wording, oldest first, strikes numbered", async ({ page }) => {
   await login(page, users.staff);
   await page.goto(`/staff/tests/${data.violationsTestId}/results`);
-  await expect(page.getByRole("columnheader", { name: "Strikes" }), "the column is named for what it counts").toBeVisible({ timeout: 15000 });
-  await expect(page.getByRole("columnheader", { name: /Tab switches/i })).toHaveCount(0);
+  await expect(page.locator("thead th", { hasText: /^Strikes$/ }), "the column is named for what it counts").toBeVisible({ timeout: 15000 });
+  await expect(page.locator("thead th", { hasText: /Tab switches/i })).toHaveCount(0);
 
   const log = await openLog(page);
   await expect(log.getByText("4 events recorded")).toBeVisible();
@@ -33,7 +33,7 @@ test("the log is clear: summary, honest wording, oldest first, strikes numbered"
 
 test("nothing wraps awkwardly: times and the status pill stay on one line, the long rule text is folded away", async ({ page }) => {
   const log = await openLog(page);
-  for (const cell of await log.locator(".vl-time").all()) {
+  for (const cell of await log.locator(".vl-time time").all()) {
     const box = await cell.boundingBox();
     expect(box.height, "a time such as 3:18:14 PM is on one line").toBeLessThan(40);
   }
