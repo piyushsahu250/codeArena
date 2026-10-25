@@ -287,3 +287,28 @@ jobs:
             node scripts/$s.js || { echo "::warning title=$s did not pass::see this step's log"; fail=1; }
           done
           exit $fail
+      # UI/UX audit probe (frontend/e2e/tests/uxAudit.spec.js): report only. Its own step, after everything else, so that it can neither slow nor fail the browser suite; the lines it prints
+      # ("[ux]" findings and "[ux-perf]" summaries) go out as annotations in parts of 8, at most 8 parts.
+      - name: UI/UX audit probe (report only)
+        if: always()
+        continue-on-error: true
+        working-directory: frontend/e2e
+        env:
+          E2E_USERS_JSON: ${{ github.workspace }}/frontend/e2e/users.json
+          UX_AUDIT: "1"
+        run: |
+          started=$(date +%s)
+          code=0; timeout 12m npx playwright test detailRoutesProbe.spec.js --reporter=line,list > /tmp/ux.out 2>&1 || code=$?
+          echo "::notice title=ui/ux audit probe::finished in $(( $(date +%s) - started )) seconds (exit code $code)"
+          grep -h "\[ux" /tmp/ux.out | sort -u | cut -c1-440 > /tmp/uxlines.txt || true
+          rm -f /tmp/uxlines.part.*; split -l 8 -d /tmp/uxlines.txt /tmp/uxlines.part. || true
+          part=0
+          for f in /tmp/uxlines.part.*; do
+            [ -f "$f" ] || continue
+            part=$((part + 1)); [ "$part" -gt 8 ] && break
+            msg=$(sed "s/%/%25/g" "$f" | awk 'BEGIN{ORS="%0A"} {print}')
+            echo "::warning title=ui/ux audit probe part $part::$msg"
+          done
+          if [ -s /tmp/uxlines.txt ]; then echo "::notice title=ui/ux audit probe lines::$(wc -l < /tmp/uxlines.txt) line(s) in total; shown in parts of 8 (8 parts at most)"; fi
+          if [ "$code" != 0 ]; then tail -n 30 /tmp/ux.out | sed "s/%/%25/g" | awk 'BEGIN{ORS="%0A"} {print}' | { read -r t || true; echo "::warning title=ui/ux audit probe did not finish cleanly::$t"; }; fi
+          exit 0
