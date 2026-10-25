@@ -57,7 +57,7 @@ for (const [who, paths] of GROUPS) {
     page.on("requestfailed", (r) => { if (r.url().includes("/api/")) note("requests", `request failed ${r.url().replace(/^.*\/api/, "/api").slice(0, 60)}`); });
     await page.addInitScript(() => {
       window.__ux = { lcp: 0, cls: 0, long: 0 };
-      try { new PerformanceObserver((l) => { for (const e of l.getEntries()) window.__ux.lcp = e.startTime; }).observe({ type: "largest-contentful-paint", buffered: true }); } catch { /* unsupported */ }
+      try { new PerformanceObserver((l) => { for (const e of l.getEntries()) { window.__ux.lcp = e.startTime; const el = e.element; window.__ux.lcpEl = el ? el.tagName.toLowerCase() + (typeof el.className === "string" && el.className ? "." + el.className.split(" ")[0] : "") + " " + e.size : "none " + e.size; } }).observe({ type: "largest-contentful-paint", buffered: true }); } catch { /* unsupported */ }
       try { new PerformanceObserver((l) => { for (const e of l.getEntries()) if (!e.hadRecentInput) { window.__ux.cls += e.value; if (e.value > (window.__ux.top || 0)) { window.__ux.top = e.value; const n = e.sources && e.sources[0] && e.sources[0].node; window.__ux.shift = n && n.nodeType === 1 ? n.tagName.toLowerCase() + (typeof n.className === "string" && n.className ? "." + n.className.split(" ")[0] : "") : (n && n.parentElement ? "text in " + n.parentElement.tagName.toLowerCase() : "?"); } } }).observe({ type: "layout-shift", buffered: true }); } catch { /* unsupported */ }
       try { new PerformanceObserver((l) => { for (const e of l.getEntries()) window.__ux.long += e.duration; }).observe({ type: "longtask", buffered: true }); } catch { /* unsupported */ }
     });
@@ -120,6 +120,7 @@ for (const [who, paths] of GROUPS) {
     const worstLong = [...perf].sort((a, b) => b.long - a.long).slice(0, 2).map((x) => `${x.p}=${Math.round(x.long)}ms`).join(", ");
     const worstDom = [...perf].sort((a, b) => b.nodes - a.nodes).slice(0, 2).map((x) => `${x.p}=${x.nodes}`).join(", ");
     console.log(`[ux-perf] ${who} (${perf.length} pages, 1280x720, cold load, local server): LCP median ${Math.round(quantile(lcps, 0.5))}ms, p90 ${Math.round(quantile(lcps, 0.9))}ms; slowest ${worstLcp}; worst CLS ${worstCls}; most long-task time ${worstLong}; largest DOM ${worstDom}`.slice(0, 430));
+    console.log(`[ux-perf-el] ${who}: ` + perf.slice(0, 7).map((x) => `${x.p}=${Math.round(x.lcp)}ms ${x.lcpEl || "?"}`).join(" ; "));
   });
 }
 
