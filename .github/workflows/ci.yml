@@ -112,6 +112,8 @@ jobs:
         run: node scripts/dedupeWritesRegression.mjs
       - name: Return-to-page regression (a safe in-app path, same account only, once)
         run: node scripts/returnToRegression.mjs
+      - name: Editor height regression (a short landscape screen caps the exam editor)
+        run: node scripts/editorHeightRegression.mjs
       - name: Dependency audit (report only)
         continue-on-error: true
         run: npm audit --omit=dev --json | node ../backend/scripts/auditSummary.js frontend

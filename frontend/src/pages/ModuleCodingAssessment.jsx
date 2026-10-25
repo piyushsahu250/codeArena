@@ -6,6 +6,8 @@ import { useGamification } from "../context/GamificationContext";
 import { useProctoring } from "../hooks/useProctoring";
 import { useScreenShare } from "../hooks/useScreenShare";
 import useIsMobile from "../hooks/useIsMobile";
+import useShortLandscape from "../hooks/useShortLandscape";
+import { editorHeightFor } from "../utils/editorHeight";
 import Navbar from "../components/Navbar";
 import ChalkUnderline from "../components/ChalkUnderline";
 import CodeResultBlock from "../components/CodeResultBlock";
@@ -44,6 +46,7 @@ export default function ModuleCodingAssessment() {
   const base = levelId ? `/module-coding/level/${levelId}` : `/module-coding/module/${moduleId}`;
   const { notify } = useGamification();
   const isMobile = useIsMobile();
+  const shortLandscape = useShortLandscape();
 
   const [status, setStatus] = useState(null); // GET /module-coding/module/:moduleId response
   const [error, setError] = useState("");
@@ -1188,10 +1191,10 @@ export default function ModuleCodingAssessment() {
               alone, which collapses to 0 on some mobile browsers when the parent's own height is
               not definite. The outer column scrolls, so a taller editor just means less empty
               space, never a cut-off. */}
-          <div style={isMobile ? { height: 420, minHeight: 0, flexShrink: 0 } : { flex: "1 1 0", minHeight: 200 }}>
+          <div style={isMobile ? { height: editorHeightFor(420, shortLandscape), minHeight: 0, flexShrink: 0 } : { flex: "1 1 0", minHeight: 200 }}>
             <StableCodeEditor
               contextKey={`${activeIdx}|${answer?.language}`}
-              height={isMobile ? 420 : "100%"}
+              height={isMobile ? editorHeightFor(420, shortLandscape) : "100%"}
               language={ALL_LANGUAGES.find((l) => l.id === answer?.language)?.monaco}
               value={answer?.code || ""}
               onChange={(v) => setCode(v || "")}

@@ -6,6 +6,8 @@ import * as blazeface from "@tensorflow-models/blazeface";
 import api, { API_BASE_URL } from "../api";
 import { useGamification } from "../context/GamificationContext";
 import useIsMobile from "../hooks/useIsMobile";
+import useShortLandscape from "../hooks/useShortLandscape";
+import { editorHeightFor } from "../utils/editorHeight";
 import CodeResultBlock from "../components/CodeResultBlock";
 import RunSubmitButtons from "../components/RunSubmitButtons";
 import ProblemStatement from "../components/ProblemStatement";
@@ -94,6 +96,7 @@ export default function TestTaking() {
   const navigate = useNavigate();
   const { notify } = useGamification();
   const isMobile = useIsMobile();
+  const shortLandscape = useShortLandscape();
 
   const [testMeta, setTestMeta] = useState(null);
   const [metaError, setMetaError] = useState(null);
@@ -2421,10 +2424,10 @@ export default function TestTaking() {
                   flex-resolved (`auto`) collapses to 0, so Monaco rendered as a blank/tiny box.
                   An explicit number on the wrapper AND on <Editor> removes that dependency
                   entirely; the outer column's overflow:auto lets the student scroll past it. */}
-              <div style={{ flex: isMobile ? "none" : 1, height: isMobile ? 380 : undefined, minHeight: 0 }}>
+              <div style={{ flex: isMobile ? "none" : 1, height: isMobile ? editorHeightFor(380, shortLandscape) : undefined, minHeight: 0 }}>
                 <StableCodeEditor
                   contextKey={`${activeIdx}|${answer?.language}`}
-                  height={isMobile ? 380 : "100%"}
+                  height={isMobile ? editorHeightFor(380, shortLandscape) : "100%"}
                   language={isSql ? "sql" : LANGUAGES.find((l) => l.id === answer?.language)?.monaco}
                   value={answer?.code || ""}
                   onChange={(v) => setCode(v || "")}

@@ -13,6 +13,8 @@ import { runSecurityCheck } from "../utils/secureAssessment";
 import { CODE_LANGUAGES, defaultStarter } from "../utils/codeEditorDefaults";
 import { applyPlainTextInputHints, watchForNonAsciiInput } from "../utils/monacoSetup";
 import useIsMobile from "../hooks/useIsMobile";
+import useShortLandscape from "../hooks/useShortLandscape";
+import { editorHeightFor } from "../utils/editorHeight";
 import api, { API_BASE_URL } from "../api";
 
 const QUIZ_TYPES = ["MCQ", "TRUE_FALSE", "MULTISELECT"];
@@ -63,6 +65,7 @@ export default function ReadinessAssessment() {
   const toast = useToast();
   const confirmDialog = useConfirm();
   const isMobile = useIsMobile();
+  const shortLandscape = useShortLandscape();
 
   const [assessment, setAssessment] = useState(null);
   const [subjectName, setSubjectName] = useState("");
@@ -671,7 +674,7 @@ export default function ReadinessAssessment() {
                 )}
                 <div style={{ border: "1px solid var(--line)", borderRadius: 8, overflow: "hidden" }}>
                   <Editor
-                    height={isMobile ? "360px" : "520px"}
+                    height={isMobile ? `${editorHeightFor(360, shortLandscape)}px` : "520px"}
                     language={current.questionType === "SQL" ? "sql" : (CODE_LANGUAGES.find((l) => l.id === ans.language)?.monaco || "python")}
                     theme="vs-dark"
                     value={ans.code || ""}
