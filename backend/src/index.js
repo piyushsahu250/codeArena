@@ -118,6 +118,9 @@ app.use(cors({
     callback(null, false);
   },
   exposedHeaders: ["Content-Disposition"],
+  // Let the browser remember a preflight answer. Without this header every authenticated API call (Authorization header) was preceded by its own OPTIONS round trip
+  // once the browser's 5-second default had expired, so each call cost two network round trips instead of one. Browsers cap the value (Chrome 2 h, Firefox 24 h).
+  maxAge: 7200,
 }));
 app.use(express.json({ limit: "1mb" }));
 app.use(timingMiddleware);

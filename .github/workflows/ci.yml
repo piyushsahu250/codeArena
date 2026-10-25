@@ -190,7 +190,7 @@ jobs:
         run: |
           fail=0
           verification_started=$(date +%s)
-          for s in verifyPermissions verifyAsyncErrors verifyRouteMetrics verifyAttemptManifest verifySubmissionsContract verifyStaffAnalytics verifyTestsContract verifyAuthContract verifyUsersContract verifyUsersWriteContract verifyAutoFinalizeDeadline verifyAiShortcutIntake verifyLeaderboardStatus verifyStartOverride verifyQuestionsContract verifyQuestionFoldersContract verifyQuestionImportExportContract verifySecureAndroid verifyCEndToEnd verifyLmsContentIsolation verifyStaffScopeIsolation verifyDeepHealth verifyAiQuota verifyMessagingGuards verifyEmailProtection verifyScoreDenominators verifyLmsWriteIsolation verifyFirstLoginPasswordChange verifyModuleCodingResetScope verifyResetClearsFlag verifyReadinessSeedRespectsDeletion; do
+          for s in verifyPermissions verifyAsyncErrors verifyRouteMetrics verifyAttemptManifest verifySubmissionsContract verifyStaffAnalytics verifyTestsContract verifyAuthContract verifyUsersContract verifyUsersWriteContract verifyAutoFinalizeDeadline verifyAiShortcutIntake verifyLeaderboardStatus verifyStartOverride verifyQuestionsContract verifyQuestionFoldersContract verifyQuestionImportExportContract verifySecureAndroid verifyCEndToEnd verifyLmsContentIsolation verifyStaffScopeIsolation verifyDeepHealth verifyAiQuota verifyMessagingGuards verifyEmailProtection verifyScoreDenominators verifyLmsWriteIsolation verifyFirstLoginPasswordChange verifyModuleCodingResetScope verifyResetClearsFlag verifyReadinessSeedRespectsDeletion verifyCorsPreflightCache; do
             echo "=== $s"
             code=0; node scripts/$s.js > "/tmp/$s.out" 2>&1 || code=$?
             cat "/tmp/$s.out"

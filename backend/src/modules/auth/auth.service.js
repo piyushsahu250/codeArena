@@ -187,7 +187,9 @@ async function forgotPassword(req, { email }) {
       try {
         await repo.storeResetToken(user.id, d.hashToken(token), new Date(now.getTime() + d.RESET_TOKEN_TTL_MS));
         const link = d.resetLink(FRONTEND_URL, token);
-        await sendMailLogged(prisma, {
+        // The mail is sent in the background: the answer below is the same whatever happens to it, and waiting for the mail server made this request take 1.4 s at the median and up
+        // to 16 s (measured on the live request log), and let anyone tell a registered address from an unknown one by how long the answer took.
+        const sending = sendMailLogged(prisma, {
           to: user.email,
           name: user.name,
           studentId: user.id,
@@ -195,10 +197,16 @@ async function forgotPassword(req, { email }) {
           subject: "Reset your CodeArena password",
           html: wrapBranded(`<p>Hi ${escapeHtml(user.name)},</p><p>Click the link below to reset your password. This link expires in 1 hour.</p><p><a href="${link}">${link}</a></p><p>If you didn't request this, you can ignore this email.</p>`),
         });
-        // sendMailLogged never throws on a delivery failure (that lands in the EmailLog row), so reaching here means the request was queued and the claim stands.
-        auditFor(req, user, AUDIT_ACTIONS.PASSWORD_RESET_REQUESTED, {});
+        // sendMailLogged never throws on a delivery failure (that lands in the EmailLog row), so it settling means the request was queued and the claim stands.
+        sending
+          .then(() => auditFor(req, user, AUDIT_ACTIONS.PASSWORD_RESET_REQUESTED, {}))
+          .catch(async (sendErr) => {
+            // Nothing was queued: release the claim so an infrastructure hiccup does not cost the user their one request for 24h.
+            console.error("[auth] forgot-password: failed before email was queued, releasing cooldown claim:", sendErr.message);
+            await repo.releaseResetCooldown(user.id).catch(() => {});
+          });
       } catch (sendErr) {
-        // Nothing was queued: release the claim so an infrastructure hiccup does not cost the user their one request for 24h.
+        // The token could not be stored: release the claim for the same reason.
         console.error("[auth] forgot-password: failed before email was queued, releasing cooldown claim:", sendErr.message);
         await repo.releaseResetCooldown(user.id).catch(() => {});
       }

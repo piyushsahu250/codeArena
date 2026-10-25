@@ -5,6 +5,9 @@
     <link rel="icon" type="image/png" href="/branding/logo.png" />
     <link rel="apple-touch-icon" href="/branding/logo.png" />
     <link rel="manifest" href="/manifest.json" />
+    <!-- Open the connection to the API (DNS + TCP + TLS: measured at about 1 s on a cold connection, 0.23 s warm) while the app's JavaScript is still downloading, so the first
+         API call does not pay for it. Vite fills in the build's VITE_API_URL; only the origin is used. -->
+    <link rel="preconnect" href="%VITE_API_URL%" crossorigin />
     <meta name="theme-color" content="#1b4332" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="CodeArena is an AI-powered coding, assessment, learning and employability platform for students and educational institutions." />
