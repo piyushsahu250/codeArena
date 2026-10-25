@@ -114,6 +114,8 @@ jobs:
         run: node scripts/returnToRegression.mjs
       - name: Editor height regression (a short landscape screen caps the exam editor)
         run: node scripts/editorHeightRegression.mjs
+      - name: Form draft regression (per account, expires, never stale)
+        run: node scripts/formDraftRegression.mjs
       - name: Dependency audit (report only)
         continue-on-error: true
         run: npm audit --omit=dev --json | node ../backend/scripts/auditSummary.js frontend

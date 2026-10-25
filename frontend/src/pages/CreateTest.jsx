@@ -12,6 +12,7 @@ import BulkQuestionImport from "../components/BulkQuestionImport";
 import { useAuth } from "../context/AuthContext";
 import { useConfirm } from "../context/ConfirmContext";
 import { useUnsavedChangesGuard } from "../context/UnsavedChangesContext";
+import { clearDraft, draftKey, loadDraft, saveDraft } from "../utils/formDraft";
 
 const TYPE_LABELS = { CODING: "Coding", MCQ: "Multiple Choice", TRUE_FALSE: "True/False", MULTISELECT: "Multiple Select" };
 
@@ -148,6 +149,43 @@ export default function CreateTest() {
     setGuard?.(!saving && isDirty, "Your test contains unsaved information. Do you want to leave this page?");
   }, [isDirty, saving, setGuard]);
   useEffect(() => () => setGuard?.(false), [setGuard]);
+
+  // Draft: the same snapshot that drives the unsaved-changes warning is also kept as a draft in this tab, so a reload, a crashed tab or an expired session does not lose a long form.
+  // It is only ever OFFERED back (see the banner below), never applied silently; see utils/formDraft.js for its limits (this tab only, this account only, 24 hours, same record version).
+  const draftStorageKey = draftKey(user?.id, isEdit ? `test:${id}` : "test:new");
+  const [draftOffer, setDraftOffer] = useState(null);
+  const draftChecked = useRef(false);
+  useEffect(() => {
+    if (loading || draftChecked.current) return;
+    draftChecked.current = true;
+    const d = loadDraft(draftStorageKey, { meta: { version } });
+    if (d && d.data !== currentSnapshot) setDraftOffer(d);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading]);
+  useEffect(() => {
+    if (loading || saving || !isDirty || draftOffer) return undefined; // while an offer is showing, the stored draft is the one being offered: do not overwrite it yet
+    const t = setTimeout(() => saveDraft(draftStorageKey, currentSnapshot, { version }), 700);
+    return () => clearTimeout(t);
+  }, [currentSnapshot, isDirty, loading, saving, draftOffer, draftStorageKey, version]);
+  function restoreDraft() {
+    try {
+      const s = JSON.parse(draftOffer.data);
+      setForm({ ...emptyForm, ...s.form });
+      setSelected(Array.isArray(s.selected) ? s.selected : []);
+      setSubjectId(s.subjectId ?? null);
+      setUnitId(s.unitId ?? null);
+      setAcademicGroupIds(Array.isArray(s.academicGroupIds) ? s.academicGroupIds : []);
+      setTalentPoolIds(Array.isArray(s.talentPoolIds) ? s.talentPoolIds : []);
+      setGroupType(s.groupType || "ACADEMIC");
+      setInstituteId(s.instituteId || "");
+      setShareStaffIds(Array.isArray(s.shareStaffIds) ? s.shareStaffIds : []);
+    } catch { clearDraft(draftStorageKey); }
+    setDraftOffer(null);
+  }
+  function discardDraft() {
+    clearDraft(draftStorageKey);
+    setDraftOffer(null);
+  }
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -352,6 +390,7 @@ export default function CreateTest() {
       ]);
 
       savedSnapshotRef.current = currentSnapshot; // reset dirty state on a successful save
+      clearDraft(draftStorageKey); // the saved test replaces the draft
       setGuard?.(false);
       navigate("/staff");
     } catch (err) {
@@ -415,6 +454,16 @@ export default function CreateTest() {
       <Navbar onBack={handleBack} />
       <div style={{ maxWidth: 720, margin: "0 auto", padding: "48px 24px" }}>
         <h1>{isEdit ? "Edit test" : "New test"}</h1>
+
+        {draftOffer && (
+          <div role="status" data-testid="draft-offer" className="card" style={{ marginTop: 12, padding: "10px 14px", display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", borderLeft: "3px solid var(--amber)" }}>
+            <span style={{ flex: 1, minWidth: 200, fontSize: 13 }}>
+              You have an unsaved draft of this test from {new Date(draftOffer.savedAt).toLocaleString()}. Restore it?
+            </span>
+            <button type="button" className="btn btn-primary" style={{ fontSize: 12, padding: "5px 12px" }} onClick={restoreDraft}>Restore draft</button>
+            <button type="button" className="btn btn-ghost" style={{ fontSize: 12, padding: "5px 12px" }} onClick={discardDraft}>Discard</button>
+          </div>
+        )}
 
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 16, position: "sticky", top: 0, background: "var(--paper)", zIndex: 5, paddingBottom: 8 }}>
           {steps.map((s, i) => (
