@@ -225,7 +225,12 @@ function Protected({ roles, children, noChrome = false }) {
           landmark (was a plain <div>) so screen-reader users have a way to jump straight to page
           content and the skip link above has something to land on. */}
       <main id="main-content" key={location.pathname} className="ca-page-enter">
-        {children}
+        {/* A loading boundary INSIDE the shell. Routes without their own <Suspense> used to suspend all the way up to the one that wraps <Routes>, which swapped the whole shell
+            (sidebar and top bar included) for a full-screen "Loading" while the page's code downloaded and then put it back: the sidebar vanished and returned and the content jumped
+            by the sidebar's width (a layout shift of 0.375 on /learning and /interview). Here only the page area shows the placeholder; pages that already have their own boundary are unaffected. */}
+        <Suspense fallback={<LoadingScreen />}>
+          {children}
+        </Suspense>
       </main>
     </>
   );
