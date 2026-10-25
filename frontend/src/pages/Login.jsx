@@ -5,6 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
 import PasswordRequirements from "../components/PasswordRequirements";
 import { passwordMeetsPolicy } from "../utils/passwordPolicy";
+import { consumeReturnTo } from "../utils/returnTo";
 import {
   MATCH_MESSAGE, MISMATCH_MESSAGE, NOT_CHANGED_MESSAGE, SIGN_IN_AGAIN_MESSAGE, SUCCESS_MESSAGE,
   canSubmitPasswordChange, changeIntro, confirmStatus, currentPasswordLabel, describeChangeFailure, describeLoginFailure, normalizeReason,
@@ -57,7 +58,8 @@ export default function Login() {
       navigate("/change-password");
       return;
     }
-    navigate(HOME_BY_ROLE[data.user.role] || "/login");
+    // After an expired session, go back to the page they were on (same account only; see utils/returnTo.js), otherwise to their home page.
+    navigate(consumeReturnTo(data.user.id) || HOME_BY_ROLE[data.user.role] || "/login");
   }
 
   function backToSignIn(message = "") {

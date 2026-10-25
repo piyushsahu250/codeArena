@@ -1,5 +1,6 @@
 import axios from "axios";
 import { withWriteDedupe } from "./utils/dedupeWrites";
+import { rememberReturnTo } from "./utils/returnTo";
 
 // Single source of truth for the backend origin — every environment (local dev, staging,
 // production) sets VITE_API_URL at build time; the localhost fallback only ever applies when
@@ -53,6 +54,8 @@ api.interceptors.request.use((config) => {
 let redirectingToLogin = false;
 export function performExpiredRedirect() {
   redirectingToLogin = true;
+  // Remember the page (path only, same account only) so signing back in returns to it; see utils/returnTo.js.
+  try { rememberReturnTo(window.location.pathname + window.location.search, JSON.parse(localStorage.getItem("user") || "null")?.id); } catch { /* nothing to remember */ }
   localStorage.removeItem("token");
   localStorage.removeItem("user");
   window.location.href = "/login?expired=1";

@@ -20,7 +20,7 @@ Conclusion: the initial download is not the bottleneck.
 |---|---|
 | Trivial API call (`/api/health`), warm | 0.23 to 0.34 s |
 | Same call on a cold connection | 1.1 s (DNS + TCP + TLS about 1.0 s) |
-| Protocol | HTTP/1.1 (nginx); no HTTP/2 |
+| Protocol | HTTP/2 (confirmed from the host with a curl that supports it; an earlier "HTTP/1.1 only" reading came from a workstation curl without HTTP/2 and was wrong) |
 | CORS preflight (`OPTIONS`) | answered, but **without `Access-Control-Max-Age`**: browsers repeat it before authenticated calls once their 5 s default expires |
 | `<link rel="preconnect">` to the API in `index.html` | none |
 
@@ -55,9 +55,7 @@ Conclusion: the backend and database are fast. Page load time is dominated by th
 
 ## Not yet addressed / needs approval
 
-* **HTTP/2 (or HTTP/3) on the API.** nginx answers HTTP/1.1 only, so a page that fires several API calls at once queues behind the browser's six-connections-per-origin limit. Enabling
-  `http2` on the nginx `listen 443 ssl` line is a host configuration change: **needs explicit approval; not done.**
-* `GET /super` (p50 0.9 s) and `GET /stats` (p95 1.15 s): slow relative to the rest; query plans not yet inspected.
+* `GET /super` (Super Admin command centre, p50 0.9 s, 13 calls in 24 h) and `GET /stats` (p95 1.15 s, 5 calls): slow relative to the rest but rarely used; `/super` already caches its live section for 20 s. Query plans not inspected; left unchanged because the cost is low against the benefit.
 * Student dashboard runs about ten database steps one after another (deliberate, to protect the connection pool). Measured server time is still only 83 ms at the median, so this is not the
   user-visible bottleneck at present.
 * Per-page request counts (how many sequential API calls each page makes) have not been measured in a real browser against production; the local probe numbers (LCP 0.12 to 0.55 s) were
