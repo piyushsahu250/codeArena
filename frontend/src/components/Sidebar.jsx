@@ -227,12 +227,12 @@ export default function Sidebar({ role, profileGateActive = false }) {
     }
   }
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     document.body.classList.add("has-sidebar");
     return () => document.body.classList.remove("has-sidebar");
   }, []);
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     document.body.classList.toggle("sidebar-collapsed", collapsed);
     localStorage.setItem("caSidebarCollapsed", collapsed ? "1" : "0");
   }, [collapsed]);
