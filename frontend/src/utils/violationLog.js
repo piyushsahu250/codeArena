@@ -55,13 +55,23 @@ export function observationOf(ev) {
   return OBSERVATION[ev?.evidence?.classification] || OBSERVATION.OBSERVED_EVENT;
 }
 
+// The exam page losing focus is counted per type: a warning the first time, a strike from the second (backend utils/proctoringSeverity.js, STRIKE_FROM_OCCURRENCE; set 2026-10-25).
+// Attempts recorded before that rule counted it through the shared every-third rule, so what the page says must follow what the server actually did to each event, not only the
+// rule in force today: `occurrence` is which time (1, 2, ...) this event is among the attempt's events of its type.
+const FOCUS_LOSS_TYPE = "POSSIBLE_EXTERNAL_ASSISTANT";
+
 // How one event was counted, from the server's own flags.
 //   strike        counted toward the attempt's strike total
 //   warning       a restricted action that was not counted on its own (a single occurrence is a soft warning; repeats can be counted)
 //   interruption  recorded for review, never counted
 //   signal        a keyboard or other signal stored apart from the strike table, never counted
-export function countOutcome(ev) {
+export function countOutcome(ev, occurrence = null) {
   if (ev?.counted === false) return { kind: "signal", reason: "Recorded for review only. This kind of signal is never counted as a strike." };
+  if (ev?.type === FOCUS_LOSS_TYPE && Number.isInteger(occurrence)) {
+    if (ev.penalized && occurrence >= 2) return { kind: "strike", reason: "Counted because the exam page lost focus more than once. The first time is only a warning." };
+    if (!ev.penalized && occurrence === 1) return { kind: "warning", reason: "Warning only. The first time the exam page loses focus is not counted; repeats are." };
+    if (!ev.penalized && occurrence >= 2) return { kind: "warning", reason: "Not counted. This repeat was recorded before repeats of this event were counted." };
+  }
   if (ev?.penalized) {
     if (ev.severity === "SUSPICIOUS") return { kind: "strike", reason: "Counted because suspicious actions repeated on this attempt and reached the exam's limit for them." };
     if (ev.severity === "CONFIRMED_VIOLATION") return { kind: "strike", reason: "Counted on its first occurrence: leaving or breaking the exam environment is always counted." };
@@ -89,8 +99,11 @@ export function buildViolationLog(events, strikeTotal) {
     .map((ev, i) => ({ ev, i, t: new Date(ev?.createdAt).getTime() }))
     .sort((a, b) => (Number.isNaN(a.t) || Number.isNaN(b.t) ? a.i - b.i : a.t - b.t || a.i - b.i));
   let strikes = 0;
+  const seenOfType = {};
   const rows = ordered.map(({ ev }) => {
-    const outcome = countOutcome(ev);
+    const type = String(ev?.type || "");
+    seenOfType[type] = (seenOfType[type] || 0) + 1; // which time this type has occurred on the attempt, oldest first
+    const outcome = countOutcome(ev, seenOfType[type]);
     if (outcome.kind === "strike") strikes += 1;
     return { ev, outcome, strikeNumber: outcome.kind === "strike" ? strikes : null, observation: observationOf(ev), label: eventLabel(ev?.type) };
   });

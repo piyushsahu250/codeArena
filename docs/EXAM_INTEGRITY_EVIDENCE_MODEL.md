@@ -22,7 +22,7 @@ Counting rule today (`utils/proctoringSeverity.js`, unchanged):
 | Severity | Types | Effect |
 |---|---|---|
 | CONFIRMED_VIOLATION | TAB_SWITCH, FULLSCREEN_EXIT, CAMERA_DROPPED, MIC_DROPPED | strike on the first occurrence |
-| SUSPICIOUS | DRAG_ATTEMPT, POSSIBLE_EXTERNAL_ASSISTANT, DEVTOOLS, COPY, PASTE, CUT, RIGHT_CLICK, MULTI_MONITOR, PRINT_SCREEN_ATTEMPT, TAB_SWITCH_BRIEF, SPLIT_SCREEN_SUSPECTED | every 3rd one is a strike |
+| SUSPICIOUS | DRAG_ATTEMPT, POSSIBLE_EXTERNAL_ASSISTANT (see the focus-loss rule below), DEVTOOLS, COPY, PASTE, CUT, RIGHT_CLICK, MULTI_MONITOR, PRINT_SCREEN_ATTEMPT, TAB_SWITCH_BRIEF, SPLIT_SCREEN_SUSPECTED | every 3rd one is a strike |
 | INTERRUPTION | BROWSER_SHORTCUT, SCREEN_OVERLAY_DETECTED, FACE_MISSING, MULTIPLE_FACES, NETWORK_LOSS, REFRESH_ATTEMPT, ORIENTATION_CHANGE, anything unknown | never a strike |
 
 Three strikes auto-submit the attempt. The pre-start screen tells students this.
@@ -99,7 +99,7 @@ server-side `policyOf(test)`. The client cannot send a classification, rule id o
 
 Never confirmed from the browser alone (reasons are in `NEVER_CONFIRMED` and shown to reviewers): `DEVTOOLS` (window-size inference),
 `BROWSER_SHORTCUT`, `PRINT_SCREEN_ATTEMPT`, `DRAG_ATTEMPT` (the page does not record where a drag started or ended, so editor selection cannot be told apart),
-`POSSIBLE_EXTERNAL_ASSISTANT` (focus lost while visible; cause unknown), `SPLIT_SCREEN_SUSPECTED`, `TAB_SWITCH_BRIEF`.
+`SPLIT_SCREEN_SUSPECTED`, `TAB_SWITCH_BRIEF`.
 
 A finding says "this prohibited action was observed under rule X, policy version V". It never says that an assistant, app or extension was opened or used, never
 names one, and never says a blocked action succeeded. Enforcement is reported as `BLOCK_ATTEMPTED`, `NOT_BLOCKABLE` or `OBSERVED_ONLY`.
@@ -130,3 +130,19 @@ Physical devices, real tab switching on mobile, screen lock, and managed-client 
 ## 8. Rollback
 
 The change is additive: reverting the commit removes the `evidence` field and the reviewer-screen labels. No schema or data is touched.
+
+## Keeping the exam page in focus (rule added 2026-10-25, policy 2026-10-25.1)
+
+At the administrator's request the exam page losing focus while still visible (`POSSIBLE_EXTERNAL_ASSISTANT`) is no longer a "never confirmed" heuristic. It is a published exam rule, `FOCUS_LOSS`
+("Keeping the exam page in focus"), for every exam:
+
+* **Finding:** each occurrence is `CONFIRMED_POLICY_VIOLATION`, shown as "Prohibited action observed". It still says only what the page saw. It does not show which app or window took the focus, that
+  an assistant was used, or why: notifications, system dialogs, phone calls and input methods send the same signal. Enforcement is `NOT_BLOCKABLE` (a web page cannot keep focus).
+* **Counting (formal tests):** the **first** occurrence on an attempt is a warning and is not counted. The **second and every later** occurrence is a strike
+  (`STRIKE_FROM_OCCURRENCE` in `backend/src/utils/proctoringSeverity.js`). The rest of the SUSPICIOUS family keeps the shared every-third rule. Module coding tests, readiness tests and AI interviews do
+  not pass the per-type count, so their counting is unchanged.
+* **Telling students:** the pre-start instructions of the test page say that clicking into another window or app is recorded, that the first time is a warning, and that each time after that counts.
+  The existing in-test notice ("This didn't count this time, but repeating it will") appears at the first occurrence.
+* **Existing attempts are not changed.** Attempts recorded before this rule keep the strikes they were given. The proctoring log describes each event by what the server actually did to it (a repeat that was
+  not counted is shown as "recorded before repeats of this event were counted"), and the finding label shown for those older events is the current rule's.
+* **Why this needs care:** one loss of focus is often innocent, which is why the first stays a warning. Reviewers should still treat the log as observations, not proof; only an authorised reviewer can confirm misconduct.

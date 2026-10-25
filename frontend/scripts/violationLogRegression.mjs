@@ -46,6 +46,23 @@ check("an unknown type becomes readable instead of SHOUTING", eventLabel("SOME_N
 check("a prohibited action is labelled as observed, not as proven", observationOf({ evidence: { classification: "CONFIRMED_POLICY_VIOLATION" } }).label === "Prohibited action observed");
 check("no classification defaults to a plain observation", observationOf({}).label === "Observed (browser signal)" && observationOf({}).tone === "neutral");
 
+// 4b. The exam page losing focus (2026-10-25 rule): a warning the first time, a strike from the second. The wording follows what the server did to each event.
+{
+  const focus = (id, penalized, min) => ({ id, type: "POSSIBLE_EXTERNAL_ASSISTANT", severity: "SUSPICIOUS", penalized, counted: true, createdAt: at(10, min, 0) });
+  const now = buildViolationLog([focus("c", true, 30), focus("a", false, 10), focus("b", true, 20)], 2);
+  check("focus loss: 1st is a warning, 2nd and 3rd are Strike 1 and Strike 2", now.rows.map((r) => r.outcome.kind + ":" + r.strikeNumber).join(",") === "warning:null,strike:1,strike:2", now.rows.map((r) => r.outcome.kind + ":" + r.strikeNumber).join(","));
+  check("focus loss: the reasons say the first time is only a warning and repeats count", now.rows[0].outcome.reason.includes("first time") && now.rows[1].outcome.reason.includes("more than once"));
+  // an attempt recorded under the previous rule: the 2nd focus loss was NOT counted by the server, and the page must not claim it should have been
+  const before = buildViolationLog([focus("a", false, 10), focus("b", false, 20)], 0);
+  check("an older attempt: an uncounted repeat is described as recorded before repeats were counted", before.rows[1].outcome.kind === "warning" && before.rows[1].outcome.reason.includes("before repeats"), before.rows[1].outcome.reason);
+  check("an older attempt: no strike is invented", before.summary.strikes === 0 && before.summary.mismatch === false);
+  // under the previous rule a FIRST focus loss could be counted (as the 3rd suspicious event overall): the page then uses the generic reason, not a claim about repeats
+  const oldFirst = buildViolationLog([focus("a", true, 10)], 1);
+  check("an older attempt: a counted first focus loss does not claim it was a repeat", oldFirst.rows[0].outcome.kind === "strike" && !oldFirst.rows[0].outcome.reason.includes("more than once"), oldFirst.rows[0].outcome.reason);
+  check("focus loss events of other types are not mixed into its occurrence count", buildViolationLog([{ id: 1, type: "COPY", severity: "SUSPICIOUS", penalized: false, counted: true, createdAt: at(9, 0, 0) }, focus("a", false, 10)], 0).rows[1].outcome.reason.includes("first time"));
+  check("focus loss is named in plain words", eventLabel("POSSIBLE_EXTERNAL_ASSISTANT") === "Exam page lost focus (cause unknown)");
+}
+
 // 5. Edge cases.
 {
   const empty = buildViolationLog([], 0);

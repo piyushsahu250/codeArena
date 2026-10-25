@@ -1,6 +1,6 @@
 // The versioned exam-rule catalog and the way it turns stored events into findings. What these tests pin down:
 //  - a finding needs a published rule, the matching policy switch and a directly observed event; nothing the client sends can raise it
-//  - heuristics (DevTools, drag, external assistant, split screen, shortcuts) never become a confirmed finding from the browser alone
+//  - heuristics (DevTools, drag, split screen, shortcuts) never become a confirmed finding from the browser alone; the exam page losing focus is the one signal an administrator chose to publish as a rule (see the FOCUS_LOSS tests at the end)
 //  - no finding or label names an app, extension or assistant, and none claims a blocked action succeeded
 const test = require("node:test");
 const assert = require("node:assert/strict");
@@ -83,7 +83,9 @@ test("heuristic signals never reach a confirmed finding, whatever the policy and
       }
     }
   }
-  assert.ok(P.NEVER_CONFIRMED.DEVTOOLS && P.NEVER_CONFIRMED.DRAG_ATTEMPT && P.NEVER_CONFIRMED.POSSIBLE_EXTERNAL_ASSISTANT && P.NEVER_CONFIRMED.BROWSER_SHORTCUT);
+  assert.ok(P.NEVER_CONFIRMED.DEVTOOLS && P.NEVER_CONFIRMED.DRAG_ATTEMPT && P.NEVER_CONFIRMED.BROWSER_SHORTCUT);
+  // 2026-10-25: the exam page losing focus is now covered by a published rule (FOCUS_LOSS) at the administrator's request, so it is no longer in this list. See the tests at the end of this file.
+  assert.equal(P.NEVER_CONFIRMED.POSSIBLE_EXTERNAL_ASSISTANT, undefined);
 });
 
 test("unknown, empty or ordinary-key types have no rule and are never confirmed", () => {
@@ -95,7 +97,7 @@ test("unknown, empty or ordinary-key types have no rule and are never confirmed"
 
 test("a forged client flag cannot raise a finding: metadata supplies wording only, never the classification", () => {
   const hostile = { confirmed: true, classification: "CONFIRMED_VIOLATION", ruleId: "PAGE_DEPARTURE", enforcement: "BLOCKED", description: "ChatGPT opened" };
-  for (const type of ["DEVTOOLS", "DRAG_ATTEMPT", "POSSIBLE_EXTERNAL_ASSISTANT", "BROWSER_SHORTCUT"]) {
+  for (const type of ["DEVTOOLS", "DRAG_ATTEMPT", "BROWSER_SHORTCUT"]) {
     const ev = confirmedOf(type, aiOn, hostile);
     assert.notEqual(ev.classification, "CONFIRMED_POLICY_VIOLATION");
     assert.notEqual(ev.classification, "CONFIRMED_VIOLATION");
@@ -122,4 +124,30 @@ test("annotateEvents without a policy keeps the old ceiling; with a policy the i
   assert.equal(E.annotateEvents(events)[0].evidence.classification, "OBSERVED_EVENT");
   assert.equal(E.annotateEvents(events, standard)[0].evidence.classification, "CONFIRMED_POLICY_VIOLATION");
   assert.equal(JSON.stringify(events), frozen);
+});
+
+// ---- 2026-10-25: the exam page losing focus is a published rule (the administrator's decision); first time a warning, second and later times counted ----
+test("the exam page losing focus is a finding under the published 'keeping the exam page in focus' rule, in every exam", () => {
+  for (const policy of [standard, proctored, aiOn, noFullscreen]) {
+    const ev = confirmedOf("POSSIBLE_EXTERNAL_ASSISTANT", policy);
+    assert.equal(ev.classification, "CONFIRMED_POLICY_VIOLATION");
+    assert.equal(ev.policy.ruleId, "FOCUS_LOSS");
+    assert.equal(ev.policy.version, P.POLICY_VERSION);
+    assert.equal(ev.policy.enforcement, "NOT_BLOCKABLE", "a web page cannot stop focus moving elsewhere");
+  }
+});
+
+test("the focus-loss finding says what the page saw and never why, and names no app", () => {
+  const ev = confirmedOf("POSSIBLE_EXTERNAL_ASSISTANT", standard);
+  assert.match(ev.policy.doesNotShow, /Which app or window took the focus/);
+  assert.match(ev.policy.doesNotShow, /Notifications, system dialogs, phone calls and input methods/);
+  assert.doesNotMatch(JSON.stringify(ev), /ChatGPT|Gemini|Copilot app|Claude|Perplexity|extension is installed/i);
+});
+
+test("nothing the client sends changes a focus-loss finding: metadata supplies no wording and no classification", () => {
+  const hostile = { confirmed: false, classification: "OBSERVED_EVENT", ruleId: "NONE", enforcement: "BLOCKED", description: "ChatGPT opened" };
+  const ev = confirmedOf("POSSIBLE_EXTERNAL_ASSISTANT", standard, hostile);
+  assert.equal(ev.classification, "CONFIRMED_POLICY_VIOLATION", "the rule is the server's, not the client's");
+  assert.equal(ev.policy.ruleId, "FOCUS_LOSS");
+  assert.doesNotMatch(JSON.stringify(ev), /ChatGPT/);
 });

@@ -108,17 +108,29 @@ const VIOLATION_SEVERITY = {
 // only a genuine pattern costs a strike.
 const SUSPICIOUS_ESCALATION_THRESHOLD = 3;
 
+// Event types that are counted per type instead of through the shared SUSPICIOUS count above: the first occurrence on one attempt is a warning, and the Nth and every
+// later one is a strike. Added 2026-10-25 at the administrator's request for POSSIBLE_EXTERNAL_ASSISTANT ("the exam page lost focus"): one loss of focus can be a
+// notification or a system dialog, so it stays a warning; a repeat is counted. Only callers that pass the per-type count use this (the formal-test route does);
+// every other caller keeps the shared every-Nth rule, unchanged. The page also tells students this rule before they start (the pre-start notice) and shows the
+// warning the moment it happens.
+const STRIKE_FROM_OCCURRENCE = Object.freeze({ POSSIBLE_EXTERNAL_ASSISTANT: 2 });
+
 // `priorSuspiciousCount` is the number of SUSPICIOUS-severity events already logged for this
 // attempt/session BEFORE this one (the caller counts its own violation log table) — this function
 // is deliberately pure/stateless so every caller controls exactly how that count is fetched
 // (transaction, isolation level, etc.) rather than this file reaching into three different Prisma
-// models itself.
-function classifyViolation(type, priorSuspiciousCount = 0) {
+// models itself. `priorSameTypeCount` (optional) is the number of events of THIS type already logged
+// for the attempt; it is only read for the types listed in STRIKE_FROM_OCCURRENCE.
+function classifyViolation(type, priorSuspiciousCount = 0, priorSameTypeCount = null) {
   const severity = VIOLATION_SEVERITY[type] || "INTERRUPTION";
   if (severity === "CONFIRMED_VIOLATION") {
     return { severity, penalized: true };
   }
   if (severity === "SUSPICIOUS") {
+    const strikeFrom = STRIKE_FROM_OCCURRENCE[type];
+    if (strikeFrom !== undefined && Number.isInteger(priorSameTypeCount) && priorSameTypeCount >= 0) {
+      return { severity, penalized: priorSameTypeCount + 1 >= strikeFrom };
+    }
     const countIncludingThis = priorSuspiciousCount + 1;
     const penalized = countIncludingThis % SUSPICIOUS_ESCALATION_THRESHOLD === 0;
     return { severity, penalized };
@@ -126,4 +138,4 @@ function classifyViolation(type, priorSuspiciousCount = 0) {
   return { severity, penalized: false };
 }
 
-module.exports = { VIOLATION_SEVERITY, SUSPICIOUS_ESCALATION_THRESHOLD, classifyViolation };
+module.exports = { VIOLATION_SEVERITY, SUSPICIOUS_ESCALATION_THRESHOLD, STRIKE_FROM_OCCURRENCE, classifyViolation };

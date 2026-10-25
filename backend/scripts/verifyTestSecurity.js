@@ -98,7 +98,7 @@ async function cleanup() {
     const v2 = await call("POST", `/tests/attempts/${att}/violation`, T.stuA, { type: "SPLIT_SCREEN_SUSPECTED" }, { "X-Exam-Session": p2.body.sessionId });
     check("split-screen signal is recorded as SUSPICIOUS", v2.status === 200 && v2.body.severity === "SUSPICIOUS");
     const v3 = await call("POST", `/tests/attempts/${att}/violation`, T.stuA, { type: "POSSIBLE_EXTERNAL_ASSISTANT", severity: "INTERRUPTION", penalized: false }, { "X-Exam-Session": p2.body.sessionId });
-    check("the client cannot choose severity: the third SUSPICIOUS event escalates to a strike", v3.status === 200 && v3.body.penalized === true, JSON.stringify(v3.body));
+    check("the client cannot choose severity: the second page-lost-focus event is counted as a strike", v3.status === 200 && v3.body.penalized === true, JSON.stringify(v3.body));
 
     // --- monitor + overview RBAC / isolation
     const mon = await call("GET", `/exam-security/exams/${prc.id}/monitor`, T.staffA);

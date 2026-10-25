@@ -11,7 +11,7 @@
 // What a web page can do about each action is stated per rule as the enforcement outcome: the page can ASK the browser to cancel an event (BLOCK_ATTEMPTED; it
 // cannot verify the browser honoured it) but it cannot stop leaving the page, DevTools opened from the browser menu, or an operating-system assistant. Strict enforcement of
 // those needs a managed device or the secure exam client.
-const POLICY_VERSION = "2026-10-16.1";
+const POLICY_VERSION = "2026-10-25.1";
 const CONFIRMED = "CONFIRMED_POLICY_VIOLATION";
 
 const ENFORCEMENT = Object.freeze({
@@ -54,6 +54,17 @@ const RULES = {
     shows: "A key combination that the exam rules prohibit reached the exam page.",
     doesNotShow: "That an assistant opened, which assistant it was, or that it was used. The operating system may handle such a key before the browser sees it.",
   },
+  // Added 2026-10-25 at the administrator's request: the exam page losing focus is a rule every exam publishes (the pre-start notice of the test page says so). The first time is
+  // a warning and the second and later times are counted as strikes (utils/proctoringSeverity.js, STRIKE_FROM_OCCURRENCE). The finding says what the page saw and never why.
+  FOCUS_LOSS: {
+    title: "Keeping the exam page in focus",
+    appliesTo: ["POSSIBLE_EXTERNAL_ASSISTANT"],
+    prohibited: () => true,
+    enforcement: () => ENFORCEMENT.NOT_BLOCKABLE,
+    describe: () => "The exam page lost focus while it was still visible",
+    shows: "The exam page lost focus while it was open, which the exam rules ask students to avoid. The first time is a warning; repeats are counted.",
+    doesNotShow: "Which app or window took the focus, that an assistant was used, or why. Notifications, system dialogs, phone calls and input methods cause the same signal.",
+  },
   CLIPBOARD: {
     title: "Copy, paste or cut",
     appliesTo: ["COPY", "PASTE", "CUT"],
@@ -74,7 +85,6 @@ const NEVER_CONFIRMED = {
   BROWSER_SHORTCUT: "Editors and muscle memory use the same combinations, and a keydown does not show that the browser action happened.",
   PRINT_SCREEN_ATTEMPT: "A key press does not show that a capture was taken.",
   DRAG_ATTEMPT: "The page does not yet record where a drag started or ended, so a drag inside the code editor cannot be told apart from a prohibited drag.",
-  POSSIBLE_EXTERNAL_ASSISTANT: "The page lost focus while still visible. The app, device or cause is not known and is not named.",
   SPLIT_SCREEN_SUSPECTED: "A window-size heuristic.",
   TAB_SWITCH_BRIEF: "A short loss of visibility, usually a notification or system prompt; it did not pass the grace period.",
 };

@@ -1794,6 +1794,9 @@ export default function TestTaking() {
                 {needsWebcam && " Moving out of camera view is also logged for review, but on its own won't auto-submit your test."}
               </li>
               <li>
+                Keep the test window in focus. Clicking into another window or app while the test is open is recorded: the first time is a warning, and after that each time counts as a violation.
+              </li>
+              <li>
                 You get one continuous {testMeta.durationMin}-minute timer for the whole test — answer any question in any
                 order, and change your answers freely until you submit or time runs out.
               </li>

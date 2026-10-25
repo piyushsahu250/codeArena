@@ -10,7 +10,7 @@ const { policyOf, startRequirementFailure } = require("../../utils/testExamSecur
 const X = require("../../utils/examSecurity");
 const { gradePendingCodingSubmissions } = require("../../utils/gradeAttempt");
 const { processGamification } = require("../../utils/gamification");
-const { classifyViolation } = require("../../utils/proctoringSeverity");
+const { classifyViolation, STRIKE_FROM_OCCURRENCE } = require("../../utils/proctoringSeverity");
 const { MANIFEST_VERSION, validateManifest, scoreBase } = require("../../utils/attemptManifest");
 const aiService = require("../../services/ai/aiService");
 const { annotateEvents } = require("../../utils/evidenceClassification");
@@ -96,7 +96,9 @@ async function recordViolation(actor, attemptId, rawType) {
   const type = String(rawType || "UNKNOWN").toUpperCase().slice(0, 40);
   // Escalation counts SUSPICIOUS events fresh from the log each time, so the threshold can change without a backfill.
   const prior = await repo.suspiciousCount(attempt.id);
-  const outcome = d.violationOutcome(attempt, classifyViolation(type, prior));
+  // Types counted per type (the exam page losing focus: a warning the first time, a strike from the second) need how many of THIS type came before.
+  const priorSameType = STRIKE_FROM_OCCURRENCE[type] !== undefined ? await repo.violationCountOfType(attempt.id, type) : null;
+  const outcome = d.violationOutcome(attempt, classifyViolation(type, prior, priorSameType));
   const { severity, penalized, tabSwitchCount, autoSubmitted } = outcome;
 
   // A violation-triggered submit is a submission like any other: coding drafts must be graded or they would stay at 0 forever.

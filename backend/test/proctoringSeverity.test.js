@@ -88,3 +88,40 @@ describe("classifyViolation", () => {
     assert.equal(penalized, true);
   });
 });
+
+describe("STRIKE_FROM_OCCURRENCE: the exam page losing focus is a warning the first time and a strike from the second (2026-10-25)", () => {
+  const { STRIKE_FROM_OCCURRENCE } = require("../src/utils/proctoringSeverity");
+
+  test("the rule is set for the focus-loss event only, from the 2nd occurrence", () => {
+    assert.deepEqual({ ...STRIKE_FROM_OCCURRENCE }, { POSSIBLE_EXTERNAL_ASSISTANT: 2 });
+    assert.equal(VIOLATION_SEVERITY.POSSIBLE_EXTERNAL_ASSISTANT, "SUSPICIOUS", "its severity is unchanged");
+  });
+
+  test("with the per-type count: the 1st is a warning, the 2nd and every later one is a strike", () => {
+    assert.equal(classifyViolation("POSSIBLE_EXTERNAL_ASSISTANT", 0, 0).penalized, false);
+    for (const prior of [1, 2, 3, 10]) assert.equal(classifyViolation("POSSIBLE_EXTERNAL_ASSISTANT", 99, prior).penalized, true, `prior=${prior}`);
+    assert.equal(classifyViolation("POSSIBLE_EXTERNAL_ASSISTANT", 0, 0).severity, "SUSPICIOUS");
+  });
+
+  test("the shared SUSPICIOUS count no longer decides this type when the per-type count is given", () => {
+    // the 2nd focus loss counts even though it is only the 2nd suspicious event overall, and the 1st never counts even if it is the 3rd suspicious event overall
+    assert.equal(classifyViolation("POSSIBLE_EXTERNAL_ASSISTANT", 0, 1).penalized, true);
+    assert.equal(classifyViolation("POSSIBLE_EXTERNAL_ASSISTANT", 2, 0).penalized, false);
+  });
+
+  test("a caller that does not pass the per-type count keeps the old every-third rule", () => {
+    assert.equal(classifyViolation("POSSIBLE_EXTERNAL_ASSISTANT", 0).penalized, false);
+    assert.equal(classifyViolation("POSSIBLE_EXTERNAL_ASSISTANT", 1).penalized, false);
+    assert.equal(classifyViolation("POSSIBLE_EXTERNAL_ASSISTANT", 2).penalized, true);
+    assert.equal(classifyViolation("POSSIBLE_EXTERNAL_ASSISTANT", 2, null).penalized, true);
+    assert.equal(classifyViolation("POSSIBLE_EXTERNAL_ASSISTANT", 2, "x").penalized, true, "a non-count is ignored, never trusted");
+  });
+
+  test("every other type is untouched by the per-type count", () => {
+    assert.equal(classifyViolation("COPY", 0, 5).penalized, false);
+    assert.equal(classifyViolation("COPY", 2, 0).penalized, true);
+    assert.equal(classifyViolation("TAB_SWITCH", 0, 0).penalized, true);
+    assert.equal(classifyViolation("BROWSER_SHORTCUT", 5, 5).penalized, false);
+    assert.equal(classifyViolation("SOMETHING_NEW", 5, 5).penalized, false);
+  });
+});

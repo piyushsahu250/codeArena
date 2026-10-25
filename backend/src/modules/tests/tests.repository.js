@@ -146,6 +146,7 @@ const submissionsOf = (attemptId) => prisma.submission.findMany({ where: { attem
 
 const attemptById = (id) => prisma.testAttempt.findUnique({ where: { id } });
 const suspiciousCount = (attemptId) => prisma.testViolation.count({ where: { attemptId, severity: "SUSPICIOUS" } });
+const violationCountOfType = (attemptId, type) => prisma.testViolation.count({ where: { attemptId, type } });
 const logViolation = (attemptId, type, severity, penalized) => prisma.testViolation.create({ data: { attemptId, type, severity, penalized } });
 // A penalized event and the strike-count update describe one event: written together so a partial write never leaves them out of sync.
 const logPenalizedViolation = (attemptId, type, severity, tabSwitchCount, autoSubmitted) => prisma.$transaction([
@@ -172,7 +173,7 @@ const attemptWithSubmissions = (testId, studentId) => prisma.testAttempt.findUni
 
 Object.assign(module.exports, {
   listTests, studentScope, attemptStatusesFor, findDetail, attemptLayout, questionsByIds, attendanceStatus, findForStart, findAttempt, findReattemptGrant, consumeReattemptGrant,
-  createAttempt, setSession, submissionsOf, attemptById, suspiciousCount, logViolation, logPenalizedViolation, attemptForAdminReview, violationsOf, securitySignalsOf, attemptForAi, testQuestionForAi,
+  createAttempt, setSession, submissionsOf, attemptById, suspiciousCount, violationCountOfType, logViolation, logPenalizedViolation, attemptForAdminReview, violationsOf, securitySignalsOf, attemptForAi, testQuestionForAi,
   studentInstitute, testForResult, attemptWithSubmissions,
 });
 
