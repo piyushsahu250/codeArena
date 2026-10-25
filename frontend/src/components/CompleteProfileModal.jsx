@@ -8,7 +8,7 @@ export default function CompleteProfileModal({ onDismiss }) {
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
-      <div className="card" style={{ padding: 28, maxWidth: 460, width: "90%", maxHeight: "calc(100dvh - 32px)", overflowY: "auto", overscrollBehavior: "contain" }}>
+      <div className="card" style={{ padding: 28, maxWidth: 460, width: "90%" }}>
         <h2 style={{ fontSize: 19 }}>Complete Your Profile</h2>
         <p style={{ fontSize: 14, marginTop: 10 }}>Welcome!</p>
         <p style={{ fontSize: 14, marginTop: 6 }}>

@@ -54,7 +54,7 @@ export default function ReportProblemWidget() {
           style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 600, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
           onClick={() => setOpen(false)}
         >
-          <div className="card" style={{ maxWidth: 420, width: "100%", padding: 24, maxHeight: "calc(100dvh - 32px)", overflowY: "auto", overscrollBehavior: "contain" }} onClick={(e) => e.stopPropagation()}>
+          <div className="card" style={{ maxWidth: 420, width: "100%", padding: 24 }} onClick={(e) => e.stopPropagation()}>
             <h3 style={{ marginTop: 0 }}>Report a problem</h3>
             {result === "ok" ? (
               <div>
