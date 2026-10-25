@@ -36,7 +36,7 @@ export default function ForceChangePassword() {
   return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", padding: 32 }}>
       <form onSubmit={handleSubmit} style={{ width: "100%", maxWidth: 400 }}>
-        <h2 style={{ fontSize: 26, color: "var(--ink)" }}>Set a new password</h2>
+        <h1 style={{ fontSize: 26, color: "var(--ink)" }}>Set a new password</h1>
         <ChalkUnderline width={120} />
         <p style={{ color: "var(--ink-dim)", marginTop: 12, marginBottom: 24, fontSize: 14 }}>
           Hi {user?.name}, this account was created by an administrator with a temporary password. Please set a new

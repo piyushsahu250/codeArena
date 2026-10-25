@@ -177,7 +177,7 @@ export default function Login() {
       {/* Form panel */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: 32 }}>
         <form onSubmit={handleSubmit} style={{ width: "100%", maxWidth: 360 }} aria-busy={loading}>
-          <h2 style={{ fontSize: 26, color: "var(--ink)" }}>Sign in</h2>
+          <h1 style={{ fontSize: 26, color: "var(--ink)" }}>Sign in</h1>
           {creating ? (
             <p className="ca-login-callout" id="login-intro">{changeIntro(reason)}</p>
           ) : (
@@ -212,7 +212,7 @@ export default function Login() {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
             <label style={{ ...labelStyle, marginTop: 14 }} htmlFor="login-password">{creating ? currentPasswordLabel(reason) : "Password"}</label>
             {!creating && (
-              <Link to="/forgot-password" style={{ fontSize: 12, color: "var(--warning-text)", fontWeight: 600 }}>
+              <Link to="/forgot-password" className="ca-tap-link" style={{ fontSize: 12, color: "var(--warning-text)", fontWeight: 600 }}>
                 Forgot password?
               </Link>
             )}

@@ -26,7 +26,7 @@ export default function ForgotPassword() {
   return (
     <div style={{ display: "flex", justifyContent: "center", padding: "64px 24px", minHeight: "100vh", background: "var(--paper)" }}>
       <form onSubmit={handleSubmit} style={{ width: "100%", maxWidth: 380 }}>
-        <h2>Forgot password</h2>
+        <h1 style={{ fontSize: "1.5em" }}>Forgot password</h1>
         <p style={{ color: "var(--ink-dim)", fontSize: 14, marginTop: -4 }}>
           Enter your account email and we'll send you a link to reset your password.
         </p>

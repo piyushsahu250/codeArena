@@ -17,7 +17,7 @@ export default function MarksheetVerify() {
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--paper, #FBF9F4)", padding: 24 }}>
       <div className="card" style={{ padding: 32, maxWidth: 440, textAlign: "center" }}>
         <ClipboardList size={32} />
-        <h2 style={{ marginTop: 8 }}>Marksheet Verification</h2>
+        <h1 style={{ marginTop: 8, fontSize: "1.5em" }}>Marksheet Verification</h1>
 
         {!result && <p className="mono" style={{ marginTop: 16 }}>Checking…</p>}
 

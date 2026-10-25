@@ -29,7 +29,7 @@ export default function VerifyEmail() {
   return (
     <div style={{ display: "flex", justifyContent: "center", padding: "64px 24px", minHeight: "100vh", background: "var(--paper)" }}>
       <div style={{ width: "100%", maxWidth: 380, textAlign: "center" }}>
-        <h2>Confirm email address</h2>
+        <h1 style={{ fontSize: "1.5em" }}>Confirm email address</h1>
 
         {status === "missing" && (
           <p style={{ fontSize: 14, marginTop: 16 }}>This link is missing its token. Request the email change again from Account Settings.</p>

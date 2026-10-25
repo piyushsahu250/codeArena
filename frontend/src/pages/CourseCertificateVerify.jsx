@@ -16,7 +16,7 @@ export default function CourseCertificateVerify() {
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--paper, #FBF9F4)" }}>
       <div className="card" style={{ padding: 32, maxWidth: 420, textAlign: "center" }}>
         <GraduationCap size={32} />
-        <h2 style={{ marginTop: 8 }}>Certificate Verification</h2>
+        <h1 style={{ marginTop: 8, fontSize: "1.5em" }}>Certificate Verification</h1>
         {!result && <p className="mono" style={{ marginTop: 16 }}>Checking…</p>}
         {result && !result.valid && <p style={{ marginTop: 16, color: "var(--rust)" }}>This certificate code could not be verified.</p>}
         {result?.valid && (

@@ -17,7 +17,7 @@ export default function InterviewVerify() {
     <div className="interview-prep" style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
       <div className="ip-glass" style={{ padding: 32, maxWidth: 420, textAlign: "center" }}>
         <Trophy size={32} />
-        <h2 style={{ marginTop: 8 }}>Certificate Verification</h2>
+        <h1 style={{ marginTop: 8, fontSize: "1.5em" }}>Certificate Verification</h1>
         {!result && <p className="mono" style={{ marginTop: 16 }}>Checking…</p>}
         {result && !result.valid && <p style={{ marginTop: 16, color: "var(--rust)" }}>This certificate code could not be verified.</p>}
         {result?.valid && (

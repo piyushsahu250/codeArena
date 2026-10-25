@@ -50,7 +50,7 @@ export default function ResetPassword() {
   return (
     <div style={{ display: "flex", justifyContent: "center", padding: "64px 24px", minHeight: "100vh", background: "var(--paper)" }}>
       <form onSubmit={handleSubmit} style={{ width: "100%", maxWidth: 380 }}>
-        <h2>Reset your password</h2>
+        <h1 style={{ fontSize: "1.5em" }}>Reset your password</h1>
 
         {success ? (
           <p style={{ color: "var(--success-text)", fontSize: 14, marginTop: 12 }}>Password reset successfully. Please log in with your new password — you'll need to sign in again on any other devices too.</p>
