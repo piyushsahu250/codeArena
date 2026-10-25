@@ -306,7 +306,7 @@ jobs:
           started=$(date +%s)
           code=0; timeout 12m npx playwright test uxAudit.spec.js --reporter=line,list > /tmp/ux.out 2>&1 || code=$?
           echo "::notice title=ui/ux audit probe::finished in $(( $(date +%s) - started )) seconds (exit code $code)"
-          grep -h "\[ux" /tmp/ux.out | sort -u | cut -c1-440 > /tmp/uxlines.txt || true
+          grep -h "\[ux-perf" /tmp/ux.out | sort -u | cut -c1-900 > /tmp/uxlines.txt || true
           rm -f /tmp/uxlines.part.*; split -l 8 -d /tmp/uxlines.txt /tmp/uxlines.part. || true
           part=0
           for f in /tmp/uxlines.part.*; do
