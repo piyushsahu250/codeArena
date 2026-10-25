@@ -101,9 +101,15 @@ async function seed() {
   for (const [u, score] of [[users.student, 9], [users.student2, 6], [users.student3, 3]]) {
     await prisma.testAttempt.create({ data: { testId: resultsTest.id, studentId: u.id, status: "SUBMITTED", totalScore: score, startedAt: new Date(now - 30 * 60000), submittedAt: new Date(now - 10 * 60000), questionOrder: questions.map((q) => q.id) } });
   }
+  // One finished attempt with a proctoring log: a right-click and a first copy (warnings), a repeated copy (counted, escalated) and a full-screen exit (counted): 2 strikes.
+  const violationsTest = await mkTest(`${TAG} Violations Test`);
+  const violationsAttempt = await prisma.testAttempt.create({ data: { testId: violationsTest.id, studentId: users.student.id, status: "SUBMITTED", totalScore: 9, tabSwitchCount: 2, startedAt: new Date(now - 90 * 60000), submittedAt: new Date(now - 10 * 60000), questionOrder: questions.map((q) => q.id) } });
+  for (const [type, severity, penalized, minutesAgo] of [["RIGHT_CLICK", "SUSPICIOUS", false, 80], ["COPY", "SUSPICIOUS", false, 70], ["COPY", "SUSPICIOUS", true, 69], ["FULLSCREEN_EXIT", "CONFIRMED_VIOLATION", true, 20]]) {
+    await prisma.testViolation.create({ data: { attemptId: violationsAttempt.id, type, severity, penalized, createdAt: new Date(now - minutesAgo * 60000) } });
+  }
   const codingTest = await mkCodingTest(`${TAG} Coding Test`);
   const codingProctored = await mkCodingTest(`${TAG} Coding Proctored Test`, { securityLevel: "PROCTORED" });
-  console.log(JSON.stringify({ users, firstLogin, institutes: { A: { id: A.id, name: A.name }, B: { id: B.id, name: B.name } }, testId: test.id, companyTestId: companyTest.id, aiShortcutTestId: aiShortcutTest.id, aiShortcutOffTestId: aiShortcutOffTest.id, resultsTestId: resultsTest.id, statusTestId: statusTest.id, codingTestId: codingTest.id, codingProctoredTestId: codingProctored.id, proctoredTestId: proctored.id, fullscreenTestId: fsTest.id, questionTexts: ["E2E question 1: pick option B", "E2E question 2: pick option B"] }));
+  console.log(JSON.stringify({ users, firstLogin, institutes: { A: { id: A.id, name: A.name }, B: { id: B.id, name: B.name } }, testId: test.id, companyTestId: companyTest.id, aiShortcutTestId: aiShortcutTest.id, aiShortcutOffTestId: aiShortcutOffTest.id, resultsTestId: resultsTest.id, statusTestId: statusTest.id, violationsTestId: violationsTest.id, codingTestId: codingTest.id, codingProctoredTestId: codingProctored.id, proctoredTestId: proctored.id, fullscreenTestId: fsTest.id, questionTexts: ["E2E question 1: pick option B", "E2E question 2: pick option B"] }));
 }
 
 (async () => {

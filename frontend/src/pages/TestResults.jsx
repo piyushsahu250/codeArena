@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import api from "../api";
 import Navbar from "../components/Navbar";
 import { downloadFromApi } from "../utils/downloadFile";
 import { matchesStudentQuery } from "../utils/studentSearch";
+import ViolationLog from "../components/ViolationLog";
 
 const STATUS_STYLE = {
   SUBMITTED: { bg: "var(--success-bg)", color: "var(--mint)", label: "Submitted" },
@@ -23,7 +24,7 @@ const stateOf = (a) => a.lifecycle?.state || (a.status === "IN_PROGRESS" ? "IN_P
 function StatusBadge({ attempt }) {
   const state = stateOf(attempt);
   const s = state === "COMPLETED" ? (STATUS_STYLE[attempt.status] || STATUS_STYLE.SUBMITTED) : STATE_STYLE[state] || STATE_STYLE.UNKNOWN;
-  return <span className="badge" style={{ background: s.bg, color: s.color }} title={attempt.lifecycle?.detail}>{s.label}</span>;
+  return <span className="badge" style={{ background: s.bg, color: s.color, whiteSpace: "nowrap" }} title={attempt.lifecycle?.detail}>{s.label}</span>;
 }
 
 function StatCard({ label, value, accent }) {
@@ -37,15 +38,6 @@ function StatCard({ label, value, accent }) {
 
 const RANK_MEDAL = { 1: "🥇", 2: "🥈", 3: "🥉" };
 
-// Mirrors backend/src/utils/proctoringSeverity.js's 4-level taxonomy purely for display.
-const SEVERITY_COLOR = { INTERRUPTION: "var(--ink-dim)", SUSPICIOUS: "var(--amber)", CONFIRMED_VIOLATION: "var(--rust)" };
-// What the server can honestly say about a browser-reported event (utils/evidenceClassification.js). Only a reviewer can confirm misconduct.
-// CONFIRMED_POLICY_VIOLATION = the server saw an action the exam's published rules prohibit (utils/proctoringPolicy.js); it says what was observed, not why or by whom.
-const EVIDENCE_LABEL = { OBSERVED_EVENT: "Observed (browser signal)", SUSPECTED_ACTIVITY: "Suspected — review needed", INCONCLUSIVE: "Inconclusive", POLICY_VIOLATION: "Policy violation", CONFIRMED_POLICY_VIOLATION: "Prohibited action observed", CONFIRMED_VIOLATION: "Confirmed by reviewer" };
-// Plain names for event types whose raw name over-claims.
-const EVENT_LABEL = { POSSIBLE_EXTERNAL_ASSISTANT: "Exam page lost focus (cause unknown)", TAB_SWITCH: "Exam page left (tab switch)", TAB_SWITCH_BRIEF: "Exam page briefly hidden", DEVTOOLS: "Window-size change (possible DevTools, unverified)", DRAG_ATTEMPT: "Drag on the exam page", COPILOT_KEY_SIGNAL: "Assistant key pressed", AI_SHORTCUT_DETECTED: "Assistant shortcut pressed", SPLIT_SCREEN_SUSPECTED: "Small window (possible split screen)" };
-// What the page could do about it. A web page asks the browser to cancel an event; it cannot confirm the browser did, and cannot stop leaving the page.
-const ENFORCEMENT_LABEL = { BLOCK_ATTEMPTED: "cancel requested, not verified", NOT_BLOCKABLE: "cannot be blocked by a web page", OBSERVED_ONLY: "recorded only" };
 
 export default function TestResults() {
   const { id } = useParams();
@@ -293,7 +285,7 @@ export default function TestResults() {
                 <th style={{ padding: "10px 8px" }}>Score</th>
                 <th style={{ padding: "10px 8px" }}>Attempted</th>
                 <th style={{ padding: "10px 8px" }}>Status</th>
-                <th style={{ padding: "10px 8px" }}>Tab switches</th>
+                <th style={{ padding: "10px 8px" }} title="Events counted as strikes under the exam's counting rule (tab switches, leaving full screen, and repeated restricted actions). Open a number to see the log.">Strikes</th>
                 <th style={{ padding: "10px 8px" }}>Questions</th>
               </tr>
             </thead>
@@ -308,7 +300,7 @@ export default function TestResults() {
                 const attempted = attemptedCountOf(a);
                 const incomplete = stateOf(a) === "COMPLETED" && attempted < total;
                 return (
-                  <>
+                  <Fragment key={a.id}>
                     <tr key={a.id} style={{ borderBottom: "1px solid var(--line)" }}>
                       <td className="mono" style={{ padding: "10px 8px", fontWeight: 700 }}>
                         {a.rank == null ? "—" : RANK_MEDAL[a.rank] ? `${RANK_MEDAL[a.rank]} ${a.rank}` : a.rank}
@@ -350,7 +342,7 @@ export default function TestResults() {
                             className="btn btn-ghost"
                             style={{ fontSize: 12, padding: "2px 6px", color: "var(--rust)", fontWeight: 700 }}
                             onClick={() => toggleViolations(a.id)}
-                            title="View the actual proctoring event log for this attempt"
+                            title="Open the proctoring log for this attempt" aria-label={`${a.tabSwitchCount} ${a.tabSwitchCount === 1 ? "strike" : "strikes"}: ${violationsExpandedId === a.id ? "hide" : "open"} the proctoring log`} aria-expanded={violationsExpandedId === a.id}
                           >
                             {a.tabSwitchCount} {violationsExpandedId === a.id ? "▲" : "▼"}
                           </button>
@@ -397,65 +389,11 @@ export default function TestResults() {
                     {violationsExpandedId === a.id && (
                       <tr>
                         <td colSpan={9} style={{ padding: "0 10px 16px" }}>
-                          <div className="card" style={{ padding: 12, background: "var(--bg-subtle, #FAFAF8)" }}>
-                            {violationsLoading === a.id && <p className="mono" style={{ fontSize: 12, color: "var(--ink-dim)" }}>Loading violation log…</p>}
-                            {violationsById[a.id]?.error && <p className="mono" style={{ fontSize: 12, color: "var(--rust)" }}>{violationsById[a.id].error}</p>}
-                            {violationsById[a.id] && !violationsById[a.id].error && (
-                              <>
-                                <p className="mono" style={{ fontSize: 11, color: "var(--ink-dim)", marginBottom: 8 }}>
-                                  {violationsById[a.id].evidenceNote || "Browser signals are observations, not proof."} "Counted" means the event
-                                  added to the {a.tabSwitchCount} strike(s) in the table under the exam's counting rule — it is not a finding of misconduct.
-                                </p>
-                                <table style={{ width: "100%", fontSize: 12 }}>
-                                  <thead>
-                                    <tr style={{ textAlign: "left", color: "var(--ink-dim)" }}>
-                                      <th style={{ padding: "2px 8px" }}>Time</th>
-                                      <th>Event</th>
-                                      <th>Evidence</th>
-                                      <th>Exam rule</th>
-                                      <th>Counted?</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    {violationsById[a.id].events.flatMap((ev) => {
-                                      const pol = ev.evidence?.policy;
-                                      const confirmed = ev.evidence?.classification === "CONFIRMED_POLICY_VIOLATION";
-                                      return [
-                                        <tr key={ev.id} className="mono">
-                                          <td style={{ padding: "2px 8px" }}>{new Date(ev.createdAt).toLocaleTimeString()}</td>
-                                          <td>{EVENT_LABEL[ev.type] || ev.type.replace(/_/g, " ")}</td>
-                                          <td title={ev.evidence ? `${ev.evidence.rationale} Limits: ${ev.evidence.limits}` : undefined} style={{ color: confirmed ? SEVERITY_COLOR.CONFIRMED_VIOLATION : ev.evidence?.classification === "SUSPECTED_ACTIVITY" ? SEVERITY_COLOR.SUSPICIOUS : "inherit" }}>
-                                            {EVIDENCE_LABEL[ev.evidence?.classification] || "Observed (browser signal)"}
-                                          </td>
-                                          <td>{pol?.ruleId ? `${pol.title} · ${ENFORCEMENT_LABEL[pol.enforcement] || "Recorded"}` : "No exam rule applies"}</td>
-                                          <td>{ev.counted === false ? "Not counted (signal)" : ev.penalized ? "Yes" : "No"}</td>
-                                        </tr>,
-                                        pol && (pol.ruleId || pol.note) ? (
-                                          <tr key={`${ev.id}-rule`}>
-                                            <td />
-                                            <td colSpan={4} style={{ fontSize: 11, color: "var(--ink-dim)", padding: "0 0 6px" }}>
-                                              {pol.ruleId ? (
-                                                <>
-                                                  <b>{pol.description}.</b> Rule {pol.ruleId}, policy {pol.version}. Shows: {pol.shows} Does not show: {pol.doesNotShow}
-                                                </>
-                                              ) : pol.note}
-                                            </td>
-                                          </tr>
-                                        ) : null,
-                                      ];
-                                    })}
-                                    {violationsById[a.id].events.length === 0 && (
-                                      <tr><td colSpan={5} style={{ padding: "6px 8px", color: "var(--ink-dim)" }}>No events recorded.</td></tr>
-                                    )}
-                                  </tbody>
-                                </table>
-                              </>
-                            )}
-                          </div>
+                          <ViolationLog studentName={a.student.name} strikeTotal={a.tabSwitchCount} loading={violationsLoading === a.id} data={violationsById[a.id]} />
                         </td>
                       </tr>
                     )}
-                  </>
+                  </Fragment>
                 );
               })}
               {!loading && filtered.length === 0 && (

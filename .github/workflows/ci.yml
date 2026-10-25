@@ -116,6 +116,8 @@ jobs:
         run: node scripts/editorHeightRegression.mjs
       - name: Form draft regression (per account, expires, never stale)
         run: node scripts/formDraftRegression.mjs
+      - name: Proctoring log regression (order, strike numbering, counting reasons, mismatch)
+        run: node scripts/violationLogRegression.mjs
       - name: Dependency audit (report only)
         continue-on-error: true
         run: npm audit --omit=dev --json | node ../backend/scripts/auditSummary.js frontend
