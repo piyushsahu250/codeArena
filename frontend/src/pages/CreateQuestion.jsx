@@ -86,6 +86,7 @@ export default function CreateQuestion() {
   const [topicId, setTopicId] = useState(null);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(isEdit);
+  const [loadError, setLoadError] = useState("");
   const [signature, setSignature] = useState(EMPTY_SIGNATURE);
 
   // Optional image attachment (diagram/figure/graph) — orthogonal to Question Type, so it's
@@ -283,6 +284,9 @@ export default function CreateQuestion() {
       setTopicId(q.topicId || null);
       setImageUrl(q.imageUrl || null);
       setLoading(false);
+    }).catch((err) => {
+      setLoadError(err.response?.status === 404 ? "This item no longer exists." : err.response?.data?.error || "Could not load this item. Check your connection and try again.");
+      setLoading(false);
     });
   }, [id, isEdit]);
 
@@ -434,6 +438,7 @@ export default function CreateQuestion() {
     setSaving(false);
   }
 
+  if (loadError) return <div><Navbar /><div style={{ maxWidth: 720, margin: "0 auto", padding: "48px 24px" }}><p role="alert" style={{ color: "var(--rust)" }}>{loadError}</p><button type="button" className="btn btn-ghost" style={{ marginTop: 16 }} onClick={() => navigate(-1)}>← Back</button></div></div>;
   if (loading) return <div style={{ padding: 48 }} className="mono">Loading…</div>;
 
   const isSql = form.questionType === "SQL";

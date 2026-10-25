@@ -52,6 +52,7 @@ export default function TestResults() {
   const [test, setTest] = useState(null);
   const [attempts, setAttempts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedId, setExpandedId] = useState(null);
   // "Tab switches" was previously just a bare count with nowhere to see what actually happened --
@@ -100,11 +101,13 @@ export default function TestResults() {
 
   useEffect(() => {
     setLoading(true);
+    setLoadError("");
     Promise.all([api.get(`/tests/${id}/results`), api.get(`/tests/${id}`)])
       .then(([resultsRes, testRes]) => {
         setAttempts(resultsRes.data);
         setTest(testRes.data);
       })
+      .catch((err) => setLoadError(err.response?.status === 404 ? "This test no longer exists." : err.response?.data?.error || "Could not load the results. Check your connection and try again."))
       .finally(() => setLoading(false));
   }, [id]);
 
@@ -198,6 +201,7 @@ export default function TestResults() {
             <button className="btn btn-ghost" onClick={() => downloadResults("csv")} disabled={filtered.length === 0 || downloadingResults}>CSV</button>
           </div>
         </div>
+        {loadError && <p role="alert" style={{ color: "var(--rust)", marginTop: 16, fontSize: 14 }}>{loadError}</p>}
         {downloadError && <p style={{ color: "var(--rust)", marginTop: 10, fontSize: 13 }}>⚠ {downloadError}</p>}
         {searchQuery.trim() && <p style={{ color: "var(--ink-dim)", marginTop: 6, fontSize: 12 }}>The download only includes rows matching "{searchQuery.trim()}" — clear the search to export everyone.</p>}
 

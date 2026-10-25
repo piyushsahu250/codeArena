@@ -73,6 +73,7 @@ export default function CreateTest() {
   const [initialTalentPoolIds, setInitialTalentPoolIds] = useState([]);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(isEdit);
+  const [loadError, setLoadError] = useState("");
   const [showBankModal, setShowBankModal] = useState(false);
   const [showBulkModal, setShowBulkModal] = useState(false);
   // Subject isolation additions — testOwnerId gates whether the Shared With panel renders at all
@@ -196,6 +197,9 @@ export default function CreateTest() {
         const extra = t.questions.map((tq) => tq.question).filter((q) => !known.has(q.id));
         return [...extra, ...prev];
       });
+      setLoading(false);
+    }).catch((err) => {
+      setLoadError(err.response?.status === 404 ? "This item no longer exists." : err.response?.data?.error || "Could not load this item. Check your connection and try again.");
       setLoading(false);
     });
   }, [id, isEdit]);
@@ -376,6 +380,7 @@ export default function CreateTest() {
     setSaving(false);
   }
 
+  if (loadError) return <div><Navbar /><div style={{ maxWidth: 720, margin: "0 auto", padding: "48px 24px" }}><p role="alert" style={{ color: "var(--rust)" }}>{loadError}</p><button type="button" className="btn btn-ghost" style={{ marginTop: 16 }} onClick={() => navigate(-1)}>← Back</button></div></div>;
   if (loading) return <div><Navbar /><div style={{ maxWidth: 720, margin: "0 auto", padding: 48 }}><SkeletonGrid count={3} minWidth={220} /></div></div>;
 
   // Lightweight progress indicator (spec section 1) — deliberately NOT a literal multi-step
