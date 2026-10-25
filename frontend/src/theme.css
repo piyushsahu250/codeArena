@@ -839,11 +839,6 @@ input::placeholder, textarea::placeholder { color: var(--ink-dim); }
   max-width: 420px;
   width: 100%;
   box-shadow: var(--shadow-md);
-  /* Never taller than the screen: on a short viewport the dialog scrolls inside itself instead of clipping its buttons. */
-  max-height: calc(100vh - 40px);
-  max-height: calc(100dvh - 40px);
-  overflow-y: auto;
-  overscroll-behavior: contain;
 }
 
 /* ===================== Mobile safeguards (global) =====================
