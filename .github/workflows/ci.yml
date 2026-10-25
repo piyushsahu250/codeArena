@@ -116,6 +116,8 @@ jobs:
         run: node scripts/editorHeightRegression.mjs
       - name: Form draft regression (per account, expires, never stale)
         run: node scripts/formDraftRegression.mjs
+      - name: Auto-submit reason regression (strike limit, clock, server close, cannot tell)
+        run: node scripts/autoSubmitRegression.mjs
       - name: Proctoring log regression (order, strike numbering, counting reasons, mismatch)
         run: node scripts/violationLogRegression.mjs
       - name: Dependency audit (report only)

@@ -45,3 +45,20 @@
   .vl { padding: 12px; }
   .vl-reason { max-width: none; }
 }
+
+/* Why an attempt was auto-submitted: a plain card above the log, coloured by cause (words always carry the meaning). */
+.vl-auto { margin-top: 12px; padding: 12px 14px; border-radius: 8px; border-left: 4px solid var(--line); background: var(--card-bg, #fff); }
+.vl-auto-danger { border-left-color: var(--danger-text); background: var(--danger-bg); }
+.vl-auto-warning { border-left-color: var(--warning-text); background: var(--warning-bg); }
+.vl-auto-title { margin: 0; font-size: 15px; color: var(--ink); }
+.vl-auto-danger .vl-auto-title { color: var(--danger-text); }
+.vl-auto-warning .vl-auto-title { color: var(--warning-text); }
+.vl-auto-summary { margin: 6px 0 0; font-size: 13px; line-height: 1.55; color: var(--ink); max-width: 720px; }
+.vl-auto-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px 16px; margin: 10px 0 0; }
+.vl-auto-fact dt { font-size: 11px; font-weight: 600; letter-spacing: 0.02em; color: var(--ink-dim); }
+.vl-auto-fact dd { margin: 2px 0 0; font-size: 13px; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+
+/* The Auto-submitted status doubles as the button that opens the explanation. */
+.vl-status-btn { display: inline-flex; align-items: center; gap: 4px; padding: 0; border: none; background: none; cursor: pointer; font: inherit; color: inherit; }
+.vl-status-btn:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; border-radius: 999px; }
+.vl-status-caret { font-size: 11px; color: var(--ink-dim); }

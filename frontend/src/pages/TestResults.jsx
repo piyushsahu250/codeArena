@@ -5,6 +5,7 @@ import Navbar from "../components/Navbar";
 import { downloadFromApi } from "../utils/downloadFile";
 import { matchesStudentQuery } from "../utils/studentSearch";
 import ViolationLog from "../components/ViolationLog";
+import { explainAutoSubmit } from "../utils/autoSubmit";
 
 const STATUS_STYLE = {
   SUBMITTED: { bg: "var(--success-bg)", color: "var(--mint)", label: "Submitted" },
@@ -335,7 +336,22 @@ export default function TestResults() {
                       <td className="mono" style={{ padding: "10px 8px", fontSize: 13, color: incomplete ? "var(--rust)" : "var(--ink-dim)", fontWeight: incomplete ? 700 : 400 }}>
                         {attempted} / {total || defaultTotalQuestions}
                       </td>
-                      <td style={{ padding: "10px 8px" }}><StatusBadge attempt={a} /></td>
+                      <td style={{ padding: "10px 8px" }}>
+                        {a.status === "AUTO_SUBMITTED" ? (
+                          // An auto-submitted attempt always has a reason; the status itself opens it (why, when, and every recorded event), even with 0 strikes.
+                          <button
+                            type="button"
+                            className="vl-status-btn"
+                            onClick={() => toggleViolations(a.id)}
+                            aria-expanded={violationsExpandedId === a.id}
+                            aria-label={`Auto-submitted: ${violationsExpandedId === a.id ? "hide" : "show"} why`}
+                            title="Show why this attempt was auto-submitted"
+                          >
+                            <StatusBadge attempt={a} />
+                            <span className="vl-status-caret" aria-hidden="true">{violationsExpandedId === a.id ? "▲" : "▼"}</span>
+                          </button>
+                        ) : <StatusBadge attempt={a} />}
+                      </td>
                       <td className="mono" style={{ padding: "10px 8px", fontSize: 12 }}>
                         {a.tabSwitchCount > 0 ? (
                           <button
@@ -389,7 +405,7 @@ export default function TestResults() {
                     {violationsExpandedId === a.id && (
                       <tr>
                         <td colSpan={9} style={{ padding: "0 10px 16px" }}>
-                          <ViolationLog studentName={a.student.name} strikeTotal={a.tabSwitchCount} loading={violationsLoading === a.id} data={violationsById[a.id]} />
+                          <ViolationLog studentName={a.student.name} strikeTotal={a.tabSwitchCount} loading={violationsLoading === a.id} data={violationsById[a.id]} autoSubmit={explainAutoSubmit({ status: a.status, startedAt: a.startedAt, submittedAt: a.submittedAt, durationMin: test?.durationMin, strikes: a.tabSwitchCount })} />
                         </td>
                       </tr>
                     )}

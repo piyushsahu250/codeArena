@@ -107,6 +107,13 @@ async function seed() {
   for (const [type, severity, penalized, minutesAgo] of [["RIGHT_CLICK", "SUSPICIOUS", false, 80], ["COPY", "SUSPICIOUS", false, 70], ["COPY", "SUSPICIOUS", true, 69], ["FULLSCREEN_EXIT", "CONFIRMED_VIOLATION", true, 20]]) {
     await prisma.testViolation.create({ data: { attemptId: violationsAttempt.id, type, severity, penalized, createdAt: new Date(now - minutesAgo * 60000) } });
   }
+  // Two auto-submitted attempts on the same test: Ben's time ran out and the server closed it 10 minutes after the deadline (0 strikes, so nothing about violations explains it), and Cal reached the
+  // strike limit with three tab switches. The test lasts 20 minutes, so Ben's deadline was 70 minutes ago and he was closed 60 minutes ago.
+  await prisma.testAttempt.create({ data: { testId: violationsTest.id, studentId: users.student2.id, status: "AUTO_SUBMITTED", totalScore: 4, tabSwitchCount: 0, startedAt: new Date(now - 90 * 60000), submittedAt: new Date(now - 60 * 60000), questionOrder: questions.map((q) => q.id) } });
+  const limitAttempt = await prisma.testAttempt.create({ data: { testId: violationsTest.id, studentId: users.student3.id, status: "AUTO_SUBMITTED", totalScore: 3, tabSwitchCount: 3, startedAt: new Date(now - 50 * 60000), submittedAt: new Date(now - 43 * 60000), questionOrder: questions.map((q) => q.id) } });
+  for (const minutesAgo of [47, 45, 43]) {
+    await prisma.testViolation.create({ data: { attemptId: limitAttempt.id, type: "TAB_SWITCH", severity: "CONFIRMED_VIOLATION", penalized: true, createdAt: new Date(now - minutesAgo * 60000) } });
+  }
   const codingTest = await mkCodingTest(`${TAG} Coding Test`);
   const codingProctored = await mkCodingTest(`${TAG} Coding Proctored Test`, { securityLevel: "PROCTORED" });
   console.log(JSON.stringify({ users, firstLogin, institutes: { A: { id: A.id, name: A.name }, B: { id: B.id, name: B.name } }, testId: test.id, companyTestId: companyTest.id, aiShortcutTestId: aiShortcutTest.id, aiShortcutOffTestId: aiShortcutOffTest.id, resultsTestId: resultsTest.id, statusTestId: statusTest.id, violationsTestId: violationsTest.id, codingTestId: codingTest.id, codingProctoredTestId: codingProctored.id, proctoredTestId: proctored.id, fullscreenTestId: fsTest.id, questionTexts: ["E2E question 1: pick option B", "E2E question 2: pick option B"] }));

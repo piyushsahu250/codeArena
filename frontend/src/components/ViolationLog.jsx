@@ -10,14 +10,40 @@ function countLabel(row) {
   return "Not counted";
 }
 
+const AUTO_TONE = { STRIKE_LIMIT: "danger", TIME_EXPIRED: "warning", UNKNOWN: "neutral" };
+
+// Why an attempt was auto-submitted (utils/autoSubmit.js): a plain title, what happened in full sentences, and the facts a reviewer can check.
+function AutoSubmitCard({ info }) {
+  return (
+    <section className={`vl-auto vl-auto-${AUTO_TONE[info.reason] || "neutral"}`} aria-label="Why this attempt was auto-submitted">
+      <h4 className="vl-auto-title">{info.title}</h4>
+      <p className="vl-auto-summary">{info.summary}</p>
+      <dl className="vl-auto-facts">
+        {info.facts.map((f) => (
+          <div key={f.label} className="vl-auto-fact"><dt>{f.label}</dt><dd>{f.value}</dd></div>
+        ))}
+      </dl>
+    </section>
+  );
+}
+
 // One attempt's proctoring log: a summary, one plain sentence about what the signals are, a table in time order, and the long rule text folded away until asked for.
 // `data` is the server's { events, evidenceNote, ... } (or { error }); `strikeTotal` is the attempt's strike count shown in the results table.
-export default function ViolationLog({ studentName, strikeTotal, loading, data }) {
+export default function ViolationLog({ studentName, strikeTotal, loading, data, autoSubmit = null }) {
   const log = useMemo(() => (data && !data.error ? buildViolationLog(data.events, strikeTotal) : null), [data, strikeTotal]);
 
-  if (loading) return <p className="vl-status" role="status">Loading the proctoring log…</p>;
-  if (data?.error) return <p className="vl-status vl-status-error" role="alert">{data.error}</p>;
-  if (!log) return null;
+  // While the log loads, or if it cannot be loaded, an auto-submit explanation is still shown: it comes from the results row and does not need the log.
+  if (loading || data?.error || !log) {
+    const message = loading ? <p className="vl-status" role="status">Loading the proctoring log…</p>
+      : data?.error ? <p className="vl-status vl-status-error" role="alert">{data.error}</p> : null;
+    if (!autoSubmit) return message;
+    return (
+      <section className="vl" aria-label={`Auto-submission details for ${studentName}`}>
+        <AutoSubmitCard info={autoSubmit} />
+        {message}
+      </section>
+    );
+  }
   const { rows, summary } = log;
 
   return (
@@ -26,6 +52,8 @@ export default function ViolationLog({ studentName, strikeTotal, loading, data }
         <h3 className="vl-title">Proctoring log</h3>
         <span className="vl-student">{studentName}</span>
       </div>
+
+      {autoSubmit && <AutoSubmitCard info={autoSubmit} />}
 
       <ul className="vl-chips" aria-label="Summary">
         <li className="vl-chip">{summary.events} {summary.events === 1 ? "event" : "events"} recorded</li>
