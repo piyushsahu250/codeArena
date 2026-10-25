@@ -19,12 +19,14 @@ export default function SelectFromQuestionBank({ excludeIds = [], onAdd, onClose
   const [btlLevel, setBtlLevel] = useState("");
   const [page, setPage] = useState(1);
   const [rows, setRows] = useState(null);
+  const [loadError, setLoadError] = useState("");
   const [totalPages, setTotalPages] = useState(1);
   const [selected, setSelected] = useState([]);
   const [adding, setAdding] = useState(false);
 
   function load() {
     setRows(null);
+    setLoadError("");
     const params = { page, pageSize: 20, questionStatus: undefined };
     if (q) params.q = q;
     if (subject) params.subject = subject;
@@ -35,6 +37,9 @@ export default function SelectFromQuestionBank({ excludeIds = [], onAdd, onClose
     api.get("/questions", { params }).then((res) => {
       setRows(res.data.rows.filter((r) => !excludeIds.includes(r.id)));
       setTotalPages(res.data.totalPages);
+    }).catch((err) => {
+      setRows([]);
+      setLoadError(err.response?.data?.error || "Could not load questions. Try again.");
     });
   }
 
@@ -85,6 +90,7 @@ export default function SelectFromQuestionBank({ excludeIds = [], onAdd, onClose
         </div>
 
         <div style={{ flex: 1, overflowY: "auto", marginTop: 12, minHeight: 200 }}>
+          {loadError && <p role="alert" style={{ fontSize: 13, color: "var(--rust)" }}>{loadError}</p>}
           {rows === null ? (
             <p style={{ fontSize: 13, color: "var(--ink-dim)" }}>Loading…</p>
           ) : rows.length === 0 ? (

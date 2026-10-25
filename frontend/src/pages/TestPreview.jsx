@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import api from "../api";
 import Navbar from "../components/Navbar";
 import ChalkUnderline from "../components/ChalkUnderline";
@@ -10,11 +10,14 @@ const TYPE_LABELS = { CODING: "Coding", MCQ: "Multiple Choice", TRUE_FALSE: "Tru
 export default function TestPreview() {
   const { id } = useParams();
   const [test, setTest] = useState(null);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    api.get(`/tests/${id}`).then((res) => setTest(res.data));
+    setError("");
+    api.get(`/tests/${id}`).then((res) => setTest(res.data)).catch((err) => setError(err.response?.status === 404 ? "This test no longer exists." : err.response?.data?.error || "Could not load this test. Check your connection and try again."));
   }, [id]);
 
+  if (error) return <div><Navbar /><div style={{ maxWidth: 800, margin: "0 auto", padding: "48px 24px" }}><h1>Test preview</h1><p role="alert" style={{ color: "var(--rust)", marginTop: 16 }}>{error}</p><Link to="/staff/tests" className="btn btn-ghost" style={{ marginTop: 16 }}>← Back to tests</Link></div></div>;
   if (!test) return <div style={{ padding: 48 }} className="mono">Loading…</div>;
 
   return (

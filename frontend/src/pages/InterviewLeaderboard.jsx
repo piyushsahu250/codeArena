@@ -12,10 +12,12 @@ export default function InterviewLeaderboard() {
   const { user } = useAuth();
   const [scope, setScope] = useState("group");
   const [rows, setRows] = useState(null);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     setRows(null);
-    api.get("/interview/leaderboard", { params: { scope } }).then((res) => setRows(res.data));
+    setError("");
+    api.get("/interview/leaderboard", { params: { scope } }).then((res) => setRows(res.data)).catch((err) => setError(err.response?.data?.error || "Could not load the leaderboard. Try again."));
   }, [scope]);
 
   return (
@@ -33,7 +35,8 @@ export default function InterviewLeaderboard() {
           ))}
         </div>
 
-        {!rows && <p className="mono" style={{ marginTop: 20 }}>Loading…</p>}
+        {!rows && !error && <p className="mono" style={{ marginTop: 20 }}>Loading…</p>}
+        {error && <p role="alert" style={{ color: "var(--rust)", marginTop: 20 }}>{error}</p>}
         {rows && rows.length === 0 && <div className="ip-glass" style={{ padding: 24, marginTop: 20, textAlign: "center" }}>No aptitude interviews completed yet in this scope.</div>}
 
         <div className="ip-glass" style={{ marginTop: 20, overflowX: "auto" }}>

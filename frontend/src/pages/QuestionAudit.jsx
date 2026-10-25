@@ -9,9 +9,10 @@ const SOURCE_LABEL = { Question: "Formal Test / Question Bank", PracticeQuestion
 export default function QuestionAudit() {
   const [data, setData] = useState(null);
   const [sourceFilter, setSourceFilter] = useState("");
+  const [loadError, setLoadError] = useState("");
 
   useEffect(() => {
-    api.get("/admin/question-audit").then((res) => setData(res.data));
+    api.get("/admin/question-audit").then((res) => setData(res.data)).catch((err) => setLoadError(err.response?.data?.error || "Could not load the audit. Try again."));
   }, []);
 
   const items = (data?.items || []).filter((i) => !sourceFilter || i.source === sourceFilter);
@@ -37,6 +38,7 @@ export default function QuestionAudit() {
           since generating missing content on a question no one has reviewed isn't something to do silently.
         </p>
 
+        {loadError && <p role="alert" style={{ color: "var(--rust)", marginTop: 16 }}>{loadError}</p>}
         {data && (
           <p className="mono" style={{ fontSize: 13, marginTop: 12 }}>
             {data.summary.incompleteCount} of {data.summary.totalScanned} coding questions have at least one missing field.
