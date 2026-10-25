@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import api from "../api";
 import Navbar from "../components/Navbar";
@@ -10,6 +10,8 @@ import QuestionPreviewToggle from "../components/QuestionPreviewToggle";
 import { MathLivePreview, MathSyntaxHint } from "../components/MathLivePreview";
 import EvaluationTypeFields, { EMPTY_SIGNATURE } from "../components/EvaluationTypeFields";
 import { useConfirm } from "../context/ConfirmContext";
+import { useAuth } from "../context/AuthContext";
+import { clearDraft, draftKey, loadDraft, saveDraft } from "../utils/formDraft";
 import { CODE_LANGUAGES } from "../utils/codeEditorDefaults";
 
 const QUESTION_TYPES = [
@@ -87,6 +89,7 @@ export default function CreateQuestion() {
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(isEdit);
   const [loadError, setLoadError] = useState("");
+  const [loadedStamp, setLoadedStamp] = useState(null); // the loaded question's updatedAt: a draft is only offered while the saved question is unchanged
   const [signature, setSignature] = useState(EMPTY_SIGNATURE);
 
   // Optional image attachment (diagram/figure/graph) — orthogonal to Question Type, so it's
@@ -283,6 +286,7 @@ export default function CreateQuestion() {
       setUnitId(q.unitId || null);
       setTopicId(q.topicId || null);
       setImageUrl(q.imageUrl || null);
+      setLoadedStamp(q.updatedAt || null);
       setLoading(false);
     }).catch((err) => {
       setLoadError(err.response?.status === 404 ? "This item no longer exists." : err.response?.data?.error || "Could not load this item. Check your connection and try again.");
@@ -402,10 +406,12 @@ export default function CreateQuestion() {
       if (isEdit) {
         await api.patch(`/questions/${id}`, payload);
         await uploadStagedImageIfAny(id);
+        clearDraft(draftStorageKey); // the saved question replaces the draft
         navigate("/staff/questions");
       } else {
         const { data: created } = await api.post("/questions", payload);
         await uploadStagedImageIfAny(created.id);
+        clearDraft(draftStorageKey); // the saved question replaces the draft
         if (readinessSubjectId) {
           await api.post(`/readiness/admin/subjects/${readinessSubjectId}/pool`, { questionIds: [created.id] }).catch(() => {});
           navigate(`/staff/readiness-subjects?edit=${readinessSubjectId}`);
@@ -436,6 +442,57 @@ export default function CreateQuestion() {
       return;
     }
     setSaving(false);
+  }
+
+  // Draft: the whole form is kept as a draft in this tab shortly after typing stops, and OFFERED back after a reload, a crashed tab or an expired session (never applied silently).
+  // Limits (utils/formDraft.js): this tab only, this account only, 24 hours, and only if the saved question has not changed since (`loadedStamp`). The staged image file cannot be kept.
+  const { user } = useAuth();
+  const draftSnapshot = useMemo(
+    () => JSON.stringify({ form, testCases, options, correctIndices, folderId, subjectId, unitId, topicId, signature, referenceSolution, refLanguage, aiGenerated }),
+    [form, testCases, options, correctIndices, folderId, subjectId, unitId, topicId, signature, referenceSolution, refLanguage, aiGenerated]
+  );
+  const baselineSnapshot = useRef(null);
+  useEffect(() => {
+    if (!loading) baselineSnapshot.current = draftSnapshot;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading]);
+  const draftIsDirty = baselineSnapshot.current !== null && draftSnapshot !== baselineSnapshot.current;
+  const draftStorageKey = draftKey(user?.id, isEdit ? `question:${id}` : "question:new");
+  const [draftOffer, setDraftOffer] = useState(null);
+  const draftChecked = useRef(false);
+  useEffect(() => {
+    if (loading || draftChecked.current) return;
+    draftChecked.current = true;
+    const d = loadDraft(draftStorageKey, { meta: { stamp: loadedStamp } });
+    if (d && d.data !== draftSnapshot) setDraftOffer(d);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading]);
+  useEffect(() => {
+    if (loading || saving || !draftIsDirty || draftOffer) return undefined; // while an offer is showing, the stored draft is the one on offer: do not overwrite it
+    const t = setTimeout(() => saveDraft(draftStorageKey, draftSnapshot, { stamp: loadedStamp }), 700);
+    return () => clearTimeout(t);
+  }, [draftSnapshot, draftIsDirty, loading, saving, draftOffer, draftStorageKey, loadedStamp]);
+  function restoreDraft() {
+    try {
+      const s = JSON.parse(draftOffer.data);
+      setForm({ ...emptyForm, ...s.form });
+      if (Array.isArray(s.testCases)) setTestCases(s.testCases);
+      if (Array.isArray(s.options)) setOptions(s.options);
+      setCorrectIndices(Array.isArray(s.correctIndices) ? s.correctIndices : []);
+      setFolderId(s.folderId || "");
+      setSubjectId(s.subjectId ?? null);
+      setUnitId(s.unitId ?? null);
+      setTopicId(s.topicId ?? null);
+      if (s.signature && typeof s.signature === "object") setSignature(s.signature);
+      if (s.referenceSolution && typeof s.referenceSolution === "object") setReferenceSolution(s.referenceSolution);
+      if (s.refLanguage) setRefLanguage(s.refLanguage);
+      setAiGenerated(!!s.aiGenerated);
+    } catch { clearDraft(draftStorageKey); }
+    setDraftOffer(null);
+  }
+  function discardDraft() {
+    clearDraft(draftStorageKey);
+    setDraftOffer(null);
   }
 
   if (loadError) return <div><Navbar /><div style={{ maxWidth: 720, margin: "0 auto", padding: "48px 24px" }}><p role="alert" style={{ color: "var(--rust)" }}>{loadError}</p><button type="button" className="btn btn-ghost" style={{ marginTop: 16 }} onClick={() => navigate(-1)}>← Back</button></div></div>;
@@ -470,6 +527,15 @@ export default function CreateQuestion() {
       <div style={{ maxWidth: 720, margin: "0 auto", padding: "48px 24px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
           <h1>{isEdit ? "Edit question" : "New question"}</h1>
+          {draftOffer && (
+            <div role="status" data-testid="draft-offer" className="card" style={{ marginTop: 12, padding: "10px 14px", display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", borderLeft: "3px solid var(--amber)" }}>
+              <span style={{ flex: 1, minWidth: 200, fontSize: 13 }}>
+                You have an unsaved draft of this question from {new Date(draftOffer.savedAt).toLocaleString()}. Restore it?
+              </span>
+              <button type="button" className="btn btn-primary" style={{ fontSize: 12, padding: "5px 12px" }} onClick={restoreDraft}>Restore draft</button>
+              <button type="button" className="btn btn-ghost" style={{ fontSize: 12, padding: "5px 12px" }} onClick={discardDraft}>Discard</button>
+            </div>
+          )}
           {isCoding && <QuestionPreviewToggle question={previewQuestion} />}
         </div>
         <form onSubmit={handleSubmit} style={{ marginTop: 24 }}>
