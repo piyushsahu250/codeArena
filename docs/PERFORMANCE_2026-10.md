@@ -58,9 +58,30 @@ Conclusion: the backend and database are fast. Page load time is dominated by th
 * `GET /super` (Super Admin command centre, p50 0.9 s, 13 calls in 24 h) and `GET /stats` (p95 1.15 s, 5 calls): slow relative to the rest but rarely used; `/super` already caches its live section for 20 s. Query plans not inspected; left unchanged because the cost is low against the benefit.
 * Student dashboard runs about ten database steps one after another (deliberate, to protect the connection pool). Measured server time is still only 83 ms at the median, so this is not the
   user-visible bottleneck at present.
-* Per-page request counts (how many sequential API calls each page makes) have not been measured in a real browser against production; the local probe numbers (LCP 0.12 to 0.55 s) were
-  taken against a local server and are a floor, not a field measurement.
 * Interaction to Next Paint could not be measured (no automated interaction trace).
 
 ## Rule applied
 Nothing here caches authentication, permissions, exam state or other private data. No production configuration, infrastructure or paid service was changed.
+
+## Request counts per page (measured in CI, production build, local server, cold load)
+
+A browser probe opened every parameterless page of each role (78 pages) and recorded the API requests each made.
+
+| Role | Pages | Median API requests per page | Most on one page | Median last answer | Pages repeating an identical GET |
+|---|---|---|---|---|---|
+| Student | 22 | 2 | 7 | 361 ms | 0 |
+| Staff | 24 | 3 | 9 | 364 ms | 1 |
+| Platform admin | 24 | 3 | 7 | 360 ms | 0 |
+| Clerk | 8 | 3 | 8 | 373 ms | 0 |
+
+Conclusion: pages are lean. The only repeated request was the interview admin page asking for its question list twice (the load-everything effect and the filter effect both ran on mount); fixed, with
+a regression test (`noDuplicateRequests.spec.js`). The times are against a local server with a small database, so they are a floor, not a field measurement.
+
+## Live now (deployed 2026-10-25, commit `a1e8177`)
+* API preflight answers carry `Access-Control-Max-Age: 7200` (confirmed on the live API).
+* `forgot-password` answers without waiting for the mail server.
+* The frontend opens the API connection early (`preconnect`); goes live with the frontend build.
+
+## Still not measured
+* Interaction to Next Paint, and a before/after comparison from a real user's device and network. Expected effect of the preflight and preconnect changes (estimate, not a measurement): one fewer
+  round trip per API call after the first, and about 1 s less on the first call of a cold page.

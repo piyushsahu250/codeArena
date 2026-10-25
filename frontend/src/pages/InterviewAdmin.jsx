@@ -41,18 +41,23 @@ export default function InterviewAdmin() {
   const [importing, setImporting] = useState(false);
   const fileRef = useRef(null);
 
-  function loadAll() {
+  // Everything except the question list. On the first render the question list is loaded by the filter effect below; loading it here too sent the same request twice.
+  function loadSummary() {
     api.get("/interview/admin/stats").then((res) => setStats(res.data));
     api.get("/interview/admin/students").then((res) => setStudents(res.data.rows));
     api.get("/interview/admin/weak-topics").then((res) => setWeakTopics(res.data));
     api.get("/interview/admin/drafts/questions", { params: { status: "PENDING", pageSize: 1 } }).then((res) => setPendingDraftCount(res.data.total)).catch(() => {});
+  }
+  // After a create or an import: refresh everything, including the question list.
+  function loadAll() {
+    loadSummary();
     loadQuestions();
   }
   function loadQuestions() {
     api.get("/interview/admin/questions", { params: filterCategory ? { category: filterCategory } : {} }).then((res) => setQuestions(res.data.rows));
   }
-  useEffect(loadAll, []);
-  useEffect(loadQuestions, [filterCategory]);
+  useEffect(loadSummary, []);
+  useEffect(loadQuestions, [filterCategory]); // also runs on mount, which is what loads the first question list
 
   async function createQuestion(e) {
     e.preventDefault();
