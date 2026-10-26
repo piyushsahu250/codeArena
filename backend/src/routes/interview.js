@@ -1503,6 +1503,7 @@ router.patch("/admin/questions/:id", authenticate, requireRole("ADMIN", "SUPER_A
         evaluationType: req.body.evaluationType !== undefined ? req.body.evaluationType : existing.evaluationType,
         functionSignature: req.body.functionSignature !== undefined ? req.body.functionSignature : existing.functionSignature,
         starterCodeByLanguage: req.body.starterCodeByLanguage !== undefined ? req.body.starterCodeByLanguage : existing.starterCodeByLanguage,
+        testCases: Array.isArray(req.body.testCases) ? req.body.testCases : undefined,
       });
       data.evaluationType = resolved.evaluationType;
       data.functionSignature = resolved.functionSignature;
