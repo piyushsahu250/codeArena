@@ -84,7 +84,8 @@ async function cleanup() {
     check("the owner can open an admin-added question", one.status === 200 && one.json && one.json.id === added[0].id, `status ${one.status}`);
     const search = await list(T.staffA, `&q=${encodeURIComponent(`q 4 ${ts}`)}`);
     check("search finds an admin-added question", ids(search).length === 1 && ids(search)[0] === added[1].id, `found ${ids(search).length}`);
-    const page1 = await list(T.staffA, "&pageSize=2&page=1"); const page3 = await list(T.staffA, "&pageSize=2&page=3");
+    const paged = (n) => call("GET", `/questions?folderId=${folderId}&pageSize=2&page=${n}`, T.staffA);
+    const page1 = await paged(1); const page3 = await paged(3);
     check("pagination totals include the admin-added questions", page1.json.total === 5 && page1.json.totalPages === 3 && ids(page3).length === 1, `total ${page1.json.total}, pages ${page1.json.totalPages}`);
     const filtered = await list(T.staffA, `&createdById=${U.adminA.id}`);
     check("the creator filter returns the admin's 3", ids(filtered).length === 3, `got ${ids(filtered).length}`);
