@@ -1,19 +1,20 @@
 const test = require("node:test");
-const assert = require("node:assert/strict");
+const path = require("path");
+const { Worker } = require("worker_threads");
 const PDFDocument = require("pdfkit");
 const pdfParse = require("pdf-parse");
-function pdfOf(lines, opts = {}) { return new Promise((res) => { const d = new PDFDocument({ autoFirstPage: false, ...opts }); const c = []; d.on("data", (x) => c.push(x)); d.on("end", () => res(Buffer.concat(c))); d.addPage(); let y = 72; for (const l of lines) { d.text(l, 72, y); y += 20; } d.end(); }); }
+function pdfOf(lines) { return new Promise((res) => { const d = new PDFDocument({ autoFirstPage: false }); const c = []; d.on("data", (x) => c.push(x)); d.on("end", () => res(Buffer.concat(c))); d.addPage(); let y = 72; for (const l of lines) { d.text(l, 72, y); y += 20; } d.end(); }); }
+const runWorker = (buf, extra = {}) => new Promise((resolve) => { const w = new Worker(path.join(__dirname, "../src/utils/pdfTextWorker.js"), { workerData: { buffer: new Uint8Array(buf), maxPages: 15 }, ...extra }); w.once("message", (m) => { resolve(m.ok ? "ok" : "ERR " + m.error); w.terminate(); }); w.once("error", (e) => resolve("WERR " + e.message)); });
 test("diag", async () => {
   const out = [];
-  const big = Array.from({ length: 60 }, (_, i) => `Line number ${i} with some padding text to make the file longer`);
-  for (const [name, lines, opts] of [["small", ["Asha Patil", "Skills"], {}], ["big", big, {}], ["small-nocompress", ["Asha Patil", "Skills"], { compress: false }]]) {
-    for (let round = 0; round < 3; round++) {
-      const buf = await pdfOf(lines, opts);
-      let r1, r2;
-      try { await pdfParse(buf); r1 = "ok"; } catch (e) { r1 = "ERR"; }
-      try { await pdfParse(buf); r2 = "ok"; } catch (e) { r2 = "ERR"; }
-      out.push(`${name}#${round} len=${buf.length} off=${buf.byteOffset} first=${r1} second=${r2}`);
-    }
+  for (let round = 0; round < 4; round++) {
+    const buf = await pdfOf(["Asha Patil", "Skills"]);
+    const exact = Buffer.from(new Uint8Array(buf).buffer);
+    let a, b;
+    try { await pdfParse(exact); a = "ok"; } catch (e) { a = "ERR"; }
+    b = await runWorker(buf);
+    const c = await runWorker(buf, { env: {} });
+    out.push(`#${round} off=${buf.byteOffset} exactOff=${exact.byteOffset} exactLen=${exact.length}/${buf.length} inThreadExact=${a} worker=${b} workerEnv={}=${c}`);
   }
-  assert.fail("DIAG " + out.join(" ; "));
+  require("node:assert").fail("DIAG " + out.join(" ; "));
 });
