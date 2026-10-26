@@ -36,6 +36,8 @@
  * to STDIO mode with their own tolerance-based comparison if they need epsilon-accurate floats.
  */
 
+const { ServiceError } = require("./serviceError");
+
 const SCALAR_TYPES = ["int", "long", "double", "boolean", "string"];
 const ARRAY_TYPES = ["int[]", "long[]", "double[]", "string[]", "boolean[]"];
 const SUPPORTED_TYPES = [...SCALAR_TYPES, ...ARRAY_TYPES];
@@ -562,6 +564,50 @@ function wrapFunctionCode(language, signature, studentCode) {
   }
 }
 
+
+// ---- test case format check -----------------------------------------------------------------------------------------------------------------------------------
+// REGRESSION (2026-10 audit, the 2026-10-26 Coding Test): two function questions were saved with LeetCode-style cases ("[7,1,5,3,6,4]" for an int[] parameter, "[1,6,8,10,15,18]" as
+// the expected array). The driver reads one line per parameter with array values separated by spaces, so it crashed parsing every input and NO solution could pass a single hidden
+// case: 124 students scored 1 mark between them, and a correct reference solution scored 0/7 on the stored cases and 7/7 on the same cases in the line format. Nothing at authoring
+// time compared the cases with the signature. This does, using exactly the rules the generated drivers parse with.
+const INT_RE = /^[+-]?\d+$/;
+const NUMBER_RE = /^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$/;
+const BOOL_RE = /^(true|false)$/i;
+const ARRAY_HINT = "arrays are written as the values separated by single spaces, without brackets or commas (for example 7 1 5 3)";
+
+function badValue(type, text) {
+  const base = isArrayType(type) ? type.slice(0, -2) : type;
+  const check = base === "int" || base === "long" ? INT_RE : base === "double" ? NUMBER_RE : base === "boolean" ? BOOL_RE : null;
+  if (!check) return null; // strings are taken as they are
+  const trimmed = String(text).trim();
+  const tokens = isArrayType(type) ? (trimmed === "" ? [] : trimmed.split(/\s+/)) : [trimmed];
+  if (tokens.every((tok) => check.test(tok))) return null;
+  return isArrayType(type) ? `is not a list of ${base} values; ${ARRAY_HINT}` : `is not a ${base} value`;
+}
+
+// Returns a list of human-readable problems (empty when every case matches the signature). `cases` are { input, expected, isHidden }.
+function functionCaseProblems(signature, cases) {
+  const problems = [];
+  if (!signature || !Array.isArray(signature.params) || !Array.isArray(cases)) return problems;
+  const params = signature.params;
+  cases.forEach((tc, i) => {
+    const label = `Test case ${i + 1}${tc.isHidden === false ? " (sample)" : tc.isHidden === true ? " (hidden)" : ""}`;
+    const lines = String(tc.input ?? "").replace(/\r\n/g, "\n").split("\n");
+    params.forEach((p, k) => {
+      const line = lines[k];
+      if (line === undefined) {
+        if (!(isArrayType(p.type) || p.type === "string")) problems.push(`${label}: the input has no line for parameter "${p.name}" (${p.type}); the input needs one line per parameter`);
+        return;
+      }
+      const why = badValue(p.type, line);
+      if (why) problems.push(`${label}: line ${k + 1} (parameter "${p.name}", ${p.type}) ${why}`);
+    });
+    if (lines.slice(params.length).some((l) => l.trim() !== "")) problems.push(`${label}: the input has more lines than the ${params.length} parameter(s); the input needs exactly one line per parameter`);
+    const why = badValue(signature.returnType, tc.expected ?? "");
+    if (why) problems.push(`${label}: the expected output (${signature.returnType}) ${why}`);
+  });
+  return problems;
+}
 // FUNCTION-mode questions always get their starterCodeByLanguage regenerated server-side from the
 // signature, rather than trusting whatever the client sent — this is the guarantee that keeps the
 // starter code the student sees in sync with the signature judge.js's driver-wrapper actually
@@ -569,16 +615,20 @@ function wrapFunctionCode(language, signature, studentCode) {
 // code sticks around) would silently break every submission for that question. Shared by every
 // coding-question admin CRUD route (Question/Test bank, Module Coding Test, InterviewQuestion,
 // PracticeQuestion) so this guarantee holds identically everywhere FUNCTION mode is offered.
-function resolveCodingFields({ evaluationType, functionSignature, starterCodeByLanguage }) {
+function resolveCodingFields({ evaluationType, functionSignature, starterCodeByLanguage, testCases }) {
   const mode = evaluationType === "FUNCTION" ? "FUNCTION" : "STDIO";
   if (mode !== "FUNCTION") {
     return { evaluationType: "STDIO", functionSignature: null, starterCodeByLanguage: starterCodeByLanguage ?? undefined };
   }
   validateSignature(functionSignature);
+  if (Array.isArray(testCases)) {
+    const problems = functionCaseProblems(functionSignature, testCases);
+    if (problems.length > 0) throw new ServiceError(400, `The test cases do not match the function signature, so no solution could pass them. ${problems.slice(0, 3).join(" | ")}${problems.length > 3 ? ` (and ${problems.length - 3} more)` : ""}`);
+  }
   const supported = languagesSupportedBy(functionSignature);
   const generated = {};
   for (const lang of supported) generated[lang] = generateStarterCode(lang, functionSignature);
   return { evaluationType: "FUNCTION", functionSignature, starterCodeByLanguage: generated };
 }
 
-module.exports = { SUPPORTED_TYPES, SCALAR_TYPES, ARRAY_TYPES, validateSignature, languagesSupportedBy, generateStarterCode, wrapFunctionCode, looksLikeFullProgram, resolveCodingFields };
+module.exports = { functionCaseProblems, SUPPORTED_TYPES, SCALAR_TYPES, ARRAY_TYPES, validateSignature, languagesSupportedBy, generateStarterCode, wrapFunctionCode, looksLikeFullProgram, resolveCodingFields };

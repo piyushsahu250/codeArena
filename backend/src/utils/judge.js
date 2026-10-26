@@ -21,7 +21,7 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 const { mapWithConcurrency } = require("./queue");
-const { wrapFunctionCode, looksLikeFullProgram } = require("./functionHarness");
+const { wrapFunctionCode, looksLikeFullProgram, functionCaseProblems } = require("./functionHarness");
 const { judgeSqlSubmission } = require("./sqlJudge");
 
 // Node's child_process.spawn inherits the FULL parent environment by default when no `env`
@@ -746,6 +746,18 @@ async function judgeSubmission({ language, code, testCases, timeLimitMs = 2000, 
   let sourceCode = code;
   let studentCodeOffset = 0;
   if (evaluationType === "FUNCTION" && functionSignature) {
+    // A question whose stored cases the driver cannot read can never be passed: say so, instead of running every student into a parse crash and calling it a wrong answer.
+    const caseProblems = functionCaseProblems(functionSignature, testCases);
+    if (caseProblems.length > 0) {
+      console.error("Function question test cases do not match its signature, not judged:", caseProblems.slice(0, 3).join(" | "));
+      return {
+        passedCases: 0,
+        totalCases: testCases.length,
+        verdict: "JUDGE_ERROR",
+        details: [],
+        errorSummary: { type: "Question setup error", line: null, message: "This question's test cases are not set up correctly, so it cannot be graded. This is not a problem with your code. Please tell your instructor.", hint: null },
+      };
+    }
     if (looksLikeFullProgram(language, code)) {
       // The student wrote a complete, self-contained program instead of just the method body —
       // FUNCTION-mode questions accept both. Run it exactly like a STDIO submission (no driver

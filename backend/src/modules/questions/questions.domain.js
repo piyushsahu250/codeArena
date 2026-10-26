@@ -138,7 +138,7 @@ function createCoding(body) {
   // Only meaningful for FLOAT_TOLERANCE but stored regardless, so switching a question to it later needs no migration for already-sane defaults.
   if (typeof floatAbsoluteTolerance === "number" && floatAbsoluteTolerance >= 0) data.floatAbsoluteTolerance = floatAbsoluteTolerance;
   if (typeof floatRelativeTolerance === "number" && floatRelativeTolerance >= 0) data.floatRelativeTolerance = floatRelativeTolerance;
-  const resolved = resolveCodingFields({ evaluationType, functionSignature, starterCodeByLanguage });
+  const resolved = resolveCodingFields({ evaluationType, functionSignature, starterCodeByLanguage, testCases: cases });
   data.evaluationType = resolved.evaluationType;
   data.functionSignature = resolved.functionSignature;
   if (resolved.starterCodeByLanguage) data.starterCodeByLanguage = resolved.starterCodeByLanguage;
@@ -232,6 +232,7 @@ function editCoding(body, existing, data) {
     evaluationType: evaluationType !== undefined ? evaluationType : existing.evaluationType,
     functionSignature: functionSignature !== undefined ? functionSignature : existing.functionSignature,
     starterCodeByLanguage: starterCodeByLanguage !== undefined ? starterCodeByLanguage : existing.starterCodeByLanguage,
+    testCases: Array.isArray(testCases) ? testCases : undefined, // checked against the signature only when the cases are part of this edit
   });
   data.evaluationType = resolved.evaluationType;
   data.functionSignature = resolved.functionSignature;

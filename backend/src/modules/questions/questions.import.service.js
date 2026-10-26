@@ -599,6 +599,8 @@ async function runCodingBulkImport(req, { rows, defaultFolderId, duplicateAction
           evaluationType: isFunctionMode ? "FUNCTION" : "STDIO",
           functionSignature,
           starterCodeByLanguage,
+          // Function questions: the cases must be in the line format the judge's driver reads (a wrong format makes every solution fail).
+          testCases: isFunctionMode ? [{ input: sample1In, expected: sample1Out, isHidden: false }, { input: sample2In, expected: sample2Out, isHidden: false }, ...hiddenCases] : undefined,
         });
         const btlLevel = parseBtlLevel(field(row, "btl"));
 
