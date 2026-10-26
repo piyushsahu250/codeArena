@@ -50,7 +50,11 @@ function readInWorker(buffer, { maxPages, deadlineMs, memoryMb }) {
     let settled = false;
     const finish = (fn, value) => { if (settled) return; settled = true; clearTimeout(timer); worker.terminate().catch(() => {}); fn(value); };
     const timer = setTimeout(() => finish(reject, new Error(TOO_SLOW)), deadlineMs);
-    worker.once("message", (m) => (m && m.ok ? finish(resolve, m.text) : finish(reject, new Error("Couldn't read this PDF. It may be damaged or password-protected."))));
+    worker.once("message", (m) => {
+      if (m && m.ok) return finish(resolve, m.text);
+      console.error("pdfText worker could not read the PDF:", m && m.error); // DEBUG-TEMP
+      finish(reject, new Error("Couldn't read this PDF. It may be damaged or password-protected. DEBUG-TEMP " + (m && m.error)));
+    });
     worker.once("error", (err) => finish(reject, new Error(err && err.code === "ERR_WORKER_OUT_OF_MEMORY" ? TOO_BIG : "Couldn't read this PDF. It may be damaged or password-protected.")));
     worker.once("exit", (code) => finish(reject, new Error(code === 0 ? "Couldn't read this PDF." : TOO_BIG)));
   });
