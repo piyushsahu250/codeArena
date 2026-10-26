@@ -8,6 +8,8 @@ const { extractTextFromFile } = require("../src/utils/resumeParser");
 
 const T = { timeout: 60000 };
 
+// Test PDFs are padded to 20 pages of 30 lines (about 13 KB): the old pdf.js inside pdf-parse fails with "bad XRef entry" on any PDF under a few KB (seen on 1.2-2.7 KB files, including the
+// app's own generated resumes with almost no content), and a real resume is far larger. The first lines of each page are the ones the test passes in.
 function pdfOf(pages) {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ autoFirstPage: false });
@@ -15,10 +17,13 @@ function pdfOf(pages) {
     doc.on("data", (c) => chunks.push(c));
     doc.on("end", () => resolve(Buffer.concat(chunks)));
     doc.on("error", reject);
-    for (const lines of pages) {
+    const count = Math.max(pages.length, 20);
+    for (let p = 0; p < count; p++) {
       doc.addPage();
+      doc.fontSize(10);
+      const lines = pages[p] || [];
       let y = 72;
-      for (const line of lines) { doc.text(line, 72, y); y += 20; }
+      for (let i = 0; i < 30; i++) { doc.text(lines[i] || `Filler line ${i + 1} on page ${p + 1} of the test document`, 72, y); y += 14; }
     }
     doc.end();
   });
