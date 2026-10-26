@@ -29,6 +29,8 @@ const aiReviewLimiter = rateLimit({ windowMs: 60 * 1000, max: 5, keyGenerator: (
 // whole-resume review, and sharing one counter across both routes would make routine per-section
 // use hit the whole-resume review's limit almost immediately.
 const improveLimiter = rateLimit({ windowMs: 60 * 1000, max: 15, keyGenerator: (req) => req.user.id });
+// Reading an uploaded file is the most expensive thing a student can ask of this server (a PDF is parsed, a scan is OCR'd), so one account gets a few per ten minutes. Counted before the file is read.
+const uploadLimiter = rateLimit({ windowMs: 10 * 60 * 1000, max: 6, keyGenerator: (req) => req.user.id, message: { error: "Too many resume uploads. Please wait a few minutes and try again." } });
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 // fullName/photoUrl/email/mobile/address are independently editable here — Resume Builder does
@@ -155,6 +157,7 @@ router.post(
   authenticate,
   requireRole("STUDENT"),
   requireFeature("resume_builder"),
+  uploadLimiter,
   (req, res, next) => {
     upload.single("file")(req, res, (err) => {
       if (err) {
