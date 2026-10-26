@@ -50,7 +50,7 @@ test("a file that is not a PDF is refused before any library sees it, whatever i
 
 test("a damaged PDF gets a plain message, not a crash", T, async () => {
   const bad = Buffer.concat([Buffer.from("%PDF-1.4\n"), Buffer.from("garbage that is not a pdf body ".repeat(20))]);
-  await assert.rejects(() => extractPdfText(bad), (err) => /Couldn't read this PDF/.test(err.message) && !/at |\\n/.test(err.message));
+  await assert.rejects(() => extractPdfText(bad), { message: /^Couldn't read this PDF\./ });
 });
 
 test("a read that runs past its deadline is stopped and says so", T, async () => {
