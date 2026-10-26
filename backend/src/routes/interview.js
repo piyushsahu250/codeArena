@@ -1432,7 +1432,7 @@ router.post("/admin/questions", authenticate, requireRole("ADMIN", "SUPER_ADMIN"
       if (cases.filter((tc) => tc.isHidden).length < 5) {
         return res.status(400).json({ error: "Each coding question needs at least 5 hidden test cases for final evaluation" });
       }
-      resolved = resolveCodingFields({ evaluationType, functionSignature, starterCodeByLanguage });
+      resolved = resolveCodingFields({ evaluationType, functionSignature, starterCodeByLanguage, testCases: cases });
     }
     const q = await prisma.interviewQuestion.create({
       data: {
@@ -1486,6 +1486,15 @@ router.patch("/admin/questions/:id", authenticate, requireRole("ADMIN", "SUPER_A
     const data = {};
     for (const f of fields) if (req.body[f] !== undefined) data[f] = f === "isActive" ? !!req.body[f] : req.body[f];
 
+    if (effectiveCategory === "CODING" && Array.isArray(req.body.testCases)) {
+      // The cases being saved must still match the function signature (a case the judge's driver cannot read makes every solution fail).
+      resolveCodingFields({
+        evaluationType: req.body.evaluationType !== undefined ? req.body.evaluationType : existing.evaluationType,
+        functionSignature: req.body.functionSignature !== undefined ? req.body.functionSignature : existing.functionSignature,
+        starterCodeByLanguage: req.body.starterCodeByLanguage !== undefined ? req.body.starterCodeByLanguage : existing.starterCodeByLanguage,
+        testCases: req.body.testCases,
+      });
+    }
     // evaluationType/functionSignature/starterCodeByLanguage are deliberately excluded from the
     // generic loop above and always re-resolved server-side (never trusted directly from the
     // client) — same guarantee resolveCodingFields documents on Question/PracticeQuestion.

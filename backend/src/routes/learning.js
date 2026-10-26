@@ -2187,7 +2187,7 @@ router.post("/lessons/:id/questions", authenticate, requireRole("ADMIN", "SUPER_
       if (cases.filter((tc) => tc.isHidden).length < 5) {
         return res.status(400).json({ error: "Each coding question needs at least 5 hidden test cases for final evaluation" });
       }
-      resolved = resolveCodingFields({ evaluationType, functionSignature, starterCodeByLanguage });
+      resolved = resolveCodingFields({ evaluationType, functionSignature, starterCodeByLanguage, testCases: cases });
     }
     const q = await prisma.practiceQuestion.create({
       data: {
@@ -2247,6 +2247,15 @@ router.patch("/practice/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", 
         if (cases.filter((tc) => tc.isHidden).length < 5) {
           return res.status(400).json({ error: "Each coding question needs at least 5 hidden test cases for final evaluation" });
         }
+      }
+      if (testCases !== undefined) {
+        // The cases being saved must still match the function signature (a case the judge's driver cannot read makes every solution fail).
+        resolveCodingFields({
+          evaluationType: evaluationType !== undefined ? evaluationType : existing.evaluationType,
+          functionSignature: functionSignature !== undefined ? functionSignature : existing.functionSignature,
+          starterCodeByLanguage: starterCodeByLanguage !== undefined ? starterCodeByLanguage : existing.starterCodeByLanguage,
+          testCases: Array.isArray(testCases) ? testCases : [],
+        });
       }
       // Only re-resolve when one of these three actually changed — otherwise re-running FUNCTION
       // mode's generator on every unrelated field edit is wasted work, and a legacy STDIO question
