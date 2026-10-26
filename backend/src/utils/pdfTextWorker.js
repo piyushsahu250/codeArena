@@ -6,9 +6,8 @@ const { renderPageInReadingOrder } = require("./pdfReadingOrder");
 
 (async () => {
   try {
-    // Wrap the received bytes without copying through Buffer's shared pool: the old pdf.js reads the underlying ArrayBuffer from offset 0, so a pooled (offset) Buffer reads garbage ("bad XRef entry").
-    const bytes = workerData.buffer;
-    const data = await pdfParse(Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength), { pagerender: renderPageInReadingOrder, max: workerData.maxPages });
+    // Hand the library a plain Uint8Array, never a Node Buffer: measured on the live image, pdf-parse's pdf.js fails with "bad XRef entry" on PDFs under about 4 KB when given a Buffer inside a worker thread (every size reads fine as a Uint8Array).
+    const data = await pdfParse(workerData.buffer, { pagerender: renderPageInReadingOrder, max: workerData.maxPages });
     parentPort.postMessage({ ok: true, text: data.text || "", pages: data.numpages });
   } catch (err) {
     parentPort.postMessage({ ok: false, error: String((err && err.message) || err).slice(0, 300) });
