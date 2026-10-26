@@ -40,7 +40,7 @@ test("every parameter type is checked with the rules its driver parses with", ()
 test("missing and extra input lines", () => {
   const two = { methodName: "f", returnType: "int", params: [{ name: "a", type: "int" }, { name: "b", type: "int" }] };
   assert.equal(functionCaseProblems(two, [C("2", "2")]).length, 1, "a missing int line is reported");
-  assert.equal(functionCaseProblems(two, [C("2 3", "5")]).length, 1, "'2 3' on one line is the old mistake (one line per parameter)");
+  assert.equal(functionCaseProblems(two, [C("2 3", "5")]).length, 2, "'2 3' on one line is the old mistake: line 1 is not an int and parameter b has no line");
   assert.deepEqual(functionCaseProblems(two, [C("2\n3", "5"), C("2\n3\n", "5"), C("2\r\n3", "5")]), [], "a trailing newline and Windows line endings are fine");
   assert.equal(functionCaseProblems(two, [C("2\n3\n4", "5")]).length, 1, "an extra non-empty line is reported");
   const tail = { methodName: "f", returnType: "int", params: [{ name: "n", type: "int" }, { name: "a", type: "int[]" }] };
