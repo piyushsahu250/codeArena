@@ -4,7 +4,7 @@
 // (see backend/test/snapshots/questions-contract.json).
 const { ServiceError } = require("../../utils/serviceError");
 const { logAudit, AUDIT_ACTIONS } = require("../../utils/auditLog");
-const { questionVisibilityWhere, ownsQuestionRow } = require("../../utils/questionVisibility");
+const { questionVisibilityWhere, ownsQuestionRow, canViewQuestionRow } = require("../../utils/questionVisibility");
 const { resolveSubjectUnitTopic } = require("../../utils/subjectAccess");
 const { validateQuestionForVerification } = require("../../utils/questionValidation");
 const { validateSignature, generateStarterCode, languagesSupportedBy } = require("../../utils/functionHarness");
@@ -25,6 +25,12 @@ async function requireOwned(actor, id, load) {
   const question = await load(id);
   // 404, not 403, on a cross-institute id: it does not confirm whether the id exists at all.
   if (!question || !ownsQuestionRow(actor.req, question)) throw new ServiceError(404, "Question not found");
+  return question;
+}
+// Reading one question: the viewing rule (an owner of the folder it sits in may read it), not the managing rule above.
+async function requireViewable(actor, id, load) {
+  const question = await load(id);
+  if (!question || !canViewQuestionRow(actor.req, question)) throw new ServiceError(404, "Question not found");
   return question;
 }
 async function requireFolder(actor, folderId, load) {
@@ -106,7 +112,7 @@ async function filterOptions(req) {
 }
 
 async function getQuestion(actor, id) {
-  const question = await requireOwned(actor, id, repo.findQuestionDetail);
+  const question = await requireViewable(actor, id, repo.findQuestionDetail);
   await questionImages.attachQuestionImageUrls(question);
   return question;
 }
