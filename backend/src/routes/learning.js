@@ -2265,6 +2265,7 @@ router.patch("/practice/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", 
           evaluationType: evaluationType !== undefined ? evaluationType : existing.evaluationType,
           functionSignature: functionSignature !== undefined ? functionSignature : existing.functionSignature,
           starterCodeByLanguage: starterCodeByLanguage !== undefined ? starterCodeByLanguage : existing.starterCodeByLanguage,
+          testCases: Array.isArray(testCases) ? testCases : undefined,
         });
         resolvedData = { evaluationType: resolved.evaluationType, functionSignature: resolved.functionSignature, starterCodeByLanguage: resolved.starterCodeByLanguage };
       }
