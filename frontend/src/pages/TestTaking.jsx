@@ -1,3 +1,4 @@
+import { shouldAutoFinalize } from "../utils/finalizeRetry";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import StableCodeEditor from "../components/StableCodeEditor";
@@ -164,6 +165,8 @@ export default function TestTaking() {
   const deadlineRef = useRef(null); // absolute ms timestamp this candidate's answers lock at
   const clockOffsetRef = useRef(0); // serverTime - Date.now() at test start; corrects a skewed device clock
   const finalizingRef = useRef(false); // in-flight guard for the auto-submit tick, distinct from finalizedRef
+  const lastFinalizeFailAtRef = useRef(0); // when the last submit attempt failed: the timer tick waits before trying again by itself (finalizeRetry.js)
+  const lastPrematureAtRef = useRef(0); // when the server last said "time is not up yet"
   const submittingCodeRef = useRef(false); // in-flight guard for handleSubmitCode, immune to disabled-button re-render lag
   const attemptIdRef = useRef(null);
   const finalizedRef = useRef(false);
@@ -707,7 +710,7 @@ export default function TestTaking() {
       // "premature" (server disagrees time is actually up), the interval must keep ticking so it
       // can retry once the corrected clock offset shows real time has elapsed. finalizingRef guards
       // against firing a second call while one is still in flight.
-      if (remaining <= 0 && !finalizingRef.current) {
+      if (shouldAutoFinalize({ remainingSec: remaining, inFlight: finalizingRef.current, finalized: finalizedRef.current, lastFailureAt: lastFinalizeFailAtRef.current, lastPrematureAt: lastPrematureAtRef.current })) {
         finalizeAndExit(true, "time");
       }
     }, 1000);
@@ -1560,7 +1563,8 @@ export default function TestTaking() {
     }
     finalizingRef.current = true;
     setFinalizing(true);
-    setFinalizeFailed(false);
+    // finalizeFailed is NOT cleared here: while a retry runs the "Submission not confirmed" card stays up (its button reads "Retrying…"), so the screen does not flip to the
+    // "Grading" card and back on every attempt. It is cleared once an attempt succeeds, or the server says time is not up yet.
 
     // Up to 3 tries with a short backoff before giving up -- most "the finalize call failed"
     // cases in practice are a transient blip, not a genuinely dead connection, and a real success
@@ -1584,6 +1588,7 @@ export default function TestTaking() {
       // pretending it worked. finalizedRef stays false so the student (or the next auto-submit
       // tick, for the time-up case) can retry; fullscreen/camera are released regardless since
       // the exam UI is now showing an error, not the live exam.
+      lastFinalizeFailAtRef.current = Date.now();
       finalizingRef.current = false;
       setFinalizing(false);
       setFinalizeFailed(true);
@@ -1598,8 +1603,10 @@ export default function TestTaking() {
     // test genuinely isn't over yet.
     if (data.premature) {
       if (typeof data.serverNow === "number") clockOffsetRef.current = data.serverNow - Date.now();
+      lastPrematureAtRef.current = Date.now();
       finalizingRef.current = false;
       setFinalizing(false);
+      setFinalizeFailed(false);
       return;
     }
     finalizedRef.current = true;
@@ -1608,6 +1615,7 @@ export default function TestTaking() {
     notify(data.gamification);
     finalizingRef.current = false;
     setFinalizing(false);
+    setFinalizeFailed(false);
     if (reason === "time") {
       setTimeExpired(true);
       return;
