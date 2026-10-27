@@ -106,7 +106,7 @@ async function approveDraftQuestion(draft, { req, frequencyTag, packageBand, exp
       err.status = 400;
       throw err;
     }
-    resolved = resolveCodingFields({ evaluationType: draft.evaluationType, functionSignature: draft.functionSignature, starterCodeByLanguage: draft.starterCodeByLanguage });
+    resolved = resolveCodingFields({ testCases: cases, evaluationType: draft.evaluationType, functionSignature: draft.functionSignature, starterCodeByLanguage: draft.starterCodeByLanguage });
   }
 
   return prisma.$transaction(async (tx) => {
