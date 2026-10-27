@@ -4,7 +4,8 @@ const { data, users, login } = require("./helpers");
 // The exam window must fill the screen. An emulated Android phone starts a real timed test, then its window is shrunk the way a floating or split-screen window would be (SIMULATED: the browser
 // is Chromium with a phone profile; this proves the page and server behaviour, NOT that a real phone's floating window reports these exact measurements). The screen size is pinned so that
 // only the window changes.
-const PHONE = { ...devices["Pixel 7"] };
+// defaultBrowserType is dropped: Playwright refuses it inside a describe group (it would need a new worker per group).
+const { defaultBrowserType: _unused, ...PHONE } = devices["Pixel 7"]; // eslint-disable-line no-unused-vars
 const pinScreen = (page) => page.addInitScript(() => {
   for (const [k, v] of Object.entries({ width: 412, height: 915, availWidth: 412, availHeight: 915 })) Object.defineProperty(window.screen, k, { get: () => v });
 });
