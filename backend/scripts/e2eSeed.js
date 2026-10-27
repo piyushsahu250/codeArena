@@ -88,6 +88,8 @@ async function seed() {
     },
   });
   const companyTest = await mkTest(`${TAG} Company Test`, { company: "ZZCO" });
+  // A test that requires the camera, for the camera-readiness spec (the browser camera is replaced by a scripted one there: a canvas that is lit, black, busy, denied or missing).
+  const cameraTest = await mkTest(`${TAG} Camera Test`, { requireWebcam: true });
   // Tests for the Copilot key / AI-assistant shortcut signals: one with the policy on, one with it off.
   const aiShortcutTest = await mkTest(`${TAG} AI Shortcut Test`, { securityPolicy: { blockAiShortcuts: true } });
   const aiShortcutOffTest = await mkTest(`${TAG} AI Shortcut Off Test`);
@@ -116,7 +118,7 @@ async function seed() {
   }
   const codingTest = await mkCodingTest(`${TAG} Coding Test`);
   const codingProctored = await mkCodingTest(`${TAG} Coding Proctored Test`, { securityLevel: "PROCTORED" });
-  console.log(JSON.stringify({ users, firstLogin, institutes: { A: { id: A.id, name: A.name }, B: { id: B.id, name: B.name } }, testId: test.id, companyTestId: companyTest.id, aiShortcutTestId: aiShortcutTest.id, aiShortcutOffTestId: aiShortcutOffTest.id, resultsTestId: resultsTest.id, statusTestId: statusTest.id, violationsTestId: violationsTest.id, codingTestId: codingTest.id, codingProctoredTestId: codingProctored.id, proctoredTestId: proctored.id, fullscreenTestId: fsTest.id, questionTexts: ["E2E question 1: pick option B", "E2E question 2: pick option B"] }));
+  console.log(JSON.stringify({ users, firstLogin, institutes: { A: { id: A.id, name: A.name }, B: { id: B.id, name: B.name } }, testId: test.id, companyTestId: companyTest.id, aiShortcutTestId: aiShortcutTest.id, aiShortcutOffTestId: aiShortcutOffTest.id, resultsTestId: resultsTest.id, statusTestId: statusTest.id, violationsTestId: violationsTest.id, cameraTestId: cameraTest.id, codingTestId: codingTest.id, codingProctoredTestId: codingProctored.id, proctoredTestId: proctored.id, fullscreenTestId: fsTest.id, questionTexts: ["E2E question 1: pick option B", "E2E question 2: pick option B"] }));
 }
 
 (async () => {

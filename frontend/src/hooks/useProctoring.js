@@ -1,3 +1,4 @@
+import { categorizeMediaError, describeCameraProblem, stopStream, verifyAudioOnly, verifyVideoPreview } from "../utils/cameraReadiness";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import * as tf from "@tensorflow/tfjs";
 import * as blazeface from "@tensorflow-models/blazeface";
@@ -371,30 +372,49 @@ export function useProctoring({ active, requireFullscreen = true, requireWebcam 
     if (node && mediaStreamRef.current) node.srcObject = mediaStreamRef.current;
   }, []);
 
+  const requestMediaGenRef = useRef(0); // generation of the latest camera request: a stale one never attaches its stream or declares ready
   const requestMedia = useCallback(async () => {
+    const gen = ++requestMediaGenRef.current;
+    const needs = { needsWebcam: !!requireWebcam, needsMic: !!requireMicrophone };
     setRequestingMedia(true);
     setMediaError(null);
     try {
       stopMedia(); // release any stale/partially-live stream before reacquiring
       const stream = await navigator.mediaDevices.getUserMedia({ video: requireWebcam, audio: requireMicrophone });
+      if (gen !== requestMediaGenRef.current) { stopStream(stream); return; } // a newer request owns the camera: release this one, never touch the newer stream
       mediaStreamRef.current = stream;
       if (videoNodeRef.current) videoNodeRef.current.srcObject = stream;
+      // A granted stream is not a working camera. Verify a real picture on a hidden element (so no page's markup has to change) before the camera counts as ready: a camera held by another
+      // app, a stalled stream or an all-black feed used to be reported "ready" over an empty preview.
+      let result = { ok: true };
+      if (requireWebcam) {
+        const probe = document.createElement("video");
+        probe.muted = true; probe.playsInline = true; probe.setAttribute("playsinline", "");
+        result = await verifyVideoPreview(probe, stream, { isCancelled: () => gen !== requestMediaGenRef.current });
+        probe.srcObject = null;
+        if (result.ok && requireMicrophone) result = verifyAudioOnly(stream);
+      } else {
+        result = verifyAudioOnly(stream);
+      }
+      if (gen !== requestMediaGenRef.current) return;
+      if (!result.ok) {
+        console.warn("[camera] stream not usable:", result.problem, result.detail);
+        stopMedia();
+        setMediaError(describeCameraProblem(result.problem, needs).message);
+        setMediaGranted(false);
+        return;
+      }
       setMediaGranted(true);
       cameraStatusRef.current = "OK";
       setCameraStatus("OK");
       micStatusRef.current = "OK";
       setMicStatus("OK");
     } catch (err) {
-      setMediaError(
-        err.name === "NotAllowedError"
-          ? `${requireWebcam && requireMicrophone ? "Camera and microphone" : requireMicrophone ? "Microphone" : "Camera"} access was denied. Please allow it to begin.`
-          : err.name === "NotFoundError"
-          ? `No ${requireWebcam && requireMicrophone ? "camera or microphone" : requireMicrophone ? "microphone" : "camera"} was found on this device.`
-          : "Could not access your camera/microphone. Please check your device and browser permissions."
-      );
+      if (gen !== requestMediaGenRef.current) return;
+      setMediaError(describeCameraProblem(categorizeMediaError(err), needs).message);
       setMediaGranted(false);
     } finally {
-      setRequestingMedia(false);
+      if (gen === requestMediaGenRef.current) setRequestingMedia(false);
     }
   }, [requireWebcam, requireMicrophone, stopMedia]);
 

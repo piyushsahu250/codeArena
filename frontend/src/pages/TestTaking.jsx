@@ -1,3 +1,4 @@
+import { CAMERA_PROBLEM, categorizeMediaError, describeCameraProblem, stopStream, verifyAudioOnly, verifyVideoPreview } from "../utils/cameraReadiness";
 import { shouldAutoFinalize } from "../utils/finalizeRetry";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
@@ -180,6 +181,9 @@ export default function TestTaking() {
   const [mediaGranted, setMediaGranted] = useState(false);
   const [mediaError, setMediaError] = useState(null);
   const [requestingMedia, setRequestingMedia] = useState(false);
+  const [mediaAcquired, setMediaAcquired] = useState(false); // the browser handed over a stream: the preview shows, but it is NOT ready until a real picture is verified
+  const [mediaChecking, setMediaChecking] = useState(false);
+  const mediaReqRef = useRef(0); // generation of the latest camera request, so a stale one can never attach its stream or declare ready
   const mediaStreamRef = useRef(null);
   const preflightVideoRef = useRef(null);
   const liveVideoRef = useRef(null);
@@ -298,49 +302,75 @@ export default function TestTaking() {
   }, []);
 
   async function requestMedia() {
-    setRequestingMedia(true);
-    setMediaError(null);
+    const gen = ++mediaReqRef.current;
     const needsWebcam = !!testMeta?.requireWebcam;
     const needsMic = !!testMeta?.requireMicrophone;
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: needsWebcam, audio: needsMic });
-      mediaStreamRef.current = stream;
-      setMediaGranted(true);
-    } catch (err) {
-      // Was previously hardcoded to always say "Camera and microphone... allow both" regardless
-      // of what this test actually requires (and regardless of what getUserMedia just above was
-      // even asked for) -- misleading on the common case of a test needing only one of the two
-      // (e.g. told to "allow both" after only camera was ever requested). Every other message on
-      // this same pre-start screen (instructions, section header below) already varies correctly
-      // by needsWebcam/needsMic; this was the one place that didn't.
-      const both = needsWebcam && needsMic;
-      const label = both ? "Camera and microphone" : needsWebcam ? "Camera" : "Microphone";
-      const reason =
-        err.name === "NotAllowedError"
-          ? `${label} access was denied. Please allow ${both ? "both" : "it"} to begin this test.`
-          : err.name === "NotFoundError"
-          ? `No ${both ? "camera or microphone was" : needsWebcam ? "camera was" : "microphone was"} found on this device. ${both ? "Both are" : "It's"} required to begin this test.`
-          : `Could not access your ${both ? "camera/microphone" : needsWebcam ? "camera" : "microphone"}. Please check your device and browser permissions.`;
-      setMediaError(reason);
-      setMediaGranted(false);
-    } finally {
+    const needs = { needsWebcam, needsMic };
+    setRequestingMedia(true);
+    setMediaError(null);
+    setMediaGranted(false);
+    // A retry must not leave the previous stream running: it would keep the camera busy and the new request would fail or come back black.
+    stopStream(mediaStreamRef.current);
+    mediaStreamRef.current = null;
+    setMediaAcquired(false);
+    if (typeof window !== "undefined" && window.isSecureContext === false) {
+      setMediaError(describeCameraProblem(CAMERA_PROBLEM.INSECURE_CONTEXT, needs).message);
       setRequestingMedia(false);
+      return;
     }
+    let stream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ video: needsWebcam, audio: needsMic });
+    } catch (err) {
+      if (gen !== mediaReqRef.current) return; // a newer request owns the screen now
+      // The cause decides the message: a camera another app is using is not a permission problem, and must not tell the student to "allow" it again.
+      setMediaError(describeCameraProblem(categorizeMediaError(err), needs).message);
+      setMediaGranted(false);
+      setRequestingMedia(false);
+      return;
+    }
+    if (gen !== mediaReqRef.current) { stopStream(stream); return; } // stale: release what this request acquired, never touch the newer stream
+    mediaStreamRef.current = stream;
+    setRequestingMedia(false);
+    setMediaAcquired(true); // shows the preview; the effect below decides whether it is READY
   }
 
-  // Attach the granted stream to the preflight preview. This must be an effect (not done
-  // inline in requestMedia) because the <video> element only mounts once mediaGranted flips
-  // true — assigning srcObject synchronously inside requestMedia hits a ref that's still null.
+  // A stream is not a picture. After the browser grants access, wait until the preview really shows frames (an active video track, playing, real dimensions, visible content) before the
+  // camera counts as ready: a camera held by another app, a stalled stream or a black feed used to show "ready" over an empty preview and let the student begin.
   useEffect(() => {
-    if (mediaGranted && preflightVideoRef.current && mediaStreamRef.current) {
-      preflightVideoRef.current.srcObject = mediaStreamRef.current;
-    }
-  }, [mediaGranted]);
+    if (!mediaAcquired) return undefined;
+    const stream = mediaStreamRef.current;
+    const gen = mediaReqRef.current;
+    const needsWebcam = !!testMeta?.requireWebcam;
+    const needsMic = !!testMeta?.requireMicrophone;
+    const needs = { needsWebcam, needsMic };
+    let cancelled = false;
+    const stale = () => cancelled || gen !== mediaReqRef.current;
+    setMediaChecking(true);
+    (async () => {
+      let result = needsWebcam ? await verifyVideoPreview(preflightVideoRef.current || document.createElement("video"), stream, { isCancelled: stale }) : verifyAudioOnly(stream);
+      if (result.ok && needsMic && needsWebcam) result = verifyAudioOnly(stream); // the microphone half of a camera + microphone test
+      if (stale()) return;
+      setMediaChecking(false);
+      if (result.ok) {
+        setMediaGranted(true);
+      } else {
+        setMediaGranted(false);
+        setMediaError(describeCameraProblem(result.problem, needs).message);
+        console.warn("[camera] preview not ready:", result.problem, result.detail);
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mediaAcquired]);
 
   // Keep the live self-view (shown during the test) in sync with the granted stream
   useEffect(() => {
     if (started && liveVideoRef.current && mediaStreamRef.current) {
       liveVideoRef.current.srcObject = mediaStreamRef.current;
+      // Attached srcObject alone does not start every browser (Android Chrome in particular): ask for playback and ignore a refusal, the preview is a convenience
+      const p = liveVideoRef.current.play?.();
+      if (p && typeof p.catch === "function") p.catch(() => {});
     }
   }, [started]);
 
@@ -563,6 +593,17 @@ export default function TestTaking() {
     // requestFullscreen() call below ever ran, which browsers require to happen synchronously in
     // direct response to the click.
     if (otherTabsDetected) return;
+    // The camera must still be live at the moment of the click (it may have been unplugged or taken by another app since the check). Synchronous, so the fullscreen request below keeps its click gesture.
+    if (testMeta?.requireWebcam || testMeta?.requireMicrophone) {
+      const s = mediaStreamRef.current;
+      const live = !!s && s.getTracks().length > 0 && s.getTracks().every((t) => t.readyState === "live") && (!testMeta?.requireWebcam || s.getVideoTracks().length > 0);
+      if (!live) {
+        setMediaGranted(false);
+        setMediaAcquired(false);
+        setMediaError(describeCameraProblem(CAMERA_PROBLEM.STREAM_ENDED, { needsWebcam: !!testMeta?.requireWebcam, needsMic: !!testMeta?.requireMicrophone }).message);
+        return;
+      }
+    }
     setStarting(true);
     // Request fullscreen synchronously in response to the click, before any awaits. Tries the
     // vendor-prefixed Fullscreen API variants too (see fullscreenCompat.js) -- the un-prefixed
@@ -1861,28 +1902,29 @@ export default function TestTaking() {
           {needsMedia && (
             <div style={{ marginTop: 20, padding: 16, border: "1px solid var(--line)", borderRadius: 10 }}>
               <div style={{ fontSize: 13, fontWeight: 700 }}>{needsWebcam && needsMic ? "Camera & microphone check" : needsWebcam ? "Camera check" : "Microphone check"}</div>
+              {/* The preview shows as soon as the browser hands over a stream, so the student can see what the camera sees; "ready" is only claimed once a real picture was verified. */}
+              {needsWebcam && mediaAcquired && (
+                <video
+                  ref={preflightVideoRef}
+                  autoPlay
+                  muted
+                  playsInline
+                  style={{ width: 160, height: 120, borderRadius: 8, marginTop: 10, background: "#000", objectFit: "cover" }}
+                />
+              )}
               {mediaGranted ? (
-                <>
-                  {needsWebcam && (
-                    <video
-                      ref={preflightVideoRef}
-                      autoPlay
-                      muted
-                      playsInline
-                      style={{ width: 160, height: 120, borderRadius: 8, marginTop: 10, background: "#000", objectFit: "cover" }}
-                    />
-                  )}
-                  <p style={{ fontSize: 12, color: "var(--mint)", marginTop: 8, fontWeight: 600 }}>✓ {needsWebcam && needsMic ? "Camera and microphone are" : "Ready"} ready</p>
-                </>
+                <p style={{ fontSize: 12, color: "var(--mint)", marginTop: 8, fontWeight: 600 }}>✓ {needsWebcam && needsMic ? "Camera and microphone are ready" : needsWebcam ? "Camera is ready" : "Microphone is ready"}</p>
+              ) : mediaChecking ? (
+                <p role="status" style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 8 }}>Checking that your {mediaLabel} is working…</p>
               ) : (
                 <>
                   <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 6 }}>
                     Required before you can begin — it stays on for the whole test.
                   </p>
                   <button className="btn btn-dark" style={{ marginTop: 10 }} onClick={requestMedia} disabled={requestingMedia}>
-                    {requestingMedia ? "Requesting access…" : `Grant ${mediaLabel} access`}
+                    {requestingMedia ? "Requesting access…" : mediaError ? `Retry ${mediaLabel}` : `Grant ${mediaLabel} access`}
                   </button>
-                  {mediaError && <p style={{ fontSize: 12, color: "var(--rust)", marginTop: 8 }}>{mediaError}</p>}
+                  {mediaError && <p role="alert" style={{ fontSize: 12, color: "var(--rust)", marginTop: 8 }}>{mediaError}</p>}
                 </>
               )}
             </div>

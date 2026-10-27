@@ -116,6 +116,8 @@ jobs:
         run: node scripts/editorHeightRegression.mjs
       - name: Form draft regression (per account, expires, never stale)
         run: node scripts/formDraftRegression.mjs
+      - name: Camera readiness regression (no false ready: black feed, no frames, busy, denied, stale request)
+        run: node scripts/cameraReadinessRegression.mjs
       - name: Time-up submit retry regression (no retry every second, no blinking)
         run: node scripts/finalizeRetryRegression.mjs
       - name: Auto-submit reason regression (strike limit, clock, server close, cannot tell)
