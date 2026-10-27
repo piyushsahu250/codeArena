@@ -307,7 +307,7 @@ function buildMonitorRows(attempts, classic, extra) {
       label: a.label || null,
       counts: {
         fullscreenExits: count("FULLSCREEN_EXIT"), tabSwitches: count("TAB_SWITCH", "TAB_SWITCH_BRIEF", "PAGE_HIDDEN"), focusLoss: count("POSSIBLE_EXTERNAL_ASSISTANT"),
-        splitScreen: count("SPLIT_SCREEN_SUSPECTED", "SCREEN_OVERLAY_DETECTED"), copy: count("COPY", "COPY_ATTEMPT"), paste: count("PASTE", "PASTE_ATTEMPT"),
+        splitScreen: count("SPLIT_SCREEN_SUSPECTED", "WINDOW_NOT_FILLING_SCREEN", "SCREEN_OVERLAY_DETECTED"), copy: count("COPY", "COPY_ATTEMPT"), paste: count("PASTE", "PASTE_ATTEMPT"),
         sessionConflicts: count("MULTIPLE_SESSION", "SESSION_REPLACED"),
       },
       secondsLeft: a.status === "IN_PROGRESS" && a.deadlineAt ? Math.max(0, Math.round((a.deadlineAt - nowMs) / 1000)) : 0,
@@ -493,7 +493,7 @@ router.get("/overview", authenticate, requireRole("SUPER_ADMIN", "ADMIN", "INSTI
       last: {
         attemptsWithStrikes: Number(penalizedAttempts[0]?.n || 0),
         fullscreenExits: sum("FULLSCREEN_EXIT"), tabSwitches: sum("TAB_SWITCH", "TAB_SWITCH_BRIEF", "PAGE_HIDDEN"),
-        possibleExternalActivity: sum("POSSIBLE_EXTERNAL_ASSISTANT", "SPLIT_SCREEN_SUSPECTED", "SCREEN_OVERLAY_DETECTED"),
+        possibleExternalActivity: sum("POSSIBLE_EXTERNAL_ASSISTANT", "SPLIT_SCREEN_SUSPECTED", "WINDOW_NOT_FILLING_SCREEN", "SCREEN_OVERLAY_DETECTED"),
         clipboardAttempts: sum("COPY", "PASTE", "CUT", "COPY_ATTEMPT", "PASTE_ATTEMPT", "CLIPBOARD_ATTEMPT"),
         sessionConflicts: sum("MULTIPLE_SESSION", "SESSION_REPLACED"), devtoolsSuspected: sum("DEVTOOLS", "DEVTOOLS_ATTEMPT"),
         secureClientFailures: sum("SECURE_CLIENT_STOPPED", "KIOSK_EXIT", "APPLICATION_POLICY_FAILURE", "BROWSER_POLICY_FAILURE", "NETWORK_POLICY_FAILURE", "DEVICE_MISMATCH", "VERSION_MISMATCH"),

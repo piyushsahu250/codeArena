@@ -38,22 +38,80 @@ export function createFocusLossSignal({ graceMs = 2500, onLoss, onRestore } = {}
   return { destroy() { clear(); window.removeEventListener("blur", onBlur); window.removeEventListener("focus", onFocus); } };
 }
 
-// True when a touch device is showing the page in a window that is much smaller than the screen in BOTH steady states we can
-// measure (split-screen / floating window). Ignored while a text field is focused (the on-screen keyboard shrinks the viewport).
-export function isLikelySplitScreen() {
-  if (!isMobileDevice() || typeof window === "undefined" || !window.screen) return false;
-  const el = document.activeElement;
-  if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable)) return false;
+// What the page can measure about its own window. `typing` is true while a text field has focus (the on-screen keyboard then shrinks the height, never the width).
+export function measureWindow() {
+  if (typeof window === "undefined" || !window.screen) return null;
   const vv = window.visualViewport;
-  if (vv && Math.abs(vv.scale - 1) > 0.05) return false; // pinch-zoom changes the visible size without any overlay
-  const h = vv ? vv.height : window.innerHeight;
-  const w = vv ? vv.width : window.innerWidth;
+  const el = document.activeElement;
   const sh = window.screen.availHeight || window.screen.height;
   const sw = window.screen.availWidth || window.screen.width;
-  if (!sh || !sw) return false;
   const portrait = window.matchMedia ? window.matchMedia("(orientation: portrait)").matches : sh >= sw;
-  // Along the long axis the browser UI alone can take ~20 %; below 62 % of the screen is a window sharing the display.
-  return portrait ? h / sh < 0.62 : w / sw < 0.62;
+  return {
+    isMobile: isMobileDevice(), portrait, innerW: vv ? vv.width : window.innerWidth, innerH: vv ? vv.height : window.innerHeight, availW: sw, availH: sh,
+    scale: vv ? vv.scale : 1, typing: !!(el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable)),
+    screenX: typeof window.screenX === "number" ? window.screenX : (window.screenLeft || 0), screenY: typeof window.screenY === "number" ? window.screenY : (window.screenTop || 0),
+  };
+}
+
+// Is the exam window failing to fill the screen? Pure (the measurements are passed in) so it can be tested. Phones and tablets only: a desktop browser is held to fullscreen by the page itself,
+// and leaving it is the fullscreen-exit rule. Pinch-zoom is ignored (it changes the visible size with no other window involved).
+//   narrow  - in portrait the window is narrower than the screen: a floating, split-screen or resized window. The on-screen keyboard never changes the width, so this holds while typing.
+//   short   - along the long axis the window is below 62 % of the screen (the browser's own bars take up to ~20 %). Ignored while typing (the keyboard shrinks the height).
+export function assessWindowFill(m) {
+  const fine = { notFilling: false, reason: null };
+  if (!m || !m.isMobile || !m.availW || !m.availH) return fine;
+  if (Math.abs((m.scale || 1) - 1) > 0.05) return fine;
+  const widthRatio = m.innerW / m.availW;
+  const heightRatio = m.innerH / m.availH;
+  if (m.portrait && widthRatio < 0.9) return { notFilling: true, reason: "narrow", widthRatio, heightRatio };
+  if (!m.typing && (m.portrait ? heightRatio < 0.62 : widthRatio < 0.62)) return { notFilling: true, reason: "short", widthRatio, heightRatio };
+  return { notFilling: false, reason: null, widthRatio, heightRatio };
+}
+export const WINDOW_MOVE_PX = 24; // smaller position changes are rounding and animation, not a window being dragged
+export const windowMoved = (a, b) => !!a && !!b && (Math.abs(a.screenX - b.screenX) > WINDOW_MOVE_PX || Math.abs(a.screenY - b.screenY) > WINDOW_MOVE_PX);
+
+// Kept for the pre-start check and the older split-screen signal of the other assessment pages.
+export function isLikelySplitScreen() {
+  return assessWindowFill(measureWindow()).notFilling;
+}
+
+// The sustained, once-per-episode rule behind the WINDOW_NOT_FILLING_SCREEN violation. step() is one measurement (the timer calls it; tests call it directly):
+//   * the window must fail to fill the screen for `sustainChecks` measurements in a row (a brief glitch, an animation or an incoming-call banner never reaches it);
+//   * one episode is reported once (the window being dragged around inside the same episode is the same episode, and its movement is added to the report);
+//   * the episode ends after `clearChecks` measurements that fill the screen again, so the NEXT episode is a new, independent report;
+//   * `cooldownMs` is the floor between two reports (the server holds the same floor, so a repeated report cannot count twice).
+export function createWindowFillMonitor({ measure = measureWindow, now = () => Date.now(), sustainChecks = 3, clearChecks = 2, cooldownMs = 30000, onViolation } = {}) {
+  let hits = 0, fills = 0, active = false, lastReportAt = 0, moved = false, previous = null, worst = null;
+  return {
+    step() {
+      const m = measure();
+      const a = assessWindowFill(m);
+      if (a.notFilling) {
+        fills = 0; hits += 1;
+        if (windowMoved(previous, m)) moved = true;
+        if (!worst || a.widthRatio < worst.widthRatio) worst = a;
+        if (hits >= sustainChecks && !active) {
+          active = true;
+          const t = now();
+          if (!lastReportAt || t - lastReportAt >= cooldownMs) {
+            lastReportAt = t;
+            const pct = Math.round(Math.min(worst.widthRatio, 1) * 100);
+            onViolation?.({ reason: moved ? "moved" : a.reason, widthPercent: pct, moved, text: moved ? `the assessment window was moved and is not filling the screen (about ${pct}% of the screen width)` : `the assessment window is not filling the screen (about ${pct}% of the screen width)` });
+          }
+        }
+      } else {
+        hits = 0; moved = false; worst = null;
+        if (active) { fills += 1; if (fills >= clearChecks) { active = false; fills = 0; } }
+      }
+      previous = m;
+    },
+    isActive: () => active,
+  };
+}
+export function createWindowFillWatch({ intervalMs = 2000, ...options } = {}) {
+  const monitor = createWindowFillMonitor(options);
+  const id = setInterval(() => monitor.step(), intervalMs);
+  return { destroy() { clearInterval(id); }, step: () => monitor.step() };
 }
 
 // Watches for a sustained split-screen state (two consecutive checks) and reports it, at most once per minute.

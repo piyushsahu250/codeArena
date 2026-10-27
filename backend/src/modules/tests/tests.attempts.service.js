@@ -10,7 +10,7 @@ const { policyOf, startRequirementFailure } = require("../../utils/testExamSecur
 const X = require("../../utils/examSecurity");
 const { gradePendingCodingSubmissions } = require("../../utils/gradeAttempt");
 const { processGamification } = require("../../utils/gamification");
-const { classifyViolation, STRIKE_FROM_OCCURRENCE } = require("../../utils/proctoringSeverity");
+const { classifyViolation, STRIKE_FROM_OCCURRENCE, DUPLICATE_WINDOW_MS } = require("../../utils/proctoringSeverity");
 const { MANIFEST_VERSION, validateManifest, scoreBase } = require("../../utils/attemptManifest");
 const aiService = require("../../services/ai/aiService");
 const { annotateEvents } = require("../../utils/evidenceClassification");
@@ -94,6 +94,13 @@ async function recordViolation(actor, attemptId, rawType) {
   if (attempt.status !== "IN_PROGRESS") return { tabSwitchCount: attempt.tabSwitchCount, autoSubmitted: true };
 
   const type = String(rawType || "UNKNOWN").toUpperCase().slice(0, 40);
+  // The same physical situation reported twice (a duplicate browser event, or a retry after a lost answer) is acknowledged without a second record or strike.
+  if (DUPLICATE_WINDOW_MS[type]) {
+    const lastAt = await repo.latestViolationAt(attempt.id, type);
+    if (lastAt && Date.now() - new Date(lastAt).getTime() < DUPLICATE_WINDOW_MS[type]) {
+      return { tabSwitchCount: attempt.tabSwitchCount, maxViolations: d.MAX_TAB_VIOLATIONS, severity: classifyViolation(type, 0).severity, penalized: false, autoSubmitted: false, deduplicated: true };
+    }
+  }
   // Escalation counts SUSPICIOUS events fresh from the log each time, so the threshold can change without a backfill.
   const prior = await repo.suspiciousCount(attempt.id);
   // Types counted per type (the exam page losing focus: a warning the first time, a strike from the second) need how many of THIS type came before.

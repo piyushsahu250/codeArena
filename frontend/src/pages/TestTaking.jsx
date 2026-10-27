@@ -23,7 +23,7 @@ import { checkOtherTabsOpen } from "../utils/tabPresence";
 import { createKeyboardSignal, isTouchDevice } from "../utils/mobileKeyboard";
 import { createTabSwitchSignal } from "../utils/tabSwitchSignal";
 import { useExamSession } from "../hooks/useExamSession";
-import { createFocusLossSignal, createSplitScreenWatch, runSecurityCheck } from "../utils/secureAssessment";
+import { createFocusLossSignal, createWindowFillWatch, runSecurityCheck } from "../utils/secureAssessment";
 import { createOverlaySignal } from "../utils/viewportOverlaySignal";
 import { applyPlainTextInputHints, watchForNonAsciiInput } from "../utils/monacoSetup";
 import { classifyKeyEvent } from "../utils/keyboardShortcuts";
@@ -805,7 +805,7 @@ export default function TestTaking() {
   // change) never does, no matter how often -- same "log don't penalize" policy the Interview
   // surface already used for face signals, generalized. `reason` is purely the human-readable
   // text for the on-page banner.
-  function reportViolation(type, reason) {
+  function reportViolation(type, reason, isRetry = false) {
     if (!attemptIdRef.current || finalizedRef.current) return;
     // Per-TYPE dedupe (matching useProctoring.js's identical map, used by Module Coding/Interview)
     // -- collapses e.g. a browser refiring the same fullscreenchange event twice in a row into one
@@ -818,7 +818,7 @@ export default function TestTaking() {
     // one specific type is exactly what per-type dedupe exists to catch.
     const now = Date.now();
     const last = lastViolationAtRef.current[type] || 0;
-    if (now - last < 1500) return;
+    if (!isRetry && now - last < 1500) return;
     lastViolationAtRef.current[type] = now;
     api
       .post(`/tests/attempts/${attemptIdRef.current}/violation`, { type })
@@ -862,7 +862,12 @@ export default function TestTaking() {
       // unrecorded AND unwarned, with nothing in the console to tell a developer why "tab
       // switching doesn't show a warning" was ever reported. Still fails open for the student
       // (never blocks them or retries indefinitely mid-exam), just no longer invisible.
-      .catch((err) => console.error("[exam] violation report failed:", err));
+      .catch((err) => {
+        console.error("[exam] violation report failed:", err);
+        // The report never got an answer (network blip). The window-fill report is sent once more after a few seconds: the server holds a 30 s duplicate window for it, so if the first one did
+        // arrive and only the answer was lost, the repeat is acknowledged without a second strike. Other types are not repeated here (they have no duplicate window).
+        if (!err.response && type === "WINDOW_NOT_FILLING_SCREEN" && !isRetry) setTimeout(() => reportViolation(type, reason, true), 4000);
+      });
   }
 
   // Sends the student's message to the in-page AI panel for the CURRENT question. The server
@@ -1016,11 +1021,12 @@ export default function TestTaking() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [started]);
 
-  // 3) Window is a fraction of the screen (split-screen / floating window) on a touch device; sustained, debounced, one report/min.
+  // 3) The exam window stops filling the screen (floating, split-screen, resized or moved window) on a phone or tablet, where fullscreen cannot be enforced. Sustained for several measurements,
+  // reported once per episode as a CONFIRMED violation (the server decides and counts it; utils/secureAssessment.js createWindowFillMonitor has the exact rule and the cooldown).
   useEffect(() => {
     if (!started || !isTouchDevice()) return;
-    const watch = createSplitScreenWatch({
-      onSuspected: () => reportViolation("SPLIT_SCREEN_SUSPECTED", "the assessment window is sharing the screen with another window"),
+    const watch = createWindowFillWatch({
+      onViolation: ({ text }) => reportViolation("WINDOW_NOT_FILLING_SCREEN", text),
     });
     return () => watch.destroy();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1803,6 +1809,9 @@ export default function TestTaking() {
               </li>
               <li>
                 Keep the test window in focus. Clicking into another window or app while the test is open is recorded: the first time is a warning, and after that each time counts as a violation.
+              </li>
+              <li>
+                Keep the test window on the full screen. A floating, split-screen, resized or moved window is recorded, and each time it happens counts as a violation straight away.
               </li>
               <li>
                 You get one continuous {testMeta.durationMin}-minute timer for the whole test — answer any question in any

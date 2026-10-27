@@ -43,6 +43,9 @@ const VIOLATION_SEVERITY = {
   FULLSCREEN_EXIT: "CONFIRMED_VIOLATION",
   CAMERA_DROPPED: "CONFIRMED_VIOLATION",
   MIC_DROPPED: "CONFIRMED_VIOLATION",
+  // Added 2026-10-28 at the administrator's request: the exam window stayed smaller than the screen (floating, split-screen or resized) or was moved, for several seconds on a phone or tablet,
+  // where fullscreen cannot be enforced. Counted from the first occurrence. It says what the page measured (window size and position), never which app was beside it.
+  WINDOW_NOT_FILLING_SCREEN: "CONFIRMED_VIOLATION",
 
   // SUSPICIOUS — a restricted action, or a heuristic with a real false-positive rate.
   MULTI_MONITOR: "SUSPICIOUS",
@@ -138,4 +141,8 @@ function classifyViolation(type, priorSuspiciousCount = 0, priorSameTypeCount = 
   return { severity, penalized: false };
 }
 
-module.exports = { VIOLATION_SEVERITY, SUSPICIOUS_ESCALATION_THRESHOLD, STRIKE_FROM_OCCURRENCE, classifyViolation };
+// One physical situation must not become several strikes: an event of these types is recorded once per window. The browser can fire the same condition twice, and a report whose answer was lost
+// in a network blip is sent again by the page; the second arrives inside the window and is acknowledged without a new record. Independent episodes later than the window count separately.
+const DUPLICATE_WINDOW_MS = Object.freeze({ WINDOW_NOT_FILLING_SCREEN: 30000 });
+
+module.exports = { VIOLATION_SEVERITY, SUSPICIOUS_ESCALATION_THRESHOLD, STRIKE_FROM_OCCURRENCE, DUPLICATE_WINDOW_MS, classifyViolation };
