@@ -27,7 +27,9 @@ function instituteWhere(requesterInstituteId) {
 function questionVisibilityWhere(req) {
   const institute = instituteWhere(req.requesterInstituteId);
   if (req.user?.role !== "STAFF") return institute;
-  return { AND: [institute, { OR: [{ createdById: null }, { createdById: req.user.id }, { folder: { shares: { some: { staffId: req.user.id } } } }] }] };
+  // The third branch: a question filed in a folder this staff member CREATED is visible to them whoever authored it (an institute admin may add questions to a staff member's folder).
+  // Folder ownership grants VIEW only; it is deliberately not in ownsQuestionRow, so editing and deleting an admin's question still follows the creator rule.
+  return { AND: [institute, { OR: [{ createdById: null }, { createdById: req.user.id }, { folder: { createdById: req.user.id } }, { folder: { shares: { some: { staffId: req.user.id } } } }] }] };
 }
 
 // Same rule as questionVisibilityWhere, but for querying QuestionFolder rows directly rather than
@@ -62,4 +64,13 @@ function ownsQuestionRow(req, row) {
   return Array.isArray(shares) && shares.some((s) => s.staffId === req.user.id);
 }
 
-module.exports = { instituteWhere, questionVisibilityWhere, questionFolderVisibilityWhere, ownsQuestionRow };
+
+// Can this requester SEE one already-loaded Question row (open it, read it)? Everything ownsQuestionRow allows, plus, for a STAFF requester, any question filed in a folder they created,
+// whoever authored it. The row must have been fetched with its `folder` (WITH_SHARES does). VIEW only: edit, delete, move and the bulk operations keep using ownsQuestionRow.
+function canViewQuestionRow(req, row) {
+  if (ownsQuestionRow(req, row)) return true;
+  if (req.user?.role !== "STAFF") return false;
+  if (req.requesterInstituteId && row.instituteId && row.instituteId !== req.requesterInstituteId) return false;
+  return !!row.folder && row.folder.createdById === req.user.id;
+}
+module.exports = { instituteWhere, questionVisibilityWhere, questionFolderVisibilityWhere, ownsQuestionRow, canViewQuestionRow };
