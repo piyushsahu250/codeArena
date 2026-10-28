@@ -125,3 +125,14 @@ describe("STRIKE_FROM_OCCURRENCE: the exam page losing focus is a warning the fi
     assert.equal(classifyViolation("SOMETHING_NEW", 5, 5).penalized, false);
   });
 });
+
+// ---- 2026-10-28: the exam window not filling the screen (or moving) is a confirmed violation from the first occurrence (the administrator's decision) ----
+test("WINDOW_NOT_FILLING_SCREEN is a confirmed, counted violation the first time", () => {
+  const { classifyViolation: classify, DUPLICATE_WINDOW_MS, VIOLATION_SEVERITY } = require("../src/utils/proctoringSeverity");
+  assert.equal(VIOLATION_SEVERITY.WINDOW_NOT_FILLING_SCREEN, "CONFIRMED_VIOLATION");
+  assert.equal(classify("WINDOW_NOT_FILLING_SCREEN", 0, 0).penalized, true);
+  assert.equal(classify("WINDOW_NOT_FILLING_SCREEN", 0).severity, "CONFIRMED_VIOLATION");
+  assert.ok(DUPLICATE_WINDOW_MS.WINDOW_NOT_FILLING_SCREEN >= 10000, "duplicates inside the window are acknowledged, not counted");
+  assert.deepEqual(Object.keys(DUPLICATE_WINDOW_MS), ["WINDOW_NOT_FILLING_SCREEN"], "no other type gets a duplicate window by accident");
+  assert.equal(classify("SPLIT_SCREEN_SUSPECTED", 0, 0).penalized, false, "the older split-screen signal (other surfaces) is unchanged");
+});

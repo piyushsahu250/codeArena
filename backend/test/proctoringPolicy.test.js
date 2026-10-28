@@ -151,3 +151,16 @@ test("nothing the client sends changes a focus-loss finding: metadata supplies n
   assert.equal(ev.policy.ruleId, "FOCUS_LOSS");
   assert.doesNotMatch(JSON.stringify(ev), /ChatGPT/);
 });
+
+// ---- 2026-10-28: keeping the exam window on the full screen is a published rule in every exam ----
+test("a window that stayed smaller than the screen is a finding under the 'keep the exam window on the full screen' rule, in every exam", () => {
+  for (const policy of [standard, proctored, aiOn, noFullscreen]) {
+    const ev = confirmedOf("WINDOW_NOT_FILLING_SCREEN", policy);
+    assert.equal(ev.classification, "CONFIRMED_POLICY_VIOLATION");
+    assert.equal(ev.policy.ruleId, "WINDOW_FILL");
+    assert.equal(ev.policy.version, P.POLICY_VERSION);
+    assert.equal(ev.policy.enforcement, "NOT_BLOCKABLE");
+    assert.match(ev.policy.doesNotShow, /Which app was beside the exam/);
+    assert.ok(!/cheat|misconduct|guilty/i.test(JSON.stringify(ev.policy)), "it never accuses");
+  }
+});

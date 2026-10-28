@@ -25,6 +25,7 @@ export const EVENT_LABEL = {
   COPILOT_KEY_SIGNAL: "Assistant key pressed",
   AI_SHORTCUT_DETECTED: "Assistant shortcut pressed",
   SPLIT_SCREEN_SUSPECTED: "Small window (possible split screen)",
+  WINDOW_NOT_FILLING_SCREEN: "Exam window not filling the screen (floating, split or moved)",
 };
 
 // What the page could do about an event. A web page asks the browser to cancel an event; it cannot confirm the browser did, and cannot stop leaving the page.

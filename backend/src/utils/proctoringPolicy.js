@@ -11,7 +11,7 @@
 // What a web page can do about each action is stated per rule as the enforcement outcome: the page can ASK the browser to cancel an event (BLOCK_ATTEMPTED; it
 // cannot verify the browser honoured it) but it cannot stop leaving the page, DevTools opened from the browser menu, or an operating-system assistant. Strict enforcement of
 // those needs a managed device or the secure exam client.
-const POLICY_VERSION = "2026-10-25.1";
+const POLICY_VERSION = "2026-10-28.1";
 const CONFIRMED = "CONFIRMED_POLICY_VIOLATION";
 
 const ENFORCEMENT = Object.freeze({
@@ -64,6 +64,17 @@ const RULES = {
     describe: () => "The exam page lost focus while it was still visible",
     shows: "The exam page lost focus while it was open, which the exam rules ask students to avoid. The first time is a warning; repeats are counted.",
     doesNotShow: "Which app or window took the focus, that an assistant was used, or why. Notifications, system dialogs, phone calls and input methods cause the same signal.",
+  },
+  // Added 2026-10-28 at the administrator's request: the exam window must fill the screen. On a phone or tablet fullscreen cannot be enforced, so a floating, split-screen or resized window
+  // (or one that is moved) is observed by measuring the window against the screen for several seconds. Counted from the first occurrence (utils/proctoringSeverity.js).
+  WINDOW_FILL: {
+    title: "Keeping the exam window on the full screen",
+    appliesTo: ["WINDOW_NOT_FILLING_SCREEN"],
+    prohibited: () => true,
+    enforcement: () => ENFORCEMENT.NOT_BLOCKABLE,
+    describe: () => "The exam window stayed smaller than the screen, or moved, for several seconds",
+    shows: "The exam window was measured covering only part of the screen (a floating, split-screen or resized window) or changing position, which the exam rules prohibit.",
+    doesNotShow: "Which app was beside the exam, that anything was viewed or used, or why. A system pop-up window, a foldable's cover screen or a window mode the operating system chose can look the same.",
   },
   CLIPBOARD: {
     title: "Copy, paste or cut",
