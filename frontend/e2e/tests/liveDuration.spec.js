@@ -42,7 +42,9 @@ test("extending a running test updates the countdown without a refresh, shows th
   // a refresh gets the same new deadline from the server
   await page.reload();
   const begin = page.getByRole("button", { name: /Begin Assessment/ });
-  if (await begin.isVisible().catch(() => false)) {
+  // after a reload the page shows either the resumed question or the start screen: wait for whichever comes first
+  await expect(page.getByText(QUESTION).first().or(begin)).toBeVisible({ timeout: 20000 });
+  if (await begin.isVisible()) {
     await page.getByLabel("I have read and understood the instructions.").check();
     await begin.click();
   }

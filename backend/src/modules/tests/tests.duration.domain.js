@@ -33,6 +33,7 @@ function planDurationChange({ startedAts, oldMin, newMin, endTime = null, now = 
   const end = endTime ? new Date(endTime).getTime() : null;
   const plan = { eligible: 0, movedLater: 0, movedEarlier: 0, unchanged: 0, pastOldDeadline: 0, wouldExpireNow: 0, wouldExpireSoon: 0, afterWindowClose: 0, earliestNewDeadline: null, latestNewDeadline: null };
   for (const s of startedAts || []) {
+    if (s === null || s === undefined || s === "") continue; // new Date(null) is the 1970 epoch: a missing start is not an attempt
     const started = new Date(s).getTime();
     if (!Number.isFinite(started)) continue;
     plan.eligible += 1;
