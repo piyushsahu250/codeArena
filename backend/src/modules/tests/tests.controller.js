@@ -56,7 +56,7 @@ const { sendAiError } = require("../../utils/aiErrors");
 const list = handler("Failed to load tests", (req) => read.listTests(actor(req)));
 const getOne = handler("Failed to load test", (req) => read.getTest(actor(req), req.params.id));
 const start = handler("Could not start test", (req) => attempts.startAttempt(actor(req), req.params.id));
-const violation = handler("Failed to record violation", (req) => attempts.recordViolation(actor(req), req.params.attemptId, req.body.type));
+const violation = handler("Failed to record violation", (req) => attempts.recordViolation(actor(req), req.params.attemptId, req.body.type, { eventId: req.body.eventId, clientAt: req.body.clientAt }));
 const violationLog = handler("Failed to load violation log", (req) => attempts.violationLog(actor(req), req.params.attemptId));
 const myResult = handler("Failed to load result", (req) => attempts.myResult(actor(req), req.params.id));
 // AI errors keep their own mapping (quota, provider, safety) through the shared helper.

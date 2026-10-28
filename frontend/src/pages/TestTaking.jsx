@@ -1,3 +1,4 @@
+import { createViolationOutbox } from "../utils/violationOutbox";
 import { SYNC_INTERVAL_MS, applyClockAnswer, secondsLeftAt, deadlineNotice } from "../utils/deadlineSync";
 import { CAMERA_PROBLEM, categorizeMediaError, describeCameraProblem, stopStream, verifyAudioOnly, verifyVideoPreview } from "../utils/cameraReadiness";
 import { shouldAutoFinalize } from "../utils/finalizeRetry";
@@ -16,7 +17,8 @@ import RunSubmitButtons from "../components/RunSubmitButtons";
 import ProblemStatement from "../components/ProblemStatement";
 import MathText from "../components/MathText";
 import { CODE_LANGUAGES as LANGUAGES, defaultStarter, supportedLanguages } from "../utils/codeEditorDefaults";
-import { getFullscreenElement, onFullscreenChange } from "../utils/fullscreenCompat";
+import { getFullscreenElement, onFullscreenChange, supportsFullscreen } from "../utils/fullscreenCompat";
+import FullscreenRecoveryOverlay from "../components/FullscreenRecoveryOverlay";
 import { enterFullscreen, releaseFullscreen, isReleasingFullscreen } from "../utils/fullscreenSession";
 
 // identity of this page for the fullscreen manager (only the owner that entered fullscreen can release it)
@@ -146,6 +148,8 @@ export default function TestTaking() {
   // counter (since it didn't actually count), and a note that repeating it will start counting.
   const [suspiciousNotice, setSuspiciousNotice] = useState(null);
   const [timeNotice, setTimeNotice] = useState(null); // neutral notice when an administrator changes the duration (deadlineSync.js)
+  const [pendingViolations, setPendingViolations] = useState(0); // security events detected but not yet acknowledged by the server (violationOutbox.js)
+  const outboxRef = useRef(null);
   // Purely informational -- shown the instant the device rotates, independent of (and faster
   // than) the server round-trip reportViolation makes for the logged, never-penalized
   // ORIENTATION_CHANGE event. Never a warning/violation banner; see the overlay-signal effect.
@@ -886,7 +890,48 @@ export default function TestTaking() {
   // change) never does, no matter how often -- same "log don't penalize" policy the Interview
   // surface already used for face signals, generalized. `reason` is purely the human-readable
   // text for the on-page banner.
-  function reportViolation(type, reason, isRetry = false) {
+  // Shows what the server decided about an event it ACKNOWLEDGED: the strike banner, the soft notice, or the auto-submit screen. A "duplicate" answer means the server already had this event
+  // (a retry after a lost answer), which was already shown when it was first acknowledged: nothing is shown or counted twice.
+  function handleViolationAck(data, type, reason) {
+    if (!data || data.duplicate) return;
+    if (data.autoSubmitted) {
+      finalizedRef.current = true;
+      setAutoSubmitted(true);
+      releaseFullscreen(TEST_FS_OWNER);
+      mediaStreamRef.current?.getTracks().forEach((t) => t.stop());
+      // No alert() here — a dedicated full-screen message is shown once `autoSubmitted`
+      // is true, and native alert()/confirm() dialogs force the browser to exit
+      // fullscreen before they can render, which would fight the auto-submit cleanup.
+    } else if (data.penalized) {
+      // No alert() here either: showing a native dialog while in fullscreen forces the
+      // browser to silently exit fullscreen first, which was actively working against
+      // the "immediately return to fullscreen" requirement. An on-page banner instead.
+      const message = `Warning ${data.tabSwitchCount}/${MAX_TAB_VIOLATIONS}: ${reason}. The test will auto-submit if this happens ${MAX_TAB_VIOLATIONS} times.`;
+      setTabWarning(message);
+      clearTimeout(tabWarningTimeoutRef.current);
+      tabWarningTimeoutRef.current = setTimeout(() => setTabWarning(null), 6000);
+    } else if (data.severity === "SUSPICIOUS") {
+      // A SUSPICIOUS-severity event (see backend/src/utils/proctoringSeverity.js — the
+      // screen-overlay heuristic, clipboard/right-click/devtools attempts, and a page-hidden
+      // spell that stayed under the "sustained absence" threshold all reach this) that didn't
+      // cross the escalation threshold this time -- a softer, distinct notice, not the strike
+      // banner used for an actual penalized violation.
+      const message = `Notice: ${reason}. This didn't count this time, but repeating it will.`;
+      setSuspiciousNotice(message);
+      clearTimeout(suspiciousNoticeTimeoutRef.current);
+      suspiciousNoticeTimeoutRef.current = setTimeout(() => setSuspiciousNotice(null), 5000);
+    } else if (type === "SCREEN_OVERLAY_DETECTED") {
+      // INTERRUPTION on the server (never counted: an on-screen keyboard or system UI can look the same), but the student must still be told it was recorded.
+      // Silence here is what made a search/assistant overlay look as if it went unnoticed.
+      setSuspiciousNotice("Notice: part of the test screen was covered by another layer (for example a search or assistant overlay). This is recorded for review and did not count as a strike. Close it and continue your test.");
+      clearTimeout(suspiciousNoticeTimeoutRef.current);
+      suspiciousNoticeTimeoutRef.current = setTimeout(() => setSuspiciousNotice(null), 7000);
+    }
+  }
+
+  // Reports an observed event. It is queued with its own event id and sent until the server acknowledges it (utils/violationOutbox.js): a failed send is retried with backoff and survives a page
+  // refresh, and a retry is recognised by the server so it is never counted twice. The student is told what the server decided when it acknowledges, never before.
+  function reportViolation(type, reason) {
     if (!attemptIdRef.current || finalizedRef.current) return;
     // Per-TYPE dedupe (matching useProctoring.js's identical map, used by Module Coding/Interview)
     // -- collapses e.g. a browser refiring the same fullscreenchange event twice in a row into one
@@ -899,57 +944,30 @@ export default function TestTaking() {
     // one specific type is exactly what per-type dedupe exists to catch.
     const now = Date.now();
     const last = lastViolationAtRef.current[type] || 0;
-    if (!isRetry && now - last < 1500) return;
+    if (now - last < 1500) return;
     lastViolationAtRef.current[type] = now;
-    api
-      .post(`/tests/attempts/${attemptIdRef.current}/violation`, { type })
-      .then(({ data }) => {
-        if (data.autoSubmitted) {
-          finalizedRef.current = true;
-          setAutoSubmitted(true);
-          releaseFullscreen(TEST_FS_OWNER);
-          mediaStreamRef.current?.getTracks().forEach((t) => t.stop());
-          // No alert() here — a dedicated full-screen message is shown once `autoSubmitted`
-          // is true, and native alert()/confirm() dialogs force the browser to exit
-          // fullscreen before they can render, which would fight the auto-submit cleanup.
-        } else if (data.penalized) {
-          // No alert() here either: showing a native dialog while in fullscreen forces the
-          // browser to silently exit fullscreen first, which was actively working against
-          // the "immediately return to fullscreen" requirement. An on-page banner instead.
-          const message = `Warning ${data.tabSwitchCount}/${MAX_TAB_VIOLATIONS}: ${reason}. The test will auto-submit if this happens ${MAX_TAB_VIOLATIONS} times.`;
-          setTabWarning(message);
-          clearTimeout(tabWarningTimeoutRef.current);
-          tabWarningTimeoutRef.current = setTimeout(() => setTabWarning(null), 6000);
-        } else if (data.severity === "SUSPICIOUS") {
-          // A SUSPICIOUS-severity event (see backend/src/utils/proctoringSeverity.js — the
-          // screen-overlay heuristic, clipboard/right-click/devtools attempts, and a page-hidden
-          // spell that stayed under the "sustained absence" threshold all reach this) that didn't
-          // cross the escalation threshold this time -- a softer, distinct notice, not the strike
-          // banner used for an actual penalized violation.
-          const message = `Notice: ${reason}. This didn't count this time, but repeating it will.`;
-          setSuspiciousNotice(message);
-          clearTimeout(suspiciousNoticeTimeoutRef.current);
-          suspiciousNoticeTimeoutRef.current = setTimeout(() => setSuspiciousNotice(null), 5000);
-        } else if (type === "SCREEN_OVERLAY_DETECTED") {
-          // INTERRUPTION on the server (never counted: an on-screen keyboard or system UI can look the same), but the student must still be told it was recorded.
-          // Silence here is what made a search/assistant overlay look as if it went unnoticed.
-          setSuspiciousNotice("Notice: part of the test screen was covered by another layer (for example a search or assistant overlay). This is recorded for review and did not count as a strike. Close it and continue.");
-          clearTimeout(suspiciousNoticeTimeoutRef.current);
-          suspiciousNoticeTimeoutRef.current = setTimeout(() => setSuspiciousNotice(null), 7000);
-        }
-      })
-      // Previously silent -- a violation that failed to even reach the server (network blip,
-      // stale session, unexpected 4xx/5xx) meant the student's action went completely
-      // unrecorded AND unwarned, with nothing in the console to tell a developer why "tab
-      // switching doesn't show a warning" was ever reported. Still fails open for the student
-      // (never blocks them or retries indefinitely mid-exam), just no longer invisible.
-      .catch((err) => {
-        console.error("[exam] violation report failed:", err);
-        // The report never got an answer (network blip). The window-fill report is sent once more after a few seconds: the server holds a 30 s duplicate window for it, so if the first one did
-        // arrive and only the answer was lost, the repeat is acknowledged without a second strike. Other types are not repeated here (they have no duplicate window).
-        if (!err.response && type === "WINDOW_NOT_FILLING_SCREEN" && !isRetry) setTimeout(() => reportViolation(type, reason, true), 4000);
-      });
+    outboxRef.current?.enqueue({ type, reason });
   }
+
+  // One outbox per running attempt. Retried when the connection returns and when the tab becomes visible again (the backoff timers cover the rest); destroyed with the page.
+  useEffect(() => {
+    if (!started || !attemptIdRef.current) return undefined;
+    const outbox = createViolationOutbox({
+      attemptId: attemptIdRef.current,
+      send: (e) => api.post(`/tests/attempts/${attemptIdRef.current}/violation`, e).then((r) => r.data),
+      onAck: (event, data) => handleViolationAck(data, event.type, event.reason),
+      onDrop: (event, err) => console.warn("[exam] a violation report was refused by the server and dropped:", event.type, err?.response?.status || err?.message),
+      onChange: (n) => setPendingViolations(n),
+    });
+    outboxRef.current = outbox;
+    outbox.flushNow(); // events left unsent by a page that was refreshed or closed
+    const onOnline = () => outbox.flushNow();
+    const onVisible = () => { if (document.visibilityState === "visible") outbox.flushNow(); };
+    window.addEventListener("online", onOnline);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => { window.removeEventListener("online", onOnline); document.removeEventListener("visibilitychange", onVisible); outbox.destroy(); if (outboxRef.current === outbox) outboxRef.current = null; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [started]);
 
   // Sends the student's message to the in-page AI panel for the CURRENT question. The server
   // independently re-checks aiAllowed for this exact question every call (see tests.js's
@@ -1712,13 +1730,17 @@ export default function TestTaking() {
     setSubmittedInfo({ id: data.id, submittedAt: data.submittedAt });
   }
 
+  // Requests fullscreen from a button press (the only moment browsers allow it) and returns whether the browser REALLY is in fullscreen afterwards, never what we hoped.
   async function resumeFullscreen() {
     try {
       await enterFullscreen(TEST_FS_OWNER);
-      setFullscreenOk(!!getFullscreenElement());
-      setTabWarning(null);
+      const active = !!getFullscreenElement();
+      setFullscreenOk(active);
+      if (active) setTabWarning(null);
+      return active;
     } catch (err) {
       console.warn("[exam] manual resumeFullscreen failed:", err);
+      return false;
     }
   }
 
@@ -2103,6 +2125,12 @@ export default function TestTaking() {
             <span className={`exam-save-pill ${savingAnswer ? "saving" : saveFailed ? "failed" : "saved"}`}>
               {savingAnswer ? "Saving…" : saveFailed ? "⚠ Not saved" : "Autosaved ✓"}
             </span>
+            {/* Detected on this device but not yet confirmed by the server (a connection problem): said as it is, never shown as recorded. They are kept and sent when the connection returns. */}
+            {pendingViolations > 0 && (
+              <span role="status" className="mono" style={{ fontSize: 11.5, color: "var(--amber-dark)" }}>
+                ⚠ {pendingViolations} security {pendingViolations === 1 ? "event is" : "events are"} waiting to be sent
+              </span>
+            )}
             <span
               className={`exam-timer exam-timer-${timerTone}`}
               role="timer"
@@ -2128,6 +2156,12 @@ export default function TestTaking() {
       )}
       {!isOffline && reconnectPhase === "saved" && (
         <div className="exam-network-banner restored">✓ All answers saved</div>
+      )}
+
+      {/* A test that requires fullscreen is blocked, with the questions hidden, until the student re-enters fullscreen from the button (the only moment a browser allows it). Not on phones and
+          tablets (their on-screen keyboard leaves fullscreen and would trap a student who is typing) and not where the browser has no Fullscreen API at all: there the banner below says so. */}
+      {test.requireFullscreen && started && !fullscreenOk && !isTouchDevice() && supportsFullscreen() && (
+        <FullscreenRecoveryOverlay timeLabel={timeLabel} resume={resumeFullscreen} />
       )}
 
       {/* Persistent (not auto-dismissing, unlike tabWarning above) so a fullscreen rejection that

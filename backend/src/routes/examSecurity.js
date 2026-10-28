@@ -432,7 +432,7 @@ router.get("/exam-attempts/:attemptId/timeline", authenticate, requireRole(...ST
       if (!a) return res.status(404).json({ error: "Attempt not found" });
       if (inst && (a.student.instituteId !== inst || (a.test.instituteId && a.test.instituteId !== inst))) return res.status(403).json({ error: "Not allowed" });
       if (!canStaffAccessTest(req, a.test)) return res.status(403).json({ error: "Not allowed" });
-      head = a; classic = await prisma.testViolation.findMany({ where: { attemptId: id }, orderBy: { createdAt: "asc" }, take: 500 });
+      head = a; classic = await prisma.testViolation.findMany({ where: { attemptId: id }, orderBy: { createdAt: "asc" }, select: { id: true, attemptId: true, type: true, severity: true, penalized: true, createdAt: true }, take: 500 }); // the idempotency columns are server-only
     } else if (kind === "READINESS") {
       const a = await prisma.readinessAssessment.findUnique({ where: { id }, include: { student: { select: { id: true, name: true, instituteId: true, registrationNumber: true } }, subject: { select: { instituteId: true, createdById: true } } } });
       if (!a) return res.status(404).json({ error: "Attempt not found" });

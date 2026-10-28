@@ -149,17 +149,28 @@ const suspiciousCount = (attemptId) => prisma.testViolation.count({ where: { att
 const violationCountOfType = (attemptId, type) => prisma.testViolation.count({ where: { attemptId, type } });
 // When the newest event of this type on the attempt was recorded (null when there is none): the duplicate-window check of recordViolation.
 const latestViolationAt = async (attemptId, type) => (await prisma.testViolation.findFirst({ where: { attemptId, type }, orderBy: { createdAt: "desc" }, select: { createdAt: true } }))?.createdAt ?? null;
-const logViolation = (attemptId, type, severity, penalized) => prisma.testViolation.create({ data: { attemptId, type, severity, penalized } });
-// A penalized event and the strike-count update describe one event: written together so a partial write never leaves them out of sync.
-const logPenalizedViolation = (attemptId, type, severity, tabSwitchCount, autoSubmitted) => prisma.$transaction([
-  prisma.testViolation.create({ data: { attemptId, type, severity, penalized: true } }),
-  prisma.testAttempt.update({ where: { id: attemptId }, data: { tabSwitchCount, ...(autoSubmitted ? { status: "AUTO_SUBMITTED", submittedAt: new Date() } : {}) } }),
-]);
+// `extra` = { clientEventId, clientAt }: the page's idempotency key and its own claimed time (see tests.violationEvent.js). A repeat of an event id on the same attempt violates the unique
+// constraint (Prisma P2002) and nothing is written.
+const logViolation = (attemptId, type, severity, penalized, extra = {}) => prisma.testViolation.create({ data: { attemptId, type, severity, penalized, ...extra } });
+// A penalized event and the strike-count update describe one event: written together so a partial write never leaves them out of sync. The count is incremented IN the database (the old
+// read-then-write could lose a strike when two violations arrived together), and the attempt is closed in the same transaction when the count reaches the limit. Returns the authoritative
+// count after this event, whether it reached the limit, and whether THIS call is the one that closed the attempt (only that call may award the completion XP).
+const logPenalizedViolation = (attemptId, type, severity, maxViolations, extra = {}) => prisma.$transaction(async (tx) => {
+  await tx.testViolation.create({ data: { attemptId, type, severity, penalized: true, ...extra } });
+  const updated = await tx.testAttempt.update({ where: { id: attemptId }, data: { tabSwitchCount: { increment: 1 } }, select: { tabSwitchCount: true } });
+  const autoSubmitted = updated.tabSwitchCount >= maxViolations;
+  let closedHere = false;
+  if (autoSubmitted) closedHere = (await tx.testAttempt.updateMany({ where: { id: attemptId, status: "IN_PROGRESS" }, data: { status: "AUTO_SUBMITTED", submittedAt: new Date() } })).count === 1;
+  return { tabSwitchCount: updated.tabSwitchCount, autoSubmitted, closedHere };
+});
+const violationByEventId = (attemptId, clientEventId) => prisma.testViolation.findUnique({ where: { attemptId_clientEventId: { attemptId, clientEventId } }, select: { id: true, type: true, severity: true, penalized: true } });
 const attemptForAdminReview = (id) => prisma.testAttempt.findUnique({
   where: { id },
   include: { test: { select: { instituteId: true, createdById: true, securityLevel: true, securityPolicy: true, requireFullscreen: true, shares: { select: { staffId: true } } } }, student: { select: { name: true, email: true } } },
 });
-const violationsOf = (attemptId) => prisma.testViolation.findMany({ where: { attemptId }, orderBy: { createdAt: "asc" } });
+// The columns the staff log has always shown; the idempotency columns are for the server only and are not exposed here.
+const VIOLATION_COLUMNS = { id: true, attemptId: true, type: true, severity: true, penalized: true, createdAt: true };
+const violationsOf = (attemptId) => prisma.testViolation.findMany({ where: { attemptId }, orderBy: { createdAt: "asc" }, select: VIOLATION_COLUMNS });
 // Keyboard signals (Copilot key / assistant shortcuts) are stored as security events, not strikes; the staff log shows them alongside the strikes.
 const securitySignalsOf = (attemptId) => prisma.examSecurityEvent.findMany({ where: { attemptKind: "TEST", attemptId, type: { in: ["COPILOT_KEY_SIGNAL", "AI_SHORTCUT_DETECTED"] } }, orderBy: { createdAt: "asc" }, take: 200 });
 
@@ -175,7 +186,7 @@ const attemptWithSubmissions = (testId, studentId) => prisma.testAttempt.findUni
 
 Object.assign(module.exports, {
   listTests, studentScope, attemptStatusesFor, findDetail, attemptLayout, questionsByIds, attendanceStatus, findForStart, findAttempt, findReattemptGrant, consumeReattemptGrant,
-  createAttempt, setSession, submissionsOf, attemptById, suspiciousCount, violationCountOfType, latestViolationAt, logViolation, logPenalizedViolation, attemptForAdminReview, violationsOf, securitySignalsOf, attemptForAi, testQuestionForAi,
+  createAttempt, setSession, submissionsOf, attemptById, suspiciousCount, violationCountOfType, latestViolationAt, violationByEventId, logViolation, logPenalizedViolation, attemptForAdminReview, violationsOf, securitySignalsOf, attemptForAi, testQuestionForAi,
   studentInstitute, testForResult, attemptWithSubmissions,
 });
 

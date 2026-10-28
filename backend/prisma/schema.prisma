@@ -2044,8 +2044,14 @@ model TestViolation {
   severity  String  @default("CONFIRMED_VIOLATION")
   penalized Boolean @default(true)
   createdAt DateTime @default(now())
+  // The page's own unique id for this event (an idempotency key). A repeat of the same id on the same attempt (a retry after a lost answer, a queue flushed twice) is acknowledged and never
+  // counted again. Null for events from older clients and for server-originated rows. Added 2026-10-28.
+  clientEventId String?
+  // When the PAGE says the event happened. Client-provided: never used for ordering, counting or deadlines (createdAt, the server's receipt time, is the record).
+  clientAt      DateTime?
 
   @@index([attemptId, createdAt])
+  @@unique([attemptId, clientEventId])
 }
 
 // ===================================================================

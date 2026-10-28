@@ -11,6 +11,7 @@ const X = require("../../utils/examSecurity");
 const { gradePendingCodingSubmissions } = require("../../utils/gradeAttempt");
 const { processGamification } = require("../../utils/gamification");
 const { classifyViolation, STRIKE_FROM_OCCURRENCE, DUPLICATE_WINDOW_MS } = require("../../utils/proctoringSeverity");
+const { parseEventId, parseClientAt, isUniqueViolation } = require("./tests.violationEvent");
 const { MANIFEST_VERSION, validateManifest, scoreBase } = require("../../utils/attemptManifest");
 const aiService = require("../../services/ai/aiService");
 const { annotateEvents } = require("../../utils/evidenceClassification");
@@ -88,36 +89,59 @@ async function startAttempt(actor, testId) {
 }
 
 // ---- proctoring violation ----
-async function recordViolation(actor, attemptId, rawType) {
+async function recordViolation(actor, attemptId, rawType, meta = {}) {
   const attempt = await repo.attemptById(attemptId);
   if (!attempt || attempt.studentId !== actor.user.id) throw new ServiceError(403, "Invalid attempt");
-  if (attempt.status !== "IN_PROGRESS") return { tabSwitchCount: attempt.tabSwitchCount, autoSubmitted: true };
+  // The identity of this report (see tests.violationEvent.js). Malformed ids are refused; a missing id is allowed (older pages) and the event is then processed exactly as before.
+  const ev = parseEventId(meta.eventId);
+  if (ev.error) throw new ServiceError(400, ev.error);
+  const eventId = ev.value;
+  const ack = eventId ? { eventId, acknowledged: true } : {};
+  if (attempt.status !== "IN_PROGRESS") return { tabSwitchCount: attempt.tabSwitchCount, autoSubmitted: true, ...ack };
 
   const type = String(rawType || "UNKNOWN").toUpperCase().slice(0, 40);
-  // The same physical situation reported twice (a duplicate browser event, or a retry after a lost answer) is acknowledged without a second record or strike.
+  // A repeat of a report the server already recorded (a retry after a lost answer, a queue flushed twice) is acknowledged with the recorded outcome and counts for nothing a second time.
+  const duplicateOf = (prior) => ({ tabSwitchCount: attempt.tabSwitchCount, maxViolations: d.MAX_TAB_VIOLATIONS, severity: prior.severity, penalized: prior.penalized, autoSubmitted: false, duplicate: true, ...ack });
+  if (eventId) {
+    const prior = await repo.violationByEventId(attempt.id, eventId);
+    if (prior) return duplicateOf(prior);
+  }
+  // The same physical situation reported twice (a duplicate browser event) is acknowledged without a second record or strike.
   if (DUPLICATE_WINDOW_MS[type]) {
     const lastAt = await repo.latestViolationAt(attempt.id, type);
     if (lastAt && Date.now() - new Date(lastAt).getTime() < DUPLICATE_WINDOW_MS[type]) {
-      return { tabSwitchCount: attempt.tabSwitchCount, maxViolations: d.MAX_TAB_VIOLATIONS, severity: classifyViolation(type, 0).severity, penalized: false, autoSubmitted: false, deduplicated: true };
+      return { tabSwitchCount: attempt.tabSwitchCount, maxViolations: d.MAX_TAB_VIOLATIONS, severity: classifyViolation(type, 0).severity, penalized: false, autoSubmitted: false, deduplicated: true, ...ack };
     }
   }
   // Escalation counts SUSPICIOUS events fresh from the log each time, so the threshold can change without a backfill.
   const prior = await repo.suspiciousCount(attempt.id);
   // Types counted per type (the exam page losing focus: a warning the first time, a strike from the second) need how many of THIS type came before.
   const priorSameType = STRIKE_FROM_OCCURRENCE[type] !== undefined ? await repo.violationCountOfType(attempt.id, type) : null;
-  const outcome = d.violationOutcome(attempt, classifyViolation(type, prior, priorSameType));
-  const { severity, penalized, tabSwitchCount, autoSubmitted } = outcome;
+  const { severity, penalized } = classifyViolation(type, prior, priorSameType);
+  // The id and the page's own claimed time are stored with the record (the server's receipt time is the record's createdAt; the claimed time is never used for anything else).
+  const extra = eventId ? { clientEventId: eventId, clientAt: parseClientAt(meta.clientAt) } : {};
+
+  let tabSwitchCount = attempt.tabSwitchCount;
+  let autoSubmitted = false;
+  let closedHere = false;
+  try {
+    if (penalized) ({ tabSwitchCount, autoSubmitted, closedHere } = await repo.logPenalizedViolation(attempt.id, type, severity, d.MAX_TAB_VIOLATIONS, extra));
+    else await repo.logViolation(attempt.id, type, severity, penalized, extra);
+  } catch (err) {
+    // Two requests with the same event id at once: one wrote it, this one is the repeat (nothing of this one was written, its transaction rolled back).
+    if (eventId && isUniqueViolation(err)) {
+      const winner = await repo.violationByEventId(attempt.id, eventId);
+      if (winner) return duplicateOf(winner);
+    }
+    throw err;
+  }
 
   // A violation-triggered submit is a submission like any other: coding drafts must be graded or they would stay at 0 forever.
   if (autoSubmitted) await gradePendingCodingSubmissions(attempt.id);
-
-  if (penalized) await repo.logPenalizedViolation(attempt.id, type, severity, tabSwitchCount, autoSubmitted);
-  else await repo.logViolation(attempt.id, type, severity, penalized);
-
-  if (autoSubmitted) {
+  if (closedHere) {
     processGamification(actor.user.id, { xpActivities: ["TEST_COMPLETE"], xpMeta: { attemptId: attempt.id }, streakEligible: true }).catch((e) => console.error("gamification failed", e));
   }
-  return { tabSwitchCount, maxViolations: d.MAX_TAB_VIOLATIONS, severity, penalized, autoSubmitted };
+  return { tabSwitchCount, maxViolations: d.MAX_TAB_VIOLATIONS, severity, penalized, autoSubmitted, ...ack };
 }
 
 // ---- staff view of an attempt's violation log ----
