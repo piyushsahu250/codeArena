@@ -53,7 +53,7 @@ test.describe("staff workflow", () => {
     await marker(page);
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     await page.getByRole("button", { name: "Save changes" }).click();
-    await expect(page).toHaveURL(/\/staff$/, { timeout: 20000 });
+    await expect(page).toHaveURL(/\/staff\/tests$/, { timeout: 20000 });
     try {
       await expect(page.getByText(/saved\./).first()).toBeVisible({ timeout: 8000 });
     } catch (err) {
@@ -90,7 +90,7 @@ test.describe("staff workflow", () => {
       await route.continue();
     });
     await page.getByRole("button", { name: "Save changes" }).dblclick();
-    await expect(page).toHaveURL(/\/staff$/, { timeout: 20000 });
+    await expect(page).toHaveURL(/\/staff\/tests$/, { timeout: 20000 });
     expect(patches, "one save, not two").toBe(1);
   });
 
@@ -120,7 +120,7 @@ test.describe("staff workflow", () => {
     await expect(page).toHaveURL(/\/staff\/tests\/new$/);
     await expect.poll(() => scrollY(page), { timeout: 5000 }).toBeLessThanOrEqual(4);
     await page.goBack();
-    await expect(page).toHaveURL(/\/staff$/);
+    await expect(page).toHaveURL(/\/staff\/tests$/);
     await expect.poll(() => scrollY(page), { timeout: 8000 }).toBeGreaterThanOrEqual(where - 40);
     expect(await stayed(page), "Back was in-app navigation, not a reload").toBe(true);
   });
