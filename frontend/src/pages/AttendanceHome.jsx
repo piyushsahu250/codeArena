@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../api";
 import Navbar from "../components/Navbar";
@@ -18,11 +18,11 @@ export default function AttendanceHome() {
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
-  useEffect(() => {
-    api.get("/attendance/my-assignments")
-      .then((res) => setAssignments(res.data))
-      .catch((err) => setError(err.response?.data?.error || "Failed to load your classes"));
-  }, []);
+  // Loads (and reloads, after a claim) only this list: the page is not reloaded, so the scroll position and everything else on it stay as they are.
+  const reloadAssignments = useCallback(() => api.get("/attendance/my-assignments")
+    .then((res) => setAssignments(res.data))
+    .catch((err) => setError(err.response?.data?.error || "Failed to load your classes")), []);
+  useEffect(() => { reloadAssignments(); }, [reloadAssignments]);
 
   return (
     <div>
@@ -84,7 +84,7 @@ export default function AttendanceHome() {
           </div>
         )}
 
-        {user?.role === "STAFF" && user?.instituteId && <TalentPoolAttendanceClaims user={user} assignments={assignments} />}
+        {user?.role === "STAFF" && user?.instituteId && <TalentPoolAttendanceClaims user={user} assignments={assignments} onClaimed={reloadAssignments} />}
       </div>
     </div>
   );
@@ -94,7 +94,7 @@ export default function AttendanceHome() {
 // least one attendance-mandatory exclusive test, with a one-click "Claim" that self-assigns
 // attendance ownership for their institute — "without requiring Admin intervention," per the spec.
 // Already-claimed pools are skipped (they already show as a normal assignment card above).
-function TalentPoolAttendanceClaims({ user, assignments }) {
+function TalentPoolAttendanceClaims({ user, assignments, onClaimed }) {
   const [pools, setPools] = useState(null);
   const [claiming, setClaiming] = useState("");
   const [error, setError] = useState("");
@@ -124,7 +124,8 @@ function TalentPoolAttendanceClaims({ user, assignments }) {
     setError("");
     try {
       await api.post(`/talent-pools/${poolId}/attendance-owners`, { instituteId: user.instituteId, staffId: user.id });
-      window.location.reload();
+      await onClaimed?.(); // refresh the assignment list in place (the claimed pool moves up into it); no full page reload
+      setClaiming("");
     } catch (err) {
       setError(err.response?.data?.error || "Failed to claim attendance ownership");
       setClaiming("");

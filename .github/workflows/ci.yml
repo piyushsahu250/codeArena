@@ -120,6 +120,8 @@ jobs:
         run: node scripts/cameraReadinessRegression.mjs
       - name: Violation outbox regression (queue, backoff with jitter, retry with the same id, refresh, refusals)
         run: node scripts/violationOutboxRegression.mjs
+      - name: Scroll policy regression (new page = top, Back = restore, same page = keep, section request)
+        run: node scripts/scrollPolicyRegression.mjs
       - name: Deadline sync regression (the page follows the server deadline when the duration changes)
         run: node scripts/deadlineSyncRegression.mjs
       - name: Exam window regression (floating window, keyboard, zoom, glitch, one report per episode)

@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect } from "react";
 import { announceTabPresence } from "./utils/tabPresence";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import ScrollManager from "./components/ScrollManager";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { GamificationProvider } from "./context/GamificationContext";
 import { FeatureProvider } from "./context/FeatureContext";
@@ -274,6 +275,7 @@ export default function App() {
       <FeatureProvider>
       <GamificationProvider>
       <BrowserRouter>
+        <ScrollManager />
         <RouteErrorBoundary>
         <Suspense fallback={<LoadingScreen />}>
         <Routes>
