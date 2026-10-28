@@ -42,7 +42,19 @@ test("leaving fullscreen blocks the exam until the student re-enters it from the
   expect(body.eventId).toBe(sent.eventId);
   expect(body.penalized).toBe(true);
 
-  await page.getByRole("button", { name: "Re-enter Fullscreen" }).click();
+  try {
+    await page.getByRole("button", { name: "Re-enter Fullscreen" }).click({ timeout: 15000 });
+  } catch (err) {
+    // say what is under the button's centre, so a blocked click explains itself in the CI annotation
+    const diag = await page.evaluate(() => {
+      const b = [...document.querySelectorAll("button")].find((x) => /Re-enter Fullscreen/.test(x.textContent));
+      if (!b) return "button not found";
+      const r = b.getBoundingClientRect();
+      const top = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+      return JSON.stringify({ disabled: b.disabled, rect: [r.x, r.y, r.width, r.height].map(Math.round), top: top ? `${top.tagName}.${String(top.className).slice(0, 40)}|${(top.textContent || "").slice(0, 50)}` : null, fullscreen: !!document.fullscreenElement, visibility: document.visibilityState, size: [innerWidth, innerHeight] });
+    });
+    throw new Error(`the Re-enter Fullscreen click failed: ${String(err.message).split("\n")[0]} | ${diag}`);
+  }
   await expect.poll(() => inFullscreen(page), { timeout: 10000 }).toBe(true);
   await expect(overlay).toHaveCount(0);
   expect(await page.evaluate(() => document.getElementById("root").hasAttribute("inert"))).toBe(false);
