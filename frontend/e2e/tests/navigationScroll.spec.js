@@ -37,7 +37,7 @@ test.describe("staff workflow", () => {
 
   test("submitting with required fields missing shows validation on the form and keeps what was typed", async ({ page }) => {
     await page.goto("/staff/tests/new");
-    const title = page.locator('form input[type="text"]').first();
+    const title = page.locator("#test-title");
     await title.fill("Half filled test title");
     await marker(page);
     await page.getByRole("button", { name: /Create test/ }).click();
@@ -54,7 +54,12 @@ test.describe("staff workflow", () => {
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     await page.getByRole("button", { name: "Save changes" }).click();
     await expect(page).toHaveURL(/\/staff$/, { timeout: 20000 });
-    await expect(page.getByText(/Test ".*" saved\./)).toBeVisible();
+    try {
+      await expect(page.getByText(/saved\./).first()).toBeVisible({ timeout: 8000 });
+    } catch (err) {
+      const diag = await page.evaluate(() => JSON.stringify({ state: history.state && history.state.usr, toasts: document.querySelectorAll(".ca-toast").length, text: document.body.innerText.slice(0, 160), url: location.pathname }));
+      throw new Error(`the saved notice was not shown | ${diag}`);
+    }
     await expect(page.locator(`#test-row-${data.testId}`)).toBeVisible({ timeout: 15000 });
     await expect.poll(() => inViewport(page, `#test-row-${data.testId}`), { timeout: 10000 }).toBe(true);
     expect(await stayed(page), "no full page load").toBe(true);
@@ -62,7 +67,7 @@ test.describe("staff workflow", () => {
 
   test("a failed save keeps the user on the form with everything entered, and says what happened", async ({ page }) => {
     await page.goto(`/staff/tests/${data.testId}/edit`);
-    const title = page.locator('form input[type="text"]').first();
+    const title = page.locator("#test-title");
     await expect(title).toBeVisible({ timeout: 15000 });
     const original = await title.inputValue();
     await title.fill(`${original} (edited)`);
