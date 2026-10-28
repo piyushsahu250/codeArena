@@ -528,7 +528,7 @@ Decisions from the product owner: (1) staff reset module-coding attempts only fo
 
 **Root causes found.**
 * **N-1 (P2) The app had no scroll policy at all.** React Router in declarative mode never moves the page, and nothing else did. Every link to another page kept the previous page's scroll offset, so a page opened part-way down, or at the top by chance, depending on where the user had been. This is the platform-wide cause of "the page returns to the top / jumps".
-* **N-2 (P2) Saving a test ended with a bare `navigate("/staff")`.** The new test lives in the Manage Tests section far below the dashboard's top, so after "Create test" the staff member saw the dashboard at an arbitrary position with no sign that anything had been saved and no sight of the new test.
+* **N-2 (P2) Saving a test ended with a bare `navigate("/staff")` (which is the staff home page, not the test list at `/staff/tests`).** The new test lives in the Manage Tests section far below the dashboard's top, so after "Create test" the staff member saw the dashboard at an arbitrary position with no sign that anything had been saved and no sight of the new test.
 * **N-3 (P3) A quick double click or a repeated Enter could send the save twice** (the only guard was state, which disables the button after the next render); on create that is two tests.
 * **N-4 (P3) Validation and save failures used `alert()`**, a blocking dialog that interrupts the page; the entered data was kept but the message was disconnected from the form.
 * **N-5 (P3) Claiming a talent pool's attendance ownership did `window.location.reload()`** (a full page load) only to refresh one list.

@@ -408,7 +408,7 @@ export default function CreateTest() {
       clearDraft(draftStorageKey); // the saved test replaces the draft
       setGuard?.(false);
       // Back to where the test lives: the dashboard, scrolled to Manage Tests, with the saved test shown and highlighted there (StaffDashboard.jsx reads this state once).
-      navigate("/staff", { state: { scrollTo: "manage-tests", testSaved: { id: testId, title: payload.title, created: !isEdit, shareWarning } } });
+      navigate("/staff/tests", { state: { scrollTo: "manage-tests", testSaved: { id: testId, title: payload.title, created: !isEdit, shareWarning } } });
     } catch (err) {
       // Create-only duplicate warning (never fires on edit, or once already confirmed) — mirrors
       // CreateQuestion.jsx's identical 409 { duplicate, existing } handling for the Question Bank.

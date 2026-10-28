@@ -95,7 +95,7 @@ test.describe("staff workflow", () => {
   });
 
   test("opening and closing a dialog on a scrolled dashboard does not move the page", async ({ page }) => {
-    await page.goto("/staff");
+    await page.goto("/staff/tests");
     await expect(page.getByRole("heading", { name: "Manage Tests" })).toBeVisible({ timeout: 15000 });
     const open = page.getByRole("button", { name: "Edit live duration" }).first();
     await open.scrollIntoViewIfNeeded();
@@ -109,7 +109,7 @@ test.describe("staff workflow", () => {
   });
 
   test("Back returns to the scroll position the dashboard had, and a new page opens at the top", async ({ page }) => {
-    await page.goto("/staff");
+    await page.goto("/staff/tests");
     await expect(page.getByRole("heading", { name: "Manage Tests" })).toBeVisible({ timeout: 15000 });
     await page.evaluate(() => window.scrollTo(0, 700));
     await expect.poll(() => scrollY(page)).toBeGreaterThan(500);
@@ -128,6 +128,6 @@ test.describe("staff workflow", () => {
 
 test("a student cannot open the staff dashboard (authorisation is still enforced)", async ({ page }) => {
   await login(page, users.student);
-  await page.goto("/staff");
+  await page.goto("/staff/tests");
   await expect(page.getByRole("heading", { name: "Manage Tests" })).toHaveCount(0);
 });
