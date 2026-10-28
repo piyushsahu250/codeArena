@@ -73,6 +73,9 @@ export default function CreateTest() {
   const [talentPoolIds, setTalentPoolIds] = useState([]);
   const [initialTalentPoolIds, setInitialTalentPoolIds] = useState([]);
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false); // synchronous guard against a second save while one is in flight (see handleSubmit)
+  const [formError, setFormError] = useState(""); // a problem with the save, shown on the form (never an alert that interrupts the page)
+  const formErrorRef = useRef(null);
   const [loading, setLoading] = useState(isEdit);
   const [loadError, setLoadError] = useState("");
   const [showBankModal, setShowBankModal] = useState(false);
@@ -333,13 +336,24 @@ export default function CreateTest() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isRandomMode, form.randomBankFolderId]);
 
+  // A problem with the save is shown on the form, next to the button, and the page scrolls to it deliberately (never to the top): everything the user entered stays exactly as it was.
+  function showFormError(message) {
+    setFormError(message);
+    requestAnimationFrame(() => { formErrorRef.current?.scrollIntoView({ block: "center", behavior: "smooth" }); formErrorRef.current?.focus({ preventScroll: true }); });
+  }
+
   async function handleSubmit(e, allowDuplicate = false) {
     e.preventDefault();
-    if (!isRandomMode && selected.length === 0) return alert("Select at least one question");
+    // One save at a time. `saving` is state and only disables the button after the next render, so a quick double click (or Enter pressed twice) would send two requests and create two
+    // tests; the ref closes that gap at once. The confirmed "create anyway" retry below goes through the same guard after it has been released.
+    if (savingRef.current) return;
+    setFormError("");
+    if (!isRandomMode && selected.length === 0) return showFormError("Select at least one question.");
     if (isRandomMode) {
-      if (!form.randomBankFolderId) return alert("Select a Question Bank for random question selection");
-      if (!form.randomQuestionsPerStudent || Number(form.randomQuestionsPerStudent) < 1) return alert("Set how many questions each student should receive");
+      if (!form.randomBankFolderId) return showFormError("Select a Question Bank for random question selection.");
+      if (!form.randomQuestionsPerStudent || Number(form.randomQuestionsPerStudent) < 1) return showFormError("Set how many questions each student should receive.");
     }
+    savingRef.current = true;
     setSaving(true);
     try {
       const distributionSum = Number(form.randomEasy || 0) + Number(form.randomMedium || 0) + Number(form.randomHard || 0);
@@ -363,6 +377,7 @@ export default function CreateTest() {
         version: isEdit ? version : undefined,
       };
       let testId = id;
+      let shareWarning = null; // a failed share is reported on the page the user lands on, not in a dialog that interrupts the save
       if (isEdit) {
         const { data: updated } = await api.patch(`/tests/${id}`, payload);
         setVersion(updated.version);
@@ -376,7 +391,7 @@ export default function CreateTest() {
           try {
             await api.post(`/tests/${testId}/shares`, { staffIds: shareStaffIds });
           } catch (shareErr) {
-            alert(shareErr.response?.data?.error || "Test created, but sharing it with the selected staff failed — share it from the Edit screen.");
+            shareWarning = shareErr.response?.data?.error || "Test created, but sharing it with the selected staff failed — share it from the Edit screen.";
           }
         }
       }
@@ -392,14 +407,15 @@ export default function CreateTest() {
       savedSnapshotRef.current = currentSnapshot; // reset dirty state on a successful save
       clearDraft(draftStorageKey); // the saved test replaces the draft
       setGuard?.(false);
-      navigate("/staff");
+      // Back to where the test lives: the dashboard, scrolled to Manage Tests, with the saved test shown and highlighted there (StaffDashboard.jsx reads this state once).
+      navigate("/staff", { state: { scrollTo: "manage-tests", testSaved: { id: testId, title: payload.title, created: !isEdit, shareWarning } } });
     } catch (err) {
       // Create-only duplicate warning (never fires on edit, or once already confirmed) — mirrors
       // CreateQuestion.jsx's identical 409 { duplicate, existing } handling for the Question Bank.
       if (isEdit && err.response?.status === 409 && err.response?.data?.conflict) {
-        alert("This test was modified by another user (possibly in another tab). Please refresh the page and re-apply your changes before saving.");
+        savingRef.current = false;
         setSaving(false);
-        return;
+        return showFormError("This test was modified by another user (possibly in another tab). Please refresh the page and re-apply your changes before saving.");
       }
       if (!isEdit && err.response?.status === 409 && err.response?.data?.duplicate) {
         const existing = err.response.data.existing;
@@ -408,14 +424,17 @@ export default function CreateTest() {
           message: `You already have a test named "${existing.title}" for ${existing.subject}${existing.unit ? ` · ${existing.unit}` : ""}. Create this one anyway?`,
           confirmLabel: "Create Anyway",
         });
+        savingRef.current = false; // released BEFORE the retry, which takes the guard itself
         setSaving(false);
         if (ok) return handleSubmit(e, true);
         return;
       }
-      alert(err.response?.data?.error || "Failed to save test");
+      // Whatever went wrong (validation, permission, network), the form keeps every value the user entered and says what happened.
+      savingRef.current = false;
       setSaving(false);
-      return;
+      return showFormError(err.response?.data?.error || (err.response ? "Failed to save the test." : "Could not reach the server. Check the connection and press save again: nothing you entered was lost."));
     }
+    savingRef.current = false;
     setSaving(false);
   }
 
@@ -886,7 +905,12 @@ export default function CreateTest() {
             </>
           )}
 
-          <button className="btn btn-primary" style={{ marginTop: 24 }} disabled={saving}>
+          {formError && (
+            <div ref={formErrorRef} role="alert" tabIndex={-1} style={{ marginTop: 24, padding: "10px 14px", borderRadius: 8, background: "var(--danger-bg, #FBE9E7)", color: "var(--danger-text, #8A1C0F)", fontSize: 14, outline: "none" }}>
+              {formError}
+            </div>
+          )}
+          <button type="submit" className="btn btn-primary" style={{ marginTop: formError ? 12 : 24 }} disabled={saving}>
             {saving ? "Saving…" : isEdit ? "Save changes" : "Create test"}
           </button>
         </form>

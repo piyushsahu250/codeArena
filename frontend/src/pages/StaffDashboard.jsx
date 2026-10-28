@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid } from "recharts";
 import { PlusCircle, BookOpen, Trophy, FileText, Mic, Users as UsersIcon, Upload, Download, School, GraduationCap, ClipboardList, BarChart3 } from "lucide-react";
 import api from "../api";
 import { useAuth } from "../context/AuthContext";
 import { useConfirm } from "../context/ConfirmContext";
+import { useToast } from "../context/ToastContext";
 import Navbar from "../components/Navbar";
 import ChalkUnderline from "../components/ChalkUnderline";
 import { SkeletonGrid } from "../components/Skeleton";
@@ -27,6 +28,9 @@ export default function StaffDashboard() {
   const { user } = useAuth();
   const confirm = useConfirm();
   const navigate = useNavigate();
+  const location = useLocation();
+  const toast = useToast();
+  const [highlightTestId, setHighlightTestId] = useState(null); // the test the user just created or saved, shown highlighted in Manage Tests
   const manageTestsRef = useRef(null);
   const [tests, setTests] = useState([]);
   const [groups, setGroups] = useState(null);
@@ -66,6 +70,28 @@ export default function StaffDashboard() {
     api.get("/resume/admin/stats").then((res) => setResumeStats(res.data)).catch(() => setResumeStats(null));
     api.get("/learning/courses").then((res) => setCourseCount(res.data.length)).catch(() => setCourseCount(null));
   }, []);
+
+  // Arriving from "Create test" / "Save changes" (CreateTest.jsx passes { testSaved } in the navigation state): say what was saved, highlight it in Manage Tests and bring it into view once the
+  // list has it. The message is shown once per history entry (sessionStorage), so Back, Forward and a refresh do not repeat it. Nothing is reset: filters and the rest of the page are untouched.
+  const savedFromForm = location.state && location.state.testSaved;
+  useEffect(() => {
+    if (!savedFromForm) return undefined;
+    const flag = `ca_saved_notice_${location.key}`;
+    let first = false;
+    try { first = !sessionStorage.getItem(flag); if (first) sessionStorage.setItem(flag, "1"); } catch { first = true; }
+    if (first) {
+      toast.success(savedFromForm.created ? `Test "${savedFromForm.title}" created.` : `Test "${savedFromForm.title}" saved.`);
+      if (savedFromForm.shareWarning) toast.error(savedFromForm.shareWarning);
+      setHighlightTestId(savedFromForm.id);
+    }
+    const clear = setTimeout(() => setHighlightTestId(null), 5000);
+    return () => clearTimeout(clear);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.key]);
+  useEffect(() => {
+    if (!highlightTestId) return;
+    document.getElementById(`test-row-${highlightTestId}`)?.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, [highlightTestId, tests.length]);
 
   function refresh() {
     api.get("/tests").then((res) => setTests(res.data));
@@ -312,7 +338,7 @@ export default function StaffDashboard() {
           </div>
         </div>
 
-        <h3 ref={manageTestsRef} style={{ fontSize: 16, marginTop: 32, marginBottom: 4, scrollMarginTop: 24 }}>Manage Tests</h3>
+        <h3 id="manage-tests" ref={manageTestsRef} style={{ fontSize: 16, marginTop: 32, marginBottom: 4, scrollMarginTop: 24 }}>Manage Tests</h3>
 
         <div style={{ display: "flex", gap: 8, marginTop: 16, flexWrap: "wrap" }}>
           <button
@@ -402,7 +428,7 @@ export default function StaffDashboard() {
             const isMine = test.createdBy?.id === user.id;
             const isShared = !isMine && (test.shares || []).some((s) => s.staffId === user.id);
             return (
-              <div key={test.id} className="card" style={{ padding: 24 }}>
+              <div key={test.id} id={`test-row-${test.id}`} className="card" style={{ padding: 24, scrollMarginTop: 96, ...(highlightTestId === test.id ? { outline: "3px solid var(--mint)", outlineOffset: 2, transition: "outline-color 0.4s" } : null) }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
                   <div>
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
