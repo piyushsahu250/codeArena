@@ -11,6 +11,18 @@ const QUESTION = /E2E question [0-9]: pick option B/;
 const inFullscreen = (page) => page.evaluate(() => !!(document.fullscreenElement || document.webkitFullscreenElement));
 const isViolation = (url) => /\/tests\/attempts\/[^/]+\/violation/.test(url);
 
+// A real browser only lets a page enter fullscreen right after a user gesture. Playwright's own page.evaluate counts as a gesture, which would let the page's automatic re-entry succeed and
+// remove the overlay by itself, so the rule is enforced here the way a browser does: requestFullscreen rejects unless a real click happened within the last second.
+const requireGestureForFullscreen = (page) => page.addInitScript(() => {
+  const real = Element.prototype.requestFullscreen;
+  let gestureUntil = 0;
+  document.addEventListener("click", () => { gestureUntil = Date.now() + 1000; }, true);
+  Element.prototype.requestFullscreen = function (...args) {
+    if (Date.now() > gestureUntil) return Promise.reject(new TypeError("requestFullscreen requires a user gesture"));
+    return real.apply(this, args);
+  };
+});
+
 async function beginStrictTest(page, user) {
   await login(page, user);
   await page.goto(`/test/${data.strictTestId}`);
@@ -23,6 +35,7 @@ async function beginStrictTest(page, user) {
 }
 
 test("leaving fullscreen blocks the exam until the student re-enters it from the button, and the exit is recorded", async ({ page }) => {
+  await requireGestureForFullscreen(page);
   await beginStrictTest(page, users.student);
   const answered = page.waitForResponse((r) => isViolation(r.url()) && r.request().method() === "POST", { timeout: 20000 });
   await page.evaluate(() => document.exitFullscreen());
