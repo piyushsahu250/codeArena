@@ -22,11 +22,16 @@ const violationLimiter = rateLimit({ windowMs: 60 * 1000, max: 40, keyGenerator:
 const examAiAssistLimiter = rateLimit({ windowMs: 60 * 1000, max: 5, keyGenerator: (req) => req.user.id });
 // Exports carry student names, e-mails and PRNs and are built in memory: a modest per-user budget.
 const exportLimiter = rateLimit({ windowMs: 60 * 1000, max: 20, keyGenerator: (req) => req.user.id });
+// The administrator's duration change is rare and heavy enough (it reads every running attempt): a few per minute is plenty. The student clock sync is polled about every 20 s per open exam page.
+const durationLimiter = rateLimit({ windowMs: 60 * 1000, max: 30, keyGenerator: (req) => req.user.id });
+const clockLimiter = rateLimit({ windowMs: 60 * 1000, max: 30, keyGenerator: (req) => req.user.id });
 
 // authoring and management
 router.post("/", ...manage, c.create);
 router.get("/staff-directory", ...manage, c.staffDirectory);
 router.patch("/:id", ...manage, c.update);
+router.get("/:id/duration-impact", ...manage, c.durationImpact);
+router.patch("/:id/duration", ...manage, durationLimiter, c.changeDuration);
 router.post("/:id/duplicate", ...manage, c.duplicate);
 router.delete("/:id", ...adminOnly, c.remove);
 router.patch("/:id/publish", ...manage, c.publish);
@@ -43,6 +48,7 @@ router.get("/:id", ...anyone, c.getOne);
 // the student attempt flow, and the staff view of its violations
 router.post("/:id/start", ...student, c.start);
 router.post("/attempts/:attemptId/violation", ...student, violationLimiter, c.violation);
+router.get("/attempts/:attemptId/clock", ...student, clockLimiter, c.attemptClock);
 router.get("/admin/attempts/:attemptId/violations", ...manage, c.violationLog);
 router.post("/attempts/:attemptId/ai-assist", ...student, examAiAssistLimiter, c.aiAssist);
 router.get("/:id/my-result", ...student, c.myResult);

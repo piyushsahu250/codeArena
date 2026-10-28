@@ -44,6 +44,7 @@ const AUDIT_ACTIONS = {
   STUDENT_PROFILE_UPDATED: "STUDENT_PROFILE_UPDATED",
   TEST_CREATED: "TEST_CREATED",
   TEST_UPDATED: "TEST_UPDATED",
+  TEST_DURATION_CHANGED: "TEST_DURATION_CHANGED", // the live duration of a formal test was changed (details: previous and new minutes, version, request id, attempts affected)
   TEST_UNPUBLISHED: "TEST_UNPUBLISHED",
   TEST_DUPLICATED: "TEST_DUPLICATED",
   TEST_DELETED: "TEST_DELETED",
@@ -149,24 +150,27 @@ const AUDIT_ACTIONS = {
 
 // Never throws — audit logging is a best-effort side channel (same posture as this codebase's
 // email-send tracking) and must not be able to fail the request it's describing.
-async function logAudit({ req, action, actorId, actorName, actorRole, studentId, instituteId, details }) {
+// The row logAudit writes, as data. A caller whose audit record must commit TOGETHER with the change it describes (a transaction) writes it through its own client with this.
+function buildAuditData({ req, action, actorId, actorName, actorRole, studentId, instituteId, details }) {
+  return {
+    action,
+    adminId: actorId || "system",
+    adminName: actorName || "System",
+    adminRole: actorRole || null,
+    ipAddress: req ? getClientIp(req) : null,
+    deviceInfo: req ? parseDevice(req.headers["user-agent"]).summary : null,
+    studentId: studentId || null,
+    instituteId: instituteId || null,
+    details: details || {},
+  };
+}
+
+async function logAudit(entry) {
   try {
-    await prisma.auditLog.create({
-      data: {
-        action,
-        adminId: actorId || "system",
-        adminName: actorName || "System",
-        adminRole: actorRole || null,
-        ipAddress: req ? getClientIp(req) : null,
-        deviceInfo: req ? parseDevice(req.headers["user-agent"]).summary : null,
-        studentId: studentId || null,
-        instituteId: instituteId || null,
-        details: details || {},
-      },
-    });
+    await prisma.auditLog.create({ data: buildAuditData(entry) });
   } catch (err) {
     console.error("Failed to write audit log:", err);
   }
 }
 
-module.exports = { logAudit, parseDevice, AUDIT_ACTIONS };
+module.exports = { logAudit, buildAuditData, parseDevice, AUDIT_ACTIONS };

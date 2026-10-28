@@ -92,6 +92,8 @@ async function seed() {
   const cameraTest = await mkTest(`${TAG} Camera Test`, { requireWebcam: true });
   // A plain test for the exam-window spec (an emulated phone shrinks its window and the page must report it once, as a counted violation).
   const windowTest = await mkTest(`${TAG} Window Test`);
+  // A 20-minute test for the live-duration spec: a student is mid-test when an administrator extends it.
+  const durationTest = await mkTest(`${TAG} Duration Test`);
   // Tests for the Copilot key / AI-assistant shortcut signals: one with the policy on, one with it off.
   const aiShortcutTest = await mkTest(`${TAG} AI Shortcut Test`, { securityPolicy: { blockAiShortcuts: true } });
   const aiShortcutOffTest = await mkTest(`${TAG} AI Shortcut Off Test`);
@@ -120,7 +122,7 @@ async function seed() {
   }
   const codingTest = await mkCodingTest(`${TAG} Coding Test`);
   const codingProctored = await mkCodingTest(`${TAG} Coding Proctored Test`, { securityLevel: "PROCTORED" });
-  console.log(JSON.stringify({ users, firstLogin, institutes: { A: { id: A.id, name: A.name }, B: { id: B.id, name: B.name } }, testId: test.id, companyTestId: companyTest.id, aiShortcutTestId: aiShortcutTest.id, aiShortcutOffTestId: aiShortcutOffTest.id, resultsTestId: resultsTest.id, statusTestId: statusTest.id, violationsTestId: violationsTest.id, cameraTestId: cameraTest.id, windowTestId: windowTest.id, codingTestId: codingTest.id, codingProctoredTestId: codingProctored.id, proctoredTestId: proctored.id, fullscreenTestId: fsTest.id, questionTexts: ["E2E question 1: pick option B", "E2E question 2: pick option B"] }));
+  console.log(JSON.stringify({ users, firstLogin, institutes: { A: { id: A.id, name: A.name }, B: { id: B.id, name: B.name } }, testId: test.id, companyTestId: companyTest.id, aiShortcutTestId: aiShortcutTest.id, aiShortcutOffTestId: aiShortcutOffTest.id, resultsTestId: resultsTest.id, statusTestId: statusTest.id, violationsTestId: violationsTest.id, cameraTestId: cameraTest.id, windowTestId: windowTest.id, durationTestId: durationTest.id, codingTestId: codingTest.id, codingProctoredTestId: codingProctored.id, proctoredTestId: proctored.id, fullscreenTestId: fsTest.id, questionTexts: ["E2E question 1: pick option B", "E2E question 2: pick option B"] }));
 }
 
 (async () => {

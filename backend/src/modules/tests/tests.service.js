@@ -14,6 +14,7 @@ const { mapWithConcurrency } = require("../../utils/queue");
 const prisma = require("../../prisma");
 const d = require("./tests.domain");
 const repo = require("./tests.repository");
+const { assertNoLiveDurationChange } = require("./tests.duration.service");
 
 const NOTIFY_EMAIL_CONCURRENCY = Number(process.env.EMAIL_CONCURRENCY) || 5;
 // Minutes before the SAME test can be e-mailed to its students again (in-app notifications are not limited). TEST_EMAIL_NOTIFY_COOLDOWN_MIN overrides it.
@@ -104,6 +105,8 @@ async function updateTest(actor, id, body) {
   if (body.version !== undefined && Number(body.version) !== existing.version) {
     throw new ServiceError(409, "This test was modified by another user. Please refresh before saving.", { conflict: true });
   }
+  // A duration change while attempts are running goes through "Edit live duration" (preview, confirmation, audit), never silently through this form.
+  await assertNoLiveDurationChange(existing, body);
 
   const { questionIds, questionTimeLimits, questionAiAllowed, academicGroupIds, questionSelectionMode, randomBankFolderId, randomQuestionsPerStudent, difficultyDistribution, instituteId: bodyInstituteId, subjectId, unitId, scheduledPublishAt } = body;
   const sec = parseSecurityInput(body);

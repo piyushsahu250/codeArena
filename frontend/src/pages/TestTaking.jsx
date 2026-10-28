@@ -1,3 +1,4 @@
+import { SYNC_INTERVAL_MS, applyClockAnswer, secondsLeftAt, deadlineNotice } from "../utils/deadlineSync";
 import { CAMERA_PROBLEM, categorizeMediaError, describeCameraProblem, stopStream, verifyAudioOnly, verifyVideoPreview } from "../utils/cameraReadiness";
 import { shouldAutoFinalize } from "../utils/finalizeRetry";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -144,6 +145,7 @@ export default function TestTaking() {
   // penalized this time -- see backend/src/utils/proctoringSeverity.js. Softer styling, no "X/Y"
   // counter (since it didn't actually count), and a note that repeating it will start counting.
   const [suspiciousNotice, setSuspiciousNotice] = useState(null);
+  const [timeNotice, setTimeNotice] = useState(null); // neutral notice when an administrator changes the duration (deadlineSync.js)
   // Purely informational -- shown the instant the device rotates, independent of (and faster
   // than) the server round-trip reportViolation makes for the logged, never-penalized
   // ORIENTATION_CHANGE event. Never a warning/violation banner; see the overlay-signal effect.
@@ -759,6 +761,43 @@ export default function TestTaking() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [secondsLeft !== null]);
 
+  // The deadline can change while the test is running (an administrator extends or shortens the duration). The server is the only authority: ask it for THIS attempt's clock every
+  // SYNC_INTERVAL_MS, when the tab comes back, and when the connection returns, and adopt exactly the deadline it gives (utils/deadlineSync.js). The countdown above reads deadlineRef on every
+  // tick, so nothing restarts; answers, code and the open question are not touched. If the server cannot be reached the current deadline stays (never an unconfirmed one) and the next try recovers.
+  useEffect(() => {
+    if (!started) return undefined;
+    let stopped = false;
+    let inFlight = false;
+    async function syncClock() {
+      if (stopped || inFlight || finalizedRef.current || !attemptIdRef.current) return;
+      inFlight = true;
+      try {
+        const { data } = await api.get(`/tests/attempts/${attemptIdRef.current}/clock`);
+        if (stopped) return;
+        const r = applyClockAnswer({ currentDeadline: deadlineRef.current, answer: data });
+        if (!r || r.ended) return;
+        clockOffsetRef.current = r.clockOffset;
+        if (r.changed) {
+          deadlineRef.current = r.deadline;
+          setSecondsLeft(secondsLeftAt(r.deadline, r.clockOffset));
+          setTimeNotice(deadlineNotice(r.deadline));
+          clearTimeout(timeNoticeTimeoutRef.current);
+          timeNoticeTimeoutRef.current = setTimeout(() => setTimeNotice(null), 15000);
+        }
+      } catch {
+        /* offline or a server hiccup: keep the current deadline, try again at the next trigger */
+      } finally {
+        inFlight = false;
+      }
+    }
+    const id = setInterval(syncClock, SYNC_INTERVAL_MS);
+    const onVisible = () => { if (document.visibilityState === "visible") syncClock(); };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("online", syncClock);
+    return () => { stopped = true; clearInterval(id); clearTimeout(timeNoticeTimeoutRef.current); document.removeEventListener("visibilitychange", onVisible); window.removeEventListener("online", syncClock); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [started]);
+
   // Initialize/restore the answer for the active question, and reset the run result panel —
   // every question switch gets a fresh console (item 4) and its own independent starter code the
   // first time it's opened (item 3), never code carried over from another question. Also marks
@@ -838,6 +877,7 @@ export default function TestTaking() {
   const lastViolationAtRef = useRef({});
   const tabWarningTimeoutRef = useRef(null);
   const suspiciousNoticeTimeoutRef = useRef(null);
+  const timeNoticeTimeoutRef = useRef(null);
   // `type` is reported to the server, which classifies it into one of four severities (see
   // backend/src/utils/proctoringSeverity.js) and decides -- never trusted client-side -- whether
   // THIS occurrence counts toward MAX_TAB_VIOLATIONS: CONFIRMED_VIOLATION (tab switch, fullscreen
@@ -2179,6 +2219,13 @@ export default function TestTaking() {
       {suspiciousNotice && (
         <div style={{ background: "var(--amber)", color: "var(--amber-ink)", padding: "10px 24px", fontSize: 13, fontWeight: 700, textAlign: "center" }} className="mono">
           {suspiciousNotice}
+        </div>
+      )}
+
+      {/* The administrator changed the duration: neutral, informational, with this attempt's own revised deadline. */}
+      {timeNotice && (
+        <div role="status" style={{ background: "var(--card-bg, #F7F7F5)", color: "var(--ink)", padding: "10px 24px", fontSize: 13, fontWeight: 600, textAlign: "center", borderBottom: "1px solid var(--line)" }}>
+          {timeNotice}
         </div>
       )}
 

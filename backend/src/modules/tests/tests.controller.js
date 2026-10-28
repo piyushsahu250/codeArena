@@ -5,6 +5,7 @@
 const { safeErrorMessage } = require("../../utils/errors");
 const { ServiceError } = require("../../utils/serviceError");
 const service = require("./tests.service");
+const duration = require("./tests.duration.service");
 
 const actor = (req) => ({ user: req.user, requesterInstituteId: req.requesterInstituteId, req });
 
@@ -41,7 +42,11 @@ const share = handler("Failed to share test", (req) => service.shareTest(actor(r
 const unshare = handler("Failed to revoke access", (req) => service.unshareTest(actor(req), req.params.id, req.params.staffId));
 const staffDirectory = handler("Failed to load staff directory", (req) => service.staffDirectory(actor(req)));
 
-module.exports = { create, update, duplicate, remove, publish, recipients, notify, notificationLog, share, unshare, staffDirectory };
+const durationImpact = handler("Failed to load the duration details", (req) => duration.durationImpact(actor(req), req.params.id, req.query));
+const changeDuration = handler("Failed to change the duration", (req) => duration.changeDuration(actor(req), req.params.id, req.body));
+const attemptClock = handler("Failed to read the clock", (req) => duration.attemptClock(actor(req), req.params.attemptId));
+
+module.exports = { create, update, duplicate, remove, publish, recipients, notify, notificationLog, share, unshare, staffDirectory, durationImpact, changeDuration, attemptClock };
 
 // ---- batch 2: reading tests and the student attempt flow ----
 const read = require("./tests.read.service");

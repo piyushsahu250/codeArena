@@ -118,6 +118,8 @@ jobs:
         run: node scripts/formDraftRegression.mjs
       - name: Camera readiness regression (no false ready - black feed, no frames, busy, denied, stale request)
         run: node scripts/cameraReadinessRegression.mjs
+      - name: Deadline sync regression (the page follows the server deadline when the duration changes)
+        run: node scripts/deadlineSyncRegression.mjs
       - name: Exam window regression (floating window, keyboard, zoom, glitch, one report per episode)
         run: node scripts/windowFillRegression.mjs
       - name: Time-up submit retry regression (no retry every second, no blinking)
@@ -206,7 +208,7 @@ jobs:
         run: |
           fail=0
           verification_started=$(date +%s)
-          for s in verifyPermissions verifyAsyncErrors verifyRouteMetrics verifyAttemptManifest verifySubmissionsContract verifyStaffAnalytics verifyTestsContract verifyAuthContract verifyUsersContract verifyUsersWriteContract verifyAutoFinalizeDeadline verifyAiShortcutIntake verifyLeaderboardStatus verifyStartOverride verifyQuestionsContract verifyQuestionFoldersContract verifyQuestionImportExportContract verifySecureAndroid verifyCEndToEnd verifyLmsContentIsolation verifyStaffScopeIsolation verifyDeepHealth verifyAiQuota verifyMessagingGuards verifyEmailProtection verifyScoreDenominators verifyLmsWriteIsolation verifyFirstLoginPasswordChange verifyModuleCodingResetScope verifyResetClearsFlag verifyReadinessSeedRespectsDeletion verifyCorsPreflightCache verifyFolderOwnerVisibility verifyWindowFillViolation; do
+          for s in verifyPermissions verifyAsyncErrors verifyRouteMetrics verifyAttemptManifest verifySubmissionsContract verifyStaffAnalytics verifyTestsContract verifyAuthContract verifyUsersContract verifyUsersWriteContract verifyAutoFinalizeDeadline verifyAiShortcutIntake verifyLeaderboardStatus verifyStartOverride verifyQuestionsContract verifyQuestionFoldersContract verifyQuestionImportExportContract verifySecureAndroid verifyCEndToEnd verifyLmsContentIsolation verifyStaffScopeIsolation verifyDeepHealth verifyAiQuota verifyMessagingGuards verifyEmailProtection verifyScoreDenominators verifyLmsWriteIsolation verifyFirstLoginPasswordChange verifyModuleCodingResetScope verifyResetClearsFlag verifyReadinessSeedRespectsDeletion verifyCorsPreflightCache verifyFolderOwnerVisibility verifyWindowFillViolation verifyLiveDuration; do
             echo "=== $s"
             code=0; node scripts/$s.js > "/tmp/$s.out" 2>&1 || code=$?
             cat "/tmp/$s.out"

@@ -11,6 +11,7 @@ import { SkeletonGrid } from "../components/Skeleton";
 import StatCard from "../components/StatCard";
 import EmptyState from "../components/EmptyState";
 import SendTestNotificationModal from "../components/SendTestNotificationModal";
+import LiveDurationModal from "../components/LiveDurationModal";
 
 function statusOf(test) {
   const now = new Date();
@@ -55,6 +56,7 @@ export default function StaffDashboard() {
   const [unitFilter, setUnitFilter] = useState("");
   const [staffOwnerFilter, setStaffOwnerFilter] = useState(""); // Admin only
   const [notifyingTest, setNotifyingTest] = useState(null); // Test row currently open in SendTestNotificationModal, or null
+  const [durationTest, setDurationTest] = useState(null); // Test row open in LiveDurationModal ("Edit live duration"), or null
 
   useEffect(() => {
     refresh();
@@ -465,6 +467,12 @@ export default function StaffDashboard() {
                     {test.isPublished && (
                       <button className="btn btn-ghost" onClick={() => setNotifyingTest(test)}>Send Notification</button>
                     )}
+                    {test.isPublished && (
+                      <button className="btn btn-ghost" onClick={() => setDurationTest(test)}>Edit live duration</button>
+                    )}
+                    {test.isPublished && (
+                      <button className="btn btn-ghost" onClick={() => setDurationTest(test)}>Edit live duration</button>
+                    )}
                     {isAdminTier && (
                       <button className="btn btn-ghost" style={{ color: "var(--rust)", borderColor: "var(--rust)" }} onClick={() => deleteTest(test)}>
                         Delete
@@ -482,6 +490,9 @@ export default function StaffDashboard() {
       </div>
       {notifyingTest && (
         <SendTestNotificationModal test={notifyingTest} onClose={() => setNotifyingTest(null)} />
+      )}
+      {durationTest && (
+        <LiveDurationModal test={durationTest} onClose={() => setDurationTest(null)} onChanged={refresh} />
       )}
     </div>
   );
