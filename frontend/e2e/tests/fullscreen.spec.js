@@ -17,10 +17,11 @@ async function spaNavigate(page, path) {
 
 async function tokenOf(page) { return page.evaluate(() => localStorage.getItem("token")); }
 
-// Creates (or re-uses) the student's in-progress mock interview and makes sure it has one real answer, so it opens on the Resume screen.
-async function mockInterviewWithProgress(page) {
+// Creates (or re-uses) the student's in-progress PRACTICE interview (an HR category session: security level STANDARD, so it keeps its Exit button) and makes sure it has one real answer, so it opens on the Resume screen.
+// Mock interviews, company rounds and talent-pool sessions are PROCTORED and have no Exit button (see interviewExam.spec.js).
+async function practiceInterviewWithProgress(page) {
   const H = { Authorization: `Bearer ${await tokenOf(page)}` };
-  const created = await page.request.post(`${API}/interview/sessions`, { headers: H, data: { isMock: true, config: {} } });
+  const created = await page.request.post(`${API}/interview/sessions`, { headers: H, data: { category: "HR", config: {} } });
   test.skip(created.status() === 400, "the interview question bank is empty on this host");
   expect(created.ok(), `create mock interview: ${created.status()}`).toBeTruthy();
   const body = await created.json();
@@ -40,12 +41,12 @@ async function openAndResume(page, id) {
   await expect(exitControl(page)).toBeVisible({ timeout: 20000 });
 }
 
-test.describe("mock interview", () => {
+test.describe("practice interview", () => {
   test.beforeEach(async ({ page }) => { await login(page, users.student3); });
 
   test("Exit releases fullscreen and returns to the interview hub", async ({ page }) => {
     const errors = []; page.on("pageerror", (e) => errors.push(e.message));
-    const id = await mockInterviewWithProgress(page);
+    const id = await practiceInterviewWithProgress(page);
     await openAndResume(page, id);
     await expect.poll(() => inFullscreen(page), { timeout: 10000 }).toBe(true);
     await exitControl(page).click();
@@ -56,7 +57,7 @@ test.describe("mock interview", () => {
   });
 
   test("the browser Back button releases fullscreen too", async ({ page }) => {
-    const id = await mockInterviewWithProgress(page);
+    const id = await practiceInterviewWithProgress(page);
     // entered by in-app navigation, so Back is a client-side route change (a full page load would end fullscreen by itself and prove nothing)
     await spaNavigate(page, `/interview/session/${id}`);
     await page.getByRole("button", { name: /Resume Interview/ }).click();
@@ -69,7 +70,7 @@ test.describe("mock interview", () => {
 
   test("rapid repeated Exit clicks end cleanly", async ({ page }) => {
     const errors = []; page.on("pageerror", (e) => errors.push(e.message));
-    const id = await mockInterviewWithProgress(page);
+    const id = await practiceInterviewWithProgress(page);
     await openAndResume(page, id);
     const exit = exitControl(page);
     await exit.click();
@@ -82,7 +83,7 @@ test.describe("mock interview", () => {
   test("a refused fullscreen request does not trap the student", async ({ page }) => {
     await page.addInitScript(() => { Element.prototype.requestFullscreen = () => Promise.reject(new Error("fullscreen denied by the browser")); });
     const errors = []; page.on("pageerror", (e) => errors.push(e.message));
-    const id = await mockInterviewWithProgress(page);
+    const id = await practiceInterviewWithProgress(page);
     await openAndResume(page, id);
     expect(await inFullscreen(page)).toBe(false);
     await exitControl(page).click();
@@ -95,7 +96,7 @@ test.describe("mock interview", () => {
       for (const k of ["requestFullscreen", "webkitRequestFullscreen", "mozRequestFullScreen", "msRequestFullscreen"]) { try { Element.prototype[k] = undefined; } catch { /* ignore */ } }
     });
     const errors = []; page.on("pageerror", (e) => errors.push(e.message));
-    const id = await mockInterviewWithProgress(page);
+    const id = await practiceInterviewWithProgress(page);
     await openAndResume(page, id);
     await exitControl(page).click();
     await expect(page).toHaveURL(/\/interview$/);
@@ -103,7 +104,7 @@ test.describe("mock interview", () => {
   });
 
   test("if the browser refuses to leave fullscreen the student is told and can retry", async ({ page }) => {
-    const id = await mockInterviewWithProgress(page);
+    const id = await practiceInterviewWithProgress(page);
     await openAndResume(page, id);
     await expect.poll(() => inFullscreen(page), { timeout: 10000 }).toBe(true);
     await page.evaluate(() => { document.exitFullscreen = () => Promise.reject(new Error("exit blocked by the browser")); });
@@ -122,7 +123,7 @@ test.describe("mock interview", () => {
   });
 
   test("leaving the interview does not end a fullscreen session that belongs to something else", async ({ page }) => {
-    const id = await mockInterviewWithProgress(page);
+    const id = await practiceInterviewWithProgress(page);
     // another feature puts the page in fullscreen first (a real click, so the browser allows it)
     await page.evaluate(() => {
       const b = document.createElement("button"); b.id = "foreign-fullscreen"; b.textContent = "fs";

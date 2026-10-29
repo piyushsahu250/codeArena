@@ -75,3 +75,20 @@
 .ip-progress-bar {
   animation: ip-progress-fill 0.6s ease;
 }
+
+/* Answer dictation controls (InterviewSession.jsx, free-text answers). */
+.ip-dict { margin-top: 10px; }
+.ip-dict-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.ip-dict-btn { display: inline-flex; align-items: center; gap: 6px; }
+.ip-dict-btn-live { border-color: #D97757; color: #D97757; }
+.ip-dict-timer { font-size: 12px; font-weight: 700; color: #D97757; }
+.ip-dict-mic { font-size: 11px; color: var(--ip-text-dim); }
+.ip-dict-status { min-height: 18px; margin-top: 6px; font-size: 12.5px; line-height: 1.45; color: var(--ip-text-dim); display: flex; flex-direction: column; gap: 2px; }
+.ip-dict-ok { color: var(--ip-accent); font-weight: 600; }
+.ip-dict-warn { color: #B7791F; }
+.ip-dict-err { color: #C2410C; font-weight: 600; }
+.ip-dict-preview {
+  margin-top: 8px; padding: 8px 12px; border-radius: 10px; font-size: 13px; font-style: italic;
+  background: var(--ip-glass-bg); border: 1px dashed var(--ip-glass-border); color: var(--ip-text-dim);
+}
+.ip-dict-preview .mono { font-style: normal; font-size: 11px; margin-right: 4px; }

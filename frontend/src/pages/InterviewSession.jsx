@@ -5,6 +5,10 @@ import api, { API_BASE_URL, performExpiredRedirect } from "../api";
 import { Mic, Square, Move, Camera } from "lucide-react";
 import { useProctoring } from "../hooks/useProctoring";
 import { createSaveQueue } from "../utils/saveQueue";
+import { useAnswerDictation } from "../hooks/useAnswerDictation";
+import { useExamNavigationGuard } from "../hooks/useExamNavigationGuard";
+import { DICT } from "../utils/dictationEngine";
+import { mergeTranscript, SPEECH_LANG } from "../utils/browserSpeech";
 import { useExamSession, recallExamSession } from "../hooks/useExamSession";
 import { runSecurityCheck } from "../utils/secureAssessment";
 import useIsMobile from "../hooks/useIsMobile";
@@ -54,6 +58,7 @@ const VIOLATION_LABEL = {
   MIC_DROPPED: "your microphone being turned off or disconnected",
   BROWSER_SHORTCUT: "using a restricted keyboard shortcut",
   SCREEN_OVERLAY_DETECTED: "an on-screen search/assistant overlay being detected",
+  NAVIGATION_ATTEMPT: "trying to leave the interview",
 };
 
 export default function InterviewSession() {
@@ -88,6 +93,43 @@ export default function InterviewSession() {
   const [saving, setSaving] = useState(false);
   // Autosave of typed answers: questionId -> idle | saving | saved | retrying | failed, driven by the queue's confirmations only.
   const [textSaveStatus, setTextSaveStatus] = useState({});
+  // ---- speech-to-text for typed answers (the rules and the lifecycle live in utils/dictationEngine.js) ----
+  // A recognised FINAL phrase is added to the end of the answer of the question the recording was started on, through a functional update on the CURRENT text: whatever the student
+  // typed meanwhile stays, earlier phrases stay, and nothing is ever overwritten. The Phase 1 autosave then saves it like any other change to the box.
+  const draftsRef = useRef({});
+  draftsRef.current = drafts;
+  const dictation = useAnswerDictation({
+    lang: data?.session?.config?.speechLang || SPEECH_LANG,
+    onCommit: (questionId, text) => {
+      if (!questionId || !text) return;
+      // The ref is updated at once as well, so a save that runs straight after the recording ends already sees this phrase (state alone is rendered a moment later).
+      const prev = draftsRef.current[questionId] || {};
+      draftsRef.current = { ...draftsRef.current, [questionId]: { ...prev, answerText: mergeTranscript(prev.answerText || "", text) } };
+      setDrafts((d) => ({ ...d, [questionId]: { ...d[questionId], answerText: mergeTranscript(d[questionId]?.answerText || "", text) } }));
+    },
+  });
+  const dictatedQuestionId = dictation.questionId;
+  const activeQuestionIdForDictation = data?.questions?.[activeIdx]?.id;
+  // Whatever path moves the page to another question, a recording started on the old one is finished first (its last words still go to the old question).
+  useEffect(() => {
+    if (dictatedQuestionId && dictation.recording && dictatedQuestionId !== activeQuestionIdForDictation) dictation.stop();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeQuestionIdForDictation]);
+  // The interview ended (submitted, terminated, round changed to a closed state): nothing may keep listening.
+  useEffect(() => { if (phase !== "active") dictation.cancel(); }, [phase, dictation.cancel]);
+
+  // Formal proctored interview in progress: the browser's Back button is absorbed (see hooks/useExamNavigationGuard.js) and the attempt is recorded for review, never counted.
+  const proctoredActive = data?.security?.level === "PROCTORED" && phase === "active";
+  useExamNavigationGuard({
+    enabled: proctoredActive,
+    onAttempt: () => {
+      onViolation("NAVIGATION_ATTEMPT");
+      const msg = "The interview is still in progress. Use Submit when you have finished; your answers and the timer are saved on the server.";
+      setSuspiciousNotice(msg);
+      setTimeout(() => setSuspiciousNotice((m) => (m === msg ? null : m)), 6000);
+    },
+  });
+
   const textQueueRef = useRef(null);
   const lastQueuedTextRef = useRef({}); // questionId -> the text last handed to the queue, or loaded from the server: unchanged text is never sent again
   const latestAnswerTextRef = useRef({ id: null, text: "" }); // read by the page-hide handler, which must send the text as it is NOW, not as it was when the handler was registered
@@ -95,7 +137,6 @@ export default function InterviewSession() {
   const [running, setRunning] = useState(false);
   const [codeSubmittedResult, setCodeSubmittedResult] = useState(false); // true once runResult holds a hidden-case Submit grade, not a sample-only Run
   const [secondsLeft, setSecondsLeft] = useState(null);
-  const [recording, setRecording] = useState(false);
   const [violationCount, setViolationCount] = useState(0);
   const [maxViolations, setMaxViolations] = useState(3);
   const [violationWarning, setViolationWarning] = useState(null);
@@ -113,7 +154,6 @@ export default function InterviewSession() {
   const [videoPos, setVideoPos] = useState(null);
   const draggingVideoRef = useRef(false);
   const videoDragOffsetRef = useRef({ x: 0, y: 0 });
-  const recognitionRef = useRef(null);
   const finalizedRef = useRef(false);
   // Set synchronously as the FIRST statement of advanceRound() (before any await, including the
   // one inside saveAnswer()) — a double-click guard distinct from `saving`, since saveAnswer()'s
@@ -563,18 +603,22 @@ export default function InterviewSession() {
   async function saveAnswer(skipped = false) {
     setSaving(true);
     try {
+      // A recording still running (or finishing) is ended FIRST and its last words are waited for, so the answer that is saved and evaluated contains everything the student said.
+      await finishDictation();
+      // `draft` above is the copy captured when the button was clicked; after a recording it is stale, so the latest text is read from the ref.
+      const live = draftsRef.current[q.id] || draft;
       // Let a draft request that is still in flight finish first (at most 3 s), so it cannot land after the real answer and look newer than it on a later reload.
       if (FREE_TEXT_CATEGORIES.includes(q.category) && textQueueRef.current) {
         await Promise.race([textQueueRef.current.flush(q.id), new Promise((resolve) => setTimeout(resolve, 3000))]);
       }
       const body = { questionId: q.id, skipped };
-      if (q.category === "APTITUDE") body.answerText = draft.selected != null ? String(draft.selected) : null;
-      else if (q.category === "CODING") { body.code = draft.code; body.language = draft.language; }
-      else body.answerText = draft.answerText;
+      if (q.category === "APTITUDE") body.answerText = live.selected != null ? String(live.selected) : null;
+      else if (q.category === "CODING") { body.code = live.code; body.language = live.language; }
+      else body.answerText = live.answerText;
       const { data: res } = await api.post(`/interview/sessions/${id}/answer`, body, { timeout: JUDGE_TIMEOUT_MS });
       if (FREE_TEXT_CATEGORIES.includes(q.category) && !skipped) {
         // The answer itself is now saved by the server, so the autosave has nothing left to send for this text.
-        lastQueuedTextRef.current[q.id] = draft.answerText || "";
+        lastQueuedTextRef.current[q.id] = live.answerText || "";
         setTextSaveStatus((prev) => ({ ...prev, [q.id]: "saved" }));
       }
       if (res.immediateResult) setRunResult(res.immediateResult);
@@ -620,6 +664,25 @@ export default function InterviewSession() {
   async function submitCode() {
     const res = await saveAnswer(false);
     if (res?.immediateResult) setCodeSubmittedResult(true);
+  }
+
+  // Ends a running recording and resolves once its last words are part of the answer (one extra tick so the commit has been rendered into draftsRef).
+  async function finishDictation() {
+    const wasDictating = dictation.status === DICT.RECORDING || dictation.status === DICT.PROCESSING_TRANSCRIPT;
+    await dictation.stop();
+    if (wasDictating) await new Promise((resolve) => setTimeout(resolve, 0));
+  }
+
+  // The numbered buttons: the question being left is saved first when it has an answer in it (a question that was only opened is not marked answered), and a recording on it is
+  // finished first, so its words stay with it.
+  async function jumpTo(i) {
+    if (i === activeIdx || saving || dictation.status === DICT.PROCESSING_TRANSCRIPT) return;
+    await finishDictation();
+    const live = draftsRef.current[q.id] || draft;
+    const hasAnswer = q.category === "APTITUDE" ? live.selected != null : FREE_TEXT_CATEGORIES.includes(q.category) && !!(live.answerText || "").trim();
+    if (hasAnswer) await saveAnswer(false); // coding drafts are autosaved on their own; Next / Submit grades them
+    setRunResult(null);
+    setActiveIdx(i);
   }
 
   async function go(delta) {
@@ -726,38 +789,20 @@ export default function InterviewSession() {
     e.currentTarget.releasePointerCapture?.(e.pointerId);
   }
 
-  function toggleRecording() {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      alert("Speech recognition isn't supported in this browser (try Chrome). You can type your answer instead.");
-      return;
-    }
-    if (recording) {
-      recognitionRef.current?.stop();
-      setRecording(false);
-      return;
-    }
-    const rec = new SpeechRecognition();
-    rec.continuous = true;
-    rec.interimResults = false;
-    rec.lang = "en-US";
-    rec.onresult = (e) => {
-      let transcript = "";
-      for (let i = e.resultIndex; i < e.results.length; i++) transcript += e.results[i][0].transcript + " ";
-      updateDraft({ answerText: ((draft.answerText || "") + " " + transcript).trim() });
-    };
-    rec.onend = () => setRecording(false);
-    rec.start();
-    recognitionRef.current = rec;
-    setRecording(true);
+  // Starts a recording on THIS question. Text already in the box is kept: each recognised phrase is added after it (see the onCommit above). One recording at a time.
+  function startDictation() {
+    dictation.start(q.id);
   }
+  // After a failure the same button says "Try again".
+  const dictHere = !dictation.questionId || dictation.questionId === q.id; // status lines belong to the question the recording was started on
+  const dictationRetryable = dictHere && [DICT.PERMISSION_DENIED, DICT.DEVICE_UNAVAILABLE, DICT.RECOGNITION_ERROR, DICT.NETWORK_ERROR, DICT.RECOVERY_REQUIRED].includes(dictation.status);
 
   const mm = secondsLeft != null ? String(Math.floor(secondsLeft / 60)).padStart(2, "0") : null;
   const ss = secondsLeft != null ? String(secondsLeft % 60).padStart(2, "0") : null;
 
   return (
     <div className={`interview-prep ${dark ? "dark" : ""}`}>
-      <Navbar />
+      <Navbar locked={proctoredActive} />
       <div style={{ maxWidth: 900, margin: "0 auto", padding: "48px 24px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 10 }}>
           <div>
@@ -770,7 +815,9 @@ export default function InterviewSession() {
               ⚠ {violationCount}/{maxViolations}
             </span>
             {secondsLeft != null && <span className="mono ip-glass" style={{ padding: "6px 12px", fontWeight: 700 }}>⏱ {mm}:{ss}</span>}
-            <button type="button" className="btn btn-ghost" onClick={exitInterview}>Exit</button>
+            {/* No Exit while a formal proctored interview is in progress: the component is not rendered at all (not hidden with CSS). The student leaves by submitting, when the
+                time ends, or by closing the tab, after which the same session resumes. Practice interviews (not PROCTORED) keep it. */}
+            {!proctoredActive && <button type="button" className="btn btn-ghost" onClick={exitInterview}>Exit</button>}
           </div>
         </div>
 
@@ -884,7 +931,7 @@ export default function InterviewSession() {
 
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 16 }}>
           {questions.map((qq, i) => (
-            <button key={qq.id} onClick={() => setActiveIdx(i)} className="btn btn-ghost" style={{ fontSize: 11, padding: "4px 8px", opacity: i === activeIdx ? 1 : 0.5, fontWeight: i === activeIdx ? 700 : 400 }}>
+            <button key={qq.id} onClick={() => jumpTo(i)} disabled={dictation.busy} className="btn btn-ghost" style={{ fontSize: 11, padding: "4px 8px", opacity: i === activeIdx ? 1 : 0.5, fontWeight: i === activeIdx ? 700 : 400 }}>
               {i + 1}
             </button>
           ))}
@@ -912,10 +959,29 @@ export default function InterviewSession() {
               <div role="status" aria-live="polite" className="mono" style={{ fontSize: 11, marginTop: 6, minHeight: 16, opacity: 0.75, color: textSaveStatus[q.id] === "failed" ? "var(--danger-text)" : undefined }}>
                 {textSaveLabel(textSaveStatus[q.id], (lastQueuedTextRef.current[q.id] ?? "") !== (draft.answerText || ""))}
               </div>
-              <button className="btn btn-ghost" style={{ marginTop: 8, display: "inline-flex", alignItems: "center", gap: 6 }} onClick={toggleRecording}>
-                {recording ? <><Square size={14} /> Stop recording</> : <><Mic size={14} /> Record answer (speech-to-text)</>}
-              </button>
-              {recording && <span className="mono" style={{ fontSize: 11, marginLeft: 8, opacity: 0.7 }}>Listening… click Stop, then edit the transcript before moving on if needed.</span>}
+              <div className="ip-dict">
+                <div className="ip-dict-row">
+                  {dictation.recording ? (
+                    <button type="button" className="btn btn-ghost ip-dict-btn ip-dict-btn-live" onClick={finishDictation} aria-pressed="true"><Square size={14} aria-hidden="true" /> Stop recording</button>
+                  ) : (
+                    <button type="button" className="btn btn-ghost ip-dict-btn" onClick={startDictation} disabled={!dictation.supported || dictation.busy || !dictation.canStart} aria-pressed="false">
+                      <Mic size={14} aria-hidden="true" /> {dictation.busy ? (dictation.status === DICT.PROCESSING_TRANSCRIPT ? "Finishing…" : "Starting…") : dictationRetryable ? "Try again" : "Start recording"}
+                    </button>
+                  )}
+                  {dictation.recording && <span className="ip-dict-timer mono" aria-label="Recording time">● {String(Math.floor(dictation.elapsedSec / 60)).padStart(2, "0")}:{String(dictation.elapsedSec % 60).padStart(2, "0")}</span>}
+                  <span className="mono ip-dict-mic">Microphone: {dictation.recording ? "on" : micBlocked ? "unavailable" : "off"}</span>
+                </div>
+                <div role="status" aria-live="polite" className="ip-dict-status">
+                  {dictation.recording && <span>Listening… Speak clearly.</span>}
+                  {dictHere && dictation.status === DICT.REQUESTING_PERMISSION && <span>Waiting for your microphone…</span>}
+                  {dictHere && dictation.status === DICT.PROCESSING_TRANSCRIPT && <span>Finishing the transcription…</span>}
+                  {dictHere && dictation.status === DICT.TRANSCRIPT_READY && <span className="ip-dict-ok">{dictation.notice}</span>}
+                  {dictHere && dictation.status === DICT.IDLE && dictation.notice && <span className="ip-dict-warn">{dictation.notice}</span>}
+                  {dictHere && dictation.message && <span className="ip-dict-err">{dictation.message}</span>}
+                  {!dictation.supported && dictation.status === DICT.IDLE && <span className="ip-dict-warn">Speech recognition is not available in this browser. Please type your answer.</span>}
+                </div>
+                {dictHere && dictation.recording && dictation.interim && <div className="ip-dict-preview" aria-live="off"><span className="mono">Hearing:</span> {dictation.interim}</div>}
+              </div>
             </>
           )}
 
@@ -988,11 +1054,11 @@ export default function InterviewSession() {
 
           <div style={{ display: "flex", justifyContent: "space-between", marginTop: 20 }}>
             <div style={{ display: "flex", gap: 8 }}>
-              <button className="btn btn-ghost" disabled={activeIdx === 0 || micBlocked} onClick={() => go(-1)}>← Previous</button>
-              <button className="btn btn-ghost" onClick={skip} disabled={micBlocked}>Skip</button>
+              <button className="btn btn-ghost" disabled={activeIdx === 0 || micBlocked || dictation.busy} onClick={() => go(-1)}>← Previous</button>
+              <button className="btn btn-ghost" onClick={skip} disabled={micBlocked || dictation.busy}>Skip</button>
             </div>
             {activeIdx < questions.length - 1 ? (
-              <button className="btn btn-primary" onClick={() => go(1)} disabled={saving || micBlocked}>{saving ? "Saving…" : "Next →"}</button>
+              <button className="btn btn-primary" onClick={() => go(1)} disabled={saving || micBlocked || dictation.busy}>{saving ? "Saving…" : "Next →"}</button>
             ) : isRoundElimination ? (
               <button className="btn btn-primary" onClick={advanceRound} disabled={saving}>
                 {saving ? "Scoring round…" : session.currentRoundNumber < roundPlan.length ? "Submit Round →" : "Submit Interview"}

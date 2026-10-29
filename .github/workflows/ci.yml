@@ -116,6 +116,8 @@ jobs:
         run: node scripts/aiErrorTextRegression.mjs
       - name: Answer autosave regression (one request in flight, newest text last, retries, saved only when confirmed)
         run: node scripts/saveQueueRegression.mjs
+      - name: Speech-to-text regression (one session at a time, final results committed once, errors named, last words kept, cleanup)
+        run: node scripts/dictationRegression.mjs
       - name: Return-to-page regression (a safe in-app path, same account only, once)
         run: node scripts/returnToRegression.mjs
       - name: Editor height regression (a short landscape screen caps the exam editor)

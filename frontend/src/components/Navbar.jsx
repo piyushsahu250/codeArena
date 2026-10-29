@@ -10,7 +10,9 @@ import api from "../api";
 
 // `onBack`: optional override for the breadcrumb's Back button — see Breadcrumb.jsx's own comment
 // on why plain browser-history-back breaks for pages with in-page, state-driven drill-down levels.
-export default function Navbar({ onBack } = {}) {
+// `locked`: an active proctored examination. Only the logo is shown, as a plain image: no link home, no search, notifications, help or account menu, and no Back or
+// breadcrumb trail, so nothing in the page header can take the student out of the interview by accident.
+export default function Navbar({ onBack, locked = false } = {}) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
@@ -63,6 +65,22 @@ export default function Navbar({ onBack } = {}) {
   function markAllRead() {
     setNotifications((prev) => prev?.map((x) => ({ ...x, read: true })) ?? prev);
     api.post("/notifications/mark-all-read").catch(() => {});
+  }
+
+  if (locked) {
+    return (
+      <nav className="ca-topbar" aria-label="CodeArena">
+        <div style={{ background: "#fdfbf5", borderRadius: 8, padding: "3px 10px", display: "flex", alignItems: "center", gap: 8 }}>
+          <img src="/branding/logo.png" alt="CodeArena" style={{ height: 34, width: "auto", display: "block" }} />
+          {user?.institute?.logoUrl && (
+            <>
+              <div style={{ width: 1, height: 22, background: "var(--line)" }} />
+              <img src={user.institute.logoUrl} alt={user.institute.name || ""} title={user.institute.name || ""} style={{ height: 26, width: "auto", maxWidth: 90, objectFit: "contain", display: "block" }} />
+            </>
+          )}
+        </div>
+      </nav>
+    );
   }
 
   return (

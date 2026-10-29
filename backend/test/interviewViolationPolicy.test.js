@@ -68,3 +68,13 @@ test("the per-session event cap is a hard stop at its limit", () => {
 test("the strike limit is unchanged at 3", () => {
   assert.equal(P.MAX_INTERVIEW_VIOLATIONS, 3);
 });
+
+test("a Back-button attempt during an interview is a known event that is logged but never counted", () => {
+  const { classifyViolation } = require("../src/utils/proctoringSeverity");
+  assert.equal(P.isKnownViolationType("NAVIGATION_ATTEMPT"), true);
+  for (let prior = 0; prior < 10; prior++) {
+    const r = classifyViolation("NAVIGATION_ATTEMPT", prior);
+    assert.equal(r.severity, "INTERRUPTION");
+    assert.equal(r.penalized, false, "never a strike, however often it happens");
+  }
+});

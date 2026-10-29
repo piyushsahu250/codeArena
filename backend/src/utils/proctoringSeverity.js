@@ -103,6 +103,9 @@ const VIOLATION_SEVERITY = {
   // strike for normal typing, on a live exam. Still blocked (preventDefault) and still logged for
   // admin review — just never counted toward the violation limit, no matter how often it recurs.
   BROWSER_SHORTCUT: "INTERRUPTION",
+  // Added 2026-10-29: the student pressed the browser Back button (or Alt+Left) during an active proctored interview. The page absorbs it and tells them the interview is
+  // still running; it is logged for review and never counted, because pressing Back by habit says nothing about cheating.
+  NAVIGATION_ATTEMPT: "INTERRUPTION",
 };
 
 // Every SUSPICIOUS_ESCALATION_THRESHOLD-th SUSPICIOUS event on one attempt/session escalates into
