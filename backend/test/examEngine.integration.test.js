@@ -6,6 +6,8 @@ const assert = require("node:assert/strict");
 const http = require("http");
 const jwt = require("jsonwebtoken");
 const prisma = require("../src/prisma");
+const core = require("../src/modules/exams/exams.core");
+const Q = require("../src/utils/examQuestions");
 
 const HOST = "localhost";
 const PORT = 4000;
@@ -136,6 +138,16 @@ const put = (a, token, ref, version, payload, finalize) => request("PUT", `/api/
 const complete = (a, token, key, expectedAnswered) => request("POST", `/api/exams/attempts/${a.attemptId}/sections/${key}/complete`, token, { expectedAnswered }, a.session);
 const view = (a, token) => request("GET", `/api/exams/attempts/${a.attemptId}`, token, undefined, a.session);
 
+// The questions this file created are in `bank`; the shared database can also hold global questions of the same category (the CI database is seeded), and any of them may be drawn
+// into a paper. For those the key is read from the database, so the test answers every question it is given instead of sending an empty answer.
+async function keyFor(sectionKey, bank, id) {
+  if (bank[id] !== undefined) return bank[id];
+  const [row] = await core.loadObjectiveRows(sectionKey, [id]);
+  const idx = row ? Q.correctIndices(row.options, row.correctAnswer) : null;
+  assert.ok(idx && idx.length, `question ${id} has a usable key`);
+  return idx[0];
+}
+
 async function doObjective(a, token, key, bank, { wrongCount = 0, skipCount = 0 } = {}) {
   const o = await open(a, token, key);
   assert.equal(o.status, 200, o.raw);
@@ -144,7 +156,7 @@ async function doObjective(a, token, key, bank, { wrongCount = 0, skipCount = 0 
   let answered = 0;
   for (const [i, item] of items.entries()) {
     if (i >= items.length - skipCount) continue;
-    const key_ = bank[item.id];
+    const key_ = await keyFor(key, bank, item.id);
     const selected = i < wrongCount ? (key_ === 0 ? 1 : 0) : key_;
     const r = await put(a, token, item.id, 0, { selected });
     assert.equal(r.status, 200, r.raw);
