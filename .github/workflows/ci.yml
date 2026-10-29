@@ -229,6 +229,13 @@ jobs:
           done
           echo "::notice title=verification scripts duration::$(( $(date +%s) - verification_started )) seconds"
           exit $fail
+      # The *.integration.test.js files need the running API and a seeded database, which only this job has. REQUIRE_INTEGRATION=1 makes a missing prerequisite a failure, not a skip.
+      - name: Interview phase 1 integration tests (concurrent strikes, event validation, answer autosave, double finalize)
+        working-directory: backend
+        env:
+          SECURE_BROWSER_SECRET: ci-only-secure-browser-secret-0123456789
+          REQUIRE_INTEGRATION: "1"
+        run: node --test test/interviewPhase1.integration.test.js
       - name: Build the SPA and serve it
         working-directory: frontend
         run: |

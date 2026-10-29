@@ -32,16 +32,29 @@ let ready = false;
 let student, other, token, otherToken, hrQuestion;
 const tokenFor = (u) => jwt.sign({ id: u.id, role: u.role, email: u.email }, process.env.JWT_SECRET, { expiresIn: "10m" });
 
+// With REQUIRE_INTEGRATION=1 (set by the CI integration job, which starts the API and seeds the database first) a missing prerequisite FAILS the file instead of
+// skipping every test, so a green run there always means the tests really ran.
+function notReady(reason) {
+  ready = false;
+  if (process.env.REQUIRE_INTEGRATION === "1") throw new Error(`interviewPhase1 integration prerequisites missing: ${reason}`);
+}
+
 test.before(async () => {
-  try { ready = (await httpRequest("GET", "/api/health", null)).status === 200; } catch { ready = false; }
-  if (!ready || !process.env.JWT_SECRET) { ready = false; return; }
+  let reachable = false;
+  try { reachable = (await httpRequest("GET", "/api/health", null)).status === 200; } catch { reachable = false; }
+  if (!reachable) return notReady("the API is not answering on localhost:4000");
+  if (!process.env.JWT_SECRET) return notReady("JWT_SECRET is not set");
   const students = await prisma.user.findMany({ where: { role: "STUDENT" }, take: 2 });
   hrQuestion = await prisma.interviewQuestion.findFirst({ where: { category: "HR" } });
-  if (students.length < 2 || !hrQuestion) { ready = false; return; }
+  if (students.length < 2) return notReady("fewer than 2 STUDENT users in the database");
+  if (!hrQuestion) return notReady("no HR InterviewQuestion in the database");
   [student, other] = students;
   token = tokenFor(student);
   otherToken = tokenFor(other);
+  ready = true;
 });
+
+test.after(async () => { await prisma.$disconnect(); }); // otherwise the open database connection keeps the test process alive
 
 // A throwaway PROCTORED session in progress for `student`, holding one placeholder answer row for the HR question (as the real session start does).
 async function makeSession(extra = {}) {
