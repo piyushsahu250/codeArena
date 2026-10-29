@@ -51,6 +51,20 @@ export function useBrowserVoice() {
       else u.onerror = finish;
       window.speechSynthesis.speak(u);
     });
+    // Safari (iOS especially) can swallow speech that was not started from a tap and then never fires onend; without this the
+    // page would wait forever and never start listening. Generous: normal speech finishes well before it.
+    setTimeout(finish, 4000 + chunks.join(" ").length * 110);
+  }, [supported]);
+
+  // Call synchronously from a tap/click handler. iOS Safari only allows speech afterwards if the page has already spoken
+  // (even an empty utterance) from a user gesture, and the first real question is spoken after server calls, outside any gesture.
+  const unlockSpeech = useCallback(() => {
+    if (!supported) return;
+    try {
+      const u = new window.SpeechSynthesisUtterance(" ");
+      u.volume = 0;
+      window.speechSynthesis.speak(u);
+    } catch { /* speech stays locked; the Replay button is itself a tap and still works */ }
   }, [supported]);
 
   const stopListening = useCallback(() => {
@@ -136,5 +150,5 @@ export function useBrowserVoice() {
     if (typeof window !== "undefined" && window.speechSynthesis) window.speechSynthesis.cancel();
   }, []);
 
-  return { supported, speaking, listening, interim, error, speak, cancelSpeech, startListening, stopListening };
+  return { supported, speaking, listening, interim, error, speak, unlockSpeech, cancelSpeech, startListening, stopListening };
 }

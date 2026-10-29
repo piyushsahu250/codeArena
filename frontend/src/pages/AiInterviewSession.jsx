@@ -286,6 +286,7 @@ export default function AiInterviewSession() {
     if (!LIVE_VOICE) {
       // Browser voice (or typing only, where the browser has no speech support). switchToText claims the session itself.
       setBrowserVoice(bv.supported);
+      bv.unlockSpeech(); // still inside the click: lets iOS Safari speak the first question later
       await switchToText();
       return;
     }
