@@ -43,6 +43,13 @@ const TestTaking = lazy(() => import("./pages/TestTaking"));
 // Lazy-loaded: pulls in Monaco (code editor), only needed for coding practice questions.
 const LessonView = lazy(() => import("./pages/LessonView"));
 const InterviewSession = lazy(() => import("./pages/InterviewSession"));
+// Section-wise examination (Aptitude, Technical, Coding and AI Mock Interview in one attempt).
+const ExamHub = lazy(() => import("./pages/exam/ExamHub"));
+const ExamSession = lazy(() => import("./pages/exam/ExamSession"));
+const ExamReport = lazy(() => import("./pages/exam/ExamReport"));
+const ExamAdminList = lazy(() => import("./pages/exam/ExamAdminList"));
+const ExamEditor = lazy(() => import("./pages/exam/ExamEditor"));
+const ExamResults = lazy(() => import("./pages/exam/ExamResults"));
 // AI Voice Interview module (separate from the InterviewSession above — different backend
 // tables/engine, feature key ai_voice_interview). Lazy-loaded: pulls in the Web Audio capture code
 // only needed once a student actually starts a voice interview.
@@ -355,6 +362,14 @@ export default function App() {
           />
           <Route path="/readiness/report/:assessmentId" element={<Protected roles={["STUDENT"]}><ReadinessReport /></Protected>} />
           <Route path="/interview" element={<Protected roles={["STUDENT"]}><FeatureProtected featureKey="ai_mock_interview"><InterviewHub /></FeatureProtected></Protected>} />
+          <Route path="/exams" element={<Protected roles={["STUDENT"]}><Suspense fallback={<LoadingScreen />}><ExamHub /></Suspense></Protected>} />
+          <Route path="/exams/attempt/:attemptId" element={<Protected roles={["STUDENT"]} noChrome><ErrorBoundary><Suspense fallback={<LoadingScreen />}><ExamSession /></Suspense></ErrorBoundary></Protected>} />
+          <Route path="/exams/attempt/:attemptId/report" element={<Protected roles={["STUDENT"]}><ErrorBoundary><Suspense fallback={<LoadingScreen />}><ExamReport /></Suspense></ErrorBoundary></Protected>} />
+          <Route path="/exam-admin" element={<Protected roles={["ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"]}><Suspense fallback={<LoadingScreen />}><ExamAdminList /></Suspense></Protected>} />
+          <Route path="/exam-admin/new" element={<Protected roles={["ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"]}><Suspense fallback={<LoadingScreen />}><ExamEditor /></Suspense></Protected>} />
+          <Route path="/exam-admin/:examId/edit" element={<Protected roles={["ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"]}><Suspense fallback={<LoadingScreen />}><ExamEditor /></Suspense></Protected>} />
+          <Route path="/exam-admin/:examId/results" element={<Protected roles={["ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"]}><Suspense fallback={<LoadingScreen />}><ExamResults /></Suspense></Protected>} />
+          <Route path="/exam-admin/attempt/:attemptId" element={<Protected roles={["ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"]}><ErrorBoundary><Suspense fallback={<LoadingScreen />}><ExamReport admin /></Suspense></ErrorBoundary></Protected>} />
           <Route path="/interview/companies" element={<Protected roles={["STUDENT"]}><InterviewCompanies /></Protected>} />
           <Route
             path="/interview/session/:id"

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import api from "../../api";
+import api, { performExpiredRedirect } from "../../api";
 import Navbar from "../../components/Navbar";
 import ReadinessChecklist from "../../components/ReadinessChecklist";
 import ExamMcqQuestion from "../../components/exam/ExamMcqQuestion";
@@ -40,6 +40,9 @@ export default function ExamSession() {
   const [notice, setNotice] = useState(null);
   const [warning, setWarning] = useState(null);
   const [ready, setReady] = useState(false);
+  const [signedOut, setSignedOut] = useState(false);
+  // The login expired mid-examination: say so in the page (the answers already saved are on the server) instead of throwing the student out of it unannounced.
+  useEffect(() => { const on = () => setSignedOut(true); window.addEventListener("app:session-expired", on); return () => window.removeEventListener("app:session-expired", on); }, []);
   const draftsRef = useRef({});
   const viewRef = useRef(null);
   const refreshingRef = useRef(false);
@@ -245,6 +248,7 @@ export default function ExamSession() {
   // ---- screens ----------------------------------------------------------------------------------------------------------------------------------------------------------------
   const shell = (children) => <div><Navbar locked={proctoredActive} /><div className="ex-page">{children}</div></div>;
 
+  if (signedOut) return shell(<div className="ex-card"><h2>Your sign-in expired</h2><p>Everything that reached the server is saved, and the examination timer is still running there. Sign in again to carry on where you left off.</p><button className="btn btn-primary" onClick={performExpiredRedirect}>Sign in again</button></div>);
   if (replaced) return shell(<div className="ex-card"><h2>Examination open elsewhere</h2><p>This examination was opened in another tab, window or device, which now holds your session. Close this one, or continue here instead. Your saved answers are safe.</p><button className="btn btn-primary" onClick={() => window.location.reload()}>Continue in this tab</button></div>);
   if (error && phase === "loading") return shell(<div><p style={{ color: "var(--rust)" }}>{error}</p><Link to="/exams" className="btn btn-ghost">← Examinations</Link></div>);
   if (!view || phase === "loading") return shell(<p className="mono">Loading…</p>);
