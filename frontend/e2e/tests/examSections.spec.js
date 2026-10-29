@@ -20,7 +20,7 @@ test("an institute administrator sees the section exams list and the editor", as
   await expect(page.getByRole("heading", { name: "Section Exams" })).toBeVisible();
   await page.getByRole("link", { name: /New section exam/ }).click();
   await expect(page).toHaveURL(/\/exam-admin\/new/);
-  await expect(page.getByLabel("Title")).toBeVisible();
+  await expect(page.getByLabel("Title", { exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "A · Aptitude" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "D · AI Mock Interview" })).toBeVisible();
   await page.waitForLoadState("networkidle");
