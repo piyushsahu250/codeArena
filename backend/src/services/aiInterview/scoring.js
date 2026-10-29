@@ -10,7 +10,10 @@
 // satisfied here. DECISION_RULE_VERSION is stored on every AiInterviewReport row specifically so a
 // later change to these thresholds is provable against historical reports instead of silently
 // reinterpreting them.
-const DECISION_RULE_VERSION = "v1";
+// v2 (2026-10): confidence weight cut from 0.15 to 0.05 (it is the AI's guess at how sure the candidate "sounded" from text alone, and
+// dictated answers carry no tone), and every average is weighted by the question's difficulty so a hard question counts for more than
+// an easy one. The shape (weighted average, then thresholds) is unchanged; reports already stored as v1 are never recomputed.
+const DECISION_RULE_VERSION = "v2";
 
 // Env-var overridable — the same "tune via env var, don't hardcode" convention already used for
 // every other tunable knob on this platform (AI_RPM_LIMIT, AI_CONCURRENCY, AI_DAILY_LIMIT_*,
@@ -29,10 +32,10 @@ function envNumber(name, fallback) {
 
 const RUBRIC = {
   weights: {
-    technical: envNumber("AI_INTERVIEW_WEIGHT_TECHNICAL", 0.4),
-    problemSolving: envNumber("AI_INTERVIEW_WEIGHT_PROBLEM_SOLVING", 0.25),
+    technical: envNumber("AI_INTERVIEW_WEIGHT_TECHNICAL", 0.45),
+    problemSolving: envNumber("AI_INTERVIEW_WEIGHT_PROBLEM_SOLVING", 0.3),
     communication: envNumber("AI_INTERVIEW_WEIGHT_COMMUNICATION", 0.2),
-    confidence: envNumber("AI_INTERVIEW_WEIGHT_CONFIDENCE", 0.15),
+    confidence: envNumber("AI_INTERVIEW_WEIGHT_CONFIDENCE", 0.05),
   },
   thresholds: {
     STRONG: envNumber("AI_INTERVIEW_THRESHOLD_STRONG", 80),
@@ -50,22 +53,36 @@ const RUBRIC = {
 const EVALUATOR_CONFIDENCE_LOW_THRESHOLD = 50;
 const REVIEW_REQUIRED_LOW_CONFIDENCE_FRACTION = 1 / 3;
 
-function average(nums) {
-  if (!nums.length) return 0;
-  return Math.round(nums.reduce((a, b) => a + b, 0) / nums.length);
-}
-
 // Aggregates every turn's stored evaluation JSON into the report's headline scores. Turns with no
 // evaluation (skipped, or the interview ended before this turn was answered) are excluded rather
 // than counted as zero — a candidate shouldn't be penalized for an interview that ran out of time
 // on an already-planned question they never got to.
+// A turn's share of every average: difficulty runs 1-10, so weights span 0.6 (easiest) to 1.5 (hardest) — a hard question counts for
+// more, without one very hard answer swamping the rest. A turn with no stored difficulty counts as 1.0, so older data averages as before.
+function turnWeight(turn) {
+  const d = Number(turn.difficultyAtTurn);
+  return Number.isFinite(d) && d > 0 ? 0.5 + Math.min(d, 10) / 10 : 1;
+}
+
+function weightedAverage(evaluated, pick) {
+  if (!evaluated.length) return 0;
+  let total = 0;
+  let weights = 0;
+  for (const t of evaluated) {
+    const w = turnWeight(t);
+    total += pick(t.evaluation) * w;
+    weights += w;
+  }
+  return Math.round(total / weights);
+}
+
 function aggregateScores(turns) {
   const evaluated = turns.filter((t) => t.evaluation);
-  const technicalScore = average(evaluated.map((t) => t.evaluation.technicalDepth ?? t.evaluation.correctness ?? 0));
-  const problemSolvingScore = average(evaluated.map((t) => t.evaluation.reasoning ?? 0));
-  const communicationScore = average(evaluated.map((t) => t.evaluation.clarity ?? 0));
-  const confidenceScore = average(evaluated.map((t) => t.evaluation.confidence ?? 0));
-  const relevanceScore = average(evaluated.map((t) => t.evaluation.relevance ?? 0));
+  const technicalScore = weightedAverage(evaluated, (e) => e.technicalDepth ?? e.correctness ?? 0);
+  const problemSolvingScore = weightedAverage(evaluated, (e) => e.reasoning ?? 0);
+  const communicationScore = weightedAverage(evaluated, (e) => e.clarity ?? 0);
+  const confidenceScore = weightedAverage(evaluated, (e) => e.confidence ?? 0);
+  const relevanceScore = weightedAverage(evaluated, (e) => e.relevance ?? 0);
 
   const overallScore = Math.round(
     technicalScore * RUBRIC.weights.technical +

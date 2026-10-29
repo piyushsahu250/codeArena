@@ -98,3 +98,11 @@ competency matrices (spec §9), admin configuration UI for the scoring rubric (s
 per-institute AI-cost dollar tracking (today's `AiUsageLog` tracks tokens/latency/success, not
 USD), multilingual generation beyond a `language` field placeholder, and load testing at scale
 (100/500/1000 concurrent interviews — spec §39). See the delivery conversation for the full list.
+
+## Scoring rule v2 (2026-10)
+
+- Default weights are now technical 0.45, problem-solving 0.30, communication 0.20, confidence 0.05 (was 0.40 / 0.25 / 0.20 / 0.15). The confidence score is the model's guess from text alone and dictated answers carry no tone, so it counts for little. Every weight is still overridable with the `AI_INTERVIEW_WEIGHT_*` env vars.
+- Every average is weighted by question difficulty (weight = 0.5 + difficulty/10, so 0.6 to 1.5). A turn with no stored difficulty counts as 1.0.
+- The per-answer evaluation runs at temperature 0 with fixed score anchors (0 / 25 / 50 / 75 / 90-100), a rule that any wrong statement lowers correctness, and a note that speech-to-text can misrecognise technical terms (recognition errors are never penalised; unclear meaning lowers `evaluatorConfidence`).
+- `decisionRuleVersion` is stored as `v2` on new reports. Reports stored as `v1` are never recomputed, so a student's earlier results do not change.
+- Not done yet (needs a database change): generating a short list of required points with each question and scoring by which points the answer covers, and recording whether an answer was spoken or typed.

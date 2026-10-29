@@ -16,8 +16,45 @@ test("aggregateScores computes a weighted overall score from per-turn signals", 
   assert.equal(scores.problemSolvingScore, 70);
   assert.equal(scores.communicationScore, 75);
   assert.equal(scores.confidenceScore, 65);
-  // 80*0.4 + 70*0.25 + 75*0.2 + 65*0.15 = 32 + 17.5 + 15 + 9.75 = 74.25 -> rounds to 74
-  assert.equal(scores.overallScore, 74);
+  // 80*0.45 + 70*0.30 + 75*0.2 + 65*0.05 = 36 + 21 + 15 + 3.25 = 75.25 -> rounds to 75
+  assert.equal(scores.overallScore, 75);
+});
+
+test("a harder question counts for more than an easier one in every average", () => {
+  const strongOnHard = [
+    { difficultyAtTurn: 9, evaluation: { technicalDepth: 90, reasoning: 90, clarity: 90, confidence: 90, relevance: 90 } },
+    { difficultyAtTurn: 2, evaluation: { technicalDepth: 50, reasoning: 50, clarity: 50, confidence: 50, relevance: 50 } },
+  ];
+  const strongOnEasy = [
+    { difficultyAtTurn: 9, evaluation: { technicalDepth: 50, reasoning: 50, clarity: 50, confidence: 50, relevance: 50 } },
+    { difficultyAtTurn: 2, evaluation: { technicalDepth: 90, reasoning: 90, clarity: 90, confidence: 90, relevance: 90 } },
+  ];
+  const hard = aggregateScores(strongOnHard);
+  const easy = aggregateScores(strongOnEasy);
+  assert.ok(hard.technicalScore > 70, "good on the hard question and weak on the easy one lands above the plain average of 70");
+  assert.ok(easy.technicalScore < 70, "weak on the hard question and good on the easy one lands below it");
+  // weights: difficulty 9 -> 1.4, difficulty 2 -> 0.7 ; (90*1.4 + 50*0.7) / 2.1 = 76.67 -> 77
+  assert.equal(hard.technicalScore, 77);
+});
+
+test("a turn with no stored difficulty counts as 1.0, so data from before this rule averages as it used to", () => {
+  const scores = aggregateScores([
+    { evaluation: { technicalDepth: 100, reasoning: 0, clarity: 0, confidence: 0, relevance: 0 } },
+    { difficultyAtTurn: null, evaluation: { technicalDepth: 0, reasoning: 0, clarity: 0, confidence: 0, relevance: 0 } },
+  ]);
+  assert.equal(scores.technicalScore, 50);
+});
+
+test("equal difficulty everywhere gives the plain average", () => {
+  const scores = aggregateScores([5, 5, 5].map((d, i) => ({ difficultyAtTurn: d, evaluation: { technicalDepth: [60, 70, 80][i], reasoning: 0, clarity: 0, confidence: 0, relevance: 0 } })));
+  assert.equal(scores.technicalScore, 70);
+});
+
+test("the rule version is v2 and the default weights sum to 1", () => {
+  const { DECISION_RULE_VERSION } = require("../src/services/aiInterview/scoring");
+  assert.equal(DECISION_RULE_VERSION, "v2");
+  const w = RUBRIC.weights;
+  assert.ok(Math.abs(w.technical + w.problemSolving + w.communication + w.confidence - 1) < 1e-9);
 });
 
 test("aggregateScores excludes turns with no evaluation (never answered) rather than counting them as zero", () => {
@@ -97,7 +134,7 @@ test("RUBRIC weights/thresholds are overridable via env vars (same convention as
   try {
     delete require.cache[require.resolve("../src/services/aiInterview/scoring")];
     const defaultRubric = require("../src/services/aiInterview/scoring").RUBRIC;
-    assert.deepEqual(defaultRubric.weights, { technical: 0.4, problemSolving: 0.25, communication: 0.2, confidence: 0.15 }, "documented defaults when no env vars are set");
+    assert.deepEqual(defaultRubric.weights, { technical: 0.45, problemSolving: 0.3, communication: 0.2, confidence: 0.05 }, "documented defaults when no env vars are set");
     assert.deepEqual(defaultRubric.thresholds, { STRONG: 80, GOOD: 65, BORDERLINE: 50 });
 
     process.env.AI_INTERVIEW_WEIGHT_TECHNICAL = "0.5";
@@ -106,7 +143,7 @@ test("RUBRIC weights/thresholds are overridable via env vars (same convention as
     const overriddenRubric = require("../src/services/aiInterview/scoring").RUBRIC;
     assert.equal(overriddenRubric.weights.technical, 0.5, "an env var actually overrides its weight");
     assert.equal(overriddenRubric.thresholds.STRONG, 90, "an env var actually overrides its threshold");
-    assert.equal(overriddenRubric.weights.problemSolving, 0.25, "an unset env var still falls back to its default even when a sibling is overridden");
+    assert.equal(overriddenRubric.weights.problemSolving, 0.3,"an unset env var still falls back to its default even when a sibling is overridden");
   } finally {
     for (const k of keys) {
       if (prior[k] === undefined) delete process.env[k];

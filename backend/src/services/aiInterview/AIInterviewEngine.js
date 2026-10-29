@@ -161,6 +161,10 @@ async function evaluateAnswer({ session, turn, answerText, userId, instituteId }
     "followUpRecommended: true if this answer is incomplete/ambiguous enough that probing further would be valuable.",
     "recommendedNextObjective: which skill/topic the NEXT question should target given this answer (can repeat the current objective if it needs more probing, or name a different one from context if this one seems well-covered).",
     "difficultyAdjustment: -1 if this answer suggests the candidate is struggling at the current difficulty, +1 if they're clearly ready for harder, 0 otherwise.",
+    "Scoring anchors, the same for every score: 0 = no attempt or entirely wrong; 25 = mostly wrong or only a vague mention; 50 = partly correct, with significant gaps or errors; 75 = correct with minor gaps; 90-100 = complete, precise and correct. Use the whole range and avoid defaulting to the middle. Score what the answer actually states, not what it might have meant.",
+    "correctness is factual accuracy: any statement that is wrong must lower it, even if the rest is good. Do not give technicalDepth or reasoning above 50 unless the answer shows how or why, not only what.",
+    "confidence: judge only from the wording (decisive statements versus hedging or contradicting itself), not from length or fluency; the text carries no tone of voice. Use 50-70 when the wording gives no clear signal.",
+    "The answer may be speech-to-text, so a technical term can be misrecognised (for example \"poly more fism\" for polymorphism). Read the evident intended term, never penalise recognition errors, and lower evaluatorConfidence when you cannot tell what was meant.",
     "Do not penalize accent, phrasing style, or non-native English — evaluate technical content and reasoning only.",
     'Return ONLY this JSON: {"correctness":0-100,"technicalDepth":0-100,"clarity":0-100,"reasoning":0-100,"confidence":0-100,"relevance":0-100,"evaluatorConfidence":0-100,"strengths":string[],"weaknesses":string[],"missingConcepts":string[],"evidence":string[],"followUpRecommended":boolean,"recommendedNextObjective":string|null,"difficultyAdjustment":-1|0|1}',
   ].join("\n\n");
@@ -168,7 +172,7 @@ async function evaluateAnswer({ session, turn, answerText, userId, instituteId }
   return aiService.generateJson({
     feature: FEATURES.EVALUATE_ANSWER, userId, instituteId,
     system: "You are an unbiased technical interview evaluator. Never score based on accent, phrasing, gender, or any protected characteristic — only content, reasoning, and technical accuracy. Respond with ONLY the requested JSON.",
-    prompt, maxTokens: 700, temperature: 0.3,
+    prompt, maxTokens: 700, temperature: 0, // scoring must be repeatable: the same answer should get the same scores
     validate: validateEvaluationShape,
   });
 }
