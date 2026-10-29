@@ -27,6 +27,7 @@ const MENU = {
       { label: "Company Tests", to: "/company-tests", icon: Briefcase },
       { label: "Readiness Assessment", to: "/readiness", icon: Target, featureKey: "readiness_test" },
       { label: "My Results", to: "/results", icon: ClipboardList },
+      { label: "Examinations", to: "/exams", icon: ClipboardList },
     ] },
     { group: "Coding", items: [
       { label: "Daily Challenge", to: "/challenges/daily", icon: CalendarDays, featureKey: "coding_challenge" },
@@ -76,6 +77,7 @@ const MENU = {
       { label: "Student Search", to: "/staff/students", icon: Users },
       { label: "Talent Pools", to: "/admin/talent-pools", icon: Star, featureKey: "talent_pool" },
       { label: "Results", to: "/admin/results", icon: ClipboardList },
+      { label: "Section Exams", to: "/exam-admin", icon: ClipboardList },
       { label: "Password Reset History", to: "/staff/password-reset-history", icon: History },
       { label: "Audit Log", to: "/staff/audit-log", icon: History },
       { label: "Certificates", to: "/staff/certificates", icon: Award, featureKey: "certificates" },
@@ -122,6 +124,7 @@ const MENU = {
       { label: "AI Draft Review", to: "/staff/interview-drafts", icon: Sparkles },
       { label: "Interview Reports", to: "/staff/interview-reports", icon: ClipboardList },
       { label: "Results", to: "/admin/results", icon: ClipboardList },
+      { label: "Section Exams", to: "/exam-admin", icon: ClipboardList },
     ] },
     { group: "System", items: [
       { label: "Email Logs", to: "/admin/email-logs", icon: Mail },
@@ -176,6 +179,7 @@ const MENU = {
       { label: "AI Draft Review", to: "/staff/interview-drafts", icon: Sparkles, featureKey: "ai_draftview" },
       { label: "Interview Reports", to: "/staff/interview-reports", icon: ClipboardList, featureKey: "ai_mock_interview" },
       { label: "Results", to: "/admin/results", icon: ClipboardList },
+      { label: "Section Exams", to: "/exam-admin", icon: ClipboardList },
     ] },
     { group: "System", items: [
       { label: "Email Logs", to: "/admin/email-logs", icon: Mail },

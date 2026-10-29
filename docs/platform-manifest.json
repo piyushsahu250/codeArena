@@ -4,7 +4,7 @@
   "lastUpdated": "2026-10-29",
   "lastCodeReview": "2026-08-08",
   "platformRevision": {
-    "backend": "2593943",
+    "backend": "9f6d780",
     "frontend": "994c5b5"
   },
   "techStack": {
@@ -112,7 +112,7 @@
   },
   "businessRulesCount": 11,
   "databaseEntities": {
-    "modelCount": 120,
+    "modelCount": 127,
     "enumCount": 30,
     "migrationStrategy": "prisma db push --accept-data-loss on every deploy (no formal Migrate history)",
     "source": "backend/prisma/schema.prisma"
