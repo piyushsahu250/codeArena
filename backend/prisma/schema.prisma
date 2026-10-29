@@ -1393,6 +1393,9 @@ model Course {
   estimatedDurationMin Int?
   difficulty           Difficulty?
 
+  // false = completing this course no longer issues a certificate. Switching it off never revokes or hides a certificate a student already holds; it only stops new ones.
+  certificateEnabled   Boolean  @default(true)
+
   modules      CourseModule[]
   certificates Certificate[]
   notes        LearningNote[]

@@ -10,12 +10,16 @@ export default function CourseCertificate() {
   const { slug } = useParams();
   const [cert, setCert] = useState(null);
   const [error, setError] = useState("");
+  const [notOffered, setNotOffered] = useState(false); // the course has its certificate switched off: no "complete every lesson" hint, there is nothing to unlock
   const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
     api.get(`/learning/courses/${slug}/certificate`)
       .then((res) => setCert(res.data))
-      .catch((err) => setError(err.response?.data?.error || "Failed to load certificate"));
+      .catch((err) => {
+        setNotOffered(err.response?.data?.code === "CERTIFICATE_NOT_OFFERED");
+        setError(err.response?.data?.error || "Failed to load certificate");
+      });
   }, [slug]);
 
   async function download() {
@@ -51,7 +55,7 @@ export default function CourseCertificate() {
 
         {error && (
           <div className="card" style={{ padding: 24, marginTop: 24, textAlign: "center", color: "var(--ink-dim)" }}>
-            {error} — complete every lesson in this course to unlock your certificate.
+            {notOffered ? error : `${error} — complete every lesson in this course to unlock your certificate.`}
           </div>
         )}
 

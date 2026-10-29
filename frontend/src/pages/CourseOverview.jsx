@@ -103,7 +103,7 @@ export default function CourseOverview() {
                 {resumeLessonId && !complete && (
                   <Link to={`/learning/${slug}/lesson/${resumeLessonId}`} className="btn btn-primary">▶ Continue</Link>
                 )}
-                {complete && <Link to={`/learning/${slug}/certificate`} className="btn btn-primary" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><GraduationCap size={14} /> View Certificate</Link>}
+                {complete && data.certificateAvailable !== false && <Link to={`/learning/${slug}/certificate`} className="btn btn-primary" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><GraduationCap size={14} /> View Certificate</Link>}
               </div>
             </div>
             <div style={{ height: 8, borderRadius: 4, background: "var(--line)", marginTop: 14, overflow: "hidden" }}>
