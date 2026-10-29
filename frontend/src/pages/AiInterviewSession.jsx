@@ -6,6 +6,7 @@ import Button from "../components/Button";
 import { useMicCapture } from "../hooks/useMicCapture";
 import { useBrowserVoice } from "../hooks/useBrowserVoice";
 import { mergeTranscript } from "../utils/browserSpeech";
+import { friendlyAiError, isRetryableAiError } from "../utils/aiErrorText";
 import { playPcm16, stopPlayback, closePcmPlayer } from "../utils/pcmPlayer";
 import { aiInterviewVoiceWsUrl } from "../utils/wsUrl";
 import { getFullscreenElement, onFullscreenChange, supportsFullscreen } from "../utils/fullscreenCompat";
@@ -57,6 +58,7 @@ export default function AiInterviewSession() {
   // the same REST /start + /answer endpoints the voice WebSocket path calls server-side internally
   // (see answerProcessor.js) — no separate backend logic, no separate turn/session model.
   const [mode, setMode] = useState("voice"); // voice | text
+  const [startRetryable, setStartRetryable] = useState(false); // the interview could not start for a reason that may pass (AI limit, busy): offer "Try again"
   const [textAnswer, setTextAnswer] = useState("");
   const [textSubmitting, setTextSubmitting] = useState(false);
   // Lightweight integrity signal (product decision: fullscreen + tab-switch only, no camera, never
@@ -315,7 +317,8 @@ export default function AiInterviewSession() {
         setCurrentQuestionText(data.turn.questionText);
         setPhase(PHASES.ACTIVE);
       } catch (err) {
-        setFatalError(err.response?.data?.error || "Could not start the interview.");
+        setFatalError(friendlyAiError(err, "Could not start the interview."));
+        setStartRetryable(isRetryableAiError(err));
         setPhase(PHASES.ERROR);
       }
     } else {
@@ -406,7 +409,7 @@ export default function AiInterviewSession() {
       if (err.response?.status === 409) {
         setFatalError(err.response?.data?.error || "That question is no longer open.");
       } else {
-        setFatalError(err.response?.data?.error || "Could not submit your answer. Your progress up to now is saved — try again.");
+        setFatalError(friendlyAiError(err, "Could not submit your answer. Your progress up to now is saved — try again."));
       }
     } finally {
       setTextSubmitting(false);
@@ -559,6 +562,22 @@ export default function AiInterviewSession() {
 
   if (phase === PHASES.LOADING) {
     return <div className="ai-int-page ai-int-centered"><p>Loading interview…</p></div>;
+  }
+
+  // The interview never got its first question (the AI could not be reached, or its daily limit was reached). Showing the interview
+  // screen here would be an empty question and an answer box that can never be submitted, so say what happened and offer a retry.
+  // The server saves nothing when /start fails, so the interview is still unstarted and safe to retry.
+  if (phase === PHASES.ERROR && session && mode === "text" && !currentQuestionText) {
+    return (
+      <div className="ai-int-page ai-int-centered">
+        <div className="ai-int-preflight-card">
+          <h2>Your interview has not started yet</h2>
+          <p className="ai-int-error" role="alert">{fatalError}</p>
+          {startRetryable && <Button variant="primary" onClick={switchToText} style={{ width: "100%", justifyContent: "center" }}><RefreshCw size={14} /> Try again</Button>}
+          <Button variant="ghost" onClick={() => { releaseFullscreen(AI_FS_OWNER); navigate("/ai-interview"); }} style={{ width: "100%", justifyContent: "center", marginTop: 8 }}>Back to AI Interviews</Button>
+        </div>
+      </div>
+    );
   }
 
   if (phase === PHASES.ERROR && !session) {

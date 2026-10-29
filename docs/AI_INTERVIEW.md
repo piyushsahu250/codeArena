@@ -114,3 +114,10 @@ The student page no longer streams audio to the Gemini Live API. Each question i
 - Code: `frontend/src/hooks/useBrowserVoice.js`, `frontend/src/utils/browserSpeech.js`, `frontend/src/pages/AiInterviewSession.jsx`. Regression: `frontend/scripts/browserSpeechRegression.mjs` (run in CI).
 - Chrome and Edge send the audio to their own speech service, so dictation needs internet. Browsers without `SpeechRecognition` (iPhone Safari, Firefox) fall back to typing.
 - The old Live WebSocket path is still in the code and is used only when the frontend is built with `VITE_AI_INTERVIEW_LIVE_VOICE=1`.
+
+## When the AI provider's free daily limit is reached (2026-10-29)
+
+- Gemini's free-tier daily request limit is counted per model. `geminiProvider.js` now tries `GEMINI_MODEL` (default `gemini-3.6-flash`) first and, only when that model reports its daily limit (or is gone for the key), moves on to `GEMINI_FALLBACK_MODELS` (default `gemini-3.5-flash-lite`, `gemini-3.1-flash-lite`, `gemini-3-flash-preview`, probed live on 2026-10-29). A model that reported its limit is skipped until its stated reset time (at most 6 hours), so no call is wasted finding that out again. A model that rejects thinking level `minimal` is retried once with `low`. `GEMINI_FALLBACK_MODELS=none` turns it off. Blocked prompts, timeouts and 5xx errors are not passed on, since another model would not change them.
+- The fallback models are lighter than the main model, so answers and gradings made while the main model is out of quota may be slightly less sharp. The model used is recorded on each `AiUsageLog` row.
+- If every model is out of quota the API still answers with `AI_DAILY_QUOTA` and the time until the first model reopens. `/start` saves nothing when it fails, so the interview stays unstarted and can be retried.
+- Student page: a failed start shows "Your interview has not started yet", the plain reason, and a "Try again" button, instead of an empty interview screen (`AiInterviewSession.jsx`, wording in `utils/aiErrorText.js`).

@@ -28,6 +28,22 @@ const MAX_RETRY_AFTER_MS = Number(process.env.GEMINI_MAX_RETRY_AFTER_MS) || 1200
 // doesn't support thinkingConfig at all.
 const THINKING_LEVEL = process.env.GEMINI_THINKING_LEVEL || "minimal";
 
+// Free-tier request limits are counted PER MODEL, so when the main model's daily allowance is used up the others still have theirs.
+// These are tried in order, only after the main model reports a daily quota (or is gone), so normal answers still come from the main model.
+// Probed live against this platform's keys on 2026-10-29: each returns 200 with thinkingLevel "minimal". Set GEMINI_FALLBACK_MODELS (comma
+// list, or "none") to change them; a model that rejects "minimal" is retried once with "low" (see callGeminiOnce's caller), so listing e.g.
+// gemini-3.7-flash is safe. The "gemini-2.5-*" models 404 for this key ("no longer available to new users") and must not be listed.
+const FALLBACK_MODELS = (() => {
+  const raw = process.env.GEMINI_FALLBACK_MODELS;
+  if (raw === undefined) return ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3-flash-preview"];
+  return raw.split(",").map((m) => m.trim()).filter((m) => m && m.toLowerCase() !== "none");
+})();
+const MAX_COOLDOWN_MS = 6 * 60 * 60 * 1000;
+// model -> time (ms) before which it is skipped, set when it reports a daily quota or 404s, so a request does not spend a call finding that out again.
+const modelCooldownUntil = new Map();
+// model -> thinking level that worked after the default was rejected.
+const thinkingLevelFor = new Map();
+
 // Optional extra keys (GEMINI_API_KEY_2, GEMINI_API_KEY_3 or a comma list in GEMINI_API_KEYS) turn
 // the per-key rate limit into a pool: a 429 on one key makes the retry use the next key right away
 // instead of waiting for the first key's quota window to reopen. With only GEMINI_API_KEY set,
@@ -59,7 +75,7 @@ function backoffDelay(attempt) {
   return base + Math.random() * base * 0.25;
 }
 
-async function callGeminiOnce({ model, system, prompt, maxTokens, temperature, jsonMode, keyOffset = 0 }) {
+async function callGeminiOnce({ model, system, prompt, maxTokens, temperature, jsonMode, keyOffset = 0, thinkingLevel = THINKING_LEVEL }) {
   const url = `${GEMINI_API_BASE}/${model}:generateContent?key=${pickKey(keyOffset)}`;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
@@ -75,7 +91,7 @@ async function callGeminiOnce({ model, system, prompt, maxTokens, temperature, j
           maxOutputTokens: maxTokens,
           temperature,
           ...(jsonMode ? { responseMimeType: "application/json" } : {}),
-          ...(THINKING_LEVEL ? { thinkingConfig: { thinkingLevel: THINKING_LEVEL } } : {}),
+          ...(thinkingLevel ? { thinkingConfig: { thinkingLevel } } : {}),
         },
       }),
     });
@@ -84,6 +100,10 @@ async function callGeminiOnce({ model, system, prompt, maxTokens, temperature, j
       const body = await res.text().catch(() => "");
       const err = new Error(`Gemini API request failed (${res.status}): ${body.slice(0, 500)}`);
       err.status = res.status;
+      // 400 "Thinking level MINIMAL is not supported for this model": the caller retries once with a level this model accepts.
+      if (res.status === 400 && /thinking level/i.test(body)) err.thinkingLevelRejected = true;
+      // 404 "no longer available to new users": this model will never work for this key, so move on to the next model.
+      if (res.status === 404) err.modelUnavailable = true;
       err.retryable = res.status === 429 || res.status >= 500;
       // Gemini tells us exactly how long to back off on a 429: a Retry-After header and/or a
       // RetryInfo detail ("retryDelay": "13s") in the body. Waiting 0.8s/1.6s (the generic backoff)
@@ -149,6 +169,27 @@ async function callGeminiOnce({ model, system, prompt, maxTokens, temperature, j
 // Calls Gemini with retry/backoff on retryable failures (429, 5xx, timeout, network). `maxRetries`
 // lets a caller opt out (0) for cases where a fast failure matters more than resilience — none do
 // today, but the knob exists per the "maximum retry attempts should be configurable" requirement.
+// One call to one model, using the thinking level that model accepts: the default first, and if the model rejects it, "low" once (remembered).
+async function callModelOnce(args) {
+  const level = thinkingLevelFor.get(args.model) || THINKING_LEVEL;
+  try {
+    return await callGeminiOnce({ ...args, thinkingLevel: level });
+  } catch (err) {
+    if (err.thinkingLevelRejected && THINKING_LEVEL && level !== "low") {
+      thinkingLevelFor.set(args.model, "low");
+      return callGeminiOnce({ ...args, thinkingLevel: "low" });
+    }
+    throw err;
+  }
+}
+
+// Whether a failure on one model should move on to the next model instead of ending the request: the model's daily allowance is used up,
+// it is gone for this key, it rejects every thinking level we send, or it is still rate limited after the retries. A blocked prompt, a
+// timeout, an unlabeled network error or a 5xx stays the caller's error, because another model would not change them.
+function shouldTryNextModel(err) {
+  return !!(err.dailyQuota || err.modelUnavailable || err.thinkingLevelRejected || err.status === 429);
+}
+
 async function generateContent({ model = DEFAULT_MODEL, system, prompt, maxTokens = 1024, temperature = 0.7, jsonMode = false, maxRetries = MAX_RETRIES }) {
   if (!isConfigured()) {
     const err = new Error("AI features are not configured on this server (GEMINI_API_KEY is not set)");
@@ -156,11 +197,46 @@ async function generateContent({ model = DEFAULT_MODEL, system, prompt, maxToken
     throw err;
   }
 
+  const now = Date.now();
+  const candidates = [model, ...FALLBACK_MODELS.filter((m) => m !== model)];
+  const available = candidates.filter((m) => !(modelCooldownUntil.get(m) > now));
+  if (!available.length) {
+    // Every model reported its daily allowance within the last few hours: answer at once with the real time left instead of calling any.
+    const soonest = Math.min(...candidates.map((m) => modelCooldownUntil.get(m) || now));
+    const err = new Error("Every configured Gemini model has reached its daily limit");
+    err.status = 429;
+    err.dailyQuota = true;
+    err.resetInSeconds = Math.max(60, Math.round((soonest - now) / 1000));
+    throw err;
+  }
+
+  let lastErr;
+  let soonestReset = null;
+  for (const m of available) {
+    try {
+      return await generateWithModel({ model: m, system, prompt, maxTokens, temperature, jsonMode, maxRetries });
+    } catch (err) {
+      lastErr = err;
+      if (!shouldTryNextModel(err)) throw err;
+      if (err.dailyQuota) {
+        const reset = err.resetInSeconds || 3600;
+        modelCooldownUntil.set(m, Date.now() + Math.min(reset * 1000, MAX_COOLDOWN_MS));
+        soonestReset = soonestReset === null ? reset : Math.min(soonestReset, reset);
+      } else if (err.modelUnavailable) {
+        modelCooldownUntil.set(m, Date.now() + MAX_COOLDOWN_MS); // will not come back on its own
+      }
+    }
+  }
+  if (lastErr?.dailyQuota && soonestReset !== null) lastErr.resetInSeconds = soonestReset; // the message names when the FIRST model reopens
+  throw lastErr;
+}
+
+async function generateWithModel({ model, system, prompt, maxTokens, temperature, jsonMode, maxRetries }) {
   keyCursor++; // round-robin the starting key per call so load spreads across a key pool
   let lastErr;
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      return await callGeminiOnce({ model, system, prompt, maxTokens, temperature, jsonMode, keyOffset: attempt });
+      return await callModelOnce({ model, system, prompt, maxTokens, temperature, jsonMode, keyOffset: attempt });
     } catch (err) {
       lastErr = err;
       if (!err.retryable || attempt === maxRetries) throw err;

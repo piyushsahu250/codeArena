@@ -112,6 +112,8 @@ jobs:
         run: node scripts/dedupeWritesRegression.mjs
       - name: Browser voice regression (voice picking, speech chunking, transcript merging, recognition errors)
         run: node scripts/browserSpeechRegression.mjs
+      - name: AI error wording regression (a daily AI limit tells the student nothing is lost and when to retry)
+        run: node scripts/aiErrorTextRegression.mjs
       - name: Return-to-page regression (a safe in-app path, same account only, once)
         run: node scripts/returnToRegression.mjs
       - name: Editor height regression (a short landscape screen caps the exam editor)
