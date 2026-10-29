@@ -22,3 +22,16 @@ Session lists, weak-topics analysis, per-student session history, PDF/Excel repo
 
 ## Related
 [KNOWN_ISSUES.md](KNOWN_ISSUES.md) KI-001, [QUESTION_BANK.md](QUESTION_BANK.md) (contrast case), [RBAC_PERMISSIONS.md](RBAC_PERMISSIONS.md).
+
+## Phase 1 hardening (2026-10-29): strikes, event validation, answer autosave
+
+Plan and findings: `docs/MOCK_INTERVIEW_GAP_ANALYSIS_2026-10-29.md`. What changed in `routes/interview.js` and the session page:
+
+- **Strikes are atomic.** `POST /interview/sessions/:id/violation` runs in one transaction that holds a row lock on the session (`SELECT ... FOR UPDATE`). The strike count is an atomic increment (the old read-then-write lost a strike when two penalised events raced), de-duplication and the SUSPICIOUS escalation count see every earlier event, and the strike that reaches `MAX_INTERVIEW_VIOLATIONS` (3) sets `status = TERMINATED` in that same commit. The report is written right after; if the process stops in between, `GET /interview/sessions/:id` writes the missing report (30 s after `submittedAt`).
+- **Finalize is safe to repeat.** `finalizeSession` claims the session with `updateMany(where status = IN_PROGRESS)`; exactly one concurrent caller writes the report, sends the e-mail and the audit row. The other gets the current session back (`alreadyFinalized`).
+- **Events are validated.** Only types in `proctoringSeverity.js`'s `VIOLATION_SEVERITY` are stored; anything else is `400`. The same type again within 2 s (30 s for `WINDOW_NOT_FILLING_SCREEN`) is acknowledged but not stored (`deduplicated: true`). At most 300 event rows per session. 60 requests per minute per student. Rules live in `utils/interviewViolationPolicy.js`.
+- **Typed answers autosave.** `POST /sessions/:id/questions/:qid/text-draft` stores the text of HR / Technical / Behavioral / Managerial / System Design answers in `CodeDraft` (`contextType = INTERVIEW_TEXT`, no migration); `GET /sessions/:id/text-drafts` returns drafts newer than the answer saved with Next. Both refuse a closed session or one past its deadline; the POST also refuses an unassigned question and over 20,000 characters. The page sends through `utils/saveQueue.js`: one request in flight per question, the newest text always last, retries with growing delays on network failures, `Saved` shown only after the server confirmed the text that is in the box.
+- The coding-draft endpoint now also refuses a closed or overdue session and a question the session was not given.
+- **Not done yet (Phase 4):** revision numbers on answers (the queue prevents out-of-order saves from one tab; the server does not yet check a revision), a server-side sweep that closes overdue sessions, and a status transition table.
+- **Known pre-existing issue, not changed here:** the page-hide handler for CODING drafts registers once per question and sends the code as it was then; the text handler reads a ref, so it sends the current text.
+- Tests: `test/interviewViolationPolicy.test.js` (unit), `test/interviewPhase1.integration.test.js` (concurrent strikes, de-duplication, unknown types, another student, closed sessions, draft save/restore/limits, double finalize; skipped when no server is running), `frontend/scripts/saveQueueRegression.mjs`.

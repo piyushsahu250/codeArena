@@ -29,6 +29,7 @@ const { cached, invalidate } = require("../utils/cache");
 const { computeInterviewAnalytics } = require("../utils/interviewAnalytics");
 const { dedupe, isInFlight } = require("../utils/requestDedup");
 const { classifyViolation } = require("../utils/proctoringSeverity");
+const { MAX_INTERVIEW_VIOLATIONS, normalizeViolationType, isKnownViolationType, duplicateWindowMs, isDuplicateEvent, exceedsEventCap } = require("../utils/interviewViolationPolicy");
 const { COMPANIES } = require("../utils/companies");
 const { isStudentTalentPoolMember } = require("../utils/talentPoolEligibility");
 const { spreadsheetFileFilter } = require("../utils/uploadFilters");
@@ -71,7 +72,10 @@ const CERT_THRESHOLD = 80;
 const SESSION_QUESTION_COUNT = { HR: 6, TECHNICAL: 6, APTITUDE: 10, CODING: 3, SYSTEM_DESIGN: 3, BEHAVIORAL: 6, MANAGERIAL: 5 };
 const MOCK_DURATION_MIN = 30;
 const COMPANY_ROUND_DURATION_MIN = 45;
-const MAX_INTERVIEW_VIOLATIONS = 3;
+// Proctoring events: a real session sends a handful a minute at most (each type is also de-duplicated server-side), so this only ever stops a
+// runaway or hostile client. Draft autosave sends one request per pause in typing, per student.
+const violationLimiter = rateLimit({ windowMs: 60 * 1000, max: 60, keyGenerator: (req) => req.user.id });
+const textDraftLimiter = rateLimit({ windowMs: 60 * 1000, max: 120, keyGenerator: (req) => req.user.id });
 
 // Server-side deadline, mirroring submissions.js/moduleCoding.js's identical deadlineOf() pattern
 // — sessions with no configured durationMin (plain category drills, resume-based) never had a
@@ -571,6 +575,17 @@ router.get("/sessions/:id", authenticate, requireRole("STUDENT"), async (req, re
       include: { answers: { orderBy: { createdAt: "asc" } }, report: true },
     });
     if (!session || session.studentId !== req.user.id) return res.status(404).json({ error: "Session not found" });
+    // A session that was closed (the strike that ends it commits the status first) but whose report was never written because the process stopped in between:
+    // write it now. Only once the closing request must be long finished, so this cannot race the request that is still writing it.
+    if (!session.report && (session.status === "COMPLETED" || session.status === "TERMINATED") && session.submittedAt && Date.now() - new Date(session.submittedAt).getTime() > 30000) {
+      try {
+        const repaired = await finalizeSession(session, { status: session.status, terminationReason: session.terminationReason, alreadyClaimed: true }, null);
+        session.report = repaired.report;
+        logger.info("INTERVIEW_REPORT_REPAIRED", { sessionId: session.id, status: session.status });
+      } catch (repairErr) {
+        console.error("[interview.sessions] could not write the missing report:", repairErr);
+      }
+    }
     const questions = await prisma.interviewQuestion.findMany({ where: { id: { in: session.answers.map((a) => a.questionId) } } });
     const ordered = session.answers.map((a) => ({ ...sanitizeQuestion(questions.find((q) => q.id === a.questionId) || {}, `${session.id}:${a.questionId}`), answer: a }));
     // A completed session's report/weakAreas never changes, so recomputing recommendations on
@@ -766,10 +781,13 @@ router.post("/sessions/:id/run-code", authenticate, requireRole("STUDENT"), exec
 // STUDENT: autosave the in-progress code draft for a coding interview question — same atomic
 // upsert pattern used for autosave everywhere else, keyed by session+question since the same
 // question bank entry could in principle appear again in a different session.
-router.post("/sessions/:id/questions/:questionId/draft", authenticate, requireRole("STUDENT"), async (req, res) => {
+router.post("/sessions/:id/questions/:questionId/draft", authenticate, requireRole("STUDENT"), textDraftLimiter, async (req, res) => {
   try {
     const session = await prisma.interviewSession.findUnique({ where: { id: req.params.id } });
     if (!session || session.studentId !== req.user.id) return res.status(403).json({ error: "Invalid session" });
+    // Drafts exist to protect work in progress: nothing to protect once the session is closed or past its deadline, and only for a question this session was given.
+    if (session.status !== "IN_PROGRESS" || Date.now() > deadlineOf(session)) return res.status(409).json({ error: "This interview is no longer accepting changes" });
+    if (!(await prisma.interviewAnswer.findUnique({ where: { sessionId_questionId: { sessionId: session.id, questionId: req.params.questionId } }, select: { id: true } }))) return res.status(404).json({ error: "Question not found" });
 
     const { language, code } = req.body;
     if (typeof code !== "string" || !language) return res.status(400).json({ error: "language and code are required" });
@@ -798,6 +816,66 @@ router.get("/sessions/:id/questions/:questionId/draft", authenticate, requireRol
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to load draft" });
+  }
+});
+
+// STUDENT: autosave the typed/dictated text of a free-text answer (HR, Technical, Behavioral, Managerial, System Design). Until now only coding answers were autosaved, so a refresh,
+// crash or lost connection before "Next" lost a typed answer. Stored in the existing CodeDraft table under its own contextType, so no migration; the real answer (and its score) is
+// still written only by POST .../answer. The page sends one request at a time per question, latest text last (see frontend/src/utils/saveQueue.js).
+const MAX_TEXT_DRAFT_CHARS = 20000;
+const TEXT_DRAFT_TYPE = "INTERVIEW_TEXT";
+router.post("/sessions/:id/questions/:questionId/text-draft", authenticate, requireRole("STUDENT"), textDraftLimiter, async (req, res) => {
+  try {
+    const session = await prisma.interviewSession.findUnique({ where: { id: req.params.id } });
+    if (!session || session.studentId !== req.user.id) return res.status(403).json({ error: "Invalid session" });
+    if (session.status !== "IN_PROGRESS" || Date.now() > deadlineOf(session)) return res.status(409).json({ error: "This interview is no longer accepting changes" });
+    const slot = await prisma.interviewAnswer.findUnique({ where: { sessionId_questionId: { sessionId: session.id, questionId: req.params.questionId } }, include: { question: { select: { category: true } } } });
+    if (!slot) return res.status(404).json({ error: "Question not found" });
+    if (!FREE_TEXT_CATEGORIES.includes(slot.question.category)) return res.status(400).json({ error: "This question does not take a typed answer" });
+
+    const { answerText } = req.body || {};
+    if (typeof answerText !== "string") return res.status(400).json({ error: "answerText is required" });
+    if (answerText.length > MAX_TEXT_DRAFT_CHARS) return res.status(413).json({ error: `Answer is too long (limit ${MAX_TEXT_DRAFT_CHARS} characters)` });
+
+    const contextId = `${session.id}:${req.params.questionId}`;
+    const saved = await prisma.codeDraft.upsert({
+      where: { studentId_contextType_contextId: { studentId: req.user.id, contextType: TEXT_DRAFT_TYPE, contextId } },
+      update: { code: answerText, language: "text" },
+      create: { studentId: req.user.id, contextType: TEXT_DRAFT_TYPE, contextId, code: answerText, language: "text" },
+      select: { updatedAt: true },
+    });
+    // Reported only after the row is committed: the page shows "Saved" from this response and from nothing else.
+    res.json({ ok: true, savedAt: saved.updatedAt, length: answerText.length });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Autosave failed" });
+  }
+});
+
+// STUDENT: every text draft of this session that is NEWER than the answer saved with "Next" (a draft older than the saved answer is stale and ignored), in one request, so a
+// refresh restores in-progress writing without one request per question.
+router.get("/sessions/:id/text-drafts", authenticate, requireRole("STUDENT"), async (req, res) => {
+  try {
+    const session = await prisma.interviewSession.findUnique({ where: { id: req.params.id }, select: { id: true, studentId: true, status: true } });
+    if (!session || session.studentId !== req.user.id) return res.status(403).json({ error: "Invalid session" });
+    if (session.status !== "IN_PROGRESS") return res.json({ drafts: {} });
+    const [drafts, answers] = await Promise.all([
+      prisma.codeDraft.findMany({ where: { studentId: req.user.id, contextType: TEXT_DRAFT_TYPE, contextId: { startsWith: `${session.id}:` } }, select: { contextId: true, code: true, updatedAt: true }, take: 200 }),
+      prisma.interviewAnswer.findMany({ where: { sessionId: session.id }, select: { questionId: true, skipped: true, updatedAt: true } }),
+    ]);
+    const answerByQuestion = new Map(answers.map((a) => [a.questionId, a]));
+    const out = {};
+    for (const d of drafts) {
+      const questionId = d.contextId.slice(session.id.length + 1);
+      const saved = answerByQuestion.get(questionId);
+      if (!saved) continue; // not a question of this session
+      // A never-answered placeholder row (skipped: true) has an updatedAt from session creation, so any draft written after it is newer; a row saved with "Next" wins over an older draft.
+      if (new Date(d.updatedAt).getTime() > new Date(saved.updatedAt).getTime()) out[questionId] = d.code;
+    }
+    res.json({ drafts: out });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to load drafts" });
   }
 });
 
@@ -1002,20 +1080,40 @@ router.post("/sessions/:id/rounds/advance", authenticate, requireRole("STUDENT")
 // Shared by the normal finalize flow and the proctoring-violation auto-terminate path — a
 // terminated session still gets a real report built from whatever was genuinely answered before
 // termination (partial credit), not an empty/blank one.
-async function finalizeSession(session, { status = "COMPLETED", terminationReason = null } = {}, req = null) {
+//
+// Safe to call twice at once (two "time is up" submits, or a submit racing the last strike): the status flip is a claim (`status = IN_PROGRESS` in the WHERE), so exactly one
+// caller builds the report, sends the e-mail and writes the audit row; the other gets the current session and report back with `alreadyFinalized: true` (report may be null for
+// a moment while the winner is still writing it). `alreadyClaimed: true` is for the caller that already moved the session out of IN_PROGRESS itself in its own transaction (the
+// strike that ends the interview): only the report is left to write.
+async function finalizeSession(session, { status = "COMPLETED", terminationReason = null, alreadyClaimed = false } = {}, req = null) {
   const answers = await prisma.interviewAnswer.findMany({ where: { sessionId: session.id } });
   const questions = await prisma.interviewQuestion.findMany({ where: { id: { in: answers.map((a) => a.questionId) } } });
   const answersWithQuestions = answers.map((a) => ({ ...a, question: questions.find((q) => q.id === a.questionId) || {} }));
   const built = buildInterviewReport(answersWithQuestions, {
     roundPlanSnapshot: session.roundPlanSnapshot, eliminatedAtRound: session.eliminatedAtRound, durationMin: session.config?.durationMin,
   });
+  const upsertReport = (client) => client.interviewReport.upsert({
+    where: { sessionId: session.id }, update: built, create: { sessionId: session.id, studentId: session.studentId, ...built },
+  });
 
-  const [updated, report] = await prisma.$transaction([
-    prisma.interviewSession.update({ where: { id: session.id }, data: { status, submittedAt: new Date(), terminationReason } }),
-    prisma.interviewReport.upsert({
-      where: { sessionId: session.id }, update: built, create: { sessionId: session.id, studentId: session.studentId, ...built },
-    }),
-  ]);
+  let updated;
+  let report;
+  if (alreadyClaimed) {
+    report = await upsertReport(prisma);
+    updated = await prisma.interviewSession.findUnique({ where: { id: session.id } });
+  } else {
+    const claimed = await prisma.$transaction(async (tx) => {
+      const won = await tx.interviewSession.updateMany({ where: { id: session.id, status: "IN_PROGRESS" }, data: { status, submittedAt: new Date(), terminationReason } });
+      if (won.count === 0) return null;
+      const r = await upsertReport(tx);
+      return { updated: await tx.interviewSession.findUnique({ where: { id: session.id } }), report: r };
+    });
+    if (!claimed) {
+      const current = await prisma.interviewSession.findUnique({ where: { id: session.id }, include: { report: true } });
+      return { session: current, report: current?.report ?? null, alreadyFinalized: true };
+    }
+    ({ updated, report } = claimed);
+  }
   logger.info(status === "TERMINATED" ? "INTERVIEW_TERMINATED" : "INTERVIEW_COMPLETED", {
     sessionId: session.id, studentId: session.studentId, terminationReason, overallScore: report.overallScore,
   });
@@ -1077,7 +1175,8 @@ router.post("/sessions/:id/finalize", authenticate, requireRole("STUDENT"), asyn
 
     const terminationReason = Date.now() > deadlineOf(session) ? "TIME_EXPIRED" : null;
     const { session: updated, report } = await finalizeSession(session, { terminationReason }, req);
-    const recommendedLearning = await buildRecommendations(report.weakAreas);
+    // A second submit that lost the race to finalize gets the session back and, if the winner has not finished writing it yet, no report for a moment.
+    const recommendedLearning = report ? await buildRecommendations(report.weakAreas) : [];
     res.json({ session: updated, report, recommendedLearning });
   } catch (err) {
     console.error(err);
@@ -1094,7 +1193,7 @@ router.post("/sessions/:id/finalize", authenticate, requireRole("STUDENT"), asyn
 // into a real strike only after repeating, rather than either always or never counting. Noise/
 // silent-environment reminders never reach this endpoint at all — they're pure client-side UI
 // state, not a proctoring concern.
-router.post("/sessions/:id/violation", authenticate, requireRole("STUDENT"), async (req, res) => {
+router.post("/sessions/:id/violation", authenticate, requireRole("STUDENT"), violationLimiter, async (req, res) => {
   try {
     const session = await prisma.interviewSession.findUnique({ where: { id: req.params.id } });
     if (!session || session.studentId !== req.user.id) return res.status(403).json({ error: "Invalid session" });
@@ -1102,24 +1201,52 @@ router.post("/sessions/:id/violation", authenticate, requireRole("STUDENT"), asy
       return res.json({ violationCount: session.violationCount, maxViolations: MAX_INTERVIEW_VIOLATIONS, terminated: session.status === "TERMINATED" });
     }
 
-    const type = String(req.body.type || "UNKNOWN").toUpperCase().slice(0, 40);
-    // Counted fresh from the log every time (not a running counter column) so the escalation
-    // threshold in proctoringSeverity.js can change later without a backfill.
-    const priorSuspiciousCount = await prisma.interviewViolation.count({ where: { sessionId: session.id, severity: "SUSPICIOUS" } });
-    const { severity, penalized } = classifyViolation(type, priorSuspiciousCount);
-    const violationCount = penalized ? session.violationCount + 1 : session.violationCount;
-    // The violation log row and the session's running count describe one event — transact them
-    // together (same class of fix as session-start/round-advance above) when penalized, rather
-    // than as two separate writes that could partially land and leave the count out of sync with
-    // the log it's supposed to be derived from.
-    if (penalized) {
-      await prisma.$transaction([
-        prisma.interviewViolation.create({ data: { sessionId: session.id, type, severity, penalized } }),
-        prisma.interviewSession.update({ where: { id: session.id }, data: { violationCount } }),
-      ]);
-    } else {
-      await prisma.interviewViolation.create({ data: { sessionId: session.id, type, severity, penalized } });
+    // Only types the shared severity map knows are recorded (see utils/interviewViolationPolicy.js); anything else is a bad request, not a log row.
+    const type = normalizeViolationType(req.body?.type);
+    if (!isKnownViolationType(type)) return res.status(400).json({ error: "Unknown event type" });
+
+    // One transaction holds a row lock on the session, so two events arriving together are handled one after the other: each sees the other's
+    // row (de-duplication and the SUSPICIOUS escalation count are exact), the strike count is an atomic increment (the old read-then-write
+    // lost a strike when two penalised events raced), and the strike that reaches the limit flips the session to TERMINATED in the SAME
+    // commit, so a crash can never leave a session at the limit but still IN_PROGRESS. The report is built right after (and, if that is
+    // interrupted, by ensureReportFor on the next load of the session).
+    const outcome = await prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT "id" FROM "InterviewSession" WHERE "id" = ${session.id} FOR UPDATE`;
+      const fresh = await tx.interviewSession.findUnique({ where: { id: session.id } });
+      if (!fresh || fresh.status !== "IN_PROGRESS") return { kind: "closed", fresh };
+
+      const lastOfType = await tx.interviewViolation.findFirst({ where: { sessionId: fresh.id, type }, orderBy: { createdAt: "desc" }, select: { createdAt: true } });
+      if (isDuplicateEvent(lastOfType?.createdAt, Date.now(), duplicateWindowMs(type))) return { kind: "duplicate", fresh, severity: classifyViolation(type, 0).severity };
+      if (exceedsEventCap(await tx.interviewViolation.count({ where: { sessionId: fresh.id } }))) return { kind: "capped", fresh, severity: classifyViolation(type, 0).severity };
+
+      // Counted fresh from the log every time (not a running counter column) so the escalation
+      // threshold in proctoringSeverity.js can change later without a backfill.
+      const priorSuspiciousCount = await tx.interviewViolation.count({ where: { sessionId: fresh.id, severity: "SUSPICIOUS" } });
+      const { severity, penalized } = classifyViolation(type, priorSuspiciousCount);
+      await tx.interviewViolation.create({ data: { sessionId: fresh.id, type, severity, penalized } });
+
+      let violationCount = fresh.violationCount;
+      let terminated = false;
+      if (penalized) {
+        const bumped = await tx.interviewSession.update({ where: { id: fresh.id }, data: { violationCount: { increment: 1 } }, select: { violationCount: true } });
+        violationCount = bumped.violationCount;
+        if (violationCount >= MAX_INTERVIEW_VIOLATIONS) {
+          await tx.interviewSession.update({ where: { id: fresh.id }, data: { status: "TERMINATED", terminationReason: "MAX_VIOLATIONS", submittedAt: new Date() } });
+          terminated = true;
+        }
+      }
+      return { kind: "recorded", fresh, severity, penalized, violationCount, terminated };
+    }, { timeout: 10000 });
+
+    if (outcome.kind === "closed") {
+      return res.json({ violationCount: outcome.fresh?.violationCount ?? session.violationCount, maxViolations: MAX_INTERVIEW_VIOLATIONS, terminated: outcome.fresh?.status === "TERMINATED" });
     }
+    if (outcome.kind === "duplicate" || outcome.kind === "capped") {
+      // Acknowledged, not stored: the same situation reported twice, or a session that already holds the maximum number of event rows.
+      return res.json({ violationCount: outcome.fresh.violationCount, maxViolations: MAX_INTERVIEW_VIOLATIONS, severity: outcome.severity, penalized: false, terminated: false, deduplicated: outcome.kind === "duplicate" });
+    }
+
+    const { severity, penalized, violationCount, terminated } = outcome;
     logger.info("VIOLATION_RECORDED", { sessionId: session.id, type, severity, penalized, violationCount });
     if (penalized) {
       logAudit({
@@ -1127,10 +1254,8 @@ router.post("/sessions/:id/violation", authenticate, requireRole("STUDENT"), asy
         details: { sessionId: session.id, type, severity, violationCount },
       });
     }
-
-    const terminated = penalized && violationCount >= MAX_INTERVIEW_VIOLATIONS;
     if (terminated) {
-      await finalizeSession({ ...session, violationCount }, { status: "TERMINATED", terminationReason: "MAX_VIOLATIONS" }, req);
+      await finalizeSession({ ...outcome.fresh, violationCount }, { status: "TERMINATED", terminationReason: "MAX_VIOLATIONS", alreadyClaimed: true }, req);
     }
 
     res.json({ violationCount, maxViolations: MAX_INTERVIEW_VIOLATIONS, severity, penalized, terminated });

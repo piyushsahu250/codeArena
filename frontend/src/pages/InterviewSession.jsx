@@ -4,6 +4,7 @@ import Editor from "@monaco-editor/react";
 import api, { API_BASE_URL, performExpiredRedirect } from "../api";
 import { Mic, Square, Move, Camera } from "lucide-react";
 import { useProctoring } from "../hooks/useProctoring";
+import { createSaveQueue } from "../utils/saveQueue";
 import { useExamSession, recallExamSession } from "../hooks/useExamSession";
 import { runSecurityCheck } from "../utils/secureAssessment";
 import useIsMobile from "../hooks/useIsMobile";
@@ -20,6 +21,17 @@ import { CODE_LANGUAGES as LANGUAGES, defaultStarter, supportedLanguages } from 
 import { applyPlainTextInputHints, watchForNonAsciiInput } from "../utils/monacoSetup";
 
 const AUTOSAVE_DEBOUNCE_MS = 2000;
+const TEXT_AUTOSAVE_DEBOUNCE_MS = 800; // a typed/dictated answer is saved this long after the last change (see utils/saveQueue.js for the ordering and retry rules)
+
+// What the line under the answer box says. "Saved" is shown only when the server confirmed the text that is in the box right now.
+function textSaveLabel(status, unsynced) {
+  if (unsynced) return "Unsaved changes…";
+  if (status === "saving") return "Saving…";
+  if (status === "saved") return "Saved";
+  if (status === "retrying") return "Reconnecting… your answer is kept here and will be saved as soon as the connection is back.";
+  if (status === "failed") return "Could not save automatically. Your answer is still here and is saved when you press Next.";
+  return "";
+}
 const JUDGE_TIMEOUT_MS = 20000;
 
 // Judge/queue-contention errors get the specific, reassuring copy the platform wants for this
@@ -74,6 +86,11 @@ export default function InterviewSession() {
   // language being switched away from.
   const [langDrafts, setLangDrafts] = useState({});
   const [saving, setSaving] = useState(false);
+  // Autosave of typed answers: questionId -> idle | saving | saved | retrying | failed, driven by the queue's confirmations only.
+  const [textSaveStatus, setTextSaveStatus] = useState({});
+  const textQueueRef = useRef(null);
+  const lastQueuedTextRef = useRef({}); // questionId -> the text last handed to the queue, or loaded from the server: unchanged text is never sent again
+  const latestAnswerTextRef = useRef({ id: null, text: "" }); // read by the page-hide handler, which must send the text as it is NOW, not as it was when the handler was registered
   const [runResult, setRunResult] = useState(null);
   const [running, setRunning] = useState(false);
   const [codeSubmittedResult, setCodeSubmittedResult] = useState(false); // true once runResult holds a hidden-case Submit grade, not a sample-only Run
@@ -153,6 +170,15 @@ export default function InterviewSession() {
           if (drafts_[i]) initial[q.id] = { ...initial[q.id], code: drafts_[i].code, language: drafts_[i].language };
         });
       }
+      // Typed answers autosaved before a refresh or crash (only those newer than the answer saved with Next come back from the server).
+      if (res.data.session.status === "IN_PROGRESS") {
+        const textDrafts = await api.get(`/interview/sessions/${id}/text-drafts`).then((r) => r.data?.drafts || {}).catch(() => ({}));
+        for (const [qid, text] of Object.entries(textDrafts)) {
+          if (initial[qid] && typeof text === "string") initial[qid] = { ...initial[qid], answerText: text };
+        }
+      }
+      // Whatever is in a box at load time is already on the server (saved answer or restored draft), so it is not sent again.
+      for (const q of res.data.questions) lastQueuedTextRef.current[q.id] = initial[q.id]?.answerText || "";
       setDrafts(initial);
       const initialLangDrafts = {};
       for (const q of res.data.questions) {
@@ -238,6 +264,38 @@ export default function InterviewSession() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeDraft.code, activeDraft.language, activeQuestion?.id, phase]);
 
+  // Autosave of typed/dictated answers for free-text questions. The queue (utils/saveQueue.js) keeps one request in flight per question, always sends the newest text last,
+  // retries network failures, and reports "saved" only after the server confirmed. It is retried at once when the browser comes back online.
+  useEffect(() => {
+    const queue = createSaveQueue({
+      send: (qid, text) => api.post(`/interview/sessions/${id}/questions/${qid}/text-draft`, { answerText: text }),
+      onStatus: (qid, status) => setTextSaveStatus((prev) => ({ ...prev, [qid]: status })),
+    });
+    textQueueRef.current = queue;
+    const retry = () => queue.retryNow();
+    window.addEventListener("online", retry);
+    return () => {
+      window.removeEventListener("online", retry);
+      queue.dispose();
+      textQueueRef.current = null;
+    };
+  }, [id]);
+
+  const activeIsFreeText = !!activeQuestion && FREE_TEXT_CATEGORIES.includes(activeQuestion.category);
+  const activeAnswerText = activeDraft.answerText || "";
+  latestAnswerTextRef.current = { id: activeIsFreeText ? activeQuestion.id : null, text: activeAnswerText };
+  useEffect(() => {
+    if (phase !== "active" || !activeIsFreeText) return;
+    const qid = activeQuestion.id;
+    if ((lastQueuedTextRef.current[qid] ?? "") === activeAnswerText) return;
+    const timer = setTimeout(() => {
+      lastQueuedTextRef.current[qid] = activeAnswerText;
+      textQueueRef.current?.push(qid, activeAnswerText);
+    }, TEXT_AUTOSAVE_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeAnswerText, activeQuestion?.id, activeIsFreeText, phase]);
+
   // A normal axios POST can be aborted mid-flight when the page is actually torn down, so this
   // uses fetch's `keepalive` flag (designed exactly for "send this request even though the page is
   // unloading"; unlike navigator.sendBeacon, it still supports the Authorization header this API
@@ -259,6 +317,10 @@ export default function InterviewSession() {
     const handler = () => {
       if (activeQuestion.category === "CODING") {
         keepaliveSave(`/interview/sessions/${id}/questions/${activeQuestion.id}/draft`, { code: activeDraft.code, language: activeDraft.language });
+      } else {
+        // The text as it is at the moment the page is hidden or closed (a ref, since this handler is registered once per question).
+        const { id: qid, text } = latestAnswerTextRef.current;
+        if (qid && text) keepaliveSave(`/interview/sessions/${id}/questions/${qid}/text-draft`, { answerText: text });
       }
     };
     window.addEventListener("beforeunload", handler);
@@ -501,11 +563,20 @@ export default function InterviewSession() {
   async function saveAnswer(skipped = false) {
     setSaving(true);
     try {
+      // Let a draft request that is still in flight finish first (at most 3 s), so it cannot land after the real answer and look newer than it on a later reload.
+      if (FREE_TEXT_CATEGORIES.includes(q.category) && textQueueRef.current) {
+        await Promise.race([textQueueRef.current.flush(q.id), new Promise((resolve) => setTimeout(resolve, 3000))]);
+      }
       const body = { questionId: q.id, skipped };
       if (q.category === "APTITUDE") body.answerText = draft.selected != null ? String(draft.selected) : null;
       else if (q.category === "CODING") { body.code = draft.code; body.language = draft.language; }
       else body.answerText = draft.answerText;
       const { data: res } = await api.post(`/interview/sessions/${id}/answer`, body, { timeout: JUDGE_TIMEOUT_MS });
+      if (FREE_TEXT_CATEGORIES.includes(q.category) && !skipped) {
+        // The answer itself is now saved by the server, so the autosave has nothing left to send for this text.
+        lastQueuedTextRef.current[q.id] = draft.answerText || "";
+        setTextSaveStatus((prev) => ({ ...prev, [q.id]: "saved" }));
+      }
       if (res.immediateResult) setRunResult(res.immediateResult);
       if (res.followUpQuestion) {
         setData((d) => (d.questions.some((qq) => qq.id === res.followUpQuestion.id) ? d : { ...d, questions: [...d.questions, res.followUpQuestion] }));
@@ -838,6 +909,9 @@ export default function InterviewSession() {
                 onChange={(e) => updateDraft({ answerText: e.target.value })}
                 placeholder="Type your answer, or use the mic below to speak it…"
               />
+              <div role="status" aria-live="polite" className="mono" style={{ fontSize: 11, marginTop: 6, minHeight: 16, opacity: 0.75, color: textSaveStatus[q.id] === "failed" ? "var(--danger-text)" : undefined }}>
+                {textSaveLabel(textSaveStatus[q.id], (lastQueuedTextRef.current[q.id] ?? "") !== (draft.answerText || ""))}
+              </div>
               <button className="btn btn-ghost" style={{ marginTop: 8, display: "inline-flex", alignItems: "center", gap: 6 }} onClick={toggleRecording}>
                 {recording ? <><Square size={14} /> Stop recording</> : <><Mic size={14} /> Record answer (speech-to-text)</>}
               </button>
