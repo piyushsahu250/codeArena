@@ -2981,6 +2981,7 @@ model InterviewSession {
   @@index([studentId, category])
   @@index([studentId, status])
   @@index([talentPoolConfigId])
+  @@index([status, submittedAt]) // the staff Interview Reports list, analytics and export filter on status and a date range and sort newest first
 }
 
 // Event-level proctoring log for interview sessions — mirrors ProctoringViolation (the module-

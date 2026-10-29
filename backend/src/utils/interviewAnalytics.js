@@ -6,7 +6,8 @@
 //  - The weekly bucket was "year-W<day of month / 7>-<month>": week 1 of March and week 1 of November were different strings that sorted wrongly, and a bucket could straddle
 //    two calendar weeks. A week is now the Monday (UTC) it starts on, written as an ISO date.
 //  - Math.max(...scores) / Math.min(...scores) spread every score into the call stack; with tens of thousands of interviews that throws RangeError. Plain loops now.
-//  - Dates were bucketed in the server's local time zone; they are now bucketed in UTC so the same interview never moves buckets when the server's zone changes.
+//  - Dates were bucketed in the server's local time zone; they are now bucketed in India time (Asia/Kolkata, UTC+5:30, no daylight saving), so the same interview never moves buckets when the
+//    server's zone changes and a week or a month starts when the people reading the chart expect it to. Terminated and scored counts are returned so the cards can say what they average.
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -19,6 +20,11 @@ function mondayOfUtcWeek(date) {
 const isoDay = (d) => d.toISOString().slice(0, 10);
 const monthKey = (d) => `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
 
+// The platform's users are in India: a week and a month start at midnight IST, not midnight UTC. An interview at 02:00 IST on a Monday belongs to that Monday's week (it is still
+// Sunday evening in UTC), and one at 01:00 IST on the 1st belongs to the new month. The date is moved by the IST offset and then read with the UTC accessors above.
+const IST_MS = 330 * 60 * 1000;
+const inIst = (date) => new Date(date.getTime() + IST_MS);
+
 function computeInterviewAnalytics(sessions, { now = Date.now(), typeLabel = () => null, defaultDateRangeApplied = null } = {}) {
   const withScore = sessions.filter((s) => s.report && typeof s.report.overallScore === "number");
   let sum = 0, highest = -Infinity, lowest = Infinity;
@@ -30,10 +36,11 @@ function computeInterviewAnalytics(sessions, { now = Date.now(), typeLabel = () 
   }
   const hasScores = withScore.length > 0;
 
-  let completedCount = 0, thisWeekCount = 0, thisMonthCount = 0;
+  let completedCount = 0, terminatedCount = 0, thisWeekCount = 0, thisMonthCount = 0;
   const weekMs = 7 * DAY_MS, monthMs = 30 * DAY_MS;
   for (const s of sessions) {
     if (s.status === "COMPLETED") completedCount++;
+    else if (s.status === "TERMINATED") terminatedCount++;
     if (s.submittedAt) {
       const age = now - new Date(s.submittedAt).getTime();
       if (age <= weekMs) thisWeekCount++;
@@ -58,7 +65,7 @@ function computeInterviewAnalytics(sessions, { now = Date.now(), typeLabel = () 
   const weekly = new Map(), monthly = new Map();
   for (const s of withScore) {
     if (!s.submittedAt) continue;
-    const d = new Date(s.submittedAt);
+    const d = inIst(new Date(s.submittedAt));
     for (const [map, key] of [[weekly, isoDay(mondayOfUtcWeek(d))], [monthly, monthKey(d)]]) {
       const cur = map.get(key) || { total: 0, count: 0 };
       cur.total += s.report.overallScore;
@@ -82,6 +89,8 @@ function computeInterviewAnalytics(sessions, { now = Date.now(), typeLabel = () 
   return {
     totalInterviews: sessions.length,
     completedCount,
+    terminatedCount,
+    scoredCount: withScore.length, // how many interviews the average, highest and lowest are computed from (terminated interviews that have a report are included); the cards show "—" when this is 0
     averageScore: hasScores ? Math.round(sum / withScore.length) : 0,
     highestScore: hasScores ? highest : 0,
     lowestScore: hasScores ? lowest : 0,

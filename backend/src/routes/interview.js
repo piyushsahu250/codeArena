@@ -27,6 +27,7 @@ const aiService = require("../services/ai/aiService");
 const { sendAiError } = require("../utils/aiErrors");
 const { cached, invalidate } = require("../utils/cache");
 const { computeInterviewAnalytics } = require("../utils/interviewAnalytics");
+const ReportFilters = require("../utils/interviewReportFilters");
 const { dedupe, isInFlight } = require("../utils/requestDedup");
 const { classifyViolation } = require("../utils/proctoringSeverity");
 const { MAX_INTERVIEW_VIOLATIONS, normalizeViolationType, isKnownViolationType, duplicateWindowMs, isDuplicateEvent, exceedsEventCap } = require("../utils/interviewViolationPolicy");
@@ -2106,27 +2107,12 @@ router.get("/admin/sessions/:sessionId/violations", authenticate, requireRole("A
 // the dashboard's charts/cards and its table always reflect the exact same filtered set the
 // user has selected. Institute scoping (Staff = own institute only, Admin = unscoped) rides on
 // the same attachRequesterInstitute pattern used by /admin/stats etc. above.
+// Throws ReportFilters.FilterError (status 400) for an invalid date or score; the routes below answer it with that message instead of a 500.
 function buildAdminSessionWhere(req) {
-  const studentWhere = { role: "STUDENT" };
-  if (req.requesterInstituteId) studentWhere.instituteId = req.requesterInstituteId;
-  if (req.query.academicGroupId) studentWhere.academicGroupId = req.query.academicGroupId;
-  // Legacy filter — the admin filter UI here still uses the old class picker (not yet rebuilt as
-  // an academic-group picker, see Phase E), so both continue to work until that rebuild ships.
-  if (req.query.classId) studentWhere.classId = req.query.classId;
-  if (req.query.batchYear) studentWhere.batchYear = req.query.batchYear;
-  if (req.query.department) studentWhere.department = req.query.department;
-  if (req.query.search) {
-    const q = String(req.query.search).trim();
-    if (q) {
-      studentWhere.OR = [
-        { name: { contains: q, mode: "insensitive" } },
-        { email: { contains: q, mode: "insensitive" } },
-        { rollNumber: { contains: q, mode: "insensitive" } },
-        { registrationNumber: { contains: q, mode: "insensitive" } },
-        { mobile: { contains: q, mode: "insensitive" } },
-      ];
-    }
-  }
+  const studentWhere = ReportFilters.studentWhere({
+    instituteId: req.requesterInstituteId, academicGroupId: req.query.academicGroupId, classId: req.query.classId,
+    batchYear: req.query.batchYear, department: req.query.department, search: req.query.search,
+  });
 
   const where = { status: { in: ["COMPLETED", "TERMINATED"] }, student: studentWhere };
   if (req.query.status && ["COMPLETED", "TERMINATED"].includes(req.query.status)) where.status = req.query.status;
@@ -2140,17 +2126,18 @@ function buildAdminSessionWhere(req) {
   }
   if (req.query.company) where.config = { path: ["company"], equals: req.query.company };
 
-  if (req.query.dateFrom || req.query.dateTo) {
-    where.submittedAt = {};
-    if (req.query.dateFrom) where.submittedAt.gte = new Date(`${req.query.dateFrom}T00:00:00`);
-    if (req.query.dateTo) where.submittedAt.lte = new Date(`${req.query.dateTo}T23:59:59`);
-  }
-  if (req.query.scoreMin || req.query.scoreMax) {
-    where.report = {};
-    if (req.query.scoreMin) where.report.overallScore = { gte: Number(req.query.scoreMin) };
-    if (req.query.scoreMax) where.report.overallScore = { ...(where.report.overallScore || {}), lte: Number(req.query.scoreMax) };
-  }
+  const submitted = ReportFilters.dateRange(req.query.dateFrom, req.query.dateTo);
+  if (submitted) where.submittedAt = submitted;
+  const score = ReportFilters.scoreBounds(req.query.scoreMin, req.query.scoreMax);
+  if (score) where.report = { overallScore: score };
   return where;
+}
+
+// The one place the report routes turn an error into a response: a bad filter is the caller's mistake (400, with the reason), anything else is ours (500).
+function reportError(res, err, fallback) {
+  if (err && err.badFilter) return res.status(400).json({ error: err.message });
+  console.error(err);
+  return res.status(500).json({ error: fallback });
 }
 
 const STUDENT_JOIN_SELECT = {
@@ -2196,15 +2183,14 @@ router.get("/admin/sessions", authenticate, requireRole("ADMIN", "SUPER_ADMIN", 
       prisma.interviewSession.findMany({
         where,
         include: { student: { select: STUDENT_JOIN_SELECT }, report: { select: { overallScore: true } } },
-        orderBy: { submittedAt: "desc" },
+        orderBy: [{ submittedAt: "desc" }, { id: "desc" }], // the id breaks ties, so two interviews with the same time can never swap pages or appear twice
         skip: (page - 1) * pageSize, take: pageSize,
       }),
       prisma.interviewSession.count({ where }),
     ]);
     res.json({ rows: sessions.map(toReportRow), page, pageSize, total, totalPages: Math.ceil(total / pageSize) });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed to load interview reports" });
+    reportError(res, err, "Failed to load interview reports");
   }
 });
 
@@ -2244,8 +2230,7 @@ router.get("/admin/analytics", authenticate, requireRole("ADMIN", "SUPER_ADMIN",
 
     res.json(payload);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed to load interview analytics" });
+    reportError(res, err, "Failed to load interview analytics");
   }
 });
 
@@ -2322,31 +2307,50 @@ router.get("/admin/sessions/:sessionId/report/pdf", authenticate, requireRole("A
 router.get("/admin/sessions/export", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const where = buildAdminSessionWhere(req);
-    const sessions = await prisma.interviewSession.findMany({
-      where,
-      include: { student: { select: STUDENT_JOIN_SELECT }, report: { select: { overallScore: true } } },
-      orderBy: { submittedAt: "desc" },
-      take: 5000,
-    });
+    // Read in batches of 1,000 (keyset on the sort order) up to EXPORT_LIMIT, instead of one 5,000-row query: the same rows, far less memory per query. The old cap cut the file
+    // off silently; now a file that hit the limit says so (a notice sheet and the X-Export-Truncated header, which the page turns into a message).
+    const EXPORT_LIMIT = 20000;
+    const sessions = [];
+    let cursor;
+    while (sessions.length < EXPORT_LIMIT) {
+      const batch = await prisma.interviewSession.findMany({
+        where,
+        include: { student: { select: STUDENT_JOIN_SELECT }, report: { select: { overallScore: true } } },
+        orderBy: [{ submittedAt: "desc" }, { id: "desc" }],
+        take: Math.min(1000, EXPORT_LIMIT - sessions.length),
+        ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+      });
+      sessions.push(...batch);
+      if (batch.length < 1000) break;
+      cursor = batch[batch.length - 1].id;
+    }
+    const total = sessions.length >= EXPORT_LIMIT ? await prisma.interviewSession.count({ where }) : sessions.length;
+    const truncated = total > sessions.length;
     const rows = sessions.map((s) => {
       const r = toReportRow(s);
       return {
         "Student Name": r.studentName, "Roll Number": r.rollNumber || "", "Registration Number (PRN)": r.registrationNumber || "",
         "Institute": r.institute || "", "Academic Group": r.groupLabel || "", "Batch": r.batchYear || "", "Department": r.department || "",
-        "Interview Type": r.type, "Company": r.company || "", "Date": r.date ? new Date(r.date).toLocaleString() : "",
+        "Interview Type": r.type, "Company": r.company || "", "Date (IST)": ReportFilters.formatIst(r.date),
         "Score (%)": r.score ?? "", "Status": r.status,
       };
     });
     const sheet = XLSX.utils.json_to_sheet(rows.map(safeRow));
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, sheet, "Interview Reports");
+    if (truncated) {
+      XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet([{ Notice: `This file holds the ${sessions.length} most recent of ${total} matching interviews. Narrow the filters (for example by date) and export again for the rest.` }]), "Notice");
+    }
     const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
     res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
     res.setHeader("Content-Disposition", 'attachment; filename="interview-reports.xlsx"');
+    res.setHeader("Access-Control-Expose-Headers", "X-Export-Truncated, X-Export-Rows, X-Export-Total");
+    res.setHeader("X-Export-Rows", String(sessions.length));
+    res.setHeader("X-Export-Total", String(total));
+    if (truncated) res.setHeader("X-Export-Truncated", "true");
     res.send(buffer);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed to export interview reports" });
+    reportError(res, err, "Failed to export interview reports");
   }
 });
 

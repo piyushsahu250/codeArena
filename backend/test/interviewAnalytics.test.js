@@ -74,3 +74,30 @@ test("a very large result set does not overflow the call stack", () => {
   assert.equal(r.lowestScore, 0);
   assert.equal(r.totalInterviews, 150000);
 });
+
+test("weeks and months start at midnight India time, not midnight UTC", () => {
+  // Sun 2026-10-18 19:00 UTC = Mon 2026-10-19 00:30 IST -> the week of Monday 19 Oct (UTC alone would put it in the week of 12 Oct)
+  // Sun 2026-10-18 18:00 UTC = Sun 2026-10-18 23:30 IST -> still the week of Monday 12 Oct
+  // Wed 2026-09-30 19:00 UTC = Thu 2026-10-01 00:30 IST -> October (UTC alone would say September)
+  const edge = [
+    mk({ submittedAt: new Date("2026-10-18T19:00:00Z"), report: { overallScore: 70 } }),
+    mk({ submittedAt: new Date("2026-10-18T18:00:00Z"), report: { overallScore: 50 } }),
+    mk({ submittedAt: new Date("2026-09-30T19:00:00Z"), report: { overallScore: 90 } }),
+  ];
+  const r = computeInterviewAnalytics(edge, { now: NOW });
+  assert.deepEqual(r.weeklyTrend, [
+    { period: "2026-09-28", averageScore: 90, count: 1 },   // 2026-10-01 00:30 IST is a Thursday, week of Monday 28 Sep
+    { period: "2026-10-12", averageScore: 50, count: 1 },
+    { period: "2026-10-19", averageScore: 70, count: 1 },
+  ]);
+  assert.deepEqual(r.monthlyTrend, [{ period: "2026-10", averageScore: 70, count: 3 }]); // (70 + 50 + 90) / 3
+});
+
+test("the cards say how many interviews they average and how many were terminated", () => {
+  const r = computeInterviewAnalytics(sessions, { now: NOW, typeLabel: label });
+  assert.equal(r.scoredCount, 4);      // the 80, 100, 0 and 60 sessions have a report; the IN_PROGRESS one does not
+  assert.equal(r.terminatedCount, 1);  // the 0 session
+  assert.equal(r.completedCount + r.terminatedCount + 1, r.totalInterviews); // + the one in progress
+  const none = computeInterviewAnalytics([mk({ report: null })], { now: NOW });
+  assert.equal(none.scoredCount, 0);
+});

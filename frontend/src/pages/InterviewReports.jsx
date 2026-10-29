@@ -36,6 +36,13 @@ export default function InterviewReports() {
   const [page, setPage] = useState(1);
   const [pageMeta, setPageMeta] = useState({ totalPages: 1, total: 0 });
   const [exporting, setExporting] = useState(false);
+  const [analyticsError, setAnalyticsError] = useState(null);
+  const [rowsError, setRowsError] = useState(null);
+  const [rowsLoading, setRowsLoading] = useState(true);
+  const [formError, setFormError] = useState(null);
+  const [notice, setNotice] = useState(null);
+  const [reloadKey, setReloadKey] = useState(0);
+  const platformWide = user?.role === "ADMIN" || user?.role === "SUPER_ADMIN"; // everyone else sees their own institute only
 
   useEffect(() => {
     api.get("/academic-groups").then((res) => setGroups(res.data)).catch(() => {});
@@ -48,41 +55,73 @@ export default function InterviewReports() {
     return p;
   }, [applied]);
 
+  // Each request is ignored if the filters changed again before it answered, so a slow older answer can never overwrite a newer one (the cards and the table must describe the same filters).
   useEffect(() => {
+    let current = true;
     setAnalyticsLoading(true);
-    api.get("/interview/admin/analytics", { params: queryParams }).then((res) => setAnalytics(res.data)).catch(() => {}).finally(() => setAnalyticsLoading(false));
-  }, [queryParams]);
+    setAnalyticsError(null);
+    api.get("/interview/admin/analytics", { params: queryParams })
+      .then((res) => { if (current) setAnalytics(res.data); })
+      .catch((err) => { if (current) { setAnalytics(null); setAnalyticsError(err.response?.data?.error || "Could not load the summary and charts."); } })
+      .finally(() => { if (current) setAnalyticsLoading(false); });
+    return () => { current = false; };
+  }, [queryParams, reloadKey]);
 
   useEffect(() => {
-    setRows(null);
+    let current = true;
+    setRowsLoading(true);
+    setRowsError(null);
     api.get("/interview/admin/sessions", { params: { ...queryParams, page, pageSize: 20 } }).then((res) => {
+      if (!current) return;
       setRows(res.data.rows);
       setPageMeta({ totalPages: res.data.totalPages, total: res.data.total });
-    }).catch(() => setRows([]));
-  }, [queryParams, page]);
+    }).catch((err) => { if (current) { setRows([]); setPageMeta({ totalPages: 1, total: 0 }); setRowsError(err.response?.data?.error || "Could not load the interview results."); } })
+      .finally(() => { if (current) setRowsLoading(false); });
+    return () => { current = false; };
+  }, [queryParams, page, reloadKey]);
 
+  // The same checks the server makes, so a mistake is shown beside the form at once instead of as an empty page.
+  function filterProblem(f) {
+    if (f.dateFrom && f.dateTo && f.dateFrom > f.dateTo) return "Date From cannot be after Date To.";
+    const lo = f.scoreMin === "" ? null : Number(f.scoreMin), hi = f.scoreMax === "" ? null : Number(f.scoreMax);
+    if ((lo !== null && (!Number.isFinite(lo) || lo < 0 || lo > 100)) || (hi !== null && (!Number.isFinite(hi) || hi < 0 || hi > 100))) return "Scores must be numbers from 0 to 100.";
+    if (lo !== null && hi !== null && lo > hi) return "Min Score cannot be above Max Score.";
+    return null;
+  }
   function applyFilters(e) {
     e.preventDefault();
+    const problem = filterProblem(filters);
+    setFormError(problem);
+    if (problem) return;
+    setNotice(null);
     setPage(1);
     setApplied(filters);
   }
   function clearFilters() {
     setFilters(EMPTY_FILTERS);
     setApplied(EMPTY_FILTERS);
+    setFormError(null);
+    setNotice(null);
     setPage(1);
   }
 
   async function exportExcel() {
     setExporting(true);
+    setNotice(null);
     try {
-      const { data } = await api.get("/interview/admin/sessions/export", { params: queryParams, responseType: "blob" });
-      const url = URL.createObjectURL(new Blob([data], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
+      const res = await api.get("/interview/admin/sessions/export", { params: queryParams, responseType: "blob" });
+      const url = URL.createObjectURL(new Blob([res.data], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
       const a = document.createElement("a");
       a.href = url; a.download = "interview-reports.xlsx";
       document.body.appendChild(a); a.click(); a.remove();
       URL.revokeObjectURL(url);
-    } catch {
-      alert("Failed to export report");
+      const rowsInFile = res.headers?.["x-export-rows"], totalMatching = res.headers?.["x-export-total"];
+      if (res.headers?.["x-export-truncated"] === "true") setNotice({ warn: true, text: `The file holds the ${rowsInFile} most recent of ${totalMatching} matching interviews. Narrow the filters (for example by date) and export again to get the rest.` });
+      else if (rowsInFile) setNotice({ text: `Exported ${rowsInFile} interview${rowsInFile === "1" ? "" : "s"}.` });
+    } catch (err) {
+      let reason = "";
+      try { reason = JSON.parse(await err.response?.data?.text?.())?.error || ""; } catch { /* the body was not JSON */ }
+      setNotice({ warn: true, text: `Failed to export the report${reason ? `: ${reason}` : "."}` });
     } finally {
       setExporting(false);
     }
@@ -116,8 +155,12 @@ export default function InterviewReports() {
           <button className="btn btn-primary" onClick={exportExcel} disabled={exporting}>{exporting ? "Preparing…" : "⬇ Export Excel"}</button>
         </div>
         <p style={{ fontSize: 13, color: "var(--ink-dim)", marginTop: 4 }}>
-          {user?.role === "STAFF" ? "Scoped to your institute — view, search, filter, and download only." : "Cross-institute view — all institutes."}
+          {platformWide ? "Cross-institute view — all institutes." : "Scoped to your institute — view, search, filter, and download only."}
         </p>
+        {notice && <p role="status" style={{ fontSize: 13, marginTop: 8, color: notice.warn ? "var(--rust)" : "var(--ip-accent, #4F9D6E)" }}>{notice.text}</p>}
+        {analyticsError && (
+          <p role="alert" style={{ fontSize: 13, marginTop: 8, color: "var(--rust)" }}>{analyticsError} <button type="button" className="btn btn-ghost" style={{ fontSize: 12, padding: "2px 8px" }} onClick={() => setReloadKey((k) => k + 1)}>Try again</button></p>
+        )}
         {analytics?.defaultDateRangeApplied && (
           <p style={{ fontSize: 12, color: "var(--amber-dark, #a06a1a)", marginTop: 4 }}>
             Showing interviews since {analytics.defaultDateRangeApplied} (last 90 days) — set a Date From below to see earlier data across all institutes.
@@ -130,18 +173,20 @@ export default function InterviewReports() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12, marginTop: 20 }}>
             <StatCard label="Total Interviews" value={analytics.totalInterviews} />
             <StatCard label="Completed" value={analytics.completedCount} />
-            <StatCard label="Average Score" value={`${analytics.averageScore}%`} />
-            <StatCard label="Highest Score" value={`${analytics.highestScore}%`} />
-            <StatCard label="Lowest Score" value={`${analytics.lowestScore}%`} />
-            <StatCard label="This Week" value={analytics.thisWeekCount} />
-            <StatCard label="This Month" value={analytics.thisMonthCount} />
+            <StatCard label="Terminated" value={analytics.terminatedCount ?? 0} />
+            {/* A score card with nothing scored shows a dash, not "0%": zero is a real score and must not be confused with "no data". */}
+            <StatCard label={analytics.scoredCount ? `Average of ${analytics.scoredCount} scored` : "Average Score"} value={analytics.scoredCount ? `${analytics.averageScore}%` : "—"} />
+            <StatCard label="Highest Score" value={analytics.scoredCount ? `${analytics.highestScore}%` : "—"} />
+            <StatCard label="Lowest Score" value={analytics.scoredCount ? `${analytics.lowestScore}%` : "—"} />
+            <StatCard label="Last 7 days" value={analytics.thisWeekCount} />
+            <StatCard label="Last 30 days" value={analytics.thisMonthCount} />
             <StatCard label="Top Company" value={analytics.companyWise[0]?.key || "—"} />
           </div>
         )}
 
         <form onSubmit={applyFilters} className="card" style={{ padding: 16, marginTop: 24 }}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px,1fr))", gap: 10 }}>
-            <div><label style={labelStyle} htmlFor="interview-reports-search">Search (name / roll)</label><input id="interview-reports-search" style={inputStyle} value={filters.search} onChange={(e) => setFilters({ ...filters, search: e.target.value })} /></div>
+            <div><label style={labelStyle} htmlFor="interview-reports-search">Search (name, roll, PRN, email)</label><input id="interview-reports-search" style={inputStyle} value={filters.search} onChange={(e) => setFilters({ ...filters, search: e.target.value })} /></div>
             <div><label style={labelStyle} htmlFor="interview-reports-academic-group">Academic Group</label>
               <select id="interview-reports-academic-group" style={inputStyle} value={filters.academicGroupId} onChange={(e) => setFilters({ ...filters, academicGroupId: e.target.value })}>
                 <option value="">All groups</option>
@@ -171,6 +216,7 @@ export default function InterviewReports() {
             <div><label style={labelStyle} htmlFor="interview-reports-score-min">Min Score</label><input id="interview-reports-score-min" type="number" min="0" max="100" style={inputStyle} value={filters.scoreMin} onChange={(e) => setFilters({ ...filters, scoreMin: e.target.value })} /></div>
             <div><label style={labelStyle} htmlFor="interview-reports-score-max">Max Score</label><input id="interview-reports-score-max" type="number" min="0" max="100" style={inputStyle} value={filters.scoreMax} onChange={(e) => setFilters({ ...filters, scoreMax: e.target.value })} /></div>
           </div>
+          {formError && <p role="alert" style={{ fontSize: 13, color: "var(--rust)", marginTop: 10 }}>{formError}</p>}
           <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
             <button className="btn btn-primary" type="submit">Apply Filters</button>
             <button className="btn btn-ghost" type="button" onClick={clearFilters}>Clear</button>
@@ -250,13 +296,13 @@ export default function InterviewReports() {
         )}
 
         <h3 style={{ fontSize: 16, marginTop: 32 }}>Interview Results ({pageMeta.total})</h3>
-        <div className="card" style={{ marginTop: 12, overflowX: "auto" }}>
+        <div className="card" style={{ marginTop: 12, overflowX: "auto", opacity: rowsLoading && rows ? 0.55 : 1, transition: "opacity .15s" }} aria-busy={rowsLoading}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead>
               <tr style={{ textAlign: "left", fontSize: 12, opacity: 0.7 }}>
                 <th style={{ padding: 10 }}>Roll No.</th><th style={{ padding: 10 }}>Student</th>
                 <th style={{ padding: 10 }}>Registration No. (PRN)</th>
-                {user?.role === "ADMIN" && <th style={{ padding: 10 }}>Institute</th>}
+                {platformWide && <th style={{ padding: 10 }}>Institute</th>}
                 <th style={{ padding: 10 }}>Group</th><th style={{ padding: 10 }}>Batch</th>
                 <th style={{ padding: 10 }}>Type</th><th style={{ padding: 10 }}>Company</th>
                 <th style={{ padding: 10 }}>Date</th><th style={{ padding: 10 }}>Score</th>
@@ -269,7 +315,7 @@ export default function InterviewReports() {
                   <td className="mono" style={{ padding: 10 }}>{r.rollNumber || "—"}</td>
                   <td style={{ padding: 10, fontWeight: 600 }}>{r.studentName}</td>
                   <td className="mono" style={{ padding: 10 }}>{r.registrationNumber || "—"}</td>
-                  {user?.role === "ADMIN" && <td style={{ padding: 10 }}>{r.institute || "—"}</td>}
+                  {platformWide && <td style={{ padding: 10 }}>{r.institute || "—"}</td>}
                   <td style={{ padding: 10 }}>{r.groupLabel || "—"}</td>
                   <td style={{ padding: 10 }}>{r.batchYear || "—"}</td>
                   <td style={{ padding: 10 }}>{r.type}</td>
@@ -283,8 +329,14 @@ export default function InterviewReports() {
                   </td>
                 </tr>
               ))}
-              {rows && rows.length === 0 && (
-                <tr><td colSpan={user?.role === "ADMIN" ? 11 : 10} style={{ padding: 20, textAlign: "center", color: "var(--ink-dim)" }}>No interviews match these filters.</td></tr>
+              {rowsError && (
+                <tr><td colSpan={platformWide ? 12 : 11} role="alert" style={{ padding: 20, textAlign: "center", color: "var(--rust)" }}>{rowsError}{" "}<button type="button" className="btn btn-ghost" style={{ fontSize: 12, padding: "2px 8px" }} onClick={() => setReloadKey((k) => k + 1)}>Try again</button></td></tr>
+              )}
+              {!rowsError && !rowsLoading && rows && rows.length === 0 && (
+                <tr><td colSpan={platformWide ? 12 : 11} style={{ padding: 20, textAlign: "center", color: "var(--ink-dim)" }}>No interviews match these filters.</td></tr>
+              )}
+              {!rows && rowsLoading && (
+                <tr><td colSpan={platformWide ? 12 : 11} className="mono" style={{ padding: 20, textAlign: "center", color: "var(--ink-dim)" }}>Loading…</td></tr>
               )}
             </tbody>
           </table>
