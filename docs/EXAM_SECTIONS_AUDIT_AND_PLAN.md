@@ -1,60 +1,65 @@
-# Section-wise examination (Aptitude, Technical, Coding, AI Interview): audit and plan
+# Section-wise examination (Aptitude, Technical, Coding, AI Mock Interview)
 
-Date: 2026-10-29. Status: **Phase 1 (rules, no database change) is implemented and unit-tested; Phases 2-8 are not started.** Nothing in this document is deployed.
+Date: 2026-10-29. Status: **implemented on branch `feat/exam-sections` (pushed as `ci/exam-sections`); not merged, not deployed.** Deploying adds seven tables to the database (see section 7).
 
-## 1. What already exists (reuse, do not rebuild)
+## 1. What it is
 
-| Need | Existing piece | Notes |
-|---|---|---|
-| A formal exam with schedule, eligibility, duration, proctoring policy | `Test` (+ `TestAcademicGroup`, `TalentPoolTest`, `securityLevel`, `securityPolicy`, `version`) | eligibility rules in `testEligibility.js`; no concept of sections |
-| One attempt per student | `TestAttempt` `@@unique([testId, studentId])` | plus `TestReattemptGrant` for authorised re-attempts |
-| Randomised selection | `Test.questionSelectionMode`, `randomBankFolder`, `difficultyDistribution`, `shuffleQuestions/Options`, `TestAttempt.questionOrder/optionOrder` | per-attempt manifest in `utils/attemptManifest.js` |
-| Question banks with institute isolation | `Question`, `QuestionFolder`, `Subject/Unit/Topic`, `InterviewQuestion` (aptitude/HR/technical/coding), visibility in `interviewQuestionVisibility.js` | answer keys already kept server-side |
-| Coding judge | `utils/judgeGateway.js`, `judge.js`, `sqlJudge.js`, `Submission`, `gradeAttempt.js` | hidden test cases never leave the server |
-| Proctoring and evidence | `useProctoring`, `utils/proctoringSeverity.js`, `ExamSecurityEvent`, `SecureExamSession`, `TestViolation`, `InterviewViolation` | unified evidence model already exists (kind TEST / INTERVIEW / AI_INTERVIEW ...) |
-| Multi-stage session with strict order | `InterviewSession` company rounds: `roundPlanSnapshot`, `currentRoundNumber`, `/rounds/advance`, round elimination | the closest existing pattern to "sections" |
-| Interview | `/interview` (rule-based scoring of HR/Technical free text, hidden-case scoring for coding), `/ai-interview` (adaptive, LLM) | two engines: see decision 1 |
-| Results and reports | `ResultExamination`, `InterviewReport`, `AiInterviewReport`, PDF generators | no consolidated multi-section report |
-| Audit | `AuditLog`, `logAudit` | |
+One formal attempt per eligible student, made of four sections taken in order: **A Aptitude, B Technical, C Coding, D AI Mock Interview**. Each section has its own status, answers, score and (optionally) timer. One server-side clock, one consolidated report. Practice attempts use the same engine but are unofficial, repeatable and never appear in official results.
 
-Not present: a section layer on `Test`, per-section state and timers, a unified result across the four kinds, versioned immutable published definitions, per-answer versioning on tests, a server expiry sweep for formal attempts.
+## 2. Decisions that were taken
 
-## 2. Proposed architecture (to confirm before Phase 2)
+1. **Section D reuses the existing interview question bank and rule-based scoring.** There is no second interview engine and no second formal attempt. Answers are saved as text (typed, or dictated with the browser's free speech-to-text and then editable). Evaluation is `RULES` by default (no AI needed); `AI` is optional, queued, retried (3 tries, backoff) and, when unavailable, leaves the answer **PENDING / FAILED, never zero**.
+2. **Aptitude questions come from the existing `InterviewQuestion` bank (category APTITUDE), technical from `Question` (by subject), coding from `Question` (CODING/SQL) through the existing judge.** Institute isolation uses the same visibility rule as the rest of the platform (own institute + global). If a bank does not hold enough valid questions, publishing is refused with the exact shortage (422 `NOT_ENOUGH_QUESTIONS`); nothing is generated or invented. Questions without a valid answer key are excluded and counted. Answer keys, explanations, hidden test cases and reference solutions are never in a student payload.
+3. **All four sections run in one attempt**, under the rules in section 4.
 
-- **Definition:** `ExamDefinition` plus `ExamVersion` (an immutable JSON snapshot of the validated blueprint, `utils/examBlueprint.js`). Publishing creates a version; attempts point at the version they started under, so later edits never change a running attempt.
-- **Assignment and one-attempt rule:** `ExamAttempt` with `@@unique([examId, studentId, attemptKey])`, where `attemptKey = "FORMAL"` for the single proctored attempt and `"PRACTICE-<n>"` for practice attempts. A plain unique constraint (no partial index) gives the concurrency-safe "one formal attempt" guarantee and keeps practice fully separate from official results. Refresh, new tab or re-login resolve to the same row.
-- **Sections:** `ExamAttemptSection` (attempt, section key, status LOCKED/IN_PROGRESS/COMPLETED, started/completed timestamps, completed-by). Transitions are conditional updates (`WHERE status = <expected>`), backed by `utils/examStateMachine.js`.
-- **Answers:** `ExamAnswer` (attempt, section, item, `version` integer, payload JSON, server receipt time) with `@@unique([attemptId, itemRef])`; a write carries the version it saw and loses if it is stale (optimistic concurrency). Coding submissions go through the existing judge and are stored with the judge result; interview answers keep the answer text and a separate evaluation record (status DONE / PENDING / FAILED, rubric version, model).
-- **Scoring and result:** `utils/examScoring.js` (this branch). One `ExamResult` row per attempt built from the four section summaries; status EVALUATION_PENDING / UNDER_REVIEW / COMPLETED / PUBLISHED / INVALIDATED.
-- **Proctoring:** reuse `ExamSecurityEvent` with a new kind `EXAM` and a `sectionKey`; events are observations, review status PENDING / DISMISSED / CONFIRMED.
-- **Migrations:** additive tables only (the project applies the schema with `prisma db push`; nothing existing is altered), so rollback is "stop using the new routes and drop the new tables".
+## 3. What was reused
 
-## 3. Decisions needed from you
+`InterviewQuestion`, `Question` + `TestCase` + `Subject`, `judgeGateway.judgeSubmission`, `interviewEvaluation`, `aiService`, `proctoringSeverity.classifyViolation`, `logAudit`, `useProctoring`, `ReadinessChecklist`, `Navbar locked`, `useExamSession` (one active tab), `useExamNavigationGuard`, `useAnswerDictation`, `saveQueue`, `ProblemStatement`, `CodeResultBlock`, Monaco, `instituteWhere`.
 
-1. **Section D engine.** (a) the rule-based `/interview` flow (no AI quota, keyword scoring, weaker for open answers), or (b) the adaptive `/ai-interview` (LLM, uses the Gemini quota). Recommendation: reuse the `/interview` question flow for delivery and add an optional LLM evaluation step that is queued, retried and may be PENDING; the exam never waits on it to save answers.
-2. **Aptitude source.** `InterviewQuestion` (APTITUDE) or the `Question` bank (MCQ with subjects/units/topics)? Technical (Section B) should come from the `Question` bank.
-3. **Practice mode.** Same tables with `attemptKey = PRACTICE-n` (recommended) or a separate set.
-4. **Result visibility.** Default for students: hidden until published, with provisional marks never shown.
+## 4. Rules the system enforces (server-side; the browser only displays)
 
-## 4. Phases
+- **One formal attempt**: database unique `(examId, studentId, attemptKey)`; `attemptKey` is `FORMAL` or `PRACTICE-n`. Refresh, a new tab, a new login and 8 concurrent starts all resolve to the same row.
+- **Server clock only.** `startedAt` is stored on the server; deadlines derive from it. Refreshing or changing the computer clock cannot move them. The overdue attempt or section is closed by the server on the next request and by a 60 s sweep, and scored from what was saved.
+- **Sections in order, one open at a time, never reopened.** Conditional updates (`WHERE status = expected`) make this safe under concurrency. Unauthorised sections are refused (409 `SECTION_ORDER`, `ANOTHER_SECTION_OPEN`, `ALREADY_COMPLETED`).
+- **Versioned answers.** A write carries the version it saw; a stale write loses (409 `STALE_VERSION`) and the newer answer is kept. A section cannot be completed over answers the server has not confirmed (409 `UNSAVED_ANSWERS`). Navigation (`FREE`/`FORWARD_ONLY`) and editing (`EDITABLE_UNTIL_SECTION_SUBMIT`/`LOCKED_AFTER_SAVE`/`LOCKED_AFTER_NEXT`) are enforced per section.
+- **One active session.** `X-Exam-Session`; a second tab gets 409 `SESSION_REPLACED` and must explicitly take over.
+- **Readiness** (camera, microphone, fullscreen, browser, connectivity) is recorded and required checks refuse the start. It is a guard, not proof; people review proctoring events.
+- **Judge and AI failures are never wrong answers.** A busy or failed judge stores the submission as PENDING and it is graded again when the section is submitted. A failed or pending AI evaluation is PENDING/FAILED.
+- **No final score while anything is pending.** The result is `provisional` (no pass/fail) until all four sections are final, and cannot be published while pending or while required review is open.
+- **Unanswered, skipped, failed, pending** are distinct states in the report. Unanswered earns 0 (or the configured negative mark where allowed); pending/failed are not counted as 0.
+- **Proctoring events are observations.** Only a reviewer-confirmed event counts as a violation. Nothing ends or fails an attempt automatically. Reaching the warning limit flags the attempt for review.
+- **Practice is separate.** Different `attemptKey`, `mode = PRACTICE`, excluded from analytics, exports and official results, capped per student.
+- **Invalidation** is administrator-only, needs a reason (5+ characters) and is audited.
+- **Isolation.** Another institute's exam and attempts answer 404 (existence is not confirmed). Students cannot reach any `/admin` route.
 
-1. **Rules (done on branch `feat/exam-sections-foundation`):** blueprint validation, the attempt and section state machines, deadline rules, scoring, result aggregation, proctoring summary. Pure code, 100+ unit tests in `backend/test/exam*.test.js`.
-2. Schema (additive) and the admin configuration API: validate on every save, publish only a valid blueprint, versioning, audit, locked fields once attempts exist.
-3. Attempt engine: start/resume (unique), readiness, open section, save answer (versioned), complete section, submit, server expiry sweep; every route calls the Phase 1 rules and uses conditional updates.
-4. Delivery of the four sections (aptitude/technical from banks without keys in the payload, coding through the existing judge, interview through the chosen engine) and the evaluation queue.
-5. Proctoring linkage and the human review workflow.
-6. Consolidated report, PDF/CSV export, admin analytics (paginated aggregation queries and indexes).
-7. Frontend: admin configuration screen, the exam shell with section navigation, timers and save status, result page.
-8. Integration, end-to-end, failure-recovery and load tests against the real application; measured numbers only.
+## 5. Where things are
 
-## 4a. What Phase 1 guarantees (by tests, run in CI)
+Backend (`backend/src`):
+- `utils/examBlueprint.js`, `examSources.js` — configuration validation (marks add up in hundredths, timing consistency, per-section sources, locked fields once attempts exist).
+- `utils/examStateMachine.js`, `examScoring.js`, `examQuestions.js`, `examReport.js` — pure, unit-tested rules.
+- `modules/exams/exams.core.js` (pools, availability, manifest), `exams.attempts.js` (start/resume, begin, claim, open/complete section, versioned save, run/submit code, expiry, finalize, events), `exams.interviewEval.js` (optional AI worker), `exams.view.js` (student view and consolidated report), `exams.admin.js` (CRUD, publish, analytics, CSV, review, invalidate), `exams.routes.js` (mounted at `/api/exams`).
+- `prisma/schema.prisma`: `ExamDefinition`, `ExamVersion`, `ExamAcademicGroup`, `ExamAttempt`, `ExamAttemptSection`, `ExamAnswer`, `ExamEvent` (all additive).
 
-- A blueprint cannot be published unless all four sections exist, marks add up exactly (in hundredths), timing is consistent (no section duration under an overall-only policy, section durations not above the total, duration fits the window), passing criteria are unambiguous, negative marking is only on multiple-choice sections and never exceeds a right answer, the interview section is fully and consistently configured, and proctoring settings are in range; a published version is locked for running attempts (`lockedFieldsChanged`).
-- An attempt cannot skip a state, a section cannot be opened out of order or reopened, only one section is open at a time, a section completes only when no answer is unconfirmed (and, if required, all are answered), a student can never invalidate an attempt, and the deadline is computed from the stored server start time only (a refresh cannot move it).
-- A judge failure is never a wrong answer; an AI evaluation that failed or is pending is never a zero; a malformed score is rejected, not clamped; the result is provisional (no pass/fail) until every section is final and is never publishable while pending or under required review; only a reviewer-confirmed event counts as a confirmed violation.
+Frontend (`frontend/src`):
+- Student: `/exams` (`ExamHub`), `/exams/attempt/:id` (`ExamSession`: readiness, resume gate, section bar, server-clock timers, save status, proctoring, locked navbar, back guard, no exit in a proctored attempt), `/exams/attempt/:id/report`.
+- Components: `components/exam/ExamMcqQuestion`, `ExamCodingProblem`, `ExamInterviewQuestion`, `ExamReportView`.
+- Administration: `/exam-admin` (list), `/exam-admin/new` and `/:id/edit` (editor with server validation and availability), `/:id/results` (analytics, attempts, CSV, publish), `/exam-admin/attempt/:id` (report with answer review, event timeline, review/publish/retry/withdraw).
+- Helpers: `utils/examAnswerSaver.js`, `examClock.js`, `examProgress.js`.
 
-## 5. Limits that stay true
+## 6. The consolidated report
+
+Student, PRN, institute, department/batch, exam and attempt id, start/end/duration, per-section marks (obtained / maximum / percentage, final or provisional, time taken, how the section ended), total, pass/fail with the criterion, strongest and weakest section, topic strengths and weaknesses (aptitude, technical), coding results per problem (verdict, tests passed/total, language, submissions; code and answer review for administrators only), interview per-question feedback and rubric averages, proctoring summary (counts, warnings, confirmed, awaiting review; full timeline for administrators), pending/failed indicators, recommendations tied to the evidence. Printable (browser print / save as PDF) and exportable as CSV (formula-safe).
+
+## 7. Deployment requirements
+
+- Run `prisma db push` (additive; creates the seven new tables; no existing table is altered). The deploy script's schema guard applies. **Deploy backend/schema before the frontend** — the new pages call new endpoints.
+- No new environment variables. AI evaluation is only used when an exam sets `evaluationMode: "AI"` and the existing AI configuration is available; the default is the rule-based rubric.
+- Rollback: stop using the routes; the new tables can be dropped without touching anything else.
+
+## 8. Limits that stay true
 
 - Browser proctoring is not tamper-proof; a tab switch, camera loss or network loss is a signal for review, not proof.
-- No concurrency figure is promised until a load test has run against the real deployment.
-- Phase 1 changes no behaviour of the running platform: the new modules are not called by any route yet.
+- Interview scores come from a fixed rubric applied to the answer text. They do not measure accent, speaking style or appearance and are one input, not a full assessment of a person.
+- No concurrency figure is promised: no load test has been run against the deployment.
+- The exam flow has been exercised end-to-end through the HTTP API in CI. The UI has syntax-checked, build-checked and smoke-tested pages; it has not been driven by a person on real devices (laptop, Android, iPhone, Mac) with a real camera, microphone and speech engine. That needs a live trial.
+- Sections B and C pools are only as good as the banks: an exam cannot be published until each pool holds enough valid questions.

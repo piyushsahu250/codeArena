@@ -63,7 +63,8 @@ export default function ExamSession() {
     const t = setInterval(() => setSaveState(saver.summary()), 400);
     const online = () => saver.retryNow();
     window.addEventListener("online", online);
-    return () => { clearInterval(t); window.removeEventListener("online", online); saver.dispose(); };
+    // The saver is not disposed on unmount: an answer that has not reached the server yet keeps being retried even if the student navigates away.
+    return () => { clearInterval(t); window.removeEventListener("online", online); };
   }, [saver]);
 
   const applyView = useCallback((data) => {
