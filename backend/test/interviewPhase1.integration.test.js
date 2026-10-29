@@ -30,6 +30,8 @@ function httpRequest(method, path, token, body) {
 
 let ready = false;
 let student, other, token, otherToken, hrQuestion;
+const createdUserIds = [];
+let createdQuestionId = null;
 const tokenFor = (u) => jwt.sign({ id: u.id, role: u.role, email: u.email }, process.env.JWT_SECRET, { expiresIn: "10m" });
 
 // With REQUIRE_INTEGRATION=1 (set by the CI integration job, which starts the API and seeds the database first) a missing prerequisite FAILS the file instead of
@@ -44,21 +46,40 @@ test.before(async () => {
   try { reachable = (await httpRequest("GET", "/api/health", null)).status === 200; } catch { reachable = false; }
   if (!reachable) return notReady("the API is not answering on localhost:4000");
   if (!process.env.JWT_SECRET) return notReady("JWT_SECRET is not set");
+  // A database with no students or no HR question (a freshly seeded CI database has neither) gets disposable ones, removed again in the after hook.
+  const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const students = await prisma.user.findMany({ where: { role: "STUDENT" }, take: 2 });
-  hrQuestion = await prisma.interviewQuestion.findFirst({ where: { category: "HR" } });
-  if (students.length < 2) return notReady("fewer than 2 STUDENT users in the database");
-  if (!hrQuestion) return notReady("no HR InterviewQuestion in the database");
+  try {
+    while (students.length < 2) {
+      const u = await prisma.user.create({ data: { name: `Phase1 Test Student ${students.length + 1}`, email: `phase1-${suffix}-${students.length}@example.test`, passwordHash: "not-a-real-hash", role: "STUDENT" } });
+      createdUserIds.push(u.id);
+      students.push(u);
+    }
+    hrQuestion = await prisma.interviewQuestion.findFirst({ where: { category: "HR", isActive: true } });
+    if (!hrQuestion) {
+      hrQuestion = await prisma.interviewQuestion.create({ data: { category: "HR", prompt: "Phase 1 integration fixture: tell me about a time you worked in a team.", isActive: true } });
+      createdQuestionId = hrQuestion.id;
+    }
+  } catch (err) {
+    return notReady(`could not create fixtures: ${String(err.message).slice(0, 300)}`);
+  }
   [student, other] = students;
   token = tokenFor(student);
   otherToken = tokenFor(other);
   ready = true;
 });
 
-test.after(async () => { await prisma.$disconnect(); }); // otherwise the open database connection keeps the test process alive
+test.after(async () => {
+  // Sessions are deleted by each test; the fixtures this file created go last (a question cannot be deleted while an answer still points at it).
+  if (createdQuestionId) await prisma.interviewQuestion.delete({ where: { id: createdQuestionId } }).catch(() => {});
+  if (createdUserIds.length) await prisma.user.deleteMany({ where: { id: { in: createdUserIds } } }).catch(() => {});
+  await prisma.$disconnect(); // otherwise the open database connection keeps the test process alive
+});
 
 // A throwaway PROCTORED session in progress for `student`, holding one placeholder answer row for the HR question (as the real session start does).
+// isMock is false on purpose: finalizing a mock session e-mails the student, which a test must never do.
 async function makeSession(extra = {}) {
-  const s = await prisma.interviewSession.create({ data: { studentId: student.id, isMock: true, status: "IN_PROGRESS", securityLevel: "PROCTORED", config: { durationMin: 30 }, ...extra } });
+  const s = await prisma.interviewSession.create({ data: { studentId: student.id, isMock: false, status: "IN_PROGRESS", securityLevel: "PROCTORED", config: { durationMin: 30 }, ...extra } });
   await prisma.interviewAnswer.create({ data: { sessionId: s.id, questionId: hrQuestion.id, skipped: true } });
   return s;
 }

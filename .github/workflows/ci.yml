@@ -235,7 +235,16 @@ jobs:
         env:
           SECURE_BROWSER_SECRET: ci-only-secure-browser-secret-0123456789
           REQUIRE_INTEGRATION: "1"
-        run: node --test test/interviewPhase1.integration.test.js
+        run: |
+          code=0
+          node --test test/interviewPhase1.integration.test.js > /tmp/interviewPhase1.out 2>&1 || code=$?
+          cat /tmp/interviewPhase1.out
+          if [ "$code" -ne 0 ]; then
+            # also published as a check annotation so the reason is readable from the run's summary without opening the raw log
+            MSG=$(tail -c 3500 /tmp/interviewPhase1.out | sed 's/%/%25/g' | awk 'BEGIN{ORS="%0A"} {print}')
+            echo "::error title=interview phase 1 integration tests failed::$MSG"
+          fi
+          exit $code
       - name: Build the SPA and serve it
         working-directory: frontend
         run: |
