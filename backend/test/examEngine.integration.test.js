@@ -11,13 +11,18 @@ const HOST = "localhost";
 const PORT = 4000;
 const tag = `exmtest-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
+// The most recent HTTP exchange is attached to every failed status comparison, so a failure in CI says which call was refused and why.
+let lastCall = "";
+const strictEqual = assert.equal;
+assert.equal = (actual, expected, message) => strictEqual(actual, expected, message || `last call: ${lastCall}`);
+
 function request(method, path, token, body, extraHeaders = {}) {
   return new Promise((resolve, reject) => {
     const data = body !== undefined ? JSON.stringify(body) : null;
     const req = http.request({ hostname: HOST, port: PORT, path, method, headers: { "Content-Type": "application/json", "X-Client-Features": "exam-session-v1", ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(data ? { "Content-Length": Buffer.byteLength(data) } : {}), ...extraHeaders } }, (res) => {
       let chunks = "";
       res.on("data", (d) => (chunks += d));
-      res.on("end", () => { try { resolve({ status: res.statusCode, body: JSON.parse(chunks || "{}"), raw: chunks }); } catch { resolve({ status: res.statusCode, body: {}, raw: chunks }); } });
+      res.on("end", () => { lastCall = `${method} ${path.replace(/[0-9a-f-]{36}/g, "<id>")} -> ${res.statusCode} ${chunks.slice(0, 300)}`; try { resolve({ status: res.statusCode, body: JSON.parse(chunks || "{}"), raw: chunks }); } catch { resolve({ status: res.statusCode, body: {}, raw: chunks }); } });
     });
     req.on("error", reject);
     if (data) req.write(data);

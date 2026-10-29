@@ -257,7 +257,7 @@ jobs:
           node --test --test-timeout=240000 test/examEngine.integration.test.js > /tmp/examEngine.out 2>&1 || code=$?
           cat /tmp/examEngine.out
           if [ "$code" -ne 0 ]; then
-            MSG=$(grep -E "^not ok|failureType|error:|expected|actual|AssertionError" /tmp/examEngine.out | head -40 | sed 's/%/%25/g' | awk 'BEGIN{ORS="%0A"} {print}')
+            MSG=$(grep -E "^not ok|failureType|error:|expected|actual|AssertionError|last call|\[exams\]|code" /tmp/examEngine.out | cut -c1-400 | head -60 | sed 's/%/%25/g' | awk 'BEGIN{ORS="%0A"} {print}')
             echo "::error title=examination integration tests failed::$MSG"
           fi
           exit $code
