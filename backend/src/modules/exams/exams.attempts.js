@@ -326,8 +326,7 @@ async function runCode(attempt, itemRef, { language, code }) {
 
 // Judges `code` on the hidden cases (all cases when none are hidden) and stores the result with the answer. A judge failure is stored as PENDING, never as a wrong answer.
 async function judgeAndStore(attempt, question, { language, code, auto }) {
-  const hidden = question.testCases.filter((c) => c.isHidden);
-  const cases = hidden.length ? hidden : question.testCases;
+  const cases = question.testCases; // a submission is graded on every case, the visible samples and the hidden ones; only the samples are ever shown to the student
   const prior = await prisma.examAnswer.findUnique({ where: { attemptId_itemRef: { attemptId: attempt.id, itemRef: question.id } } });
   const submissions = (prior?.evaluation?.submissions || 0) + (auto ? 0 : 1);
   const history = [...(prior?.evaluation?.history || [])];

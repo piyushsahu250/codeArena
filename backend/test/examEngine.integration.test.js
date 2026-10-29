@@ -190,7 +190,7 @@ test("a student completes all four sections in one attempt and gets one consolid
   const sub = await request("POST", `/api/exams/attempts/${a.attemptId}/items/${problem.id}/submit-code`, F.tokens.s1, { language: "python", code: "a,b=map(int,input().split())\nprint(a+b)\n" }, a.session);
   assert.equal(sub.status, 200, sub.raw);
   assert.ok(["DONE", "PENDING"].includes(sub.body.submission.status));
-  if (sub.body.submission.status === "DONE") { assert.equal(sub.body.submission.passedCases, 2); assert.equal(sub.body.submission.totalCases, 2, "graded on all cases when the hidden ones are the grading set"); }
+  if (sub.body.submission.status === "DONE") { assert.equal(sub.body.submission.passedCases, 2); assert.equal(sub.body.submission.totalCases, 2, "graded on every case, the visible sample and the hidden one"); }
   assert.equal((await complete(a, F.tokens.s1, "CODING", 1)).status, 200);
 
   const iv = await open(a, F.tokens.s1, "AI_INTERVIEW");
