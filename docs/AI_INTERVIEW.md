@@ -106,3 +106,11 @@ USD), multilingual generation beyond a `language` field placeholder, and load te
 - The per-answer evaluation runs at temperature 0 with fixed score anchors (0 / 25 / 50 / 75 / 90-100), a rule that any wrong statement lowers correctness, and a note that speech-to-text can misrecognise technical terms (recognition errors are never penalised; unclear meaning lowers `evaluatorConfidence`).
 - `decisionRuleVersion` is stored as `v2` on new reports. Reports stored as `v1` are never recomputed, so a student's earlier results do not change.
 - Not done yet (needs a database change): generating a short list of required points with each question and scoring by which points the answer covers, and recording whether an answer was spoken or typed.
+
+## Browser voice (default since 2026-10-29)
+
+The student page no longer streams audio to the Gemini Live API. Each question is read aloud with the browser's `speechSynthesis`; the answer is dictated with `SpeechRecognition` (English, `en-IN`) into the same answer box the typed mode uses, and submitted through the REST `/start` and `/answer` endpoints. No audio goes through our server, and no Live/TTS provider quota is used. Only the text calls (question generation, answer evaluation, report) still use the AI provider.
+
+- Code: `frontend/src/hooks/useBrowserVoice.js`, `frontend/src/utils/browserSpeech.js`, `frontend/src/pages/AiInterviewSession.jsx`. Regression: `frontend/scripts/browserSpeechRegression.mjs` (run in CI).
+- Chrome and Edge send the audio to their own speech service, so dictation needs internet. Browsers without `SpeechRecognition` (iPhone Safari, Firefox) fall back to typing.
+- The old Live WebSocket path is still in the code and is used only when the frontend is built with `VITE_AI_INTERVIEW_LIVE_VOICE=1`.

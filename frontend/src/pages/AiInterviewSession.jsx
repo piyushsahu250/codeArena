@@ -4,6 +4,8 @@ import { Mic, MicOff, PhoneOff, RefreshCw, Volume2 } from "lucide-react";
 import api, { performExpiredRedirect } from "../api";
 import Button from "../components/Button";
 import { useMicCapture } from "../hooks/useMicCapture";
+import { useBrowserVoice } from "../hooks/useBrowserVoice";
+import { mergeTranscript } from "../utils/browserSpeech";
 import { playPcm16, stopPlayback, closePcmPlayer } from "../utils/pcmPlayer";
 import { aiInterviewVoiceWsUrl } from "../utils/wsUrl";
 import { getFullscreenElement, onFullscreenChange, supportsFullscreen } from "../utils/fullscreenCompat";
@@ -27,10 +29,18 @@ import "./aiInterview.css";
 // to evaluate the answer and generate the next question).
 const PHASES = { LOADING: "loading", PREFLIGHT: "preflight", CONNECTING: "connecting", ACTIVE: "active", COMPLETED: "completed", ERROR: "error" };
 
+// Voice runs in the browser by default (the question is read aloud by speechSynthesis, the answer is dictated with SpeechRecognition
+// into the same answer box the typed mode uses), so an interview needs no AI-provider audio quota: only the text calls remain. The
+// older Gemini Live WebSocket path below is kept but only used when the build sets VITE_AI_INTERVIEW_LIVE_VOICE=1.
+const LIVE_VOICE = import.meta.env.VITE_AI_INTERVIEW_LIVE_VOICE === "1";
+
 export default function AiInterviewSession() {
   const { id } = useParams();
   const navigate = useNavigate();
   const mic = useMicCapture();
+  const bv = useBrowserVoice();
+  const [browserVoice, setBrowserVoice] = useState(false); // this interview is using browser speech (mode === "text" under the hood)
+  const micOnRef = useRef(true); // the student has not switched the dictation off
 
   const [phase, setPhase] = useState(PHASES.LOADING);
   const phaseRef = useRef(PHASES.LOADING);
@@ -273,6 +283,13 @@ export default function AiInterviewSession() {
     // no Fullscreen API for arbitrary elements at all — see fullscreenCompat.js — so treating this
     // as mandatory would lock those candidates out of starting an interview entirely).
     if (supportsFullscreen()) enterFullscreen(AI_FS_OWNER);
+    if (!LIVE_VOICE) {
+      // Browser voice (or typing only, where the browser has no speech support). switchToText claims the session itself.
+      setBrowserVoice(bv.supported);
+      bv.unlockSpeech(); // still inside the click: lets iOS Safari speak the first question later
+      await switchToText();
+      return;
+    }
     if (!(await claimSession())) return;
     const granted = await mic.requestPermission();
     if (granted) connect();
@@ -340,9 +357,38 @@ export default function AiInterviewSession() {
     }
   }
 
+  const onSpeechText = useCallback((t) => setTextAnswer((prev) => mergeTranscript(prev, t)), []);
+
+  // Reads each new question aloud, then (unless the student switched dictation off) starts listening for the answer. The cleanup
+  // silences both, so leaving ACTIVE (completed, ended by a security verdict) or moving to the next question never talks over anything.
+  useEffect(() => {
+    if (!browserVoice || mode !== "text" || phase !== PHASES.ACTIVE || !currentQuestionText) return;
+    bv.stopListening();
+    bv.speak(currentQuestionText, () => { if (micOnRef.current) bv.startListening(onSpeechText); });
+    return () => { bv.cancelSpeech(); bv.stopListening(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [browserVoice, mode, phase, currentQuestionText]);
+
+  function replayQuestion() {
+    bv.stopListening();
+    bv.speak(currentQuestionText, () => { if (micOnRef.current) bv.startListening(onSpeechText); });
+  }
+
+  function toggleDictation() {
+    if (bv.listening) {
+      micOnRef.current = false;
+      bv.stopListening();
+    } else {
+      micOnRef.current = true;
+      bv.cancelSpeech();
+      bv.startListening(onSpeechText);
+    }
+  }
+
   async function submitTextAnswer(e) {
     e.preventDefault();
     if (!textAnswer.trim() || textSubmitting) return;
+    bv.stopListening();
     setTextSubmitting(true);
     setFatalError(null);
     try {
@@ -538,8 +584,19 @@ export default function AiInterviewSession() {
           ) : (
             <ul className="ai-int-checklist">
               <li>Find a quiet space with a stable internet connection.</li>
-              <li>Speak clearly — the AI will ask a follow-up if it needs you to repeat something.</li>
-              <li>You can interrupt the AI at any time if you want it to repeat or rephrase.</li>
+              {!LIVE_VOICE && bv.supported ? (
+                <>
+                  <li>Each question is read aloud. Speak your answer; it appears as text that you can correct before you submit it.</li>
+                  <li>Use Chrome or Edge, allow the microphone when asked, and tap "Replay question" to hear a question again. You can type instead at any time.</li>
+                </>
+              ) : !LIVE_VOICE ? (
+                <li>This browser cannot read questions aloud or take speech, so you will read each question and type your answers. For voice, open this page in Chrome or Edge.</li>
+              ) : (
+                <>
+                  <li>Speak clearly — the AI will ask a follow-up if it needs you to repeat something.</li>
+                  <li>You can interrupt the AI at any time if you want it to repeat or rephrase.</li>
+                </>
+              )}
             </ul>
           )}
           {session.security?.level === "PROCTORED" && (
@@ -558,9 +615,9 @@ export default function AiInterviewSession() {
           {claimError && <p className="ai-int-error">{claimError}</p>}
           {mic.error && <p className="ai-int-error">{mic.error}</p>}
           <Button variant="primary" disabled={session.security?.level === "PROCTORED" && !secCheck?.ready} loading={mic.permission === "requesting"} onClick={beginInterview} style={{ width: "100%", justifyContent: "center" }}>
-            <Mic size={16} /> {isResuming ? "Reconnect & continue" : "Enable microphone & begin"}
+            <Mic size={16} /> {isResuming ? "Reconnect & continue" : !LIVE_VOICE && !bv.supported ? "Begin interview" : "Enable microphone & begin"}
           </Button>
-          {(mic.error || isResuming) && (
+          {((LIVE_VOICE && (mic.error || isResuming)) || (!LIVE_VOICE && bv.supported)) && (
             <Button variant="ghost" onClick={switchToText} style={{ width: "100%", justifyContent: "center", marginTop: 8 }}>
               Continue by typing your answers instead
             </Button>
@@ -624,6 +681,17 @@ export default function AiInterviewSession() {
           <div className="ai-int-question-card">
             <p>{currentQuestionText || "Loading the next question…"}</p>
           </div>
+          {browserVoice && (
+            <div className="ai-int-controls" style={{ marginTop: 12 }} aria-live="polite">
+              <Button variant="ghost" onClick={replayQuestion} disabled={textSubmitting || !currentQuestionText}><Volume2 size={14} /> Replay question</Button>
+              <button type="button" className={`ai-int-mic-btn ${bv.listening ? "" : "muted"}`} onClick={toggleDictation} disabled={textSubmitting} aria-label={bv.listening ? "Stop dictating" : "Speak your answer"}>
+                {bv.listening ? <Mic size={20} /> : <MicOff size={20} />}
+              </button>
+              <span className="ai-int-state-label">{bv.speaking ? "Reading the question…" : bv.listening ? "Listening… speak your answer" : "Microphone off — tap the mic to speak"}</span>
+            </div>
+          )}
+          {browserVoice && bv.listening && bv.interim && <div className="ai-int-caption">"{bv.interim}"</div>}
+          {browserVoice && bv.error && <p className="ai-int-error" role="alert">{bv.error}</p>}
           {lastEvaluation && <div className="ai-int-eval-hint">Last answer recorded.</div>}
           <form onSubmit={submitTextAnswer} style={{ width: "100%", marginTop: 16 }}>
             <label className="ca-sr-only" htmlFor="ai-interview-text-answer">Your answer</label>
@@ -631,7 +699,7 @@ export default function AiInterviewSession() {
               id="ai-interview-text-answer"
               value={textAnswer}
               onChange={(e) => setTextAnswer(e.target.value)}
-              placeholder="Type your answer…"
+              placeholder={browserVoice ? "Your spoken answer appears here. You can edit it before submitting." : "Type your answer…"}
               rows={6}
               style={{ width: "100%", padding: 12, borderRadius: 8, border: "1px solid var(--line)", fontFamily: "inherit", fontSize: 14 }}
               disabled={textSubmitting || phase !== PHASES.ACTIVE}
