@@ -80,6 +80,7 @@ enum QuestionStatus {
 }
 
 model Institute {
+  examDefinitions ExamDefinition[] @relation("ExamInstitute")
   id        String   @id @default(uuid())
   name      String   @unique
   code      String?
@@ -194,6 +195,8 @@ model Class {
 }
 
 model User {
+  examAttempts ExamAttempt[] @relation("ExamAttemptStudent")
+  examsCreated ExamDefinition[] @relation("ExamCreator")
   id           String   @id @default(uuid())
   name         String
   email        String   @unique
@@ -3341,6 +3344,7 @@ model Division {
 // entity" principle. batch/section are plain strings (no separate Batch/Section model), matching
 // the existing Class.batchYear / Division.name conventions.
 model AcademicGroup {
+  examAssignments ExamAcademicGroup[]
   id           String     @id @default(uuid())
   institute    Institute  @relation(fields: [instituteId], references: [id], onDelete: Cascade)
   instituteId  String
@@ -4332,4 +4336,146 @@ model RolePermission {
 
   @@id([role, permissionKey])
   @@index([permissionKey])
+}
+
+// ===================== Section-wise examination (Aptitude, Technical, Coding, AI Interview) =====================
+// One examination definition, one attempt per student (formal) and one result. See docs/EXAM_SECTIONS_AUDIT_AND_PLAN.md and backend/src/modules/exams.
+// All tables are new and additive: nothing existing is altered, and no existing data is touched.
+model ExamDefinition {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  status      String   @default("DRAFT") // DRAFT | PUBLISHED | ARCHIVED
+  blueprint   Json     // the editable blueprint (utils/examBlueprint.js + utils/examSources.js); only a valid one can be published
+  version     Int      @default(0) // number of the latest published ExamVersion (0 = never published)
+  institute   Institute? @relation("ExamInstitute", fields: [instituteId], references: [id], onDelete: Cascade)
+  instituteId String?  // null = platform-wide (only a platform-level administrator can create one)
+  createdBy   User     @relation("ExamCreator", fields: [createdById], references: [id])
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+
+  versions ExamVersion[]
+  groups   ExamAcademicGroup[]
+  attempts ExamAttempt[]
+
+  @@index([instituteId, status])
+  @@index([createdById])
+}
+
+// An immutable snapshot taken at publish time: attempts point at the version they started under, so a later edit never changes a running attempt.
+model ExamVersion {
+  id            String   @id @default(uuid())
+  exam          ExamDefinition @relation(fields: [examId], references: [id], onDelete: Cascade)
+  examId        String
+  version       Int
+  blueprint     Json
+  publishedAt   DateTime @default(now())
+  publishedById String
+  attempts      ExamAttempt[]
+
+  @@unique([examId, version])
+}
+
+model ExamAcademicGroup {
+  id              String   @id @default(uuid())
+  exam            ExamDefinition @relation(fields: [examId], references: [id], onDelete: Cascade)
+  examId          String
+  group           AcademicGroup @relation(fields: [academicGroupId], references: [id], onDelete: Cascade)
+  academicGroupId String
+
+  @@unique([examId, academicGroupId])
+  @@index([academicGroupId])
+}
+
+model ExamAttempt {
+  id          String   @id @default(uuid())
+  exam        ExamDefinition @relation(fields: [examId], references: [id], onDelete: Cascade)
+  examId      String
+  examVersion ExamVersion @relation(fields: [versionId], references: [id])
+  versionId   String
+  student     User     @relation("ExamAttemptStudent", fields: [studentId], references: [id], onDelete: Cascade)
+  studentId   String
+  instituteId String?  // denormalised from the student at start, for institute-scoped reporting
+  mode        String   // PRACTICE | PROCTORED
+  // "FORMAL" for the single formal attempt, "PRACTICE-<n>" for practice attempts. With the unique constraint below this is what makes "one formal attempt per student per
+  // examination" a database guarantee that concurrent requests cannot break, while practice attempts stay separate and repeatable.
+  attemptKey  String
+  status      String   @default("READINESS_CHECK") // utils/examStateMachine.js ATTEMPT
+  startedAt   DateTime? // server time at which the examination clock started
+  submittedAt DateTime?
+  sessionId   String?  // one-active-session control (formal attempts)
+  manifest    Json     // the frozen assignment: { APTITUDE: [{ ref, marks, ... }], TECHNICAL: [...], CODING: [...], AI_INTERVIEW: [...] }
+  readiness   Json?    // what the readiness check reported (the server records it, it is not trusted as proof)
+  warningCount   Int     @default(0)
+  needsReview    Boolean @default(false)
+  resultStatus   String? // EVALUATION_PENDING | UNDER_REVIEW | COMPLETED | PUBLISHED | INVALIDATED
+  result         Json?
+  resultComputedAt DateTime?
+  invalidatedReason String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+
+  sections ExamAttemptSection[]
+  answers  ExamAnswer[]
+  events   ExamEvent[]
+
+  @@unique([examId, studentId, attemptKey])
+  @@index([examId, status])
+  @@index([studentId])
+  @@index([instituteId, createdAt])
+  @@index([status, startedAt])
+}
+
+model ExamAttemptSection {
+  id          String   @id @default(uuid())
+  attempt     ExamAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  attemptId   String
+  key         String   // APTITUDE | TECHNICAL | CODING | AI_INTERVIEW
+  status      String   @default("LOCKED") // LOCKED | IN_PROGRESS | COMPLETED
+  startedAt   DateTime?
+  completedAt DateTime?
+  completedBy String?  // STUDENT | SECTION_TIMER | EXAM_DEADLINE | ADMIN
+  summary     Json?    // the section's score summary (utils/examScoring.js), written when it is completed and refreshed when a pending evaluation finishes
+
+  @@unique([attemptId, key])
+}
+
+// One row per (attempt, item). `version` is the optimistic-concurrency counter: a save carries the version it last saw and is refused (409) if another save got there first.
+model ExamAnswer {
+  id         String   @id @default(uuid())
+  attempt    ExamAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  attemptId  String
+  sectionKey String
+  itemRef    String   // the question id
+  version    Int      @default(1)
+  payload    Json     // MCQ: { selected }, coding: { code, language }, interview: { text }
+  evaluation Json?    // coding: judge result; interview: rubric evaluation { status: DONE | PENDING | FAILED, ... }
+  lockedAt   DateTime? // set when the answer may no longer change (answer-editing policy)
+  savedAt    DateTime @default(now())
+  updatedAt  DateTime @default(now()) @updatedAt
+
+  @@unique([attemptId, itemRef])
+  @@index([attemptId, sectionKey])
+}
+
+model ExamEvent {
+  id             String   @id @default(uuid())
+  attempt        ExamAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  attemptId      String
+  sectionKey     String?
+  type           String
+  severity       String   // classified on the SERVER (utils/proctoringSeverity.js), never taken from the client
+  penalized      Boolean  @default(false) // counted toward the warning display
+  requiresReview Boolean  @default(false)
+  reviewStatus   String   @default("NONE") // NONE | PENDING | DISMISSED | CONFIRMED (only a reviewer can set DISMISSED or CONFIRMED)
+  reviewNote     String?
+  reviewedById   String?
+  reviewedAt     DateTime?
+  clientAt       DateTime? // when the browser says it happened (informational only)
+  source         String   @default("BROWSER")
+  createdAt      DateTime @default(now()) // server receipt time: the authoritative one
+
+  @@index([attemptId, createdAt])
+  @@index([reviewStatus])
 }

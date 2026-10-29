@@ -40,6 +40,7 @@ const adminCommandRoutes = require("./routes/adminCommand");
 const gamificationRoutes = require("./routes/gamification");
 const resumeRoutes = require("./routes/resume");
 const interviewRoutes = require("./routes/interview");
+const examRoutes = require("./modules/exams/exams.routes");
 const aiInterviewRoutes = require("./routes/aiInterview");
 const moduleCodingRoutes = require("./routes/moduleCoding");
 const practiceRoutes = require("./routes/practice");
@@ -256,6 +257,7 @@ app.use("/api/command", adminCommandRoutes);
 app.use("/api/gamification", gamificationRoutes);
 app.use("/api/resume", resumeRoutes);
 app.use("/api/interview", interviewRoutes);
+app.use("/api/exams", examRoutes);
 app.use("/api/ai-interviews", aiInterviewRoutes);
 app.use("/api/interview", interviewDraftRoutes);
 app.use("/api/interview", companyQuestionRoutes);
@@ -344,6 +346,11 @@ const server = app.listen(PORT, () => {
   // the process if it fails.
   const judge = require("./utils/judge");
   if (!process.env.JUDGE_URL) judge.warmUpCompilers().catch((err) => console.warn("judge warm-up failed", err.message)); // a separate judge service warms its own
+  // Section-wise examinations: the server closes attempts and sections whose deadline has passed even if the student has gone away. Each pass is idempotent (conditional updates),
+  // so several API instances running it at once cannot double-close or double-score anything.
+  const examAttempts = require("./modules/exams/exams.attempts");
+  const sweep = setInterval(() => examAttempts.sweepExpired().catch((err) => console.warn("exam expiry sweep failed:", err.message)), 60 * 1000);
+  if (sweep.unref) sweep.unref();
   // Network-egress isolation for sandbox-uid submissions is now installed once, as real root,
   // by docker-entrypoint.sh BEFORE this process ever starts — not from here. Node itself no
   // longer holds cap_net_admin (see the Dockerfile's setcap comment); that capability delegation
