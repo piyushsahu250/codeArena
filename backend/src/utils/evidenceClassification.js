@@ -42,6 +42,7 @@ const RULES = {
   NETWORK_LOSS: { category: "OTHER", base: "INCONCLUSIVE", suspectAfter: null, limits: "The connection dropped; this is not a student action." },
   REFRESH_ATTEMPT: { category: "OTHER", base: "OBSERVED_EVENT", suspectAfter: null, limits: "A page reload was attempted." },
   ORIENTATION_CHANGE: { category: "OTHER", base: "OBSERVED_EVENT", suspectAfter: null, limits: "The device was rotated." },
+  NAVIGATION_ATTEMPT: { category: "OTHER", base: "OBSERVED_EVENT", suspectAfter: null, limits: "The browser Back button (or Alt+Left) was pressed during a proctored interview and absorbed by the page. Pressing Back is a common habit and says nothing about outside assistance." },
   SCREEN_OVERLAY_DETECTED: { category: "OTHER", base: "INCONCLUSIVE", suspectAfter: null, limits: "A viewport-size heuristic; an on-screen keyboard or pinch-zoom looks the same." },
 };
 
