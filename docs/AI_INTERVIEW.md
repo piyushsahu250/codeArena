@@ -98,3 +98,11 @@ competency matrices (spec §9), admin configuration UI for the scoring rubric (s
 per-institute AI-cost dollar tracking (today's `AiUsageLog` tracks tokens/latency/success, not
 USD), multilingual generation beyond a `language` field placeholder, and load testing at scale
 (100/500/1000 concurrent interviews — spec §39). See the delivery conversation for the full list.
+
+## Browser voice (default since 2026-10-29)
+
+The student page no longer streams audio to the Gemini Live API. Each question is read aloud with the browser's `speechSynthesis`; the answer is dictated with `SpeechRecognition` (English, `en-IN`) into the same answer box the typed mode uses, and submitted through the REST `/start` and `/answer` endpoints. No audio goes through our server, and no Live/TTS provider quota is used. Only the text calls (question generation, answer evaluation, report) still use the AI provider.
+
+- Code: `frontend/src/hooks/useBrowserVoice.js`, `frontend/src/utils/browserSpeech.js`, `frontend/src/pages/AiInterviewSession.jsx`. Regression: `frontend/scripts/browserSpeechRegression.mjs` (run in CI).
+- Chrome and Edge send the audio to their own speech service, so dictation needs internet. Browsers without `SpeechRecognition` (iPhone Safari, Firefox) fall back to typing.
+- The old Live WebSocket path is still in the code and is used only when the frontend is built with `VITE_AI_INTERVIEW_LIVE_VOICE=1`.

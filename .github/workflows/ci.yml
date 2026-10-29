@@ -110,6 +110,8 @@ jobs:
         run: node scripts/passwordPolicyRegression.mjs
       - name: Double-click protection regression (an identical write in flight is sent once, then can be repeated)
         run: node scripts/dedupeWritesRegression.mjs
+      - name: Browser voice regression (voice picking, speech chunking, transcript merging, recognition errors)
+        run: node scripts/browserSpeechRegression.mjs
       - name: Return-to-page regression (a safe in-app path, same account only, once)
         run: node scripts/returnToRegression.mjs
       - name: Editor height regression (a short landscape screen caps the exam editor)
