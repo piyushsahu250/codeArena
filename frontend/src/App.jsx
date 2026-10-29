@@ -168,6 +168,14 @@ function profileGateActive(user) {
 // noChrome skips the persistent Sidebar — used for the three fullscreen/proctored routes
 // (timed exam, mock interview session, module coding assessment) where offering navigation away
 // from an active, monitored attempt would undermine the whole point of locking it down.
+// "My Certificates": a student's page, and also where a staff member, clerk or institute admin sees a certificate the Super Admin issued to them. The institute's "certificates" feature
+// switch is a student feature, so it only gates students.
+function MyCertificatesRoute() {
+  const { user } = useAuth();
+  const page = <MyCertificates />;
+  return user?.role === "STUDENT" ? <FeatureProtected featureKey="certificates">{page}</FeatureProtected> : page;
+}
+
 function Protected({ roles, children, noChrome = false }) {
   const { user } = useAuth();
   const location = useLocation();
@@ -313,7 +321,7 @@ export default function App() {
           <Route path="/certificate/verify/:code" element={<CertificateVerify />} />
           <Route path="/results/verify/:code" element={<MarksheetVerify />} />
           <Route path="/account" element={<Protected><AccountSettings /></Protected>} />
-          <Route path="/certificates" element={<Protected roles={["STUDENT"]}><FeatureProtected featureKey="certificates"><MyCertificates /></FeatureProtected></Protected>} />
+          <Route path="/certificates" element={<Protected roles={["STUDENT", "STAFF", "CLERK", "INSTITUTE_ADMIN"]}><MyCertificatesRoute /></Protected>} />
           <Route path="/attendance" element={<Protected roles={["STUDENT"]}><FeatureProtected featureKey="attendance"><MyAttendance /></FeatureProtected></Protected>} />
           <Route path="/talent-pools" element={<Protected roles={["STUDENT"]}><FeatureProtected featureKey="talent_pool"><MyTalentPools /></FeatureProtected></Protected>} />
           <Route path="/results" element={<Protected roles={["STUDENT"]}><MyResults /></Protected>} />

@@ -8,8 +8,16 @@ const { requireFeature } = require("../middleware/featureGate");
 const { issueCertificate, revokeCertificate } = require("../utils/certificates");
 const { generateCertificatePdf } = require("../utils/certificatePdf");
 const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
+const { STAFF_RECIPIENT_ROLES, checkRecipient, canRevokeOwn } = require("../utils/certificateRecipients");
 
 const router = express.Router();
+
+// People who can hold a certificate: students, and the staff, clerks and institute admins the Super Admin has issued one to (see utils/certificateRecipients.js).
+const HOLDER_ROLES = ["STUDENT", ...STAFF_RECIPIENT_ROLES];
+// The institute's "certificates" feature switch is a student-facing feature; it does not hide a certificate from the staff member who was given one.
+function featureForStudentsOnly(req, res, next) {
+  return req.user.role === "STUDENT" ? requireFeature("certificates")(req, res, next) : next();
+}
 
 const FRONTEND_URL = process.env.FRONTEND_URL || "https://codearena.site";
 
@@ -36,8 +44,8 @@ function serializeCert(cert, extra = {}) {
   };
 }
 
-// STUDENT: every certificate this student holds, across both certificate systems, newest first.
-router.get("/me", authenticate, requireRole("STUDENT"), attachRequesterInstitute, requireFeature("certificates"), async (req, res) => {
+// STUDENT (or a staff member, clerk or institute admin who was issued one): every certificate this person holds, across both certificate systems, newest first.
+router.get("/me", authenticate, requireRole(...HOLDER_ROLES), attachRequesterInstitute, featureForStudentsOnly, async (req, res) => {
   try {
     const [certs, interviewCert] = await Promise.all([
       prisma.certificate.findMany({ where: { studentId: req.user.id }, orderBy: { issuedAt: "desc" } }),
@@ -70,7 +78,7 @@ router.get("/me", authenticate, requireRole("STUDENT"), attachRequesterInstitute
 
 // STUDENT: download one of their own Certificate-model certificates as a PDF. (Interview
 // certificates keep using their own existing download route.)
-router.get("/:id/download", authenticate, requireRole("STUDENT"), attachRequesterInstitute, requireFeature("certificates"), async (req, res) => {
+router.get("/:id/download", authenticate, requireRole(...HOLDER_ROLES), attachRequesterInstitute, featureForStudentsOnly, async (req, res) => {
   try {
     const cert = await prisma.certificate.findUnique({
       where: { id: req.params.id },
@@ -129,14 +137,17 @@ router.get("/verify/:code", verifyLimiter, async (req, res) => {
 
 // ADMIN/STAFF: manually issue a MANUAL-type certificate for activities with no underlying data
 // model on this platform (workshops, FDP, bootcamps, placement-prep programs, institute
-// certifications). Staff may only issue to students within their own institute.
+// certifications). Staff may only issue to students within their own institute. The Super Admin
+// can also issue to staff, clerks and institute admins (`studentId` is the recipient's user id whatever their role).
 router.post("/manual", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const { studentId, programName, title } = req.body;
     if (!studentId || !programName) return res.status(400).json({ error: "studentId and programName are required" });
 
     const student = await prisma.user.findUnique({ where: { id: studentId }, include: { institute: true } });
-    if (!student || student.role !== "STUDENT") return res.status(404).json({ error: "Student not found" });
+    if (!student) return res.status(404).json({ error: "Recipient not found" });
+    const allowed = checkRecipient({ requesterRole: req.user.role, targetRole: student.role });
+    if (!allowed.ok) return res.status(allowed.status).json({ error: allowed.error });
     if (req.requesterInstituteId && student.instituteId !== req.requesterInstituteId) {
       return res.status(403).json({ error: "You can only issue certificates to students under your own institute" });
     }
@@ -151,7 +162,7 @@ router.post("/manual", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTIT
       programCode: programName,
     });
 
-    await logAudit({ req, action: AUDIT_ACTIONS.CERTIFICATE_ISSUED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role, studentId: student.id, instituteId: student.instituteId, details: { certificateId: cert.id, type: "MANUAL", programName } });
+    await logAudit({ req, action: AUDIT_ACTIONS.CERTIFICATE_ISSUED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role, studentId: student.id, instituteId: student.instituteId, details: { certificateId: cert.id, type: "MANUAL", programName, recipientRole: student.role } });
     res.status(201).json(serializeCert(cert));
   } catch (err) {
     console.error(err);
@@ -165,12 +176,16 @@ router.post("/manual", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTIT
 // revoke certificates belonging to their own institute's students.
 router.post("/:id/revoke", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
-    const existing = await prisma.certificate.findUnique({ where: { id: req.params.id }, include: { student: { select: { instituteId: true } } } });
+    const existing = await prisma.certificate.findUnique({ where: { id: req.params.id }, include: { student: { select: { instituteId: true, role: true } } } });
     if (!existing) return res.status(404).json({ error: "Certificate not found" });
+    if (existing.student.role !== "STUDENT" && req.user.role !== "SUPER_ADMIN") {
+      return res.status(403).json({ error: "Only the Super Admin can revoke certificates held by staff, clerks and institute admins." });
+    }
     if (req.requesterInstituteId && existing.student.instituteId !== req.requesterInstituteId) {
       return res.status(403).json({ error: "You can only revoke certificates belonging to your own institute" });
     }
     if (existing.status === "REVOKED") return res.status(400).json({ error: "This certificate is already revoked" });
+    if (!canRevokeOwn(req.user.role, req.user.id, existing.studentId)) return res.status(403).json({ error: "You cannot revoke your own certificate" });
 
     const cert = await revokeCertificate(existing.id, { revokedByName: req.user.name, reason: req.body.reason });
     await logAudit({ req, action: AUDIT_ACTIONS.CERTIFICATE_REVOKED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role, studentId: existing.studentId, details: { certificateId: cert.id, reason: req.body.reason || null } });
@@ -187,14 +202,16 @@ router.post("/:id/revoke", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "IN
 router.get("/admin", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const where = req.requesterInstituteId ? { student: { instituteId: req.requesterInstituteId } } : {};
+    // Staff see the students' certificates only; certificates given to staff, clerks and institute admins are for the administrators who run the institute.
+    if (req.user.role === "STAFF") where.student = { ...(where.student || {}), role: "STUDENT" };
     if (req.query.type) where.type = req.query.type;
     const certs = await prisma.certificate.findMany({
       where,
-      include: { student: { select: { name: true, email: true, rollNumber: true } } },
+      include: { student: { select: { name: true, email: true, rollNumber: true, role: true } } },
       orderBy: { issuedAt: "desc" },
       take: 500,
     });
-    res.json(certs.map((c) => ({ ...serializeCert(c), studentName: c.student.name, studentEmail: c.student.email, rollNumber: c.student.rollNumber })));
+    res.json(certs.map((c) => ({ ...serializeCert(c), studentName: c.student.name, studentEmail: c.student.email, rollNumber: c.student.rollNumber, recipientRole: c.student.role })));
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to load certificates" });

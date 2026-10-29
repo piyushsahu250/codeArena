@@ -199,6 +199,11 @@ const MENU = {
 // subset, not an alias).
 MENU.SUPER_ADMIN = MENU.ADMIN;
 
+// The Super Admin can issue a certificate to a staff member, clerk or institute admin; this is where they open it. It goes in just above the final Settings group.
+for (const role of ["STAFF", "CLERK", "INSTITUTE_ADMIN"]) {
+  MENU[role].splice(MENU[role].length - 1, 0, { group: "Account", items: [{ label: "My Certificates", to: "/certificates", icon: Award }] });
+}
+
 export default function Sidebar({ role, profileGateActive = false }) {
   const location = useLocation();
   const navigate = useNavigate();

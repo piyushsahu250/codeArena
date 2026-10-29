@@ -8,6 +8,9 @@ import { useToast } from "../context/ToastContext";
 import { useAuth } from "../context/AuthContext";
 
 const TYPE_LABEL = { LEARNING_MODULE: "Learning Module", CODING_ASSESSMENT: "Coding Assessment", MANUAL: "Manual" };
+// Who a certificate can be issued to. Only the Super Admin sees the non-student choices (the server enforces it too).
+const RECIPIENT_OPTIONS = [["STUDENT", "Student"], ["STAFF", "Staff"], ["CLERK", "Clerk"], ["INSTITUTE_ADMIN", "Institute Admin"]];
+const RECIPIENT_LABEL = Object.fromEntries(RECIPIENT_OPTIONS);
 
 // Renders at /admin/certificates and /staff/certificates (basePath controls the back link).
 // Manual issuance is for activities with no underlying data model on this platform — workshops,
@@ -18,6 +21,7 @@ export default function CertificateAdmin({ basePath }) {
   const [certs, setCerts] = useState(null);
   const [typeFilter, setTypeFilter] = useState("");
 
+  const [recipientRole, setRecipientRole] = useState("STUDENT");
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
   const [selectedStudent, setSelectedStudent] = useState(null);
@@ -31,25 +35,34 @@ export default function CertificateAdmin({ basePath }) {
   const confirmDialog = useConfirm();
   const toast = useToast();
   const { user } = useAuth();
-  const canRevoke = user?.role === "ADMIN";
+  const canRevoke = user?.role === "ADMIN" || user?.role === "SUPER_ADMIN"; // the server also allows institute admins, for their own institute's students
+  const isSuperAdmin = user?.role === "SUPER_ADMIN";
+  const recipientLabel = RECIPIENT_LABEL[recipientRole] || "Student";
 
   function load() {
     api.get("/certificates/admin", { params: typeFilter ? { type: typeFilter } : {} }).then((res) => setCerts(res.data));
   }
   useEffect(load, [typeFilter]);
 
+  // Results are for the chosen kind of recipient only; the answer that arrives for a previous choice or a previous search is ignored.
   useEffect(() => {
-    if (!query.trim()) { setResults([]); return; }
+    if (!query.trim()) { setResults([]); return undefined; }
+    let current = true;
     const t = setTimeout(() => {
-      api.get("/users/search", { params: { q: query.trim(), role: "STUDENT" } }).then((res) => setResults(res.data.rows)).catch(() => setResults([]));
+      api.get("/users/search", { params: { q: query.trim(), role: recipientRole } }).then((res) => { if (current) setResults(res.data.rows); }).catch(() => { if (current) setResults([]); });
     }, 300);
-    return () => clearTimeout(t);
-  }, [query]);
+    return () => { current = false; clearTimeout(t); };
+  }, [query, recipientRole]);
+
+  function chooseRecipientRole(role) {
+    setRecipientRole(role);
+    setSelectedStudent(null); setQuery(""); setResults([]); setError(""); setSuccess("");
+  }
 
   async function issue(e) {
     e.preventDefault();
     setError(""); setSuccess("");
-    if (!selectedStudent) return setError("Select a student first");
+    if (!selectedStudent) return setError(`Select a ${recipientLabel.toLowerCase()} first`);
     if (!programName.trim()) return setError("Program name is required");
     setIssuing(true);
     try {
@@ -103,8 +116,16 @@ export default function CertificateAdmin({ basePath }) {
             automatically when a student completes them.
           </p>
           <form onSubmit={issue} style={{ marginTop: 12, display: "grid", gap: 10 }}>
+            {isSuperAdmin && (
+              <div>
+                <label style={labelStyle} htmlFor="cert-recipient-role">Issue to</label>
+                <select id="cert-recipient-role" style={inputStyle} value={recipientRole} onChange={(e) => chooseRecipientRole(e.target.value)}>
+                  {RECIPIENT_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                </select>
+              </div>
+            )}
             <div style={{ position: "relative" }}>
-              <label style={labelStyle} htmlFor="cert-student-search">Student</label>
+              <label style={labelStyle} htmlFor="cert-student-search">{recipientLabel}</label>
               {selectedStudent ? (
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <span className="badge">{selectedStudent.name} ({selectedStudent.email})</span>
@@ -112,13 +133,13 @@ export default function CertificateAdmin({ basePath }) {
                 </div>
               ) : (
                 <>
-                  <input id="cert-student-search" style={inputStyle} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by name, roll number, or email" />
+                  <input id="cert-student-search" style={inputStyle} value={query} onChange={(e) => setQuery(e.target.value)} placeholder={recipientRole === "STUDENT" ? "Search by name, roll number, or email" : "Search by name, employee ID, or email"} />
                   {results.length > 0 && (
                     <div className="card" style={{ position: "absolute", zIndex: 5, width: "100%", maxHeight: 220, overflowY: "auto", padding: 4, marginTop: 2 }}>
                       {results.map((s) => (
                         <div key={s.id} style={{ padding: "8px 10px", cursor: "pointer", fontSize: 13, borderRadius: 6 }}
                           onClick={() => { setSelectedStudent(s); setResults([]); }}>
-                          <strong>{s.name}</strong> — {s.rollNumber || "no roll #"} — {s.email}
+                          <strong>{s.name}</strong> — {recipientRole === "STUDENT" ? (s.rollNumber || "no roll #") : (s.employeeId || RECIPIENT_LABEL[s.role] || s.role)} — {s.email}{s.institute?.name ? ` — ${s.institute.name}` : ""}
                         </div>
                       ))}
                     </div>
@@ -165,7 +186,7 @@ export default function CertificateAdmin({ basePath }) {
               {certs === null && <tr><td colSpan={7} style={{ padding: 24, textAlign: "center", color: "var(--ink-dim)" }} className="mono">Loading…</td></tr>}
               {certs?.map((c) => (
                 <tr key={c.id} style={{ borderBottom: "1px solid var(--line)", fontSize: 13 }}>
-                  <td style={{ padding: "10px 12px" }}>{c.studentName}<br /><span className="mono" style={{ fontSize: 11, color: "var(--ink-dim)" }}>{c.studentEmail}</span></td>
+                  <td style={{ padding: "10px 12px" }}>{c.studentName}{c.recipientRole && c.recipientRole !== "STUDENT" && <span className="badge" style={{ marginLeft: 6, fontSize: 10 }}>{RECIPIENT_LABEL[c.recipientRole] || c.recipientRole}</span>}<br /><span className="mono" style={{ fontSize: 11, color: "var(--ink-dim)" }}>{c.studentEmail}</span></td>
                   <td style={{ padding: "10px 12px" }}>{TYPE_LABEL[c.type] || c.type}</td>
                   <td style={{ padding: "10px 12px" }}>{c.programName || c.title}</td>
                   <td className="mono" style={{ padding: "10px 12px", fontSize: 11 }}>{c.certificateCode}</td>
