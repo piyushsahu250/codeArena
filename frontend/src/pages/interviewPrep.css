@@ -75,3 +75,41 @@
 .ip-progress-bar {
   animation: ip-progress-fill 0.6s ease;
 }
+
+/* Pre-interview screen (InterviewSession.jsx, phase "preflight"): header, detail chips and the four rule cards. */
+.ip-pre-card { padding: 32px; max-width: 680px; width: 100%; margin-top: 24px; }
+.ip-pre-eyebrow {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--ip-accent); margin-bottom: 8px;
+}
+.ip-pre-title { margin: 0; font-size: 30px; line-height: 1.15; }
+.ip-pre-chips { list-style: none; margin: 14px 0 4px; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.ip-pre-chips li {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 600; color: var(--ip-text);
+  padding: 6px 12px; border-radius: 999px;
+  background: var(--ip-glass-bg); border: 1px solid var(--ip-glass-border);
+}
+.ip-pre-chips li svg { color: var(--ip-accent); flex-shrink: 0; }
+.ip-pre-heading { margin: 22px 0 10px; font-size: 14px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ip-text-dim); }
+.ip-pre-rules { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.ip-pre-rule {
+  display: flex; gap: 12px; align-items: flex-start;
+  padding: 14px; border-radius: 12px;
+  background: var(--ip-glass-bg); border: 1px solid var(--ip-glass-border);
+}
+.ip-pre-rule strong { display: block; font-size: 14px; color: var(--ip-text); margin-bottom: 4px; }
+.ip-pre-rule p { margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--ip-text-dim); }
+.ip-pre-rule-icon {
+  flex: 0 0 auto; width: 34px; height: 34px; border-radius: 10px;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--ip-accent); background: color-mix(in srgb, var(--ip-accent) 14%, transparent);
+}
+.ip-pre-rule-warn { border-left: 3px solid #D97757; }
+.ip-pre-rule-warn .ip-pre-rule-icon { color: #D97757; background: rgba(217, 119, 87, 0.14); }
+@media (max-width: 640px) {
+  .ip-pre-card { padding: 20px; }
+  .ip-pre-title { font-size: 24px; }
+  .ip-pre-rules { grid-template-columns: 1fr; }
+}

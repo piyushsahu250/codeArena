@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import Editor from "@monaco-editor/react";
 import api, { API_BASE_URL, performExpiredRedirect } from "../api";
-import { Mic, Square, Move, Camera } from "lucide-react";
+import { Mic, Square, Move, Camera, Clock, ListChecks, Maximize, AlertTriangle, ShieldCheck } from "lucide-react";
 import { useProctoring } from "../hooks/useProctoring";
 import { useExamSession, recallExamSession } from "../hooks/useExamSession";
 import { runSecurityCheck } from "../utils/secureAssessment";
@@ -422,23 +422,49 @@ export default function InterviewSession() {
       <div className={`interview-prep ${dark ? "dark" : ""}`}>
         <Navbar />
         <div style={{ display: "flex", justifyContent: "center", padding: 24 }}>
-          <div className="ip-glass" style={{ padding: 32, maxWidth: 560, marginTop: 24 }}>
-            <h2>{session.isMock ? "Mock Interview" : session.isCompanyRound ? `${session.config?.company || ""} Company Round` : session.isResumeBased ? "Resume-based Interview" : `${CATEGORY_LABEL[session.category]} Interview`}</h2>
+          <div className="ip-glass ip-pre-card">
+            <div className="ip-pre-eyebrow"><ShieldCheck size={14} aria-hidden="true" /> Proctored interview</div>
+            <h2 className="ip-pre-title">{session.isMock ? "Mock Interview" : session.isCompanyRound ? `${session.config?.company || ""} Company Round` : session.isResumeBased ? "Resume-based Interview" : `${CATEGORY_LABEL[session.category]} Interview`}</h2>
             <ChalkUnderline />
-            {session.isCompanyRound && session.config?.generalFallbackCategories?.length > 0 && (
-              <p style={{ fontSize: 12, marginTop: 10, padding: "8px 12px", borderRadius: 8, background: "rgba(217,119,87,0.12)", color: "var(--rust)" }}>
-                We don't have enough {session.config.company}-specific questions in {session.config.generalFallbackCategories.join(", ").toLowerCase()} yet, so this round
-                includes general industry-standard questions for {session.config.generalFallbackCategories.length > 1 ? "those sections" : "that section"}.
-              </p>
-            )}
-            <p style={{ fontSize: 13, marginTop: 14, opacity: 0.85 }}>
-              This interview is fully proctored and runs in fullscreen with your camera and microphone on for the
-              whole duration. Switching tabs, exiting fullscreen, or turning off your camera/microphone is tracked
-              and logged; after {maxViolations} such violations the interview is automatically terminated. Your face
-              should stay visible in frame — briefly stepping away or multiple people appearing in frame is logged
-              for review but won't end your interview. Background noise triggers a friendly reminder only, never a
-              violation.
-            </p>
+
+            <ul className="ip-pre-chips" aria-label="Interview details">
+              {session.config?.durationMin ? <li><Clock size={14} aria-hidden="true" /> {session.config.durationMin} minutes</li> : null}
+              {data.questions?.length ? <li><ListChecks size={14} aria-hidden="true" /> {data.questions.length} questions</li> : null}
+              <li><Maximize size={14} aria-hidden="true" /> Fullscreen</li>
+              <li><Camera size={14} aria-hidden="true" /> Camera and microphone on</li>
+            </ul>
+
+            <h3 className="ip-pre-heading">Before you begin</h3>
+            <div className="ip-pre-rules">
+              <div className="ip-pre-rule">
+                <span className="ip-pre-rule-icon" aria-hidden="true"><Maximize size={18} /></span>
+                <div>
+                  <strong>Stay in fullscreen</strong>
+                  <p>The interview runs full screen from start to finish. Leaving fullscreen is recorded.</p>
+                </div>
+              </div>
+              <div className="ip-pre-rule">
+                <span className="ip-pre-rule-icon" aria-hidden="true"><Camera size={18} /></span>
+                <div>
+                  <strong>Camera and microphone on</strong>
+                  <p>Keep both on for the whole interview and keep your face in frame.</p>
+                </div>
+              </div>
+              <div className="ip-pre-rule ip-pre-rule-warn">
+                <span className="ip-pre-rule-icon" aria-hidden="true"><AlertTriangle size={18} /></span>
+                <div>
+                  <strong>{maxViolations} violations end the interview</strong>
+                  <p>Switching tabs, exiting fullscreen, or turning off your camera or microphone counts as a violation. After {maxViolations}, the interview ends automatically and your answers so far are kept.</p>
+                </div>
+              </div>
+              <div className="ip-pre-rule">
+                <span className="ip-pre-rule-icon" aria-hidden="true"><ShieldCheck size={18} /></span>
+                <div>
+                  <strong>Recorded for review, not counted</strong>
+                  <p>Stepping away briefly or more than one face in frame is logged for review and does not end your interview. Background noise only shows a reminder.</p>
+                </div>
+              </div>
+            </div>
 
             <ReadinessChecklist
               proctor={proctor}
