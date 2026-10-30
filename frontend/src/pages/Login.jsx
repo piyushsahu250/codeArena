@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Award, Code2, Mic, ShieldCheck } from "lucide-react";
 import api from "../api";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
@@ -17,6 +18,15 @@ import "./login.css";
 // a dedicated dashboard yet either, so it lands there too for now (still institute-scoped by
 // the backend regardless of which page it renders).
 const HOME_BY_ROLE = { STUDENT: "/dashboard", STAFF: "/staff", ADMIN: "/admin", CLERK: "/clerk", SUPER_ADMIN: "/admin", INSTITUTE_ADMIN: "/admin" };
+
+// What the platform does, one line each, shown beside the sign-in form. Every line describes something the platform really has (coding tests judged automatically, proctored exams,
+// the AI mock interview, courses with verifiable certificates); nothing here is a number or a promise that could go out of date.
+const HIGHLIGHTS = [
+  { icon: Code2, title: "Coding assessments", text: "Write, run and submit code in the browser, with automated judging." },
+  { icon: ShieldCheck, title: "Secure examinations", text: "Proctored tests with fullscreen, camera checks and server-side timing." },
+  { icon: Mic, title: "AI mock interviews", text: "Practise HR and technical interviews by voice or text, and get detailed feedback." },
+  { icon: Award, title: "Learning and certificates", text: "Complete courses and earn certificates that anyone can verify online." },
+];
 
 // One page, two steps, ONE form element. Step "signin" is the long-standing sign-in. When the server answers a correct email and password with "this account must choose a new
 // password first" (an administrator-issued temporary password, or one past the institute's expiry window) the page stays where it is and the same form gains the new-password
@@ -157,33 +167,32 @@ export default function Login() {
   return (
     <div className="ca-login-grid">
       {/* Blackboard panel */}
-      <div
-        style={{
-          background: "var(--slate-900)",
-          color: "var(--chalk)",
-          padding: "64px",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-        }}
-      >
-        <div style={{ background: "#fdfbf5", borderRadius: 16, padding: "20px 28px", display: "inline-flex", alignItems: "center", maxWidth: 320 }}>
-          <img src="/branding/logo.png" alt="CodeArena" style={{ width: "100%", height: "auto", display: "block" }} />
+      <div className="ca-login-brand">
+        <div className="ca-login-brand-inner">
+          <div className="ca-login-logo">
+            <img src="/branding/logo.png" alt="CodeArena" />
+          </div>
+          <p className="ca-login-tagline">Empowering Talent Through Smart Coding Assessments.</p>
+          <ul className="ca-login-points" aria-label="What CodeArena offers">
+            {HIGHLIGHTS.map(({ icon: Icon, title, text }) => (
+              <li key={title}>
+                <span className="ca-login-point-icon" aria-hidden="true"><Icon size={18} /></span>
+                <span><strong>{title}</strong><span className="ca-login-point-text">{text}</span></span>
+              </li>
+            ))}
+          </ul>
         </div>
-        <p style={{ color: "var(--chalk-dim)", maxWidth: 420, marginTop: 24, lineHeight: 1.6, fontSize: 17 }}>
-          Empowering Talent Through Smart Coding Assessments.
-        </p>
       </div>
 
       {/* Form panel */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: 32 }}>
-        <form onSubmit={handleSubmit} style={{ width: "100%", maxWidth: 360 }} aria-busy={loading}>
+      <div className="ca-login-formpane">
+        <form onSubmit={handleSubmit} className="ca-login-card" aria-busy={loading}>
           <h1 style={{ fontSize: 26, color: "var(--ink)" }}>Sign in</h1>
           {creating ? (
             <p className="ca-login-callout" id="login-intro">{changeIntro(reason)}</p>
           ) : (
-            <p style={{ color: "var(--ink-dim)", marginTop: -4, marginBottom: 24, fontSize: 14 }}>
-              Use your university email to continue.
+            <p className="ca-login-sub">
+              Sign in with the email address your institute registered for you.
             </p>
           )}
           {/* Heard by screen readers when the step changes or the password was changed without a session; the visible text above is not a live region on purpose. */}
@@ -213,7 +222,7 @@ export default function Login() {
             readOnly={creating}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@codearena.edu.in"
+            placeholder="Your registered email address"
           />
 
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
@@ -229,13 +238,20 @@ export default function Login() {
             name="password"
             ref={passwordInput}
             style={inputStyle}
-            type={creating && showPasswords ? "text" : "password"}
+            type={showPasswords ? "text" : "password"}
             autoComplete="current-password"
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder={creating ? undefined : "••••••••"}
+            placeholder={creating ? undefined : "Your password"}
           />
+          {/* A checkbox, not a button: the sign-in button stays the first button in the form, and the second step keeps its own "Show passwords" below. */}
+          {!creating && (
+            <label className="ca-pw-show ca-pw-show-signin">
+              <input type="checkbox" checked={showPasswords} onChange={(e) => setShowPasswords(e.target.checked)} />
+              Show password
+            </label>
+          )}
 
           {creating && (
             <>
@@ -289,7 +305,7 @@ export default function Login() {
           {error && <p className="ca-login-error" role="alert">{error}</p>}
           {notice && <p className="ca-login-notice">{notice}</p>}
 
-          <button className="btn btn-primary" style={{ width: "100%", marginTop: 18, padding: "12px 0" }} disabled={loading || !canSubmit}>
+          <button className="btn btn-primary ca-login-submit" disabled={loading || !canSubmit}>
             {creating ? (loading ? "Changing password…" : "Change Password & Login") : loading ? "Signing in…" : "Sign in"}
           </button>
           {creating && (
@@ -298,11 +314,11 @@ export default function Login() {
             </button>
           )}
 
-          <p style={{ marginTop: 20, fontSize: 14, color: "var(--ink-dim)" }}>
-            Don't have an account? Contact your admin to get one created.
+          <p className="ca-login-help">
+            Don't have an account? Accounts are created by your institute administrator. Contact your admin to get one created.
           </p>
           {/* No opacity here: --ink-dim at 75% opacity measured about 3.1:1 on the light page (AA needs 4.5:1 for text this small); at full strength it is about 5.2:1 light and 7.0:1 dark. */}
-          <p style={{ marginTop: 32, fontSize: 12, color: "var(--ink-dim)", textAlign: "center" }}>
+          <p className="ca-login-powered">
             Powered by Acrosoft Webtech Solution Pvt. Ltd.
           </p>
         </form>
