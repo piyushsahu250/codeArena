@@ -42,11 +42,25 @@ export default function OnlineAssessment() {
 
       <h2>Question types and grading</h2>
       <p>
-        A single test can mix coding, MCQ, true/false, multi-select, fill-in-the-blank, and SQL
+        A single test can mix coding, MCQ, true/false, multi-select, numerical-answer, and SQL
         questions. Coding and SQL questions are graded by the same judge described on the{" "}
         <Link to="/coding-platform">Coding Platform</Link> page — auto-graded against hidden test
         cases, with a detailed per-question breakdown available once results are published, so a
         student can see exactly which cases passed and which didn't.
+      </p>
+
+      <h2>Section-wise exams</h2>
+      <p>
+        An institute can set up one exam made of four sections — Aptitude, Technical, Coding and
+        an AI mock interview — taken in order inside a single proctored attempt. Each student gets
+        exactly one official attempt; every section is saved and scored on its own, and the
+        student ends with one consolidated report: marks per section, strengths and weak topics,
+        the coding results, interview feedback and a proctoring summary. The questions come from
+        the institute's own question banks — if a bank doesn't hold enough valid questions, the
+        exam can't be published, so nothing is invented to fill the gap. Events recorded by the
+        proctoring are shown to a reviewer, and only the ones a reviewer confirms count against
+        a student. Students can also take unofficial practice attempts that never appear in the
+        official results.
       </p>
 
       <h2>Timing that can't be gamed</h2>

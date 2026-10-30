@@ -14,7 +14,11 @@ import "./landing.css";
 // Public marketing homepage — shown at "/" to anyone not signed in (see App.jsx's Home()).
 // Every claim on this page is grounded in a feature that actually exists in this codebase
 // (routes, models, judge languages) rather than invented adoption numbers or a role that isn't
-// real here — this platform has exactly three roles (Student/Staff/Admin, see schema.prisma).
+// real here. The roles that exist are Student, Staff, Placement Clerk, Institute Admin, Admin and
+// Super Admin (see the Role enum in schema.prisma); there is no recruiter login, so the Recruiters
+// card describes what recruiters get to rely on (verifiable certificates, consistent benchmarks), not an account.
+// The counts in STATS below are checked against the code (judge languages, QuestionType, InterviewCategory,
+// proctoringSeverity.js); when one of those changes, change the number here. A count that is a floor is written "N+".
 // There's no self-serve signup (Register.jsx redirects to "contact your admin") and no lead-
 // capture backend yet, so every CTA points at the real /login route rather than a fake demo
 // form or an invented contact address.
@@ -22,7 +26,7 @@ export default function Landing() {
   useSeoHead({
     title: "AI-Powered Coding & Assessment Platform",
     description:
-      "CodeArena is an AI-powered coding, assessment, learning and employability platform for students and educational institutions — proctored exams, a real compiler, an LMS, and AI mock interviews in one workspace.",
+      "CodeArena is an AI-powered coding, assessment, learning and employability platform for students and educational institutions — proctored and section-wise exams, a real compiler, an LMS, and AI mock interviews in one workspace.",
     path: "/",
   });
   return (
@@ -127,7 +131,8 @@ const AUDIENCES = [
     items: [
       "Practice coding with instant, hidden-test-case grading",
       "Structured learning paths with module-end coding tests",
-      "AI-evaluated mock interviews across 7 tracks",
+      "AI mock interviews across 7 tracks — answer by typing or by voice",
+      "Section-wise exams that combine aptitude, technical, coding and interview rounds",
       "A resume builder with real ATS scoring",
     ],
   },
@@ -138,6 +143,7 @@ const AUDIENCES = [
     items: [
       "Author question banks and build tests in minutes",
       "Run proctored assessments with live violation logs",
+      "Review flagged events and publish results when you are ready",
       "Mark attendance and manage lecture plans per section",
       "Track every student's performance in one dashboard",
     ],
@@ -151,6 +157,7 @@ const AUDIENCES = [
       "Institute → Batch → Department → Section, auto-derived",
       "Full audit log of every account and password action",
       "Exportable attendance, results, and performance reports",
+      "Staff, placement-cell and institute-admin roles, each scoped to your institute",
     ],
   },
   {
@@ -202,10 +209,10 @@ function AudienceSection() {
 // rather than invented adoption numbers — see the header comment for why.
 const STATS = [
   { value: 5, suffix: "", label: "Compiler languages, plus SQL" },
-  { value: 5, suffix: "", label: "Question types (coding, MCQ, SQL & more)" },
-  { value: 7, suffix: "", label: "AI-evaluated interview tracks" },
-  { value: 6, suffix: "", label: "Live proctoring signals monitored" },
-  { value: 100, suffix: "%", label: "Auto-graded, zero manual re-checking" },
+  { value: 6, suffix: "", label: "Question types (coding, MCQ, SQL, numerical & more)" },
+  { value: 7, suffix: "", label: "Interview practice tracks with AI-assisted feedback" },
+  { value: 20, suffix: "+", label: "Proctoring signal types recorded for review" },
+  { value: 4, suffix: "", label: "Sections in one exam: aptitude, technical, coding, interview" },
 ];
 
 function StatCard({ stat }) {
@@ -249,10 +256,12 @@ function FeatureSections() {
         id="assessments"
         eyebrow="Proctored Assessments"
         title="Exams that hold up to scrutiny."
-        description="Formal tests run inside a locked-down, fullscreen session with tab-switch and copy-paste detection, optional face-presence checks, and a full violation log faculty can review after the fact."
+        description="Formal tests run inside a locked-down, fullscreen session with tab-switch and copy-paste detection, optional face-presence checks, and a full violation log faculty can review after the fact. A single exam can also be section-wise — aptitude, technical, coding and an AI mock interview in one attempt, with one consolidated report per student."
         bullets={[
           "Randomized question order and shuffled MCQ options per student",
-          "Auto-graded coding, MCQ, true/false, multi-select, and SQL questions",
+          "Auto-graded coding, MCQ, true/false, multi-select, numerical, and SQL questions",
+          "Sections taken in order, each saved and scored separately, on a server-side clock",
+          "In section-wise exams, flagged events are reviewed by faculty before they count against a student",
           "Live violation feed during the attempt, not just a final report",
           "Detailed per-question breakdown once results are published",
         ]}
@@ -267,7 +276,7 @@ function FeatureSections() {
         description="Structured courses break down into modules and lessons, each ending in a coding test a student has to pass before the next module unlocks — so 'completed' actually means something."
         bullets={[
           "Module-end coding assessments with the same judge as formal exams",
-          "Course-completion certificates with QR-verifiable authenticity",
+          "Course-completion certificates, where a course offers them, with QR-verifiable authenticity",
           "Practice-streak and XP-based gamification to keep momentum",
           "Progress visible to both the student and their faculty",
         ]}
@@ -280,6 +289,7 @@ function FeatureSections() {
         title="Interview practice that actually evaluates you."
         description="Seven interview tracks — HR, Technical, Coding, Aptitude, System Design, Behavioral, and Managerial — each scored by heuristic and AI-assisted evaluation, plus a resume builder with real ATS scoring, not a cosmetic checklist."
         bullets={[
+          "Answer by typing or speaking — the browser's own speech-to-text, no extra software",
           "Company-round simulations tagged to real recruiter formats",
           "Resume upload, parsing, and AI-assisted rewrite suggestions",
           "Weak-topic detection that recommends what to practice next",
@@ -357,8 +367,13 @@ function AssessmentVisual() {
   return (
     <div className="ca-feature-visual">
       <div className="ca-panel-row">
-        <span style={{ fontWeight: 700, fontSize: 14 }}>Data Structures — Mid Term</span>
+        <span style={{ fontWeight: 700, fontSize: 14 }}>Placement Drive — Section-wise Exam</span>
         <span className="badge" style={{ background: "rgba(79,157,110,0.15)", color: "var(--success-text)" }}>Live</span>
+      </div>
+      <div className="ca-track-pill-row" style={{ marginBottom: 12 }}>
+        {["A · Aptitude ✓", "B · Technical ✓", "C · Coding — open", "D · AI Interview — next"].map((s) => (
+          <span key={s} className="ca-track-pill">{s}</span>
+        ))}
       </div>
       <div style={{ fontSize: 12.5, color: "var(--ink-dim)" }}>Proctoring signals — this attempt</div>
       {[
@@ -374,7 +389,7 @@ function AssessmentVisual() {
       ))}
       <div style={{ marginTop: 14 }}>
         <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5 }}>
-          <span>Question 6 of 20</span><span className="mono">18:42 remaining</span>
+          <span>Section C — problem 2 of 3</span><span className="mono">18:42 remaining</span>
         </div>
         <div className="ca-mini-bar-track"><div className="ca-mini-bar-fill" style={{ width: "30%" }} /></div>
       </div>
