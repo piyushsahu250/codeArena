@@ -282,7 +282,7 @@ const COURSE_STATUS_COLORS = {
 const DIFFICULTY_OPTIONS = ["EASY", "MEDIUM", "HARD"];
 const EMPTY_COURSE_FORM = {
   slug: "", name: "", description: "", status: "DRAFT", category: "", thumbnailUrl: "", bannerUrl: "",
-  instructorName: "", skillsCovered: "", estimatedDurationMin: "", difficulty: "", prerequisiteCourseIds: [],
+  instructorName: "", skillsCovered: "", estimatedDurationMin: "", difficulty: "", prerequisiteCourseIds: [], certificateEnabled: true,
 };
 
 // This whole Admin content-management tree (courses/modules/chapters/lessons/coding assessments)
@@ -347,6 +347,7 @@ function CoursePanel({ courses, onSelect, onRefresh }) {
       instructorName: c.instructorName || "", skillsCovered: Array.isArray(c.skillsCovered) ? c.skillsCovered.join(", ") : "",
       estimatedDurationMin: c.estimatedDurationMin ?? "", difficulty: c.difficulty || "",
       prerequisiteCourseIds: (c.prerequisites || []).map((p) => p.prerequisiteCourseId),
+      certificateEnabled: c.certificateEnabled !== false,
     });
   }
   function cancelEdit() {
@@ -459,6 +460,11 @@ function CoursePanel({ courses, onSelect, onRefresh }) {
               </select>
             </div>
           </div>
+
+          <label style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: 13, marginTop: 12 }} htmlFor="course-certificate-enabled">
+            <input id="course-certificate-enabled" type="checkbox" style={{ marginTop: 3 }} checked={form.certificateEnabled !== false} onChange={(e) => setForm({ ...form, certificateEnabled: e.target.checked })} />
+            <span>Give a completion certificate<br /><span style={{ fontSize: 11, color: "var(--ink-dim)" }}>Turn off to stop issuing new certificates for this course. Certificates students already hold stay valid.</span></span>
+          </label>
 
           <label style={labelStyle}>Prerequisites (must be completed first)</label>
           <div style={{ display: "grid", gap: 4, maxHeight: 120, overflowY: "auto", border: "1px solid var(--line)", borderRadius: 8, padding: 8, marginTop: 6 }}>

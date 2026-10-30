@@ -10,6 +10,7 @@ const { guardStarterCodeIsNotSolution } = require("../utils/starterCodeGuard");
 const { resolveCodingFields } = require("../utils/functionHarness");
 const { generateCertificatePdf } = require("../utils/certificatePdf");
 const { issueCertificate } = require("../utils/certificates");
+const { certificateOffered, parseCertificateEnabled } = require("../utils/courseCertificatePolicy");
 const { getModuleLockMap } = require("../utils/learningLock");
 const { LIVE, statusOf, liveLessonWhere, ACTIONS } = require("../utils/publishState");
 const { processGamification } = require("../utils/gamification");
@@ -258,8 +259,16 @@ router.get("/courses/:slug", authenticate, attachRequesterInstitute, async (req,
     }
   }
 
+  // The "View Certificate" button is shown only when this student can actually get one: the course issues certificates, or they already hold one from before it was switched off.
+  let certificateAvailable = course.certificateEnabled !== false;
+  if (req.user.role === "STUDENT" && !certificateAvailable) {
+    const held = await prisma.certificate.findUnique({ where: { studentId_courseId_type: { studentId: req.user.id, courseId: course.id, type: "LEARNING_MODULE" } }, select: { id: true } });
+    certificateAvailable = certificateOffered(course, held);
+  }
+
   res.json({
-    course: { id: course.id, slug: course.slug, name: course.name, description: course.description, isActive: course.isActive, kind: course.kind },
+    course: { id: course.id, slug: course.slug, name: course.name, description: course.description, isActive: course.isActive, kind: course.kind, certificateEnabled: course.certificateEnabled !== false },
+    certificateAvailable,
     modules,
     overall: { totalLessons, completedLessons, percent: totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0 },
     resumeLessonId,
@@ -1009,10 +1018,13 @@ async function checkCourseCompletion(studentId, course) {
 
 // Auto-issues (idempotently, via the studentId+courseId unique constraint) the LEARNING_MODULE
 // certificate for a fully-completed course, and returns the existing one on any later call.
+// Returns null when the course has its certificate switched off (Course.certificateEnabled = false) and the student does not already hold one: a certificate that was
+// issued earlier stays valid and downloadable, switching the course off only stops new ones.
 async function getOrIssueLearningCertificate(studentId, course) {
   let cert = await prisma.certificate.findUnique({
     where: { studentId_courseId_type: { studentId, courseId: course.id, type: "LEARNING_MODULE" } },
   });
+  if (!certificateOffered(course, cert)) return null;
   if (!cert) {
     const student = await prisma.user.findUnique({ where: { id: studentId }, include: { institute: true } });
     cert = await issueCertificate({
@@ -1039,6 +1051,7 @@ router.get("/courses/:slug/certificate", authenticate, requireRole("STUDENT"), a
     }
 
     const cert = await getOrIssueLearningCertificate(req.user.id, course);
+    if (!cert) return res.status(403).json({ error: "This course does not issue a certificate.", code: "CERTIFICATE_NOT_OFFERED" });
     const student = await prisma.user.findUnique({ where: { id: req.user.id }, select: { name: true } });
     res.json({ ...cert, studentName: student.name, courseName: course.name });
   } catch (err) {
@@ -1082,6 +1095,7 @@ router.get("/courses/:slug/certificate/download", authenticate, requireRole("STU
     if (!complete) return res.status(400).json({ error: "Course not yet completed" });
 
     const cert = await getOrIssueLearningCertificate(req.user.id, course);
+    if (!cert) return res.status(403).json({ error: "This course does not issue a certificate.", code: "CERTIFICATE_NOT_OFFERED" });
     const student = await prisma.user.findUnique({ where: { id: req.user.id }, include: { institute: true } });
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `attachment; filename="${course.slug}-certificate.pdf"`);
@@ -1129,7 +1143,9 @@ function slugify(input) {
 // Fields shared by create/edit — course metadata beyond the original slug/name/description/order.
 function extractCourseMetadata(body) {
   const { category, thumbnailUrl, bannerUrl, instructorName, skillsCovered, estimatedDurationMin, difficulty } = body;
+  const certificateEnabled = parseCertificateEnabled(body.certificateEnabled);
   return {
+    ...(certificateEnabled !== undefined ? { certificateEnabled } : {}),
     ...(category !== undefined ? { category: category || null } : {}),
     ...(thumbnailUrl !== undefined ? { thumbnailUrl: thumbnailUrl || null } : {}),
     ...(bannerUrl !== undefined ? { bannerUrl: bannerUrl || null } : {}),
