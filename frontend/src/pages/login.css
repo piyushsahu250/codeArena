@@ -30,3 +30,43 @@
 
 /* The email shown on the second step is a fact the student confirmed by signing in, not something to edit. */
 .ca-login-readonly { background: var(--card-bg); color: var(--ink-dim); }
+
+/* ---- Sign-in page layout. Colours are the theme tokens only (chalk and chalk-dim on slate are the pairs the contrast regression already covers). ---- */
+.ca-login-brand {
+  position: relative;
+  background:
+    radial-gradient(900px 420px at 15% 105%, rgba(232, 163, 61, 0.14), transparent 60%),
+    radial-gradient(700px 360px at 100% 0%, rgba(244, 239, 227, 0.06), transparent 55%),
+    var(--slate-900);
+  color: var(--chalk);
+  display: flex;
+  align-items: center;
+  padding: 48px clamp(32px, 6vw, 88px);
+}
+.ca-login-brand-inner { width: 100%; max-width: 480px; }
+.ca-login-logo { background: #fdfbf5; border-radius: 16px; padding: 20px 28px; display: inline-flex; align-items: center; max-width: 240px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25); }
+.ca-login-logo img { width: 100%; height: auto; display: block; }
+.ca-login-tagline { color: var(--chalk); font-family: var(--font-display); font-size: clamp(22px, 2.4vw, 30px); line-height: 1.25; font-weight: 700; letter-spacing: -0.01em; margin: 28px 0 24px; max-width: 440px; }
+
+.ca-login-points { list-style: none; margin: 0; padding: 0; display: grid; gap: 18px; }
+.ca-login-points li { display: flex; gap: 14px; align-items: flex-start; }
+.ca-login-point-icon { flex: 0 0 auto; width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: rgba(232, 163, 61, 0.16); color: var(--amber); }
+.ca-login-points strong { display: block; color: var(--chalk); font-size: 15px; font-weight: 600; }
+.ca-login-point-text { display: block; color: var(--chalk-dim); font-size: 14px; line-height: 1.5; margin-top: 2px; }
+
+.ca-login-formpane { display: flex; align-items: center; justify-content: center; padding: 32px 24px; }
+.ca-login-card { width: 100%; max-width: 400px; background: var(--card-bg, #fff); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow-md); padding: 36px 32px 28px; }
+.ca-login-sub { color: var(--ink-dim); margin: -2px 0 22px; font-size: 14px; line-height: 1.5; }
+.ca-pw-show-signin { margin-top: 10px; }
+.ca-login-submit { width: 100%; justify-content: center; margin-top: 20px; padding: 12px 0; font-size: 15px; }
+.ca-login-help { margin: 22px 0 0; font-size: 13px; line-height: 1.5; color: var(--ink-dim); }
+.ca-login-powered { margin: 24px 0 0; padding-top: 16px; border-top: 1px solid var(--line); font-size: 12px; color: var(--ink-dim); text-align: center; }
+
+@media (max-width: 768px) {
+  .ca-login-brand { padding: 20px 24px; }
+  .ca-login-logo { padding: 8px 12px; max-width: 140px; border-radius: 12px; }
+  .ca-login-tagline { margin: 12px 0 0; font-size: 16px; }
+  .ca-login-points { display: none; }
+  .ca-login-formpane { padding: 24px 16px 32px; }
+  .ca-login-card { padding: 28px 22px 22px; }
+}
