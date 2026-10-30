@@ -80,7 +80,7 @@ check("no field is marked autoComplete off or given a made-up value", !/autoComp
 check("the page never writes anything itself to localStorage, sessionStorage, cookies or the console (the session is stored by AuthContext only)", !/localStorage|sessionStorage|document\.cookie|console\./.test(source));
 check("the new password is never put in the address (no navigate or link built from it)", !/navigate\([^)]*[nN]ewPassword|to=\{[^}]*[nN]ewPassword/.test(source));
 check('the submit button says "Change Password & Login" on the second step', source.includes("Change Password & Login"));
-check("show / hide is a checkbox, so the submit button stays the first <button> of the form (the existing browser tests click `form button`)", count('type="checkbox"') === 1 && source.indexOf("<button") === source.indexOf('<button className="btn btn-primary"'));
+check("show / hide is a checkbox (one on each step: 'Show password' on sign-in, 'Show passwords' on the second step), so the submit button stays the first <button> of the form (the existing browser tests click `form button`)", count('type="checkbox"') === 2 && /Show password\s*<\/label>/.test(source) && /Show passwords\s*<\/label>/.test(source) && source.indexOf("<button") === source.search(/<button className="btn btn-primary[^"]*"/));
 
 if (failures) { console.error(`${failures} check(s) failed`); process.exit(1); }
 console.log("first-login regression: all passed");
