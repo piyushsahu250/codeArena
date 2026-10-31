@@ -8,6 +8,12 @@ const Src = require("../../utils/examSources");
 const Scoring = require("../../utils/examScoring");
 const { SECTION_KEYS } = require("../../utils/examBlueprint");
 const { instituteWhere } = require("../../utils/questionVisibility");
+
+// An examination that belongs to no institute is open to students of every institute, and a student sees only their own institute's questions plus the shared ones (instituteId null).
+// So when such an exam is checked (at publish, or by an administrator who sees everything), only the shared questions can be counted on: GLOBAL_ONLY means exactly that.
+// Before this, the check counted every institute's questions, passed, and then a student of one institute was told "not ready" because their own pool was short.
+const GLOBAL_ONLY = "__shared_only__";
+const visible = (instituteId) => (instituteId === GLOBAL_ONLY ? { instituteId: null } : instituteWhere(instituteId));
 const { seededShuffle } = require("../../utils/optionShuffle");
 const { evaluateHrAnswer, evaluateTechnicalAnswer } = require("../../utils/interviewEvaluation");
 
@@ -24,7 +30,7 @@ async function aptitudePools(section, instituteId) {
   const pools = {}; const invalid = [];
   for (const { category } of section.source.distribution) {
     const rows = await prisma.interviewQuestion.findMany({
-      where: { category: "APTITUDE", aptitudeCategory: category, isActive: true, generatedForStudentId: null, ...(diff?.length ? { difficulty: { in: diff } } : {}), ...instituteWhere(instituteId) },
+      where: { category: "APTITUDE", aptitudeCategory: category, isActive: true, generatedForStudentId: null, ...(diff?.length ? { difficulty: { in: diff } } : {}), ...visible(instituteId) },
       select: { id: true, prompt: true, options: true, correctAnswer: true }, take: POOL_LIMIT,
     });
     pools[category] = [];
@@ -38,7 +44,7 @@ async function technicalPools(section, instituteId) {
   const pools = {}; const invalid = [];
   for (const { subjectId } of section.source.subjects) {
     const rows = await prisma.question.findMany({
-      where: { subjectId, questionType: { in: Q.OBJECTIVE_TYPES }, questionStatus: "PUBLISHED", ...(diff?.length ? { difficulty: { in: diff } } : {}), ...instituteWhere(instituteId) },
+      where: { subjectId, questionType: { in: Q.OBJECTIVE_TYPES }, questionStatus: "PUBLISHED", ...(diff?.length ? { difficulty: { in: diff } } : {}), ...visible(instituteId) },
       select: { id: true, description: true, options: true, correctAnswer: true, questionType: true }, take: POOL_LIMIT,
     });
     pools[subjectId] = [];
@@ -50,7 +56,7 @@ async function technicalPools(section, instituteId) {
 async function codingRows(section, instituteId) {
   const ids = section.source.questionIds;
   const rows = await prisma.question.findMany({
-    where: { id: { in: ids }, questionType: { in: ["CODING", "SQL"] }, questionStatus: "PUBLISHED", ...instituteWhere(instituteId) },
+    where: { id: { in: ids }, questionType: { in: ["CODING", "SQL"] }, questionStatus: "PUBLISHED", ...visible(instituteId) },
     select: { id: true, testCases: { select: { id: true } } },
   });
   const byId = new Map(rows.map((r) => [r.id, r]));
@@ -68,7 +74,7 @@ async function interviewPool(section, instituteId) {
   const cats = Src.interviewBankCategories(section);
   const wanted = section.interview?.difficulty;
   const rows = await prisma.interviewQuestion.findMany({
-    where: { category: { in: cats }, isActive: true, generatedForStudentId: null, ...instituteWhere(instituteId) },
+    where: { category: { in: cats }, isActive: true, generatedForStudentId: null, ...visible(instituteId) },
     select: { id: true, prompt: true, difficulty: true }, take: POOL_LIMIT,
   });
   const valid = rows.filter((r) => typeof r.prompt === "string" && r.prompt.trim());
@@ -243,6 +249,7 @@ async function scoreInterview(attempt, blueprint, answers) {
 }
 
 module.exports = {
+  GLOBAL_ONLY,
   POOL_LIMIT, INTERVIEW_RUBRIC_VERSION, sha, round2, sectionOf, itemsOf, availability, buildManifest, studentItems, loadObjectiveRows, judgeStatusOf, ruleEvaluate,
   scoreObjective, scoreCoding, scoreInterview, answerMap, SECTION_KEYS,
 };
