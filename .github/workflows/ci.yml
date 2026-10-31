@@ -263,6 +263,20 @@ jobs:
             echo "::error title=examination integration tests failed::$MSG"
           fi
           exit $code
+      - name: Test Management integration tests (folders, star/hide, archive, series, assignment, student view, sequential lock, reports)
+        working-directory: backend
+        env:
+          SECURE_BROWSER_SECRET: ci-only-secure-browser-secret-0123456789
+          REQUIRE_INTEGRATION: "1"
+        run: |
+          code=0
+          node --test --test-timeout=240000 test/testManagement.integration.test.js > /tmp/testManagement.out 2>&1 || code=$?
+          cat /tmp/testManagement.out
+          if [ "$code" -ne 0 ]; then
+            MSG=$(grep -E "^not ok|failureType|error:|expected|actual|AssertionError|last call|\[test-management\]" /tmp/testManagement.out | cut -c1-400 | head -60 | sed "s/%/%25/g" | awk "BEGIN{ORS=\"%0A\"} {print}")
+            echo "::error title=Test Management integration tests failed::$MSG"
+          fi
+          exit $code
       - name: Build the SPA and serve it
         working-directory: frontend
         run: |

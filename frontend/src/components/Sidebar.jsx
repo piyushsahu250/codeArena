@@ -24,6 +24,7 @@ const MENU = {
       { label: "My Attendance", to: "/attendance", icon: CalendarCheck, featureKey: "attendance" },
     ] },
     { group: "Assessments", items: [
+      { label: "Tests", to: "/tests", icon: ClipboardList },
       { label: "Company Tests", to: "/company-tests", icon: Briefcase },
       { label: "Readiness Assessment", to: "/readiness", icon: Target, featureKey: "readiness_test" },
       { label: "My Results", to: "/results", icon: ClipboardList },
@@ -65,7 +66,7 @@ const MENU = {
     { group: "Main", items: [
       { label: "Dashboard", to: "/staff", icon: LayoutDashboard },
       { label: "My Activity", to: "/my-activity", icon: BarChart3 },
-      { label: "Tests & Analytics", to: "/staff/tests", icon: BarChart3 },
+      { label: "Test Management", to: "/staff/test-management", icon: BarChart3 },
       { label: "Learning Management", to: "/staff/learning", icon: BookOpen },
       { label: "Question Bank", to: "/staff/questions", icon: FileQuestion, featureKey: "question_bank" },
       { label: "Readiness Tests", to: "/staff/readiness-subjects", icon: Target, featureKey: "readiness_test" },
@@ -78,6 +79,7 @@ const MENU = {
       { label: "Talent Pools", to: "/admin/talent-pools", icon: Star, featureKey: "talent_pool" },
       { label: "Results", to: "/admin/results", icon: ClipboardList },
       { label: "Section Exams", to: "/exam-admin", icon: ClipboardList },
+      { label: "Test Management", to: "/staff/test-management", icon: BarChart3 },
       { label: "Password Reset History", to: "/staff/password-reset-history", icon: History },
       { label: "Audit Log", to: "/staff/audit-log", icon: History },
       { label: "Certificates", to: "/staff/certificates", icon: Award, featureKey: "certificates" },
@@ -125,6 +127,7 @@ const MENU = {
       { label: "Interview Reports", to: "/staff/interview-reports", icon: ClipboardList },
       { label: "Results", to: "/admin/results", icon: ClipboardList },
       { label: "Section Exams", to: "/exam-admin", icon: ClipboardList },
+      { label: "Test Management", to: "/staff/test-management", icon: BarChart3 },
     ] },
     { group: "System", items: [
       { label: "Email Logs", to: "/admin/email-logs", icon: Mail },
@@ -180,6 +183,7 @@ const MENU = {
       { label: "Interview Reports", to: "/staff/interview-reports", icon: ClipboardList, featureKey: "ai_mock_interview" },
       { label: "Results", to: "/admin/results", icon: ClipboardList },
       { label: "Section Exams", to: "/exam-admin", icon: ClipboardList },
+      { label: "Test Management", to: "/staff/test-management", icon: BarChart3 },
     ] },
     { group: "System", items: [
       { label: "Email Logs", to: "/admin/email-logs", icon: Mail },

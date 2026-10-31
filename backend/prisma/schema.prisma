@@ -80,6 +80,8 @@ enum QuestionStatus {
 }
 
 model Institute {
+  testFolders TestFolder[]
+  testSeries  TestSeries[]
   examDefinitions ExamDefinition[] @relation("ExamInstitute")
   id        String   @id @default(uuid())
   name      String   @unique
@@ -195,6 +197,11 @@ model Class {
 }
 
 model User {
+  // Test Management: folders this person created, their own star/hide/folder state per test, series they authored and series assignments they made.
+  testFolders          TestFolder[]           @relation("TestFolderOwner")
+  testUserStates       TestUserState[]        @relation("TestUserStates")
+  testSeriesCreated    TestSeries[]           @relation("TestSeriesCreator")
+  testSeriesAssigned   TestSeriesAssignment[] @relation("TestSeriesAssigner")
   examAttempts ExamAttempt[] @relation("ExamAttemptStudent")
   examsCreated ExamDefinition[] @relation("ExamCreator")
   id           String   @id @default(uuid())
@@ -361,6 +368,11 @@ model User {
 }
 
 model Test {
+  // Test Management: a test can be switched off for new attempts without being unpublished or deleted, and parked in the archive. Both default to "normal", so every existing test is unchanged.
+  isActive     Boolean  @default(true)
+  archivedAt   DateTime?
+  userStates   TestUserState[]
+  seriesItems  TestSeriesItem[]
   id           String   @id @default(uuid())
   title        String
   code         String?
@@ -568,6 +580,7 @@ model TestAcademicGroup {
 // ===================================================================
 
 model TalentPool {
+  testSeriesAssignments TestSeriesAssignment[]
   id          String   @id @default(uuid())
   name        String
   description String?
@@ -3348,6 +3361,7 @@ model Division {
 // entity" principle. batch/section are plain strings (no separate Batch/Section model), matching
 // the existing Class.batchYear / Division.name conventions.
 model AcademicGroup {
+  testSeriesAssignments TestSeriesAssignment[]
   examAssignments ExamAcademicGroup[]
   id           String     @id @default(uuid())
   institute    Institute  @relation(fields: [instituteId], references: [id], onDelete: Cascade)
@@ -4482,4 +4496,117 @@ model ExamEvent {
 
   @@index([attemptId, createdAt])
   @@index([reviewStatus])
+}
+
+// ===================================================================
+// Test Management: folders, per-person star/hide state, Test Series and their assignments. All additive; no existing table or column changes meaning.
+// ===================================================================
+
+// A staff member's own folder for organising tests. Deleting a folder never deletes a test: the placements (TestUserState.folderId) fall back to "no folder".
+model TestFolder {
+  id           String    @id @default(uuid())
+  name         String
+  owner        User      @relation("TestFolderOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  ownerId      String
+  institute    Institute? @relation(fields: [instituteId], references: [id], onDelete: Cascade)
+  instituteId  String?
+  // Optional labels for filtering the folder list; they organise, they never grant or limit access to anything.
+  academicYear String?
+  department   String?
+  subject      String?
+  isArchive    Boolean   @default(false) // an "archive" folder: tests moved here are also archived
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @default(now()) @updatedAt
+  states       TestUserState[]
+
+  @@unique([ownerId, name])
+  @@index([instituteId])
+}
+
+// What one person has done to one test in their own working view: starred, hidden, filed in one of their folders. Never read for access decisions and never visible to students.
+model TestUserState {
+  id        String   @id @default(uuid())
+  user      User     @relation("TestUserStates", fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  test      Test     @relation(fields: [testId], references: [id], onDelete: Cascade)
+  testId    String
+  starred   Boolean  @default(false)
+  hidden    Boolean  @default(false)
+  folder    TestFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  folderId  String?
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@unique([userId, testId])
+  @@index([userId, starred])
+  @@index([userId, hidden])
+  @@index([folderId])
+  @@index([testId])
+}
+
+// An ordered set of existing tests. It owns no questions, schedules or results: every test keeps its own window, eligibility and attempts, and results stay on the attempts.
+model TestSeries {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  coverUrl    String?  // external image URL only, like the other cover images on this platform
+  subject     String?
+  difficulty  String?  // EASY | MEDIUM | HARD
+  status      String   @default("DRAFT") // DRAFT | PUBLISHED (a person's decision)
+  isActive    Boolean  @default(true)    // switched off = not available to students, nothing is lost
+  archivedAt  DateTime?
+  accessMode  String   @default("FLEXIBLE") // FLEXIBLE | SEQUENTIAL
+  // Sequential mode: the next test opens once the previous one is ATTEMPTED (submitted) or PASSED (submitted and at or above that test's own passing marks).
+  unlockRule  String   @default("ATTEMPTED")
+  createdBy   User     @relation("TestSeriesCreator", fields: [createdById], references: [id])
+  createdById String
+  institute   Institute? @relation(fields: [instituteId], references: [id], onDelete: Cascade)
+  instituteId String?
+  version     Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+  items       TestSeriesItem[]
+  assignments TestSeriesAssignment[]
+
+  @@index([createdById])
+  @@index([instituteId, status])
+}
+
+model TestSeriesItem {
+  id       String     @id @default(uuid())
+  series   TestSeries @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+  seriesId String
+  test     Test       @relation(fields: [testId], references: [id], onDelete: Cascade)
+  testId   String
+  position Int
+
+  @@unique([seriesId, testId])
+  @@index([seriesId, position])
+  @@index([testId])
+}
+
+// A series given to one academic group or one Talent Pool (exactly one of the two), with its own window. A series never grants access to a test by itself: a student still has to be
+// eligible for each test (that is checked when the series is assigned and again when a test is opened).
+model TestSeriesAssignment {
+  id                 String   @id @default(uuid())
+  series             TestSeries @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+  seriesId           String
+  academicGroup      AcademicGroup? @relation(fields: [academicGroupId], references: [id], onDelete: Cascade)
+  academicGroupId    String?
+  pool               TalentPool? @relation(fields: [poolId], references: [id], onDelete: Cascade)
+  poolId             String?
+  startAt            DateTime
+  endAt              DateTime?          // null together with noExpiry = true: no end date exists, none is invented
+  noExpiry           Boolean  @default(false)
+  completionDeadline DateTime?
+  instructions       String?
+  isActive           Boolean  @default(true)
+  createdBy          User     @relation("TestSeriesAssigner", fields: [createdById], references: [id])
+  createdById        String
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @default(now()) @updatedAt
+
+  @@unique([seriesId, academicGroupId])
+  @@unique([seriesId, poolId])
+  @@index([academicGroupId])
+  @@index([poolId])
 }

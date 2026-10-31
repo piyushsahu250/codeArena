@@ -86,7 +86,7 @@ async function getNotifications(student, primaryCourse) {
   const [assignedTests, myAttempts] = await Promise.all([
     prisma.test.findMany({
       where: {
-        isPublished: true,
+        isPublished: true, isActive: true, archivedAt: null,
         ...testEligibilityWhere(student.academicGroupId, student.classId, [...memberPoolIds], student.instituteId),
       },
       select: { id: true, title: true, startTime: true, createdAt: true },

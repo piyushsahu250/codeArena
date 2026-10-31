@@ -107,7 +107,7 @@ async function loadTasks(student) {
   const [tests, attempts] = await Promise.all([
     prisma.test.findMany({
       where: {
-        isPublished: true,
+        isPublished: true, isActive: true, archivedAt: null,
         endTime: { gt: now }, // expired, never-attempted items are not "pending tasks"
         ...testEligibilityWhere(student.academicGroupId, student.classId, [...poolIds], student.instituteId),
       },

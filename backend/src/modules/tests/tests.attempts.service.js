@@ -2,6 +2,7 @@
 // attempt's violation log. No req/res: callers pass an `actor` { user, requesterInstituteId, req }.
 const crypto = require("crypto");
 const prisma = require("../../prisma");
+const { assertNotLockedBySeries } = require("../testManagement/testSeries.student");
 const { ServiceError } = require("../../utils/serviceError");
 const { isTestVisibleToStudent } = require("../../utils/testEligibility");
 const { getStudentPoolIds } = require("../../utils/talentPoolEligibility");
@@ -40,6 +41,10 @@ async function startAttempt(actor, testId) {
 
   const existing = await repo.findAttempt(testId, userId);
   if (existing && existing.status !== "IN_PROGRESS") throw new ServiceError(403, "Thank you. You have already completed this assessment.");
+  // Test Management: a test that was switched off or archived takes no NEW attempts. An attempt already running is never cut off by it.
+  if (!existing && (test.isActive === false || test.archivedAt)) throw new ServiceError(403, "This test is not available right now.");
+  // Test Series: a test in a sequential series is locked until the earlier tests are done (checked here, on the server, whichever page the student came from).
+  if (!existing) await assertNotLockedBySeries(userId, testId);
 
   const now = new Date();
   const window = d.startWindow(now, test, existing);

@@ -65,6 +65,12 @@ const InstituteCommand = lazy(() => import("./pages/command/InstituteCommand"));
 const StaffHome = lazy(() => import("./pages/command/StaffHome"));
 const ClerkHome = lazy(() => import("./pages/command/ClerkHome"));
 const StaffDashboard = lazy(() => import("./pages/StaffDashboard"));
+const TestManagement = lazy(() => import("./pages/testmgmt/TestManagement"));
+const SeriesEditor = lazy(() => import("./pages/testmgmt/SeriesPages").then((m) => ({ default: m.SeriesEditor })));
+const SeriesAssign = lazy(() => import("./pages/testmgmt/SeriesPages").then((m) => ({ default: m.SeriesAssign })));
+const SeriesReport = lazy(() => import("./pages/testmgmt/SeriesPages").then((m) => ({ default: m.SeriesReport })));
+const StudentTests = lazy(() => import("./pages/testmgmt/StudentTests").then((m) => ({ default: m.StudentTests })));
+const StudentSeries = lazy(() => import("./pages/testmgmt/StudentTests").then((m) => ({ default: m.StudentSeries })));
 const StudentPerformance = lazy(() => import("./pages/StudentPerformance"));
 const InterviewProgress = lazy(() => import("./pages/InterviewProgress"));
 const InterviewReports = lazy(() => import("./pages/InterviewReports"));
@@ -474,6 +480,13 @@ export default function App() {
           {/* Staff (and Admin, who can also manage tests/questions) */}
           <Route path="/staff" element={<Protected roles={["ADMIN", "STAFF"]}><Suspense fallback={<LoadingScreen />}><StaffHome /></Suspense></Protected>} />
           <Route path="/staff/tests" element={<Protected roles={["ADMIN", "STAFF"]}><Suspense fallback={<LoadingScreen />}><StaffDashboard /></Suspense></Protected>} />
+          <Route path="/staff/tests/classic" element={<Protected roles={["ADMIN", "STAFF"]}><Suspense fallback={<LoadingScreen />}><StaffDashboard /></Suspense></Protected>} />
+          <Route path="/staff/test-management" element={<Protected roles={["ADMIN", "STAFF"]}><Suspense fallback={<LoadingScreen />}><TestManagement /></Suspense></Protected>} />
+          <Route path="/staff/test-management/series/:id/assign" element={<Protected roles={["ADMIN", "STAFF"]}><Suspense fallback={<LoadingScreen />}><SeriesAssign /></Suspense></Protected>} />
+          <Route path="/staff/test-management/series/:id/report" element={<Protected roles={["ADMIN", "STAFF"]}><Suspense fallback={<LoadingScreen />}><SeriesReport /></Suspense></Protected>} />
+          <Route path="/staff/test-management/series/:id" element={<Protected roles={["ADMIN", "STAFF"]}><Suspense fallback={<LoadingScreen />}><SeriesEditor /></Suspense></Protected>} />
+          <Route path="/tests" element={<Protected roles={["STUDENT"]}><Suspense fallback={<LoadingScreen />}><StudentTests /></Suspense></Protected>} />
+          <Route path="/tests/series/:id" element={<Protected roles={["STUDENT"]}><Suspense fallback={<LoadingScreen />}><StudentSeries /></Suspense></Protected>} />
           <Route path="/staff/learning" element={<Protected roles={["ADMIN", "STAFF"]}><LearningManagement /></Protected>} />
           <Route path="/staff/exam-security/:testId" element={<Protected roles={["ADMIN", "STAFF"]}><ExamSecurityMonitor /></Protected>} />
           <Route path="/staff/exam-security/test/:testId" element={<Protected roles={["ADMIN", "STAFF"]}><Suspense fallback={<LoadingScreen />}><TestSecurityMonitor /></Suspense></Protected>} />

@@ -26,7 +26,7 @@ async function listTests(actor) {
     // A valid session can outlive the user row; treat it like any other dead session.
     if (!student) throw accountGone();
     const memberPoolIds = await getStudentPoolIds(prisma, actor.user.id);
-    where = { isPublished: true, ...testEligibilityWhere(student.academicGroupId, student.classId, [...memberPoolIds], student.instituteId) };
+    where = { isPublished: true, isActive: true, archivedAt: null, ...testEligibilityWhere(student.academicGroupId, student.classId, [...memberPoolIds], student.instituteId) };
   }
   const tests = await repo.listTests(where, staff, d.TESTS_LIST_CAP);
   if (staff) return tests;
