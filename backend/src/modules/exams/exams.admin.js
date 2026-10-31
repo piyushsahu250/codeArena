@@ -85,7 +85,7 @@ async function publishExam(req, exam) {
   const full = Src.validateFullBlueprint(exam.blueprint);
   const gate = B.canPublish(full.normalized);
   if (!gate.ok || !full.valid) return fail(422, "INVALID_CONFIGURATION", "Fix the configuration errors before publishing.", { errors: full.errors, warnings: full.warnings });
-  const avail = await core.availability(full.normalized, exam.instituteId);
+  const avail = await core.availability(full.normalized, exam.instituteId || core.GLOBAL_ONLY);
   if (avail.shortages.length) return fail(422, "NOT_ENOUGH_QUESTIONS", "The question banks do not hold enough valid questions for this examination.", { shortages: avail.shortages, invalidCount: avail.invalidCount });
   const version = exam.version + 1;
   await prisma.$transaction(async (tx) => {

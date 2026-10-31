@@ -132,7 +132,7 @@ router.post("/admin/exams/:id/validate", ...adminAuth, loadManagedExam, wrap(asy
   const core = require("./exams.core");
   const v = validateFullBlueprint(req.exam.blueprint);
   const out = { valid: v.valid, errors: v.errors, warnings: v.warnings };
-  if (v.valid) { const a = await core.availability(v.normalized, req.exam.instituteId); out.shortages = a.shortages; out.invalidQuestionsExcluded = a.invalidCount; out.groups = Object.fromEntries(Object.entries(a.report).map(([k, r]) => [k, r.groups])); }
+  if (v.valid) { const a = await core.availability(v.normalized, req.exam.instituteId || core.GLOBAL_ONLY); out.shortages = a.shortages; out.invalidQuestionsExcluded = a.invalidCount; out.groups = Object.fromEntries(Object.entries(a.report).map(([k, r]) => [k, r.groups])); }
   res.json(out);
 }));
 router.post("/admin/exams/:id/publish", ...adminAuth, loadManagedExam, wrap(async (req, res) => send(res, await admin.publishExam(req, req.exam))));
