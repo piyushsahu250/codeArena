@@ -5,6 +5,9 @@
 // Exits non-zero on any problem. The seed script refuses to run if this fails.
 "use strict";
 const { spawnSync } = require("child_process");
+const fs = require("fs");
+const os = require("os");
+const path = require("path");
 const { modules } = require("../content/python");
 const { renderLesson } = require("../content/python/render");
 
@@ -13,10 +16,16 @@ const problems = [];
 const bad = (where, msg) => problems.push(`${where}: ${msg}`);
 const BANNED = /coming soon|lorem ipsum|\btodo\b|\btbd\b|placeholder (text|content)|fixme/i;
 
+// Programs run from a real file (not -c) so multiprocessing, which re-imports the main module, behaves as it does for students.
+const workDir = fs.mkdtempSync(path.join(os.tmpdir(), "pycontent-"));
+let runCounter = 0;
 const py = (src, input = "") => {
-  const r = spawnSync(process.env.PYTHON || "python3", ["-I", "-c", src], { input, encoding: "utf8", timeout: 10000 });
+  const file = path.join(workDir, `main${runCounter++}.py`);
+  fs.writeFileSync(file, src);
+  const r = spawnSync(process.env.PYTHON || "python3", ["-I", file], { input, encoding: "utf8", timeout: 20000 });
   return { out: (r.stdout || "").replace(/\r\n/g, "\n"), err: r.stderr || "", status: r.status };
 };
+process.on("exit", () => { try { fs.rmSync(workDir, { recursive: true, force: true }); } catch { /* best effort */ } });
 const norm = (s) => s.replace(/[ \t]+$/gm, "").replace(/\n+$/, "");
 
 const REQUIRED = ["title", "minutes", "learn", "why", "realWorld", "simple", "detail", "diagram", "example", "lineByLine", "dryRun", "realExample", "mistakes", "practices", "interview", "practiceQs", "revision", "quiz", "tasks"];
