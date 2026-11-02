@@ -29,7 +29,7 @@ function request(method, path, token, body) {
     req.end();
   });
 }
-const tokenFor = (u) => jwt.sign({ id: u.id, role: u.role, email: u.email }, process.env.JWT_SECRET, { expiresIn: "30m" });
+const tokenFor = (u) => jwt.sign({ id: u.id, role: u.role, email: u.email, name: u.name }, process.env.JWT_SECRET, { expiresIn: "30m" });
 
 const F = { users: [], institutes: [], preExisting: false };
 let ready = false, admin, adminT, studentA, studentAT, studentB, studentBT, course;
