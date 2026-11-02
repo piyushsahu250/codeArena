@@ -59,6 +59,6 @@
 .tm-step .no { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; border: 1px solid currentColor; font-size: 13px; font-weight: 700; }
 .tm-step.locked { opacity: .6; }
 .tm-step.done .no { background: var(--mint, #4F9D6E); color: #fff; border-color: transparent; }
-.tm-modal-back { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: grid; place-items: center; z-index: 80; padding: 16px; }
-.tm-modal { background: var(--bg, #fff); color: var(--ink); border: 1px solid var(--line); border-radius: 16px; padding: 20px; width: min(640px, 100%); max-height: 88vh; overflow: auto; }
+.tm-modal-back { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: grid; place-items: center; z-index: 400; padding: 16px; }
+.tm-modal { background: var(--card-bg, #fff); color: var(--ink); border: 1px solid var(--line); border-radius: 16px; padding: 20px; width: min(640px, 100%); max-height: 88vh; overflow: auto; }
 .tm-modal h3 { margin-top: 0; }
