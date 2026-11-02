@@ -539,3 +539,8 @@ Format per [DEVELOPMENT_GUIDE.md](DEVELOPMENT_GUIDE.md):
 - Database model count: 120 -> 127 (review DATABASE.md, DATA_DICTIONARY.md)
 - This entry was generated mechanically by `scripts/docSync.js` (counts only — no AI involved, no prose rewritten).
 - Manual review needed: update the prose in the doc file(s) referenced above to describe what actually changed and why.
+
+## 2026-10-31 (auto-detected drift)
+- Database model count: 127 -> 132 (review DATABASE.md, DATA_DICTIONARY.md)
+- This entry was generated mechanically by `scripts/docSync.js` (counts only — no AI involved, no prose rewritten).
+- Manual review needed: update the prose in the doc file(s) referenced above to describe what actually changed and why.
