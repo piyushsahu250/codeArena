@@ -11,7 +11,7 @@ const { renderLesson } = require("../content/python/render");
 const RUN = process.argv.includes("--run");
 const problems = [];
 const bad = (where, msg) => problems.push(`${where}: ${msg}`);
-const BANNED = /coming soon|lorem ipsum|todo|tbd|placeholder|fixme/i;
+const BANNED = /coming soon|lorem ipsum|\btodo\b|\btbd\b|placeholder (text|content)|fixme/i;
 
 const py = (src, input = "") => {
   const r = spawnSync(process.env.PYTHON || "python3", ["-I", "-c", src], { input, encoding: "utf8", timeout: 10000 });

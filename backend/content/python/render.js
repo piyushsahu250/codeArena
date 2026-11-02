@@ -80,6 +80,22 @@ function graph(title, desc, W, H, nodes, edges) {
       inner += horizontal ? lines(e.label, (p1.x + p2.x) / 2, (p1.y + p2.y) / 2 - 10, 12, "middle") : lines(e.label, (p1.x + p2.x) / 2 + (e.dx || 12), (p1.y + p2.y) / 2, 12, "start");
     }
   }
+  // Layout gate: every box must sit inside the canvas, and no arrow may run through a box it does not start or end at.
+  for (const n of nodes) {
+    const w = n.w || 150, h = n.h || 54;
+    if (n.x - w / 2 < 0 || n.y - h / 2 < 0 || n.x + w / 2 > W || n.y + h / 2 > H) throw new Error(`diagram "${title}": box "${n.t}" is outside the ${W}x${H} canvas`);
+  }
+  for (const e of edges) {
+    const a = byId[e.from], b = byId[e.to];
+    for (const n of nodes) {
+      if (n === a || n === b) continue;
+      const w = (n.w || 150) / 2 - 3, h = (n.h || 54) / 2 - 3;
+      for (let t = 0.05; t < 0.96; t += 0.05) {
+        const px = a.x + (b.x - a.x) * t, py = a.y + (b.y - a.y) * t;
+        if (Math.abs(px - n.x) < w && Math.abs(py - n.y) < h) throw new Error(`diagram "${title}": arrow ${e.from}->${e.to} runs through box "${n.t}"`);
+      }
+    }
+  }
   for (const n of nodes) inner += node(n.k || "proc", n.t, n.x, n.y, n.w || 150, n.h || 54);
   return svgWrap(W, H, title, desc, inner);
 }
