@@ -70,7 +70,7 @@ for (const m of modules) {
       for (const t of L.tasks || []) { taskCount++; checkTask(w, t); }
       if (RUN) {
         for (const [name, ex] of [["example", L.example], ["realExample", L.realExample]]) {
-          const r = py(ex.code);
+          const r = py(ex.code, ex.stdin || "");
           ran++;
           if (ex.expectError) { if (r.status === 0 || !r.err.includes(ex.expectError)) bad(w, `${name} should fail with ${ex.expectError}`); }
           else if (r.status !== 0) bad(w, `${name} crashed: ${r.err.slice(-200)}`);

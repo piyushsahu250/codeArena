@@ -130,7 +130,7 @@ lessons.push({
 <ul><li>Text is a <strong>string</strong>, written with single or double quotes: <code>'Hi'</code> or <code>"Hi"</code>.</li><li>Several values separated by commas are printed with a space between them (<code>sep=" "</code>).</li><li>After printing, Python moves to a new line (<code>end="\\n"</code>). Change <code>end</code> to stay on the same line.</li><li>Special characters need an <strong>escape sequence</strong>: <code>\\n</code> new line, <code>\\t</code> tab, <code>\\"</code> a quote inside a double-quoted string.</li></ul>
 <p>Triple quotes <code>"""..."""</code> let a string span several lines.</p>`,
   syntax: { code: `print(value1, value2, ..., sep=" ", end="\\n")`, note: "<code>sep</code> and <code>end</code> are optional keyword arguments." },
-  diagram: graph("What happens when print runs", "Flow: your code calls print, Python converts values to text, writes them to the screen, then adds a newline.", 560, 120,
+  diagram: graph("What happens when print runs", "Flow: your code calls print, Python converts values to text, writes them to the screen, then adds a newline.", 600, 120,
     [{ id: "a", k: "term", t: "print(\"Hi\", 5)", x: 80, y: 60, w: 130 }, { id: "b", k: "proc", t: "Convert each\nvalue to text", x: 245, y: 60, w: 130 }, { id: "c", k: "proc", t: "Join with\nsep (space)", x: 400, y: 60, w: 120 }, { id: "d", k: "io", t: "Screen +\nend (newline)", x: 520, y: 60, w: 100 }],
     [{ from: "a", to: "b" }, { from: "b", to: "c" }, { from: "c", to: "d" }]),
   example: { code: `print("Hello, World!")\nprint("Python", 3, "is fun")\nprint("A", "B", "C", sep="-")\nprint("No newline", end=" | ")\nprint("same line")\nprint("Tab:\\tdone")`, out: `Hello, World!\nPython 3 is fun\nA-B-C\nNo newline | same line\nTab:\tdone` },

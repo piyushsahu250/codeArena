@@ -6,7 +6,12 @@
 const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const list = (items, tag = "ul") => `<${tag}>${items.map((i) => `<li>${i}</li>`).join("")}</${tag}>`;
 const code = (src, lang = "python") => `<pre style="background:rgba(127,127,127,.14);padding:12px 14px;border-radius:8px;overflow:auto;font-size:.92em;line-height:1.5"><code class="language-${lang}">${esc(src.replace(/\n$/, ""))}</code></pre>`;
+const stdinBlock = (s) => s == null ? "" : `<p style="margin:.4rem 0 .2rem"><strong>Input typed by the user</strong></p><pre style="background:rgba(56,139,253,.13);padding:10px 14px;border-radius:8px;overflow:auto;font-size:.92em"><code>${esc(String(s))}</code></pre>`;
 const output = (out) => `<p style="margin:.4rem 0 .2rem"><strong>Output</strong></p><pre style="background:rgba(46,160,67,.13);padding:10px 14px;border-radius:8px;overflow:auto;font-size:.92em"><code>${esc(out.replace(/\n$/, ""))}</code></pre>`;
+// A terminal window illustration: title bar plus the commands (lines starting with "$ " or "> " are what you type).
+const terminal = (title, text) =>
+  `<figure style="margin:1rem 0"><div style="border-radius:8px;overflow:hidden;border:1px solid rgba(127,127,127,.5)"><div style="background:#3b3f45;color:#eee;padding:5px 12px;font-size:.8em">${esc(title)}</div>` +
+  `<pre style="margin:0;background:#16181c;color:#d8dee9;padding:12px 14px;overflow:auto;font-size:.9em;line-height:1.5"><code>${esc(text.replace(/\n$/, ""))}</code></pre></div></figure>`;
 const h = (n, t) => `<h${n} style="margin:1.4rem 0 .5rem">${t}</h${n}>`;
 const table = (headers, rows) =>
   `<div style="overflow-x:auto"><table style="border-collapse:collapse;min-width:60%">` +
@@ -15,7 +20,7 @@ const table = (headers, rows) =>
 
 // ---- Diagram helpers: accessible inline SVG that follows the page text colour (light and dark) ----
 const svgWrap = (w, h2, title, desc, inner) =>
-  `<figure style="margin:1rem 0;text-align:center"><svg viewBox="0 0 ${w} ${h2}" role="img" aria-labelledby="t d" style="width:100%;max-width:${w}px;height:auto" xmlns="http://www.w3.org/2000/svg">` +
+  `<figure style="margin:1rem 0;text-align:center;overflow-x:auto"><svg viewBox="0 0 ${w} ${h2}" role="img" aria-labelledby="t d" style="width:100%;min-width:${Math.min(w, 520)}px;max-width:${w}px;height:auto" xmlns="http://www.w3.org/2000/svg">` +
   `<title id="t">${esc(title)}</title><desc id="d">${esc(desc)}</desc>` +
   `<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>` +
   `${inner}</svg><figcaption style="font-size:.85em;opacity:.8">${esc(title)}</figcaption></figure>`;
@@ -70,7 +75,10 @@ function graph(title, desc, W, H, nodes, edges) {
     };
     const p1 = pt(a, b), p2 = pt(b, a);
     inner += `<line x1="${p1.x}" y1="${p1.y}" x2="${p2.x}" y2="${p2.y}" stroke="currentColor" stroke-width="1.6" marker-end="url(#ah)"/>`;
-    if (e.label) inner += lines(e.label, (p1.x + p2.x) / 2 + (e.dx || 12), (p1.y + p2.y) / 2 - 2, 12, "start");
+    if (e.label) {
+      const horizontal = Math.abs(p2.x - p1.x) > Math.abs(p2.y - p1.y); // keep the label clear of the arrow: above a horizontal line, beside a vertical one
+      inner += horizontal ? lines(e.label, (p1.x + p2.x) / 2, (p1.y + p2.y) / 2 - 10, 12, "middle") : lines(e.label, (p1.x + p2.x) / 2 + (e.dx || 12), (p1.y + p2.y) / 2, 12, "start");
+    }
   }
   for (const n of nodes) inner += node(n.k || "proc", n.t, n.x, n.y, n.w || 150, n.h || 54);
   return svgWrap(W, H, title, desc, inner);
@@ -87,10 +95,10 @@ function renderLesson(L) {
   p.push(h(2, "Detailed explanation") + L.detail);
   if (L.syntax) p.push(h(2, "Syntax") + code(L.syntax.code, L.syntax.lang || "python") + (L.syntax.note ? `<p>${L.syntax.note}</p>` : ""));
   p.push(h(2, "Diagram") + L.diagram);
-  p.push(h(2, "Basic example") + code(L.example.code) + output(L.example.out));
+  p.push(h(2, "Basic example") + code(L.example.code) + stdinBlock(L.example.stdin) + output(L.example.out));
   p.push(h(3, "Line-by-line explanation") + `<ol>${L.lineByLine.map(([l, t]) => `<li><code>${esc(l)}</code> &mdash; ${t}</li>`).join("")}</ol>`);
   if (L.dryRun) p.push(h(3, "Dry run") + (L.dryRun.intro ? `<p>${L.dryRun.intro}</p>` : "") + table(L.dryRun.headers, L.dryRun.rows));
-  p.push(h(2, "Real-world example") + (L.realExample.intro ? `<p>${L.realExample.intro}</p>` : "") + code(L.realExample.code) + output(L.realExample.out));
+  p.push(h(2, "Real-world example") + (L.realExample.intro ? `<p>${L.realExample.intro}</p>` : "") + code(L.realExample.code) + stdinBlock(L.realExample.stdin) + output(L.realExample.out));
   p.push(h(2, "Common mistakes") + list(L.mistakes));
   p.push(h(2, "Best practices") + list(L.practices));
   p.push(h(2, "Interview perspective") + list(L.interview));
@@ -102,4 +110,4 @@ function renderLesson(L) {
   return p.join("\n");
 }
 
-module.exports = { esc, list, code, output, h, table, chain, graph, svgWrap, renderLesson };
+module.exports = { esc, list, code, output, h, table, terminal, chain, graph, svgWrap, renderLesson };

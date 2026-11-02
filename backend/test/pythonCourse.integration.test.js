@@ -52,8 +52,8 @@ test.before(async () => {
   F.institutes.push(A.id, B.id);
   F.A = A.id;
   admin = await mkUser("SUPER_ADMIN", null, "admin");
-  studentA = await mkUser("STUDENT", A.id, "studentA");
-  studentB = await mkUser("STUDENT", B.id, "studentB");
+  studentA = await mkUser("STUDENT", A.id, "sa");
+  studentB = await mkUser("STUDENT", B.id, "sb");
   [adminT, studentAT, studentBT] = [admin, studentA, studentB].map(tokenFor);
   ready = true;
 });
@@ -79,7 +79,7 @@ test("seeding creates a Draft, unassigned course that no student can see", async
   if (!needs(t)) return;
   const stats = await seedPythonCourse(prisma, { log: quiet });
   assert.ok(stats.created > 40, "should create course, module, chapter, lessons, questions and an assessment");
-  course = await prisma.course.findUnique({ where: { slug: SLUG }, include: { modules: { include: { chapters: { include: { topics: true, levels: true } } } } } });
+  course = await prisma.course.findUnique({ where: { slug: SLUG }, include: { modules: { orderBy: { order: "asc" }, include: { chapters: { orderBy: { order: "asc" }, include: { topics: { orderBy: { order: "asc" } }, levels: true } } } } } });
   assert.equal(course.status, "DRAFT");
   assert.equal(course.isActive, false);
   assert.equal(await prisma.courseInstituteAssignment.count({ where: { courseId: course.id } }), 0);
