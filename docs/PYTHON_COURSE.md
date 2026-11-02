@@ -1,6 +1,6 @@
 # Python Zero to Hero (course content and tooling)
 
-**Status (2026-11-02): in progress.** Modules 1 to 4 are authored, machine-verified and seeded as a **Draft** course. Modules 5 to 23, the project catalogue and the 200-problem placement bank are **not written yet**. Nothing here is visible to students until an administrator publishes and assigns the course.
+**Status (2026-11-02): in progress.** Modules 1 to 15 (Phases 0 to 3) are authored, machine-verified and seeded as a **Draft** course. Modules 16 to 23, the project catalogue and the 200-problem placement bank are **not written yet**. Nothing here is visible to students until an administrator publishes and assigns the course.
 
 ## How the course maps onto the existing LMS (nothing duplicated)
 
@@ -34,13 +34,13 @@ No schema change and no migration are needed.
 
 | | Count |
 | --- | --- |
-| Modules | 4 (Introduction to Programming; Installation and Environment Setup; Syntax and Basic Concepts; Data Types and Data Handling) |
-| Lessons | 27 (6 + 7 + 7 + 7), 25 to 45 minutes each |
-| Quiz questions | 129 (MCQ, output prediction, debugging, fill in the blank) |
-| Coding tasks in lessons | 33, each with 2 sample and at least 1 hidden case |
-| Module assessments | 4, with 14 coding questions in total |
-| Diagrams | 27 (one per lesson) plus terminal illustrations in the setup lessons |
-| Python executions during validation | 259 (every example, every reference solution against every case) |
+| Modules | 15 (Phase 0: Modules 1-2; Phase 1: Modules 3-9; Phase 2: Modules 10-13; Phase 3: Modules 14-15) |
+| Lessons | 105, 25 to 70 minutes each (Module 15 has four chapters) |
+| Quiz questions | 515 (MCQ, output prediction, debugging, fill in the blank) |
+| Coding tasks in lessons | 128, each with 2 sample and at least 1 hidden case |
+| Module assessments | 15, with 60 coding questions in total |
+| Diagrams | 105 (one per lesson) plus terminal illustrations in the setup lessons |
+| Python executions during validation | 1,397 (every example, every reference solution against every case) |
 
 Module 1 topics 1 to 16 and its three practicals, Module 2 topics 1 to 28, and Module 3 topics are grouped into lessons; every bullet of the spec appears inside a lesson.
 
@@ -70,7 +70,7 @@ Checked against python.org and docs.python.org on **2 November 2026**: latest st
 
 ## Known limitations and open items
 
-- **Not authored:** Modules 5 to 23, Phase 4 to 7 content, the 15 mini and 6 major projects, 200+ placement problems, 150+ interview questions, mock tests. The structure and tooling are ready for them.
+- **Not authored:** Modules 16 to 23, Phase 4 to 7 content, the 15 mini and 6 major projects, 200+ placement problems, 150+ interview questions, mock tests. The structure and tooling are ready for them.
 - **No real screenshots.** Setup lessons use drawn terminal illustrations and flowcharts. Real screenshots of installers would age with every release.
 - **Hinglish** is a short optional note per lesson, not a full translation.
 - **Rendering was checked** through the same sanitiser the student page uses (DOMPurify), on desktop, a 375 px phone viewport and dark mode. It has **not** been checked inside the live student page or on a real device.
