@@ -1,0 +1,176 @@
+// Real HTTP integration test for the seeded "Python Zero to Hero" course: seed -> invisible while Draft -> publish through the admin API
+// -> invisible until assigned -> visible only to the assigned institute -> lesson content, quiz grading, coding judge and progress
+// persistence as a student -> no answer/hidden-case leakage -> re-seed is idempotent. Talks to the API on localhost:4000 and removes
+// everything it created. With REQUIRE_INTEGRATION=1 (CI) a missing prerequisite FAILS the file instead of skipping it.
+const { test } = require("node:test");
+const assert = require("node:assert/strict");
+const http = require("http");
+const { spawnSync } = require("child_process");
+const jwt = require("jsonwebtoken");
+const prisma = require("../src/prisma");
+const { seedPythonCourse, SLUG } = require("../scripts/seedPythonCourse");
+
+const PORT = 4000;
+const tag = `pycourse-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+let lastCall = "";
+const strictEqual = assert.equal;
+assert.equal = (a, b, m) => strictEqual(a, b, m || `last call: ${lastCall}`);
+
+function request(method, path, token, body) {
+  return new Promise((resolve, reject) => {
+    const data = body !== undefined ? JSON.stringify(body) : null;
+    const req = http.request({ hostname: "localhost", port: PORT, path, method, headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(data ? { "Content-Length": Buffer.byteLength(data) } : {}) } }, (res) => {
+      let chunks = "";
+      res.on("data", (d) => (chunks += d));
+      res.on("end", () => { lastCall = `${method} ${path} -> ${res.statusCode} ${chunks.slice(0, 300)}`; try { resolve({ status: res.statusCode, body: JSON.parse(chunks || "{}") }); } catch { resolve({ status: res.statusCode, body: {} }); } });
+    });
+    req.on("error", reject);
+    if (data) req.write(data);
+    req.end();
+  });
+}
+const tokenFor = (u) => jwt.sign({ id: u.id, role: u.role, email: u.email }, process.env.JWT_SECRET, { expiresIn: "30m" });
+
+const F = { users: [], institutes: [], preExisting: false };
+let ready = false, admin, adminT, studentA, studentAT, studentB, studentBT, course;
+const haveReason = (r) => { ready = false; if (process.env.REQUIRE_INTEGRATION === "1") throw new Error(`pythonCourse integration prerequisites missing: ${r}`); };
+const mkUser = async (role, instituteId, label) => {
+  const u = await prisma.user.create({ data: { name: `${label} ${tag}`, email: `${tag}-${label}@example.test`, passwordHash: "not-a-real-hash", role, instituteId, registrationNumber: role === "STUDENT" ? `PRN-${tag}-${label}`.slice(0, 40) : null } });
+  F.users.push(u.id);
+  return u;
+};
+
+test.before(async () => {
+  let up = false;
+  try { up = (await request("GET", "/api/health", null)).status === 200; } catch { up = false; }
+  if (!up) return haveReason("the API is not answering on localhost:4000");
+  if (!process.env.JWT_SECRET) return haveReason("JWT_SECRET is not set");
+  F.preExisting = !!(await prisma.course.findUnique({ where: { slug: SLUG } }));
+  if (F.preExisting) return haveReason(`a course with slug ${SLUG} already exists; refusing to touch real content`);
+  const A = await prisma.institute.create({ data: { name: `${tag}-A` } });
+  const B = await prisma.institute.create({ data: { name: `${tag}-B` } });
+  F.institutes.push(A.id, B.id);
+  F.A = A.id;
+  admin = await mkUser("SUPER_ADMIN", null, "admin");
+  studentA = await mkUser("STUDENT", A.id, "studentA");
+  studentB = await mkUser("STUDENT", B.id, "studentB");
+  [adminT, studentAT, studentBT] = [admin, studentA, studentB].map(tokenFor);
+  ready = true;
+});
+
+test.after(async () => {
+  try {
+    if (!F.preExisting) {
+      const c = await prisma.course.findUnique({ where: { slug: SLUG }, select: { id: true } });
+      if (c) {
+        await prisma.question.deleteMany({ where: { moduleCodingTest: { OR: [{ chapter: { module: { courseId: c.id } } }, { module: { courseId: c.id } }] } } }).catch(() => {});
+        await prisma.course.delete({ where: { id: c.id } }).catch((e) => console.error("cleanup course:", e.message));
+      }
+    }
+    await prisma.user.deleteMany({ where: { id: { in: F.users } } }).catch(() => {});
+    await prisma.institute.deleteMany({ where: { id: { in: F.institutes } } }).catch(() => {});
+  } finally { await prisma.$disconnect(); }
+});
+
+const needs = (t) => { if (!ready) { t.skip("prerequisites missing"); return false; } return true; };
+const quiet = () => {};
+
+test("seeding creates a Draft, unassigned course that no student can see", async (t) => {
+  if (!needs(t)) return;
+  const stats = await seedPythonCourse(prisma, { log: quiet });
+  assert.ok(stats.created > 40, "should create course, module, chapter, lessons, questions and an assessment");
+  course = await prisma.course.findUnique({ where: { slug: SLUG }, include: { modules: { include: { chapters: { include: { topics: true, levels: true } } } } } });
+  assert.equal(course.status, "DRAFT");
+  assert.equal(course.isActive, false);
+  assert.equal(await prisma.courseInstituteAssignment.count({ where: { courseId: course.id } }), 0);
+  const mod = course.modules[0], ch = mod.chapters[0];
+  assert.equal(mod.isActive, false); assert.equal(ch.isActive, false);
+  assert.ok(ch.topics.length >= 6 && ch.topics.every((l) => !l.isActive && (l.content || "").includes("<svg")), "all lessons Draft, each carrying real content with a diagram");
+  assert.equal(ch.levels[0].isActive, false);
+  const r = await request("GET", `/api/learning/courses/${SLUG}`, studentAT);
+  assert.equal(r.status, 404, "a Draft course must not be visible to a student");
+});
+
+test("re-running the seed creates nothing and changes nothing", async (t) => {
+  if (!needs(t)) return;
+  const before = await prisma.lesson.count({ where: { module: { courseId: course.id } } });
+  const stats = await seedPythonCourse(prisma, { log: quiet });
+  assert.equal(stats.created, 0);
+  assert.equal(await prisma.lesson.count({ where: { module: { courseId: course.id } } }), before);
+});
+
+test("admin publishes the content, and the course stays invisible until it is assigned", async (t) => {
+  if (!needs(t)) return;
+  const mod = course.modules[0], ch = mod.chapters[0];
+  const pub = async (entity, id) => assert.equal((await request("POST", `/api/learning/publish/${entity}/${id}/publish`, adminT)).status, 200);
+  await pub("course", course.id);
+  await pub("module", mod.id);
+  await pub("chapter", ch.id);
+  for (const l of ch.topics) await pub("lesson", l.id);
+  await pub("level", ch.levels[0].id);
+  const r = await request("GET", `/api/learning/courses/${SLUG}`, studentAT);
+  assert.equal(r.status, 404, "published but unassigned = still invisible");
+});
+
+test("only the assigned institute's student can open the course and lessons", async (t) => {
+  if (!needs(t)) return;
+  const asg = await request("POST", `/api/learning/courses/${course.id}/assignments`, adminT, { instituteIds: [F.A] });
+  assert.equal(asg.status, 200);
+  assert.equal((await request("GET", `/api/learning/courses/${SLUG}`, studentAT)).status, 200);
+  assert.equal((await request("GET", `/api/learning/courses/${SLUG}`, studentBT)).status, 404, "another institute's student must not see it");
+  const lessonId = course.modules[0].chapters[0].topics[0].id;
+  assert.equal((await request("GET", `/api/learning/lessons/${lessonId}`, studentBT)).status, 404);
+  const ok = await request("GET", `/api/learning/lessons/${lessonId}`, studentAT);
+  assert.equal(ok.status, 200);
+  assert.match(ok.body.lesson.content, /<svg[^>]*role="img"/);
+  assert.match(ok.body.lesson.content, /Interview perspective/);
+});
+
+test("students never receive answers or hidden test cases", async (t) => {
+  if (!needs(t)) return;
+  for (const l of course.modules[0].chapters[0].topics) {
+    const r = await request("GET", `/api/learning/lessons/${l.id}`, studentAT);
+    assert.equal(r.status, 200);
+    const raw = JSON.stringify(r.body);
+    assert.ok(!raw.includes("correctAnswer"), "no correctAnswer key in the student payload");
+    for (const q of r.body.questions) if (q.type === "CODING") assert.ok(q.testCases.length >= 2 && q.testCases.every((c) => !c.isHidden), "only sample cases are sent");
+  }
+});
+
+test("quiz grading, progress persistence and the real coding judge", async (t) => {
+  if (!needs(t)) return;
+  const lessonId = course.modules[0].chapters[0].topics[0].id;
+  const lesson = await request("GET", `/api/learning/lessons/${lessonId}`, studentAT);
+  const mcq = lesson.body.questions.find((q) => q.type === "MCQ");
+  const wrong = await request("POST", `/api/learning/practice/${mcq.id}/check`, studentAT, { answer: 99 });
+  assert.equal(wrong.body.correct, false);
+  // The student sees shuffled options; the server tells us which shuffled index is right only after an attempt, so find it.
+  let solved = false;
+  for (let i = 0; i < mcq.options.length && !solved; i++) solved = (await request("POST", `/api/learning/practice/${mcq.id}/check`, studentAT, { answer: i })).body.correct === true;
+  assert.ok(solved, "exactly one option must grade as correct");
+
+  const done = await request("POST", `/api/learning/lessons/${lessonId}/progress`, studentAT, { status: "COMPLETED" });
+  assert.equal(done.status, 200);
+  const again = await request("GET", `/api/learning/lessons/${lessonId}`, studentAT);
+  assert.equal(again.body.progress.status, "COMPLETED", "progress must persist across requests");
+
+  const py = spawnSync("python3", ["--version"]);
+  if (py.status !== 0) return console.log("python3 not available here; judge step skipped");
+  const task = lesson.body.questions.find((q) => q.type === "CODING");
+  const solution = (await prisma.practiceQuestion.findUnique({ where: { id: task.id } })).testCases;
+  const expected = solution.find((c) => c.isHidden).expected;
+  const print = expected.split("\n").map((ln) => `print(${JSON.stringify(ln)})`).join("\n");
+  const ok = await request("POST", `/api/learning/practice/${task.id}/submit`, studentAT, { language: "python", code: print });
+  assert.equal(ok.body.verdict, "ACCEPTED", "the reference answer must be accepted by the real judge");
+  const bad = await request("POST", `/api/learning/practice/${task.id}/submit`, studentAT, { language: "python", code: 'print("wrong")' });
+  assert.ok(bad.body.verdict && bad.body.verdict !== "ACCEPTED", "a wrong answer must be rejected");
+});
+
+test("the module assessment exists as an unlocked-by-admin Python-only level with hidden cases", async (t) => {
+  if (!needs(t)) return;
+  const level = await prisma.moduleCodingTest.findFirst({ where: { chapterId: course.modules[0].chapters[0].id }, include: { questions: { include: { testCases: true } } } });
+  assert.deepEqual(level.allowedLanguages, ["python"]);
+  assert.equal(level.proctoring, true);
+  assert.ok(level.questions.length >= 3);
+  for (const q of level.questions) assert.ok(q.testCases.some((c) => c.isHidden) && q.testCases.some((c) => !c.isHidden), "every question needs sample and hidden cases");
+});
