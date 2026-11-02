@@ -12,6 +12,9 @@ const { modules } = require("../content/python");
 const { renderLesson } = require("../content/python/render");
 
 const RUN = process.argv.includes("--run");
+// --only=16 checks just "Module 16" (handy while authoring; CI always checks everything)
+const onlyArg = process.argv.find((a) => a.startsWith("--only="));
+const selected = onlyArg ? modules.filter((m) => m.module.title.includes(`Module ${onlyArg.slice(7)}:`)) : modules;
 const problems = [];
 const bad = (where, msg) => problems.push(`${where}: ${msg}`);
 const BANNED = /coming soon|lorem ipsum|\btodo\b|\btbd\b|placeholder (text|content)|fixme/i;
@@ -51,7 +54,7 @@ function checkTask(where, t) {
   }
 }
 
-for (const m of modules) {
+for (const m of selected) {
   const mod = m.module;
   if (!mod.title || !mod.chapters?.length) bad(mod.title || "module", "missing title or chapters");
   for (const ch of mod.chapters) {
@@ -92,6 +95,6 @@ for (const m of modules) {
   if ((mod.assessment?.questions || []).length < 3) bad(mod.title, "module assessment needs at least 3 questions");
 }
 
-console.log(`modules=${modules.length} lessons=${lessonCount} quiz=${quizCount} tasks=${taskCount} assessmentQs=${assessmentCount}${RUN ? ` pythonRuns=${ran}` : " (lint only)"}`);
+console.log(`modules=${selected.length} lessons=${lessonCount} quiz=${quizCount} tasks=${taskCount} assessmentQs=${assessmentCount}${RUN ? ` pythonRuns=${ran}` : " (lint only)"}`);
 if (problems.length) { console.error(`\n${problems.length} problem(s):\n- ` + problems.join("\n- ")); process.exit(1); }
 console.log("OK: content passed validation");
