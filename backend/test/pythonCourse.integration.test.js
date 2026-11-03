@@ -161,9 +161,12 @@ test("quiz grading, progress persistence and the real coding judge", async (t) =
   const wrong = await request("POST", `/api/learning/practice/${mcq.id}/check`, studentAT, { answer: 99 });
   assert.equal(wrong.body.correct, false);
   // The student sees shuffled options; the server tells us which shuffled index is right only after an attempt, so find it.
-  let solved = false;
-  for (let i = 0; i < mcq.options.length && !solved; i++) solved = (await request("POST", `/api/learning/practice/${mcq.id}/check`, studentAT, { answer: i })).body.correct === true;
+  let solved = false, solvedAt = -1;
+  for (let i = 0; i < mcq.options.length && !solved; i++) { solved = (await request("POST", `/api/learning/practice/${mcq.id}/check`, studentAT, { answer: i })).body.correct === true; if (solved) solvedAt = i; }
   assert.ok(solved, "exactly one option must grade as correct");
+  // A wrong answer is answered with the correct one (the page shows it): it must be the position of the option the student can actually click, in the order they were shown.
+  assert.equal(Number(wrong.body.correctAnswer), solvedAt, "the correct answer in a wrong-answer response is the option that grades correct");
+  assert.equal(typeof wrong.body.explanation, "string", "and the explanation comes with it");
 
   const done = await request("POST", `/api/learning/lessons/${lessonId}/progress`, studentAT, { status: "COMPLETED" });
   assert.equal(done.status, 200);

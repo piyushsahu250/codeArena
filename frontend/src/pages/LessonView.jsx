@@ -4,6 +4,7 @@ import DOMPurify from "dompurify";
 import Editor from "@monaco-editor/react";
 import api from "../api";
 import { useGamification } from "../context/GamificationContext";
+import { optionHighlight, correctAnswerText } from "../utils/practiceAnswer";
 import Navbar from "../components/Navbar";
 import ChalkUnderline from "../components/ChalkUnderline";
 import CodeResultBlock from "../components/CodeResultBlock";
@@ -687,7 +688,7 @@ function PracticeQuestionCard({ question }) {
         <>
           <div style={{ display: "grid", gap: 8, marginTop: 10 }}>
             {(question.options || []).map((opt, idx) => (
-              <label key={idx} className="card" style={{ padding: "10px 14px", display: "flex", alignItems: "center", gap: 10, cursor: result ? "default" : "pointer" }}>
+              <label key={idx} className="card" style={{ padding: "10px 14px", display: "flex", alignItems: "center", gap: 10, cursor: result ? "default" : "pointer", ...optionHighlight(result, idx, selected) }}>
                 <input type="radio" name={question.id} checked={selected === idx} onChange={() => setSelected(idx)} disabled={!!result} />
                 <span style={{ whiteSpace: "pre-wrap" }}>{opt}</span>
               </label>
@@ -704,6 +705,12 @@ function PracticeQuestionCard({ question }) {
           <div className="mono" style={{ fontWeight: 700, color: result.correct ? "var(--mint)" : "var(--rust)" }}>
             {result.correct ? "✓ Correct" : "✗ Not quite"}
           </div>
+          {!result.correct && correctAnswerText(question, result) && (
+            <p style={{ fontSize: 13, marginTop: 6 }}>
+              <strong>Correct answer: </strong>
+              <span style={{ whiteSpace: "pre-wrap" }}>{correctAnswerText(question, result)}</span>
+            </p>
+          )}
           {result.explanation && <p style={{ fontSize: 13, marginTop: 6 }}>{result.explanation}</p>}
         </div>
       )}
