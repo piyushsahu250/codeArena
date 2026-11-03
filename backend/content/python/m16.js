@@ -199,7 +199,7 @@ ${table(["Problem", "What goes wrong"], [["dirty read", "reading another transac
   revision: ["Transaction = atomic group; commit or rollback.", "with conn: handles it.", "Constraints enforce consistency.", "Do arithmetic in SQL; keep transactions short."],
   hinglish: "Transaction ke saare kaam ek saath hote hain ya koi nahi: commit pakka karta hai aur rollback sab undo kar deta hai. Bank transfer mein debit aur credit ek hi transaction mein rakho. bal = bal - ? SQL mein hi likho taaki lost update na ho.",
   quiz: [
-    mcq("What does rollback do?", ["Saves changes", "Undoes the uncommitted changes of the transaction", "Closes the database", "Deletes the table"], 1, "Atomicity."),
+    mcq("What does rollback do?", ["Saves changes", "Undoes the uncommitted changes of the transaction", "Closes the database", "Deletes the table"], 1, "A transaction is all or nothing: rollback undoes every change made since the last commit, which is what atomicity means."),
     mcq("What stops a negative balance at the database level?", ["A CHECK constraint", "A print statement", "A comment", "An index"], 0, "The database enforces the rule."),
     mcq("What is a lost update?", ["A deleted table", "Two transactions overwrite each other's change", "A slow query", "A syntax error"], 1, "One write is silently lost."),
     mcq("Which statement avoids a lost update?", ["Read bal in Python, add, write", "UPDATE acct SET bal = bal - ?", "Sleep before writing", "Use two connections"], 1, "The database applies the arithmetic atomically."),

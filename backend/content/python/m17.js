@@ -46,7 +46,7 @@ ${table(["Class", "Meaning", "Common codes"], [["1xx", "informational", "101 Swi
   revision: ["Client sends request, server sends response.", "Methods: GET read, POST create, PUT replace, PATCH change, DELETE remove.", "Status classes 2xx/3xx/4xx/5xx.", "Stateless; use HTTPS."],
   hinglish: "Client request bhejta hai aur server response lautata hai jisme status code, headers aur body hoti hai. GET data padhta hai, POST naya banata hai, PUT badalta hai aur DELETE hataata hai. 2xx safal, 4xx client ki galti aur 5xx server ki galti hoti hai.",
   quiz: [
-    mcq("Which status code means the resource was created?", ["200", "201", "204", "301"], 1, "201 Created."),
+    mcq("Which status code means the resource was created?", ["200", "201", "204", "301"], 1, "201 means Created: the request succeeded and a new resource now exists. 200 is a plain success, 204 has no body, 301 is a redirect."),
     mcq("Which method is safe and idempotent?", ["POST", "GET", "PATCH", "DELETE only"], 1, "GET only reads."),
     mcq("What does 404 mean?", ["Server crashed", "Resource not found", "Not authorised", "Redirect"], 1, "The path has no resource."),
     mcq("Which code means \"you are known but not allowed\"?", ["401", "403", "404", "500"], 1, "403 Forbidden."),
@@ -169,7 +169,7 @@ ${table(["Style", "How", "Loop until"], [["page/per_page", "<code>?page=2</code>
   hinglish: "Network call fail ho sakti hai, isliye sirf temporary failures (timeout, 429, 5xx) ko badhte hue wait (1, 2, 4...) ke saath retry karo. Saare pages ke liye next tak loop chalao, jawab cache karo aur rate limit ka dhyan rakho.",
   quiz: [
     mcq("Which status is worth retrying?", ["404", "422", "503", "401"], 2, "A temporary server problem."),
-    mcq("What are the waits for base 1 s and exponential backoff?", ["1, 1, 1", "1, 2, 4", "1, 3, 5", "1, 10, 100"], 1, "base * 2^n.", "OUTPUT_PREDICTION"),
+    mcq("What are the waits for base 1 s and exponential backoff?", ["1, 1, 1", "1, 2, 4", "1, 3, 5", "1, 10, 100"], 1, "Each wait doubles the one before: base × 2^n gives 1, 2, 4 seconds for a base of 1 s.", "OUTPUT_PREDICTION"),
     mcq("What does jitter do?", ["Adds a little randomness so clients do not retry together", "Speeds up retries", "Disables backoff", "Compresses data"], 0, "It avoids synchronised retry storms."),
     mcq("When does a paginated loop stop?", ["After 3 pages", "When there is no next page", "Never", "At the first item"], 1, "When next is null or the page is empty."),
     mcq("What does 429 mean?", ["Too many requests", "Not found", "Gone", "Bad gateway"], 0, "You are being rate limited.")

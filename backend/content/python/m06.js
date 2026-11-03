@@ -120,7 +120,7 @@ ${table(["Outer", "Inner", "Inner body runs"], [["3 times", "4 times each", "3 &
   revision: ["Inner loop completes per outer step.", "rows = outer, columns = inner.", "end=\"\" keeps the line; print() ends it.", "Total runs = product (or a sum like 1+2+...+n)."],
   hinglish: "Nested loop mein outer loop ke har step par inner loop poora chalta hai. Pattern mein rows outer loop se aur columns inner loop se aate hain. Row khatam hone par khali print() likhna mat bhoolo.",
   quiz: [
-    mcq("How many times does print run?\n\nfor i in range(3):\n    for j in range(4):\n        print(i, j)", ["7", "12", "3", "4"], 1, "3 x 4 = 12.", "OUTPUT_PREDICTION"),
+    mcq("How many times does print run?\n\nfor i in range(3):\n    for j in range(4):\n        print(i, j)", ["7", "12", "3", "4"], 1, "The inner loop runs completely for every pass of the outer loop, so the counts multiply: 3 × 4 = 12 lines are printed.", "OUTPUT_PREDICTION"),
     mcq("What does print(\"*\" * 3) output?", ["***", "* * *", "3*", "Error"], 0, "String repetition.", "OUTPUT_PREDICTION"),
     mcq("What does an empty print() do?", ["Prints nothing, not even a newline", "Prints a blank line (a newline)", "Raises an error", "Prints None"], 1, "It outputs just the newline."),
     mcq("For n = 4, how many stars are printed by: for i in range(1, n+1): print('*' * i)?", ["4", "10", "16", "8"], 1, "1 + 2 + 3 + 4 = 10.", "OUTPUT_PREDICTION"),
@@ -235,7 +235,7 @@ lessons.push({
   hinglish: "Time complexity batati hai ki input badhne par kaam kitna badhta hai. Ek loop O(n), loop ke andar loop O(n²), aur har baar aadha karne wala loop O(log n) hota hai. Jahan ho sake formula, set aur built-in functions use karo.",
   quiz: [
     mcq("What is the complexity of one loop over n items?", ["O(1)", "O(n)", "O(n²)", "O(log n)"], 1, "The work grows in step with n."),
-    mcq("What is the complexity of two nested loops over n items each?", ["O(n)", "O(2n)", "O(n²)", "O(log n)"], 2, "n times n."),
+    mcq("What is the complexity of two nested loops over n items each?", ["O(n)", "O(2n)", "O(n²)", "O(log n)"], 2, "Each of the n passes of the outer loop runs the inner loop n times, so the body runs n × n = n² times: O(n²)."),
     mcq("How many halvings take 16 down to 1?", ["16", "4", "8", "2"], 1, "16, 8, 4, 2, 1: four halvings.", "OUTPUT_PREDICTION"),
     mcq("Which is O(1) on average?", ["x in a list", "x in a set", "sorting a list", "summing a list"], 1, "Hash-based lookup."),
     mcq("What is the better way to build a long string from many pieces?", ["s += piece in a loop always", "\"\".join(pieces)", "Use recursion", "Use input()"], 1, "join builds the result once."),

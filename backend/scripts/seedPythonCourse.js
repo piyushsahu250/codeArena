@@ -69,7 +69,7 @@ async function seedPythonCourse(prisma, { sync = false, plan = false, log = cons
         let lesson = plan ? null : await prisma.lesson.findUnique({ where: { moduleId_title: { moduleId: mod.id, title: L.title } } });
         const existed = !!lesson;
         lesson = await take(lesson, () => prisma.lesson.create({ data: {
-          moduleId: mod.id, chapterId: chapter.id, title: L.title, order: li, content: html, estimatedMinutes: L.minutes, isActive: false,
+          moduleId: mod.id, chapterId: chapter.id, title: L.title, order: li, content: html, estimatedMinutes: L.minutes, isActive: false, isModuleTest: !!L.moduleTest,
         } }), `lesson ${L.title}`);
         if (existed && sync && !plan && lesson.content !== html) {
           await prisma.lesson.update({ where: { id: lesson.id }, data: { content: html, estimatedMinutes: L.minutes } });

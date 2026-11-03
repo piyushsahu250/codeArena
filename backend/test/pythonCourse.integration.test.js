@@ -63,6 +63,7 @@ test.after(async () => {
     if (!F.preExisting) {
       const c = await prisma.course.findUnique({ where: { slug: SLUG }, select: { id: true } });
       if (c) {
+        await prisma.certificate.deleteMany({ where: { OR: [{ courseId: c.id }, { studentId: { in: F.users } }] } }).catch((e) => console.error("cleanup certificates:", e.message));
         await prisma.question.deleteMany({ where: { moduleCodingTest: { OR: [{ chapter: { module: { courseId: c.id } } }, { module: { courseId: c.id } }] } } }).catch(() => {});
         await prisma.course.delete({ where: { id: c.id } }).catch((e) => console.error("cleanup course:", e.message));
       }
@@ -85,7 +86,10 @@ test("seeding creates a Draft, unassigned course that no student can see", async
   assert.equal(await prisma.courseInstituteAssignment.count({ where: { courseId: course.id } }), 0);
   const mod = course.modules[0], ch = mod.chapters[0];
   assert.equal(mod.isActive, false); assert.equal(ch.isActive, false);
-  assert.ok(ch.topics.length >= 6 && ch.topics.every((l) => !l.isActive && (l.content || "").includes("<svg")), "all lessons Draft, each carrying real content with a diagram");
+  const teaching = ch.topics.filter((l) => !l.isModuleTest);
+  assert.ok(teaching.length >= 6 && ch.topics.every((l) => !l.isActive) && teaching.every((l) => (l.content || "").includes("<svg")), "all lessons Draft, each teaching lesson carrying real content with a diagram");
+  assert.equal(ch.topics.filter((l) => l.isModuleTest).length, 1, "the module ends with exactly one practice test");
+  assert.ok(ch.topics.find((l) => l.isModuleTest).order >= teaching.length, "and it comes after the teaching lessons");
   assert.equal(ch.levels[0].isActive, false);
   // Phase 6: 21 unpublished projects (15 mini, 6 major), each with at least three tasks, some auto-judged and some manual
   const projects = await prisma.courseProject.findMany({ where: { module: { courseId: course.id } }, include: { tasks: true } });
@@ -185,4 +189,75 @@ test("the module assessment exists as an unlocked-by-admin Python-only level wit
   assert.equal(level.proctoring, true);
   assert.ok(level.questions.length >= 3);
   for (const q of level.questions) assert.ok(q.testCases.some((c) => c.isHidden) && q.testCases.some((c) => !c.isHidden), "every question needs sample and hidden cases");
+});
+
+test("a student has to pass every module test, and the certificate is issued automatically when the whole course is done, not before", async (t) => {
+  if (!needs(t)) return;
+  const { modules: specs } = require("../content/python");
+  const now = new Date(), live = { isActive: true, archivedAt: null, publishedAt: now };
+  // Earlier tests published only Module 1; publish the rest as an administrator would.
+  await prisma.courseModule.updateMany({ where: { courseId: course.id }, data: live });
+  await prisma.chapter.updateMany({ where: { module: { courseId: course.id } }, data: live });
+  await prisma.lesson.updateMany({ where: { module: { courseId: course.id } }, data: live });
+
+  const mods = await prisma.courseModule.findMany({ where: { courseId: course.id }, orderBy: { order: "asc" }, include: { lessons: { orderBy: { order: "asc" } } } });
+  assert.equal(mods.length, specs.length);
+  const testsPerModule = mods.map((m) => m.lessons.filter((l) => l.isModuleTest));
+  assert.equal(testsPerModule.filter((x) => x.length === 1).length, 23, "23 modules end with a practice test");
+  assert.equal(testsPerModule.filter((x) => x.length === 0).length, 1, "only the projects module has none");
+
+  // Correct option TEXT per prompt, from the authored content: the student sees the options shuffled, so an answer is the position of that text in what the server sent.
+  const correctText = new Map();
+  for (const sp of specs) for (const c of sp.module.chapters) for (const L of c.lessons) if (L.moduleTest) for (const q of L.quiz) correctText.set(q.prompt, q.options[q.correctAnswer]);
+  const takeTest = async (lessonId, mode) => {
+    const view = await request("GET", `/api/learning/lessons/${lessonId}`, studentAT);
+    assert.equal(view.status, 200);
+    assert.ok(!JSON.stringify(view.body).includes("correctAnswer"), "the test never carries its answers");
+    const answers = {};
+    for (const q of view.body.questions.filter((x) => x.type !== "CODING")) {
+      const right = q.options.indexOf(correctText.get(q.prompt));
+      assert.ok(right >= 0, `the right option is among those shown: ${q.prompt.slice(0, 40)}`);
+      answers[q.id] = mode === "all-right" ? right : (right + 1) % q.options.length; // "all-wrong" picks a different option for every question
+    }
+    return request("POST", `/api/learning/lessons/${lessonId}/test-submit`, studentAT, { answers });
+  };
+
+  let certificateBeforeEnd = null, lastResult = null;
+  for (const [mi, m] of mods.entries()) {
+    const test = m.lessons.find((l) => l.isModuleTest);
+    for (const l of m.lessons.filter((x) => !x.isModuleTest)) assert.equal((await request("POST", `/api/learning/lessons/${l.id}/progress`, studentAT, { status: "COMPLETED" })).status, 200);
+    if (!test) continue;
+
+    // The test lesson cannot be completed by hand
+    assert.equal((await request("POST", `/api/learning/lessons/${test.id}/progress`, studentAT, { status: "COMPLETED" })).status, 400, "no completing a test by clicking");
+    // A failed attempt does not complete it, and the next module stays locked
+    const failed = await takeTest(test.id, "all-wrong");
+    assert.equal(failed.status, 200);
+    assert.equal(failed.body.passed, false);
+    assert.ok(failed.body.score < failed.body.passThreshold);
+    const next = mods[mi + 1];
+    if (next) assert.equal((await request("GET", `/api/learning/lessons/${next.lessons[0].id}`, studentAT)).status, 403, `module ${mi + 2} stays locked after a failed test`);
+    if (mi === mods.length - 1) {
+      // everything except the final test is done: still no certificate
+      certificateBeforeEnd = await request("GET", `/api/learning/courses/${SLUG}/certificate`, studentAT);
+      assert.equal(await prisma.certificate.count({ where: { studentId: studentA.id, courseId: course.id } }), 0, "no certificate issued before the end");
+    }
+    // Passing completes it and opens the next module
+    const passed = await takeTest(test.id, "all-right");
+    assert.equal(passed.body.passed, true);
+    assert.equal(passed.body.score, 100);
+    if (next) assert.equal((await request("GET", `/api/learning/lessons/${next.lessons[0].id}`, studentAT)).status, 200, `module ${mi + 2} opens after the test is passed`);
+    lastResult = passed;
+  }
+  assert.equal(certificateBeforeEnd.status, 400, "the certificate page refuses an unfinished course");
+  assert.equal(lastResult.body.courseCompleted, true, "finishing the last test reports that the course is complete");
+  assert.equal(lastResult.body.certificateIssued, true);
+  assert.equal(await prisma.certificate.count({ where: { studentId: studentA.id, courseId: course.id, type: "LEARNING_MODULE" } }), 1, "issued automatically, without the student asking for it");
+  const cert = await request("GET", `/api/learning/courses/${SLUG}/certificate`, studentAT);
+  assert.equal(cert.status, 200);
+  assert.ok(cert.body.certificateCode);
+  assert.equal(await prisma.certificate.count({ where: { studentId: studentA.id, courseId: course.id } }), 1, "asking again never issues a second one");
+  const overview = await request("GET", `/api/learning/courses/${SLUG}`, studentAT);
+  assert.equal(overview.body.overall.percent, 100);
+  assert.equal((await request("GET", `/api/learning/courses/${SLUG}/certificate`, studentBT)).status === 200, false, "another student gets nothing");
 });

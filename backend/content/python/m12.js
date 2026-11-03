@@ -120,7 +120,7 @@ ${table(["Operation", "list", "dict / set (average)", "deque"], [["index / looku
   revision: ["Add sequential, multiply nested, keep the largest term, drop constants.", "list in/insert/remove O(n); dict/set O(1).", "Best / average / worst / amortised.", "Trade time for space."],
   hinglish: "Big O batata hai ki input n badhne par steps kitne badhte hain. Nested loops multiply hote hain (n²), sequential loops jud jaate hain, aur har baar aadha karne par log n. Time aur space dono batao.",
   quiz: [
-    mcq("What is the complexity of two nested loops of n?", ["O(n)", "O(2n)", "O(n²)", "O(log n)"], 2, "n × n."),
+    mcq("What is the complexity of two nested loops of n?", ["O(n)", "O(2n)", "O(n²)", "O(log n)"], 2, "The inner loop runs n times for each of the n turns of the outer loop, so the body runs n × n = n² times: O(n²)."),
     mcq("What is the complexity of x in a list of n items?", ["O(1)", "O(log n)", "O(n)", "O(n²)"], 2, "It scans the list."),
     mcq("What is the complexity of 3n + 5?", ["O(n)", "O(3n)", "O(5)", "O(n²)"], 0, "Drop constants and lower terms."),
     mcq("What is the complexity of halving n until 1?", ["O(n)", "O(log n)", "O(1)", "O(n log n)"], 1, "The number of halvings is log₂ n."),

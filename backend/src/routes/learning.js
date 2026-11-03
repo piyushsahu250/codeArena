@@ -479,7 +479,9 @@ router.post("/lessons/:id/progress", authenticate, requireRole("STUDENT"), attac
       }
     }
 
-    res.json({ ...progress, gamification });
+    // The certificate is issued the moment the last lesson of the course is completed, not when the student next asks for it.
+    const completion = isNewCompletion ? await issueCertificateIfCourseComplete(req.user.id, lesson.module.courseId) : null;
+    res.json({ ...progress, gamification, ...(completion || {}) });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to update progress" });
@@ -579,7 +581,8 @@ router.post("/lessons/:id/test-submit", authenticate, requireRole("STUDENT"), at
       }
     }
 
-    res.json({ passed, score, correctCount, totalCount: questions.length, passThreshold: PASS_THRESHOLD, results, gamification });
+    const completion = passed && !alreadyPassed ? await issueCertificateIfCourseComplete(req.user.id, lesson.module.courseId) : null;
+    res.json({ passed, score, correctCount, totalCount: questions.length, passThreshold: PASS_THRESHOLD, results, gamification, ...(completion || {}) });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to submit practice test" });
@@ -1040,6 +1043,25 @@ async function getOrIssueLearningCertificate(studentId, course) {
     });
   }
   return cert;
+}
+
+// Called right after a lesson or a module test is newly completed. Cheap first: one query for "is any live lesson of this course still not completed by this student"; only when none
+// is left does it run the full check (which also requires every module test passed, through getModuleLockMap) and issue the certificate. Never throws: if anything fails the
+// student can still open the certificate page, which issues it the same way.
+async function issueCertificateIfCourseComplete(studentId, courseId) {
+  try {
+    const remaining = await prisma.lesson.count({ where: { AND: [{ module: { courseId } }, liveLessonWhere, { progress: { none: { studentId, status: "COMPLETED" } } }] } });
+    if (remaining > 0) return null;
+    const course = await prisma.course.findUnique({ where: { id: courseId } });
+    if (!course) return null;
+    const { complete } = await checkCourseCompletion(studentId, course);
+    if (!complete) return null;
+    const cert = await getOrIssueLearningCertificate(studentId, course);
+    return { courseCompleted: true, certificateIssued: !!cert };
+  } catch (err) {
+    console.error("certificate auto-issue failed", err);
+    return null;
+  }
 }
 
 // STUDENT: fetch (auto-issuing on first call) the certificate for a fully-completed course.

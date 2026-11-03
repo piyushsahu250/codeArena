@@ -38,7 +38,7 @@ ${table(["Problem", "Number of results", "Time"], [["subsets of n items", "2<sup
   revision: ["Choose, explore, unchoose.", "Subsets 2^n; permutations n!.", "Copy the path when recording.", "Prune hopeless branches; sort to skip duplicates."],
   hinglish: "Backtracking mein jawab ek ek choice se banate hain, aur agar aage rasta band ho jaye to pichli choice undo karke doosri try karte hain. Result mein path ki copy rakho aur jahan jawab nahi ban sakta wahan pehle hi ruk jao (pruning).",
   quiz: [
-    mcq("How many subsets does a set of 4 items have?", ["8", "16", "24", "4"], 1, "2^4.", "OUTPUT_PREDICTION"),
+    mcq("How many subsets does a set of 4 items have?", ["8", "16", "24", "4"], 1, "Each of the 4 items is either in a subset or not, so there are 2 × 2 × 2 × 2 = 2^4 = 16 subsets (including the empty set).", "OUTPUT_PREDICTION"),
     mcq("How many permutations do 4 distinct items have?", ["16", "24", "12", "4"], 1, "4! = 24.", "OUTPUT_PREDICTION"),
     mcq("Why store path[:] and not path?", ["Speed", "The same list is modified later while backtracking", "Python requires it", "To sort it"], 1, "Otherwise every result would end up identical."),
     mcq("What is pruning?", ["Sorting the input", "Abandoning a branch that cannot lead to a solution", "Deleting the results", "Using a loop"], 1, "It saves exponential work."),

@@ -28,6 +28,7 @@ export default function LessonView() {
   const [completing, setCompleting] = useState(false);
   const [bookmarking, setBookmarking] = useState(false);
   const [advancing, setAdvancing] = useState(false);
+  const [courseDone, setCourseDone] = useState(null); // set when finishing this lesson or test completes the whole course: { certificateIssued }
 
   function load() {
     api.get(`/learning/lessons/${lessonId}`)
@@ -44,6 +45,7 @@ export default function LessonView() {
       const { data: progress } = await api.post(`/learning/lessons/${lessonId}/progress`, { status: nextStatus });
       setData((d) => ({ ...d, progress: { status: progress.status, bookmarked: progress.bookmarked } }));
       notify(progress.gamification);
+      if (progress.courseCompleted) setCourseDone({ certificateIssued: !!progress.certificateIssued });
     } catch {
       alert("Failed to update progress");
     } finally {
@@ -81,8 +83,9 @@ export default function LessonView() {
     }
   }
 
-  function handlePassed() {
+  function handlePassed(result) {
     setData((d) => ({ ...d, progress: { ...(d.progress || {}), status: "COMPLETED" } }));
+    if (result?.courseCompleted) setCourseDone({ certificateIssued: !!result.certificateIssued });
   }
 
   if (error) {
@@ -120,7 +123,7 @@ export default function LessonView() {
               className="badge"
               style={{ marginTop: 8, display: "inline-block", background: lesson.isModuleTest ? "var(--amber)" : "var(--success-bg)" }}
             >
-              {lesson.isModuleTest ? "Official Test — one graded attempt" : "Practice Module — unlimited attempts"}
+              {lesson.isModuleTest ? "Module Test — pass to unlock the next module (retakes allowed)" : "Practice Module — unlimited attempts"}
             </span>
           </div>
           <div style={{ display: "flex", gap: 8 }}>
@@ -196,6 +199,14 @@ export default function LessonView() {
         {!lesson.isModuleTest && testQuestions.length > 0 && (
           <div style={{ display: "grid", gap: 16, marginTop: 16 }}>
             {testQuestions.map((q) => <PracticeQuestionCard key={q.id} question={q} />)}
+          </div>
+        )}
+
+        {courseDone && (
+          <div className="card" style={{ padding: 20, marginTop: 32, borderLeft: "4px solid var(--mint)" }}>
+            <strong>You have completed {course.name}.</strong>
+            <p style={{ fontSize: 13, color: "var(--ink-dim)", marginTop: 6 }}>{courseDone.certificateIssued ? "Your certificate has been issued." : "Well done."}</p>
+            {courseDone.certificateIssued && <Link to={`/learning/${slug}/certificate`} className="btn btn-primary" style={{ marginTop: 12, display: "inline-block" }}>View certificate</Link>}
           </div>
         )}
 
@@ -344,7 +355,7 @@ function ModuleTestBlock({ lessonId, questions, alreadyPassed, onPassed }) {
     try {
       const { data } = await api.post(`/learning/lessons/${lessonId}/test-submit`, { answers });
       setResult(data);
-      if (data.passed) onPassed();
+      if (data.passed) onPassed(data);
       notify(data.gamification);
     } catch (err) {
       alert(err.response?.data?.error || "Failed to submit test");
@@ -381,7 +392,7 @@ function ModuleTestBlock({ lessonId, questions, alreadyPassed, onPassed }) {
         <div style={{ display: "grid", gap: 12, marginTop: 20 }}>
           {result.results.map((r, i) => (
             <div key={r.questionId} className="card" style={{ padding: 16, borderLeft: `4px solid ${r.correct ? "var(--mint)" : "var(--rust)"}` }}>
-              <div style={{ fontWeight: 600 }}>{i + 1}. {r.prompt}</div>
+              <div style={{ fontWeight: 600, whiteSpace: "pre-wrap" }}>{i + 1}. {r.prompt}</div>
               {r.options ? (
                 <div style={{ display: "grid", gap: 6, marginTop: 10 }}>
                   {r.options.map((opt, idx) => {
@@ -391,7 +402,7 @@ function ModuleTestBlock({ lessonId, questions, alreadyPassed, onPassed }) {
                     const color = isCorrectOpt ? "var(--mint)" : isSelected && !r.correct ? "var(--rust)" : "var(--ink)";
                     return (
                       <div key={idx} style={{ padding: "8px 12px", borderRadius: 8, background: bg, color, fontSize: 13, display: "flex", justifyContent: "space-between" }}>
-                        <span>{opt}</span>
+                        <span style={{ whiteSpace: "pre-wrap" }}>{opt}</span>
                         {isSelected && <span className="mono" style={{ fontSize: 11 }}>Your answer</span>}
                         {isCorrectOpt && !isSelected && <span className="mono" style={{ fontSize: 11 }}>Correct answer</span>}
                       </div>
@@ -419,7 +430,7 @@ function ModuleTestBlock({ lessonId, questions, alreadyPassed, onPassed }) {
       <div style={{ display: "grid", gap: 20 }}>
         {questions.map((q, i) => (
           <div key={q.id}>
-            <div style={{ fontWeight: 600 }}>{i + 1}. {q.prompt}</div>
+            <div style={{ fontWeight: 600, whiteSpace: "pre-wrap" }}>{i + 1}. {q.prompt}</div>
             {q.type === "FILL_BLANK" ? (
               <input
                 style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid var(--line)", marginTop: 8 }}
@@ -432,7 +443,7 @@ function ModuleTestBlock({ lessonId, questions, alreadyPassed, onPassed }) {
                 {(q.options || []).map((opt, idx) => (
                   <label key={idx} className="card" style={{ padding: "10px 14px", display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
                     <input type="radio" name={q.id} checked={answers[q.id] === idx} onChange={() => setAnswers((a) => ({ ...a, [q.id]: idx }))} />
-                    {opt}
+                    <span style={{ whiteSpace: "pre-wrap" }}>{opt}</span>
                   </label>
                 ))}
               </div>
@@ -595,7 +606,7 @@ function PracticeQuestionCard({ question }) {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <span className="badge">{TYPE_LABEL[question.type] || question.type}</span>
       </div>
-      {question.type !== "CODING" && <p style={{ marginTop: 10, fontWeight: 600 }}>{question.prompt}</p>}
+      {question.type !== "CODING" && <p style={{ marginTop: 10, fontWeight: 600, whiteSpace: "pre-wrap" }}>{question.prompt}</p>}
 
       {question.type === "CODING" ? (
         <>
@@ -678,7 +689,7 @@ function PracticeQuestionCard({ question }) {
             {(question.options || []).map((opt, idx) => (
               <label key={idx} className="card" style={{ padding: "10px 14px", display: "flex", alignItems: "center", gap: 10, cursor: result ? "default" : "pointer" }}>
                 <input type="radio" name={question.id} checked={selected === idx} onChange={() => setSelected(idx)} disabled={!!result} />
-                {opt}
+                <span style={{ whiteSpace: "pre-wrap" }}>{opt}</span>
               </label>
             ))}
           </div>

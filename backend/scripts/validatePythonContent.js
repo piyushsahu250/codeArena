@@ -10,6 +10,7 @@ const os = require("os");
 const path = require("path");
 const { modules } = require("../content/python");
 const { renderLesson } = require("../content/python/render");
+const MODULE_TEST = require("../content/python/moduleTest");
 
 const RUN = process.argv.includes("--run");
 // --only=16 checks just "Module 16" (handy while authoring; CI always checks everything)
@@ -165,13 +166,53 @@ function checkSetItem(where, it) {
   }
 }
 
+// A module's final practice test: built only from that module's own choice questions, last in the module, and enough of them to be a fair test. Without it a student could
+// complete every lesson by clicking and unlock every module (and the certificate) without answering anything.
+let moduleTestCount = 0, moduleTestQuestions = 0;
+function checkModuleTest(w, mod, ch, L) {
+  moduleTestCount++;
+  if (L.title !== MODULE_TEST.TITLE) bad(w, `a module test is titled "${MODULE_TEST.TITLE}"`);
+  const last = mod.chapters[mod.chapters.length - 1];
+  if (ch !== last || last.lessons[last.lessons.length - 1] !== L) bad(w, "the module test must be the last lesson of its module");
+  if (mod.chapters.flatMap((c) => c.lessons).filter((x) => x.moduleTest).length !== 1) bad(w, "a module has exactly one practice test");
+  const quiz = L.quiz || [];
+  if (quiz.length < MODULE_TEST.MINIMUM || quiz.length > MODULE_TEST.SIZE) bad(w, `a test has ${MODULE_TEST.MINIMUM} to ${MODULE_TEST.SIZE} questions, has ${quiz.length}`);
+  const own = new Map(); // prompt -> question, for every choice question of the module's own lessons
+  for (const x of mod.chapters.flatMap((c) => c.lessons)) if (!x.moduleTest) for (const q of x.quiz || []) own.set(q.prompt, q);
+  const seen = new Set();
+  for (const q of quiz) {
+    moduleTestQuestions++;
+    const where = `${w} / ${String(q.prompt).slice(0, 40)}`;
+    if (!MODULE_TEST.CHOICE.has(q.type)) bad(where, `a test uses choice questions only, not ${q.type}`);
+    if (!Array.isArray(q.options) || q.options.length < 2 || !Number.isInteger(q.correctAnswer) || q.correctAnswer < 0 || q.correctAnswer >= q.options.length) bad(where, "bad options or answer index");
+    if (!q.explanation) bad(where, "needs an explanation (shown after every attempt)");
+    if (seen.has(q.prompt)) bad(where, "the same question twice in one test");
+    seen.add(q.prompt);
+    const src = own.get(q.prompt);
+    if (!src) bad(where, "not one of this module's own quiz questions");
+    else if (JSON.stringify(src.options) !== JSON.stringify(q.options) || src.correctAnswer !== q.correctAnswer) bad(where, "differs from the lesson question it was copied from");
+  }
+  let html = ""; try { html = renderLesson(L); } catch (e) { bad(w, `render failed: ${e.message}`); return; }
+  if (BANNED.test(html)) bad(w, `contains banned placeholder wording: ${html.match(BANNED)[0]}`);
+  if (/<script|onerror=|onload=|javascript:/i.test(html)) bad(w, "unsafe markup");
+  if (!/70%/.test(html) || !/retake/i.test(html)) bad(w, "the page must state the pass mark and that retakes are allowed");
+  if (!(L.covers || []).length) bad(w, "must say which lessons it covers");
+}
+
 for (const m of selected) {
   const mod = m.module;
   if (!mod.title || !mod.chapters?.length) bad(mod.title || "module", "missing title or chapters");
+  {
+    const usable = mod.chapters.flatMap((c) => c.lessons).filter((x) => !x.moduleTest).reduce((n, x) => n + (x.quiz || []).filter((q) => MODULE_TEST.CHOICE.has(q.type)).length, 0);
+    const has = mod.chapters.some((c) => c.lessons.some((x) => x.moduleTest));
+    if (usable >= MODULE_TEST.MINIMUM && !has) bad(mod.title, `has ${usable} choice questions but no practice test`);
+    if (usable < MODULE_TEST.MINIMUM && has) bad(mod.title, "has a practice test but too few questions");
+  }
   for (const ch of mod.chapters) {
     for (const L of ch.lessons) {
       const w = `${mod.title} / ${L.title}`;
       lessonCount++;
+      if (L.moduleTest) { checkModuleTest(w, mod, ch, L); continue; }
       for (const f of L.project ? PROJECT_REQUIRED : L.items ? QA_REQUIRED : L.set ? SET_REQUIRED : REQUIRED) if (L[f] == null || (Array.isArray(L[f]) && !L[f].length)) bad(w, `missing ${f}`);
       if (titles.has(L.title)) bad(w, "duplicate lesson title");
       titles.add(L.title);
@@ -226,6 +267,7 @@ if (qaCount) console.log(`interview questions=${qaCount}`);
 if (setCount) console.log(`practice-set questions=${setCount}`);
 if (projectCount) console.log(`projects=${projectCount} mini=${miniCount} major=${majorCount} fromScratch=${scratchCount}`);
 if (mockCount) console.log(`timed mocks=${mockCount} mockQuestions=${mockQuestionCount}`);
+if (moduleTestCount) console.log(`module practice tests=${moduleTestCount} questions=${moduleTestQuestions}`);
 console.log(`modules=${selected.length} lessons=${lessonCount} quiz=${quizCount} tasks=${taskCount} assessmentQs=${assessmentCount}${RUN ? ` pythonRuns=${ran}` : " (lint only)"}`);
 if (problems.length) { console.error(`\n${problems.length} problem(s):\n- ` + problems.join("\n- ")); process.exit(1); }
 console.log("OK: content passed validation");

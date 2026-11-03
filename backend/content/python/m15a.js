@@ -123,7 +123,7 @@ ${table(["Pattern", "Idea", "Example"], [["seen-set", "remember items already vi
   revision: ["dict/set: O(1) average.", "Seen-set, complement map, frequency, grouping, prefix + map.", "Keys must be hashable.", "Trades memory for time."],
   hinglish: "Hash table key se seedha jagah nikaal leta hai, isliye dictionary aur set mein dhoondhna O(1) hai. Two-sum mein value aur index yaad rakho aur target - x dhoondho. Anagram group karne ke liye sorted letters ka tuple key banao.",
   quiz: [
-    mcq("What is the average cost of key in dict?", ["O(1)", "O(log n)", "O(n)", "O(n²)"], 0, "Hash lookup."),
+    mcq("What is the average cost of key in dict?", ["O(1)", "O(log n)", "O(n)", "O(n²)"], 0, "A dict hashes the key and goes straight to its slot, so on average the cost does not grow with the size of the dict: O(1)."),
     mcq("Why store the item after checking the complement in two-sum?", ["Speed", "An item must not pair with itself", "Python requires it", "To sort"], 1, "Otherwise x could match its own entry."),
     mcq("Which is a valid dictionary key?", ["[1, 2]", "{1: 2}", "(1, 2)", "{1, 2}"], 2, "Tuples of hashables are hashable."),
     mcq("What does Counter(\"aab\")[\"a\"] return?", ["1", "2", "3", "0"], 1, "Two a's.", "OUTPUT_PREDICTION"),

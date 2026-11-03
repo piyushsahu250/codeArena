@@ -213,7 +213,19 @@ function renderProject(P) {
   return p.join("\n");
 }
 
+// The final test of a module: the rules and what it covers. The questions are the lesson's own practice questions, which the platform grades together.
+function renderModuleTest(L) {
+  const p = [`<div class="py-lesson">`];
+  p.push(h(2, "About this test") + `<p>This test checks what you learned in the whole module. It has ${L.quiz.length} questions, all multiple choice. You need <strong>70%</strong> to pass, which is <strong>${Math.ceil(L.quiz.length * 0.7)} correct answers</strong>. You can retake it as many times as you need; after every try you see which answers were right and why.</p>`);
+  p.push(h(2, "Why it matters") + `<p>Passing this test is what completes the module and unlocks the next one. Finishing every module, including this test, is what earns the course certificate.</p>`);
+  p.push(h(2, "What it covers") + list(L.covers.map(esc)));
+  p.push(h(2, "Before you start") + list(["Skim the quick revision of any lesson you feel unsure about.", "Read each question completely; the answer options are in a different order for every student.", "If a question shows a program, work out its output on paper before you choose."]));
+  p.push(`<p style="margin-top:1.4rem"><em>Scroll down to the questions. Answer all of them, then press Submit Test.</em></p></div>`);
+  return p.join("\n");
+}
+
 function renderLesson(L) {
+  if (L.moduleTest) return renderModuleTest(L);
   if (L.project) return renderProject(L.project);
   if (L.items) return renderQa(L);
   if (L.set) return renderSet(L);

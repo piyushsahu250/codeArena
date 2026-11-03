@@ -37,7 +37,7 @@ No schema change and no migration are needed.
 | | Count |
 | --- | --- |
 | Modules | 24: Modules 1 to 23 (Phase 0: Modules 1-2; Phase 1: Modules 3-9; Phase 2: Modules 10-13; Phase 3: Modules 14-15; Phase 4: Modules 16-18; Phase 5: Modules 19-20; Phase 7: Modules 21-23) plus the Phase 6 projects module |
-| Lessons | 197: 176 in Modules 1 to 23 (25 to 70 minutes each; Modules 15 and 18 have four chapters, Modules 19 and 20 three, Module 21 six, Module 22 three chapters, Module 23 three chapters) and 21 project guides (90 to 480 minutes) |
+| Lessons | 220: 176 teaching lessons in Modules 1 to 23 (25 to 70 minutes each; Modules 15 and 18 have four chapters, Modules 19 and 20 three, Module 21 six, Module 22 three chapters, Module 23 three chapters), 21 project guides (90 to 480 minutes) and 23 module practice tests (15 minutes each, 276 questions, see below) |
 | Projects | 21 (15 mini, 6 major, 2 of them build-from-scratch) with 77 project tasks (25 auto-judged, 52 manual) |
 | Quiz questions | 1,054 (MCQ, output prediction, debugging, fill in the blank) |
 | Coding tasks in lessons | 420 (224 of them the tagged interview bank), each with 2 sample and at least 1 hidden case |
@@ -140,3 +140,19 @@ Checked against python.org and docs.python.org on **2 November 2026**: latest st
 | Judge test suite | `backend/test/pythonJudge.test.js`: 32 tests through the real judge; run in CI on Linux and, with `PYJ_EXPECT_SANDBOX_USER=1 PYJ_EXPECT_NO_NETWORK=1`, inside the production judge container |
 | Changing the runtime | Not done silently. A new Python version changes grading for every course, so it is a deliberate change: update the Dockerfile, run the suite, then re-run the validator on that version |
 | `EXACT` comparison mode | Compares the program's output with surrounding whitespace removed against the raw expected text, so it is not byte-exact. Left as is: making it exact would change the result of stored questions |
+
+## Module practice tests and the certificate (2026-11-03)
+
+**Why.** The platform unlocks the next module, and issues the course certificate, only when every lesson of a module is COMPLETED. An ordinary lesson can be completed with one click, so before this change a student could unlock all 24 modules and earn the certificate without answering a single question (checked on the live database: the course had no module-test lessons; the Java course has 15).
+
+**What.** Every module that has enough choice questions ends with a lesson **Module Practice Test** (`isModuleTest`), built by `backend/content/python/moduleTest.js` from the module's own multiple-choice, output-prediction and debugging questions: 12 questions, taken in round-robin order across the module's lessons so every lesson is represented, the same on every run. 23 modules get one (276 questions); the **Real-World Projects** module has no quiz questions and therefore no test. Fill-in-the-blank and coding questions are never used, because an exact-text answer could block a student unfairly. Nothing is invented: the validator fails if a test question is not one of the module's own lesson questions, if it differs from its source, or if a module with enough questions has no test.
+
+**How it is graded (platform behaviour, unchanged).** `POST /api/learning/lessons/:id/test-submit` grades all the questions together on the server; 70% passes (9 of 12); retakes are unlimited and show the correct answers and explanations; a later weaker attempt never un-passes a test; the lesson cannot be completed by hand (the progress route refuses it); the next module stays locked until the test is passed.
+
+**Certificate.** Issued automatically the moment the last lesson of the course is completed or the last test is passed (`issueCertificateIfCourseComplete` in `routes/learning.js`): every live lesson completed and every module satisfied. The response says `courseCompleted` and `certificateIssued`, and the lesson page shows a banner with a link. Asking for the certificate earlier answers 400 "Course not yet completed"; asking again never issues a second one; a course with certificates switched off issues none.
+
+**Rolling it out on a course that is already seeded.** The seed creates the new lessons as Draft, like everything else it creates. After deploying: run `node scripts/seedPythonCourse.js` (creates the 23 tests and their questions; nothing existing changes), then publish the tests with `node scripts/publishPythonModuleTests.js` (`--plan` first).
+
+**Known limit.** The projects module (21 lessons) is still completed lesson by lesson with "Mark as Complete"; its project tasks are not yet a condition of the certificate. Requiring approved major projects needs a product decision about who approves them.
+
+**Tests.** `test/moduleTest.test.js` (the properties above), the end-to-end test in `test/pythonCourse.integration.test.js` (a student is walked through all 220 lessons through the real API: a failed attempt keeps the next module locked, a test cannot be clicked complete, no certificate before the end, one certificate exactly at the end), and `scripts/validatePythonContent.js`.
