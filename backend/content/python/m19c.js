@@ -247,7 +247,7 @@ lessons.push({
   simple: "In Matplotlib you create a <strong>Figure</strong> (the canvas) with one or more <strong>Axes</strong> (the plots), call methods such as <code>ax.plot</code> or <code>ax.bar</code> to draw, label them, and then show or save the figure.",
   detail: `<p><strong>Install:</strong> <code>python -m pip install matplotlib</code>. Import with <code>import matplotlib.pyplot as plt</code>. In a notebook or on your desktop <code>plt.show()</code> opens the chart; on a server (no screen) choose the non-interactive backend first: <code>matplotlib.use(&quot;Agg&quot;)</code> and save with <code>fig.savefig(&quot;chart.png&quot;, dpi=150)</code>.</p>
 <h3>The object-oriented way</h3>
-<pre style="background:rgba(127,127,127,.14);padding:12px 14px;border-radius:8px;overflow:auto"><code>fig, ax = plt.subplots(figsize=(6, 3))
+<pre style="background:#16181c;color:#d8dee9;padding:12px 14px;border-radius:8px;overflow:auto"><code>fig, ax = plt.subplots(figsize=(6, 3))
 ax.plot(months, sales, marker="o", label="sales")
 ax.set_title("Sales by month")
 ax.set_xlabel("Month")

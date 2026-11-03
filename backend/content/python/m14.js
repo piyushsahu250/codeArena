@@ -61,7 +61,7 @@ lessons.push({
   detail: `<h3>Requirements and cost</h3>
 ${table(["", "Linear search", "Binary search"], [["Data must be", "any order", "<strong>sorted</strong> (and random access, like a list)"], ["Time", "O(n)", "O(log n)"], ["Space", "O(1)", "O(1) iterative; O(log n) recursive"], ["Use when", "small or unsorted data, or a single search", "sorted data, many searches"]])}
 <h3>The standard loop</h3>
-<pre style="background:rgba(127,127,127,.14);padding:12px 14px;border-radius:8px"><code>lo, hi = 0, len(a) - 1\nwhile lo &lt;= hi:\n    mid = (lo + hi) // 2\n    if a[mid] == target: return mid\n    if a[mid] &lt; target: lo = mid + 1\n    else: hi = mid - 1\nreturn -1</code></pre>
+<pre style="background:#16181c;color:#d8dee9;padding:12px 14px;border-radius:8px"><code>lo, hi = 0, len(a) - 1\nwhile lo &lt;= hi:\n    mid = (lo + hi) // 2\n    if a[mid] == target: return mid\n    if a[mid] &lt; target: lo = mid + 1\n    else: hi = mid - 1\nreturn -1</code></pre>
 <p>(In other languages <code>(lo + hi) / 2</code> can overflow; Python integers cannot, so it is safe here.)</p>
 <h3>Boundary variations</h3>
 <ul><li><strong>Lower bound / first occurrence</strong>: the first index whose value is &ge; target. Use the half-open loop <code>lo, hi = 0, len(a)</code> with <code>while lo &lt; hi</code>: if <code>a[mid] &lt; target</code> then <code>lo = mid + 1</code> else <code>hi = mid</code>.</li><li><strong>Upper bound</strong>: first index whose value is &gt; target; the last occurrence is that index minus 1.</li><li><code>bisect.bisect_left(a, x)</code> and <code>bisect_right</code> do exactly these.</li></ul>
@@ -137,7 +137,7 @@ lessons.push({
   detail: `<h3>Divide and conquer</h3>
 <p>1) <strong>Divide</strong> the problem into smaller parts of the same kind; 2) <strong>conquer</strong> each part (recursively, with a base case of size 0 or 1); 3) <strong>combine</strong> the answers.</p>
 <h3>Merge sort</h3>
-<pre style="background:rgba(127,127,127,.14);padding:12px 14px;border-radius:8px"><code>def merge_sort(a):\n    if len(a) &lt;= 1:\n        return a\n    mid = len(a) // 2\n    return merge(merge_sort(a[:mid]), merge_sort(a[mid:]))</code></pre>
+<pre style="background:#16181c;color:#d8dee9;padding:12px 14px;border-radius:8px"><code>def merge_sort(a):\n    if len(a) &lt;= 1:\n        return a\n    mid = len(a) // 2\n    return merge(merge_sort(a[:mid]), merge_sort(a[mid:]))</code></pre>
 <p>The <code>merge</code> of two sorted lists uses two pointers and takes O(n) time.</p>
 <h3>Why O(n log n)</h3>
 <p>The list is halved log&#8322; n times (the depth of the recursion tree), and each level does O(n) work in total for merging: n × log n. This holds for best, average and worst cases. Extra memory for the merged lists is O(n) (plus O(log n) recursion stack).</p>

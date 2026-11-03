@@ -64,7 +64,7 @@ ${table(["Code", "Effect"], [["<code>a.sort()</code>", "sorts <code>a</code> in 
 <h3>Nested lists</h3>
 <p>A list of lists models a table: <code>grid[row][col]</code>. Each inner list is a separate object. Build a grid with a comprehension: <code>[[0] * 3 for _ in range(2)]</code>. Never write <code>[[0] * 3] * 2</code>: that repeats <em>one</em> inner list, so a change to one row shows in all.</p>
 <h3>List comprehensions</h3>
-<pre style="background:rgba(127,127,127,.14);padding:12px 14px;border-radius:8px"><code>[expression for item in iterable]\n[expression for item in iterable if condition]\n[a if cond else b for item in iterable]</code></pre>
+<pre style="background:#16181c;color:#d8dee9;padding:12px 14px;border-radius:8px"><code>[expression for item in iterable]\n[expression for item in iterable if condition]\n[a if cond else b for item in iterable]</code></pre>
 <p>It is equivalent to a loop with <code>append</code> but shorter and usually faster. If it needs more than one condition and a nested loop, use a normal loop for clarity.</p>`,
   syntax: { code: `sorted(a, key=len, reverse=True)\nsquares = [x * x for x in range(1, 6)]\nevens = [x for x in a if x % 2 == 0]\ngrid = [[0] * cols for _ in range(rows)]`, note: "A comprehension builds a new list." },
   diagram: chain("A list comprehension step by step", "Left to right: take each item, filter with the condition, compute the expression, collect results into a new list.",

@@ -5,9 +5,9 @@
 
 const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const list = (items, tag = "ul") => `<${tag}>${items.map((i) => `<li>${i}</li>`).join("")}</${tag}>`;
-const code = (src, lang = "python") => `<pre style="background:rgba(127,127,127,.14);padding:12px 14px;border-radius:8px;overflow:auto;font-size:.92em;line-height:1.5"><code class="language-${lang}">${esc(src.replace(/\n$/, ""))}</code></pre>`;
-const stdinBlock = (s) => s == null ? "" : `<p style="margin:.4rem 0 .2rem"><strong>Input typed by the user</strong></p><pre style="background:rgba(56,139,253,.13);padding:10px 14px;border-radius:8px;overflow:auto;font-size:.92em"><code>${esc(String(s))}</code></pre>`;
-const output = (out) => `<p style="margin:.4rem 0 .2rem"><strong>Output</strong></p><pre style="background:rgba(46,160,67,.13);padding:10px 14px;border-radius:8px;overflow:auto;font-size:.92em"><code>${esc(out.replace(/\n$/, ""))}</code></pre>`;
+const code = (src, lang = "python") => `<pre style="background:#16181c;color:#d8dee9;padding:12px 14px;border-radius:8px;overflow:auto;font-size:.92em;line-height:1.5"><code class="language-${lang}">${esc(src.replace(/\n$/, ""))}</code></pre>`;
+const stdinBlock = (s) => s == null ? "" : `<p style="margin:.4rem 0 .2rem"><strong>Input typed by the user</strong></p><pre style="background:rgba(56,139,253,.13);color:inherit;padding:10px 14px;border-radius:8px;overflow:auto;font-size:.92em"><code>${esc(String(s))}</code></pre>`;
+const output = (out) => `<p style="margin:.4rem 0 .2rem"><strong>Output</strong></p><pre style="background:rgba(46,160,67,.13);color:inherit;padding:10px 14px;border-radius:8px;overflow:auto;font-size:.92em"><code>${esc(out.replace(/\n$/, ""))}</code></pre>`;
 // A terminal window illustration: title bar plus the commands (lines starting with "$ " or "> " are what you type).
 const terminal = (title, text) =>
   `<figure style="margin:1rem 0"><div style="border-radius:8px;overflow:hidden;border:1px solid rgba(127,127,127,.5)"><div style="background:#3b3f45;color:#eee;padding:5px 12px;font-size:.8em">${esc(title)}</div>` +

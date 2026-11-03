@@ -175,7 +175,7 @@ lessons.push({
 <ol><li>Begin (implicit with the first change in the sqlite3 module).</li><li>Run the statements.</li><li>If everything is valid: <code>commit()</code>. If anything fails: <code>rollback()</code>.</li></ol>
 <p>The pattern <code>with conn:</code> does this for you. In Python's sqlite3, a transaction starts automatically before INSERT, UPDATE and DELETE; check the autocommit setting of your Python version and driver and prefer explicit <code>with</code> blocks.</p>
 <h3>Atomic transfer</h3>
-<pre style="background:rgba(127,127,127,.14);padding:12px 14px;border-radius:8px"><code>with conn:\n    conn.execute("UPDATE acct SET bal = bal - ? WHERE id = ?", (amount, src))\n    conn.execute("UPDATE acct SET bal = bal + ? WHERE id = ?", (amount, dst))</code></pre>
+<pre style="background:#16181c;color:#d8dee9;padding:12px 14px;border-radius:8px"><code>with conn:\n    conn.execute("UPDATE acct SET bal = bal - ? WHERE id = ?", (amount, src))\n    conn.execute("UPDATE acct SET bal = bal + ? WHERE id = ?", (amount, dst))</code></pre>
 <p>Let the database enforce the rules: <code>CHECK (bal &gt;= 0)</code> makes an overdraft fail, and the surrounding transaction rolls back the first update.</p>
 <h3>Isolation and concurrency</h3>
 ${table(["Problem", "What goes wrong"], [["dirty read", "reading another transaction's uncommitted change"], ["lost update", "two transactions read, change and write the same row, one overwrites the other"], ["non-repeatable read", "the same query returns different values within one transaction"], ["phantom read", "new rows appear between two identical queries"], ["deadlock", "two transactions wait for each other's locks; the database aborts one"]])}

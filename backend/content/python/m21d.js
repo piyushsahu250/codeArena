@@ -14,7 +14,7 @@ lessons.push({
   realWorld: "Databases use binary search in indexes, Git bisect finds the commit that broke a build, autoscalers search for the smallest capacity that meets a deadline, and every report that lists the top items sorts by a key.",
   simple: "If the data is sorted (or a yes/no test changes only once, from no to yes), you can halve the search range each step. The art is keeping the loop invariant exactly right so you never loop forever or skip the answer.",
   detail: `<h3>The reliable template: first index where a condition is true</h3>
-<pre style="background:rgba(127,127,127,.14);padding:12px 14px;border-radius:8px;overflow:auto"><code>lo, hi = 0, n          # answer is in [lo, hi]; hi means "none"
+<pre style="background:#16181c;color:#d8dee9;padding:12px 14px;border-radius:8px;overflow:auto"><code>lo, hi = 0, n          # answer is in [lo, hi]; hi means "none"
 while lo &lt; hi:
     mid = (lo + hi) // 2
     if condition(mid):
@@ -431,7 +431,7 @@ lessons.push({
 <ol><li>What is the smallest case I can answer directly (base case)?</li><li>How does a bigger case use a smaller one (the recursive step), making progress towards the base case?</li><li>What is the cost: how many calls and how deep is the recursion? Python's default limit is about 1000 nested calls (<code>sys.setrecursionlimit</code> can raise it, but prefer loops or memoisation for deep recursion).</li></ol>
 <p>Overlapping subproblems (Fibonacci) are cached with <code>functools.lru_cache</code>, which is the start of dynamic programming.</p>
 <h3>The backtracking template</h3>
-<pre style="background:rgba(127,127,127,.14);padding:12px 14px;border-radius:8px;overflow:auto"><code>def dfs(state):
+<pre style="background:#16181c;color:#d8dee9;padding:12px 14px;border-radius:8px;overflow:auto"><code>def dfs(state):
     if is_complete(state):
         record(state); return
     for choice in choices(state):

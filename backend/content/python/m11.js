@@ -17,7 +17,7 @@ lessons.push({
 ${table(["Object", "Must provide", "Examples"], [["Iterable", "<code>__iter__()</code> returning an iterator", "list, str, dict, set, range, file"], ["Iterator", "<code>__next__()</code> (and <code>__iter__()</code> returning itself)", "generator, <code>iter(list)</code>, zip, map, file object"]])}
 <p><code>for x in obj</code> is: <code>it = iter(obj)</code>, then repeat <code>x = next(it)</code> until <code>StopIteration</code>. Iterators are <strong>one-shot</strong>: once exhausted they stay empty. Iterables such as lists can create a fresh iterator each time.</p>
 <h3>Writing an iterator class</h3>
-<pre style="background:rgba(127,127,127,.14);padding:12px 14px;border-radius:8px"><code>class Evens:\n    def __init__(self, limit):\n        self.n, self.limit = 0, limit\n    def __iter__(self):\n        return self\n    def __next__(self):\n        if self.n >= self.limit:\n            raise StopIteration\n        value = self.n\n        self.n += 2\n        return value</code></pre>
+<pre style="background:#16181c;color:#d8dee9;padding:12px 14px;border-radius:8px"><code>class Evens:\n    def __init__(self, limit):\n        self.n, self.limit = 0, limit\n    def __iter__(self):\n        return self\n    def __next__(self):\n        if self.n >= self.limit:\n            raise StopIteration\n        value = self.n\n        self.n += 2\n        return value</code></pre>
 <h3>Generators are shorter</h3>
 <p>The same thing as a generator function is three lines (<code>while n &lt; limit: yield n; n += 2</code>). <code>yield from other</code> delegates to another iterable. A generator expression <code>(x * x for x in data)</code> is lazy; a list comprehension is eager.</p>
 <h3>Useful tools</h3>
@@ -56,7 +56,7 @@ lessons.push({
   simple: "A decorator <em>with arguments</em> is a function that returns a decorator: <code>@repeat(3)</code> means <code>f = repeat(3)(f)</code>. Caching stores results by arguments so a repeated call is instant.",
   detail: `<h3>Decorator factories</h3>
 <p>Three levels: the outer function takes the settings, returns the real decorator, which takes the function and returns the wrapper.</p>
-<pre style="background:rgba(127,127,127,.14);padding:12px 14px;border-radius:8px"><code>def repeat(times):\n    def decorator(func):\n        @wraps(func)\n        def wrapper(*args, **kwargs):\n            for _ in range(times):\n                result = func(*args, **kwargs)\n            return result\n        return wrapper\n    return decorator</code></pre>
+<pre style="background:#16181c;color:#d8dee9;padding:12px 14px;border-radius:8px"><code>def repeat(times):\n    def decorator(func):\n        @wraps(func)\n        def wrapper(*args, **kwargs):\n            for _ in range(times):\n                result = func(*args, **kwargs)\n            return result\n        return wrapper\n    return decorator</code></pre>
 <h3>Stacking</h3>
 <p>Decorators apply from the bottom up: <code>@a</code> above <code>@b</code> above <code>def f</code> means <code>f = a(b(f))</code>, so <code>a</code> is outermost and runs first on a call.</p>
 <h3>functools</h3>
@@ -255,7 +255,7 @@ ${table(["Need", "Code"], [["today's date / now", "<code>date.today()</code>, <c
 <h3>random</h3>
 <p><code>random()</code>, <code>randint(a, b)</code> (inclusive), <code>choice</code>, <code>sample</code>, <code>shuffle</code>, <code>seed</code>. These are <strong>not secure</strong>: for passwords, tokens and OTPs use the <code>secrets</code> module (<code>secrets.randbelow</code>, <code>secrets.token_hex</code>).</p>
 <h3>logging</h3>
-<pre style="background:rgba(127,127,127,.14);padding:12px 14px;border-radius:8px"><code>import logging\nlogging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")\nlog = logging.getLogger(__name__)\nlog.info("loaded %d rows", 120)\nlog.error("failed", exc_info=True)</code></pre>
+<pre style="background:#16181c;color:#d8dee9;padding:12px 14px;border-radius:8px"><code>import logging\nlogging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")\nlog = logging.getLogger(__name__)\nlog.info("loaded %d rows", 120)\nlog.error("failed", exc_info=True)</code></pre>
 <p>Libraries log; applications configure (level, format, file). Use <code>%s</code>-style arguments rather than f-strings so formatting happens only when the message is emitted. <code>log.exception("...")</code> inside an <code>except</code> logs the traceback. Never log passwords or personal data.</p>`,
   syntax: { code: `from datetime import date, datetime, timedelta\n(date(2026, 12, 25) - date(2026, 11, 2)).days\nd.strftime("%d %b %Y")\nimport logging\nlog = logging.getLogger(__name__)`, note: "Use UTC for storage." },
   diagram: chain("Logging levels, low to high", "Left to right: DEBUG, INFO, WARNING, ERROR, CRITICAL; a configured level shows that level and everything to its right.",
@@ -291,7 +291,7 @@ lessons.push({
   detail: `<h3>sys.argv</h3>
 <p><code>python tool.py a b</code> gives <code>sys.argv == ["tool.py", "a", "b"]</code>. Everything is a string; counting and converting is on you. Fine for tiny scripts.</p>
 <h3>argparse</h3>
-<pre style="background:rgba(127,127,127,.14);padding:12px 14px;border-radius:8px"><code>import argparse\nparser = argparse.ArgumentParser(description="Greet people")\nparser.add_argument("name")                      # positional\nparser.add_argument("--times", type=int, default=1)\nparser.add_argument("--shout", action="store_true")\nargs = parser.parse_args()                       # or parse_args(list_for_tests)\nprint(args.name, args.times, args.shout)</code></pre>
+<pre style="background:#16181c;color:#d8dee9;padding:12px 14px;border-radius:8px"><code>import argparse\nparser = argparse.ArgumentParser(description="Greet people")\nparser.add_argument("name")                      # positional\nparser.add_argument("--times", type=int, default=1)\nparser.add_argument("--shout", action="store_true")\nargs = parser.parse_args()                       # or parse_args(list_for_tests)\nprint(args.name, args.times, args.shout)</code></pre>
 <p>It provides types, defaults, choices, required options, subcommands and automatic <code>-h/--help</code> and error messages. Passing a list to <code>parse_args(["Asha", "--times", "2"])</code> makes the parser easy to test.</p>
 <h3>Environment variables</h3>
 <ul><li><code>os.environ["HOME"]</code> (KeyError if missing); <code>os.environ.get("MODE", "dev")</code> or <code>os.getenv</code> with a default.</li><li>Values are always strings: convert numbers and booleans yourself.</li><li>Use them for deployment-specific settings and <strong>secrets</strong> (API keys, database passwords). Never hard-code or commit secrets. During development a <code>.env</code> file (read by <code>python-dotenv</code>) kept out of Git is common.</li></ul>

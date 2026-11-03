@@ -275,7 +275,7 @@ ${table(["Symptom", "Likely cause", "Fix"], [["'python' is not recognized (Windo
 ${terminal("Terminal", `$ git --version\n$ git init\n$ git add .\n$ git commit -m "Add student card program"\n$ git branch -M main\n$ git remote add origin https://github.com/<your-user>/<repo>.git\n$ git push -u origin main`)}
 <p>Create the empty repository on github.com first, then run the commands above. Add a <code>.gitignore</code> file so you never commit <code>.venv/</code>, <code>__pycache__/</code> or secrets. Never put passwords or API keys in your code or repository.</p>
 <h3>A clean project layout</h3>
-<pre style="background:rgba(127,127,127,.14);padding:12px 14px;border-radius:8px"><code>student-card/\n  main.py\n  requirements.txt\n  README.md\n  .gitignore</code></pre>`,
+<pre style="background:#16181c;color:#d8dee9;padding:12px 14px;border-radius:8px"><code>student-card/\n  main.py\n  requirements.txt\n  README.md\n  .gitignore</code></pre>`,
   syntax: { code: `git init\ngit add .\ngit commit -m "message"\ngit push -u origin main`, lang: "bash" },
   diagram: graph("Setup troubleshooting flow", "Flow: run python --version; if it prints a version, test pip; if not, install or fix PATH in a new terminal; then retest.", 600, 260,
     [{ id: "a", k: "term", t: "python --version", x: 100, y: 40, w: 160 }, { id: "b", k: "dec", t: "Version\nshown?", x: 300, y: 40, w: 120, h: 64 }, { id: "c", k: "proc", t: "python -m pip --version", x: 500, y: 40, w: 180 }, { id: "d", k: "proc", t: "Install / fix PATH,\nopen NEW terminal", x: 300, y: 150, w: 200, h: 56 }, { id: "e", k: "term", t: "Setup verified", x: 500, y: 150, w: 150 }],

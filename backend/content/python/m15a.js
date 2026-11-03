@@ -62,7 +62,7 @@ lessons.push({
   detail: `<h3>Fixed window of size k</h3>
 <p>Compute the first window, then slide: add the entering item, subtract the leaving item: <code>total += a[i] - a[i - k]</code>. Each step is O(1).</p>
 <h3>Variable window</h3>
-<pre style="background:rgba(127,127,127,.14);padding:12px 14px;border-radius:8px"><code>left = 0\nfor right in range(len(a)):\n    add a[right] to the window\n    while window is invalid:\n        remove a[left] from the window\n        left += 1\n    update the answer using right - left + 1</code></pre>
+<pre style="background:#16181c;color:#d8dee9;padding:12px 14px;border-radius:8px"><code>left = 0\nfor right in range(len(a)):\n    add a[right] to the window\n    while window is invalid:\n        remove a[left] from the window\n        left += 1\n    update the answer using right - left + 1</code></pre>
 <p>Each index enters and leaves the window at most once, so the whole thing is O(n) even though there is a loop inside a loop.</p>
 ${table(["Goal", "Condition to shrink", "Update answer"], [["longest substring without repeats", "a character repeats", "max length after shrinking"], ["shortest subarray with sum &ge; s (positives)", "while sum &ge; s", "min length while valid"], ["longest with at most k distinct", "distinct count &gt; k", "max length"], ["count subarrays with sum &lt; s", "sum &ge; s", "add <code>right - left + 1</code>"]])}
 <h3>Requirements</h3>

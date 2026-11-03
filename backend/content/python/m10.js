@@ -255,7 +255,7 @@ lessons.push({
   realWorld: "A <code>Library</code> has many <code>Book</code> objects; a payment system accepts any <code>PaymentMethod</code> that can <code>pay(amount)</code>; an API response model is a dataclass.",
   simple: "An <strong>abstract class</strong> declares methods that every child must provide but does not implement them. <strong>Composition</strong> builds big objects from smaller ones (a Library <em>has</em> Books). A <strong>dataclass</strong> writes <code>__init__</code>, <code>__repr__</code> and <code>__eq__</code> for you.",
   detail: `<h3>Abstract base classes (ABC)</h3>
-<pre style="background:rgba(127,127,127,.14);padding:12px 14px;border-radius:8px"><code>from abc import ABC, abstractmethod\nclass Shape(ABC):\n    @abstractmethod\n    def area(self): ...</code></pre>
+<pre style="background:#16181c;color:#d8dee9;padding:12px 14px;border-radius:8px"><code>from abc import ABC, abstractmethod\nclass Shape(ABC):\n    @abstractmethod\n    def area(self): ...</code></pre>
 <p>You cannot create a <code>Shape()</code>; a subclass must implement every abstract method before it can be instantiated. This guarantees the interface and documents it. (Python also has <code>typing.Protocol</code> for structural typing, Module 11.)</p>
 <h3>Composition versus inheritance</h3>
 ${table(["", "Inheritance (is-a)", "Composition (has-a)"], [["Example", "<code>Car(Vehicle)</code>", "<code>Car</code> has an <code>Engine</code>"], ["Coupling", "tight: child depends on the parent's internals", "loose: depends on the other object's interface"], ["Change at run time", "no", "yes: swap the engine"], ["Rule of thumb", "only for true specialisation", "the default choice"]])}

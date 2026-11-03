@@ -138,7 +138,7 @@ lessons.push({
   realWorld: "A report page takes 8 seconds; the profile shows 90% of the time in one database helper, not in the loop everyone suspected.",
   simple: "<code>timeit</code> runs a snippet many times and reports the time. <code>cProfile</code> counts calls and times each function. <code>tracemalloc</code> shows how much memory your code allocates.",
   detail: `<h3>timeit</h3>
-<pre style="background:rgba(127,127,127,.14);padding:12px 14px;border-radius:8px"><code>import timeit\ntimeit.timeit("x in data", setup="data = list(range(10000)); x = 9999", number=1000)</code></pre>
+<pre style="background:#16181c;color:#d8dee9;padding:12px 14px;border-radius:8px"><code>import timeit\ntimeit.timeit("x in data", setup="data = list(range(10000)); x = 9999", number=1000)</code></pre>
 <p>It disables the garbage collector and repeats the code, giving a more stable result than <code>time.time()</code> around a single call. In IPython or Jupyter use <code>%timeit</code>. Take the <em>minimum</em> of several repeats (<code>timeit.repeat</code>) to reduce noise from other programs.</p>
 <h3>Profiling with cProfile</h3>
 <p><code>python -m cProfile -s cumtime script.py</code> or <code>cProfile.run("main()")</code> prints, per function: number of calls, total time, time per call, cumulative time. Look for functions with a large cumulative time or an astonishing number of calls.</p>

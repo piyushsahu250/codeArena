@@ -63,7 +63,7 @@ lessons.push({
 <p><code>f(*[1, 2, 3])</code> spreads a list into positional arguments; <code>f(**{"a": 1})</code> spreads a dictionary into keyword arguments.</p>
 <h3>The mutable default trap</h3>
 <p>Default values are created <strong>once</strong>, when the function is defined. <code>def add(x, items=[])</code> therefore shares one list between all calls. Use <code>None</code> and create the list inside:</p>
-<pre style="background:rgba(127,127,127,.14);padding:12px 14px;border-radius:8px"><code>def add(x, items=None):\n    if items is None:\n        items = []\n    items.append(x)\n    return items</code></pre>
+<pre style="background:#16181c;color:#d8dee9;padding:12px 14px;border-radius:8px"><code>def add(x, items=None):\n    if items is None:\n        items = []\n    items.append(x)\n    return items</code></pre>
 <p>Python raises <code>TypeError</code> for a missing required argument, an unknown keyword or a value given twice.</p>`,
   syntax: { code: `def describe(name, age=18, *hobbies, city="Pune", **extra):\n    ...\ndescribe("Asha", 20, "chess", "music", city="Delhi", role="admin")`, note: "Order: positional, defaults, *args, keyword-only, **kwargs." },
   diagram: graph("How a call is matched", "The call describe(Asha, 20, chess, city=Delhi) matches name and age by position, extra positional values go to args, city by keyword.", 640, 240,
@@ -222,7 +222,7 @@ lessons.push({
   simple: "A <strong>decorator</strong> wraps a function to add behaviour before or after it, without editing the function. A <strong>generator</strong> is a function that <code>yield</code>s values one at a time and pauses between them.",
   detail: `<h3>Decorators</h3>
 <p>A decorator is a function that takes a function and returns a new function. The line <code>@decorator</code> above <code>def f</code> is shorthand for <code>f = decorator(f)</code>. The wrapper should accept <code>*args, **kwargs</code> so it fits any function, and use <code>functools.wraps</code> to keep the original name and docstring.</p>
-<pre style="background:rgba(127,127,127,.14);padding:12px 14px;border-radius:8px"><code>def logged(func):\n    @wraps(func)\n    def wrapper(*args, **kwargs):\n        print("calling", func.__name__)\n        result = func(*args, **kwargs)\n        return result\n    return wrapper</code></pre>
+<pre style="background:#16181c;color:#d8dee9;padding:12px 14px;border-radius:8px"><code>def logged(func):\n    @wraps(func)\n    def wrapper(*args, **kwargs):\n        print("calling", func.__name__)\n        result = func(*args, **kwargs)\n        return result\n    return wrapper</code></pre>
 <h3>Generators</h3>
 <p>A function containing <code>yield</code> returns a <strong>generator</strong>. Each <code>next()</code> (or each pass of a <code>for</code> loop) runs the function until the next <code>yield</code>, hands out that value and pauses with all its local variables kept. When the function ends the generator raises <code>StopIteration</code>, which a <code>for</code> loop handles silently.</p>
 <ul><li><strong>Lazy</strong>: values are produced on demand, so memory use stays tiny.</li><li><strong>One-shot</strong>: once consumed a generator is empty.</li><li><strong>Generator expression</strong>: <code>(x * x for x in range(5))</code>, like a list comprehension with round brackets: <code>sum(x * x for x in range(1000000))</code> never builds the list.</li></ul>

@@ -103,7 +103,7 @@ lessons.push({
   realWorld: "A music player's playlist with next and previous (doubly linked), a round-robin scheduler (circular), the chain used to resolve collisions in hash tables.",
   simple: "A linked list is a chain of <strong>nodes</strong>. Each node holds a value and a reference to the next node (and, in a doubly linked list, to the previous one). You reach items by following the links from the <strong>head</strong>.",
   detail: `<h3>Node and list</h3>
-<pre style="background:rgba(127,127,127,.14);padding:12px 14px;border-radius:8px"><code>class Node:\n    def __init__(self, value, next=None):\n        self.value = value\n        self.next = next</code></pre>
+<pre style="background:#16181c;color:#d8dee9;padding:12px 14px;border-radius:8px"><code>class Node:\n    def __init__(self, value, next=None):\n        self.value = value\n        self.next = next</code></pre>
 ${table(["Kind", "Links", "Extra"], [["singly linked", "<code>next</code>", "move forward only; tail points to <code>None</code>"], ["doubly linked", "<code>next</code> and <code>prev</code>", "move both ways; delete a node in O(1) if you hold it"], ["circular", "tail points back to head", "no <code>None</code> end; round-robin"]])}
 <h3>Costs versus a Python list</h3>
 ${table(["Operation", "linked list", "Python list"], [["access by index", "O(n)", "O(1)"], ["insert / delete at the head", "O(1)", "O(n)"], ["insert / delete after a known node", "O(1)", "O(n)"], ["search", "O(n)", "O(n)"], ["memory per item", "higher (object + pointer)", "lower"]])}

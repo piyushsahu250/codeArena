@@ -107,7 +107,7 @@ lessons.push({
   realWorld: "A churn model team compares a logistic baseline, a random forest and gradient boosting, tunes the winner's depth and learning rate with cross-validation on the training set, and finally reports a single score on the untouched test set.",
   simple: "<strong>Hyper-parameters</strong> are the settings you choose (tree depth, k, C). <strong>Grid search</strong> tries every combination with cross-validation and keeps the best. An <strong>ensemble</strong> combines many models: a random forest averages many different trees, which is more accurate and stable than one tree.",
   detail: `<h3>GridSearchCV</h3>
-<pre style="background:rgba(127,127,127,.14);padding:12px 14px;border-radius:8px;overflow:auto"><code>pipe = Pipeline([("scale", StandardScaler()), ("svm", SVC())])
+<pre style="background:#16181c;color:#d8dee9;padding:12px 14px;border-radius:8px;overflow:auto"><code>pipe = Pipeline([("scale", StandardScaler()), ("svm", SVC())])
 grid = GridSearchCV(pipe, {"svm__C": [0.1, 1, 10], "svm__kernel": ["linear", "rbf"]}, cv=5)
 grid.fit(X_train, y_train)
 grid.best_params_, grid.best_score_   # chosen with cross-validation on the training data

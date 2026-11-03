@@ -59,7 +59,7 @@ lessons.push({
 ${table(["Age", "Price"], [["under 5", "0 (free)"], ["5 to 12", "100"], ["13 to 59", "300; 250 for members"], ["60 and over", "150"]])}
 <h3>Nested vs flat</h3>
 <p>Some nesting can be flattened. These two behave the same:</p>
-<pre style="background:rgba(127,127,127,.14);padding:12px 14px;border-radius:8px"><code>if age &gt;= 18:\n    if has_id:\n        print("enter")\n\nif age &gt;= 18 and has_id:\n    print("enter")</code></pre>
+<pre style="background:#16181c;color:#d8dee9;padding:12px 14px;border-radius:8px"><code>if age &gt;= 18:\n    if has_id:\n        print("enter")\n\nif age &gt;= 18 and has_id:\n    print("enter")</code></pre>
 <p>Prefer the flat version when both questions lead to the same action. Keep nesting when each answer needs its <em>own</em> follow-up.</p>
 <h3>Readability limit</h3>
 <p>More than about three levels of indentation is a warning sign. Use <code>and</code>/<code>or</code>, early checks for invalid input, or functions to flatten the logic.</p>`,
@@ -138,7 +138,7 @@ lessons.push({
 <ol><li>Write the rule in a sentence.</li><li>Identify the pieces: each comparison and how they join (all of / any of).</li><li>Make a <strong>boundary table</strong>: values just below, on and just above each limit.</li><li>Code it; check every row of the table.</li></ol>
 <h3>The leap-year rule</h3>
 <p>A year is a leap year if it is divisible by 4, <em>except</em> century years, which must be divisible by 400. So 2024 and 2000 are leap years; 1900 and 2100 are not.</p>
-<pre style="background:rgba(127,127,127,.14);padding:12px 14px;border-radius:8px"><code>leap = year % 4 == 0 and (year % 100 != 0 or year % 400 == 0)</code></pre>
+<pre style="background:#16181c;color:#d8dee9;padding:12px 14px;border-radius:8px"><code>leap = year % 4 == 0 and (year % 100 != 0 or year % 400 == 0)</code></pre>
 <h3>De Morgan's laws</h3>
 <p><code>not (a and b)</code> equals <code>(not a) or (not b)</code>; <code>not (a or b)</code> equals <code>(not a) and (not b)</code>. They help you simplify or invert a condition without mistakes.</p>
 <h3>Validation first</h3>
