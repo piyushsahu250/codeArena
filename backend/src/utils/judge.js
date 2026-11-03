@@ -306,6 +306,13 @@ const RUNTIME_ERROR_PATTERNS = {
     [/Bus error/, "Bus Error", "Your program accessed memory in an invalid way — check pointer arithmetic and array bounds."],
   ],
   python: [
+    // Python reports a syntax error when it starts the file, so these arrive as a runtime failure with no compile step. IndentationError is listed first because
+    // its text also contains "Error" but never "SyntaxError".
+    [/IndentationError/, "Indentation Error", "Check your indentation — Python needs the same number of spaces for every line in a block, and an indented block after a line ending in a colon."],
+    [/SyntaxError/, "Syntax Error", "Check the line shown and the one before it for a missing colon, bracket, parenthesis or quote."],
+    // A program that calls input() more times than the test provides lines. Beginners hit this constantly.
+    [/EOFError/, "Input Error", "Your program asked for more input than was given. Check how many times you call input() against the number of input lines in the problem."],
+    [/ModuleNotFoundError|ImportError/, "Import Error", "That module is not available here. Use only Python's standard library, and check the spelling of the module name."],
     [/ZeroDivisionError/, "Division by Zero", "Your code divided by zero — check your divisor before dividing."],
     [/IndexError/, "Index Error", "Your code accessed a list/string index outside its valid range."],
     [/KeyError/, "Key Error", "Your code accessed a dictionary key that doesn't exist — check the key exists first."],
@@ -449,6 +456,10 @@ async function spawnWithTimeout(cmd, args, options, input, timeLimitMs, { enforc
       }
       return next;
     }
+    // A multi-byte character (any non-ASCII text, e.g. Devanagari) can arrive split across two chunks. Decoding each chunk on its own turned both halves into U+FFFD, so large
+    // non-ASCII output was corrupted. setEncoding makes the stream decode across chunk boundaries.
+    child.stdout.setEncoding("utf8");
+    child.stderr.setEncoding("utf8");
     child.stdout.on("data", (d) => { stdout = trackOutput(d, stdout); });
     child.stderr.on("data", (d) => { stderr = trackOutput(d, stderr); });
 
@@ -817,6 +828,9 @@ async function judgeSubmission({ language, code, testCases, timeLimitMs = 2000, 
         // Same path-disclosure concern as the compile-error branch above -- a runtime crash's
         // stderr (segfault message, uncaught exception, etc.) can also embed the real temp-dir
         // source path; clean it the same way before it's ever attached to a per-case result.
+        // The summary keeps only the last line of a traceback, so the line number has to be taken from the full text here, before it is discarded. It is shown only when the
+        // program ran exactly as the student wrote it: in a wrapped (function-mode) run a line number could point into the generated driver instead.
+        const failure = result.outputExceeded ? null : summarizeError(language, result.error);
         return {
           input: tc.input,
           expected: tc.expected,
@@ -826,7 +840,8 @@ async function judgeSubmission({ language, code, testCases, timeLimitMs = 2000, 
           // spawnWithTimeout already tracks it as its own distinct condition (a fast infinite
           // print loop killed for flooding output, not a crash or a timeout).
           verdict: result.timedOut ? "TLE" : result.oom ? "MLE" : result.outputExceeded ? "OLE" : "RUNTIME_ERROR",
-          error: result.outputExceeded ? "Output limit exceeded" : summarizeError(language, result.error).message,
+          error: result.outputExceeded ? "Output limit exceeded" : failure.message,
+          line: failure && sourceCode === code ? failure.line : null,
           timeMs: result.timeMs ?? null,
           memoryKb: result.memoryKb ?? null,
         };
@@ -876,7 +891,7 @@ async function judgeSubmission({ language, code, testCases, timeLimitMs = 2000, 
     } else {
       const errored = details.find((d) => d.verdict === "RUNTIME_ERROR");
       if (errored) {
-        const base = summarizeError(language, errored.error);
+        const base = { ...summarizeError(language, errored.error), line: errored.line ?? null };
         const classified = classifyRuntimeError(language, errored.error);
         errorSummary = classified
           ? { type: classified.type, line: base.line, message: base.message, hint: classified.hint }
