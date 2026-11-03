@@ -95,7 +95,7 @@ Module "Phase 6 - Real-World Projects" holds 21 projects in two chapters: **15 m
 
 ## Version-sensitive facts
 
-Checked against python.org and docs.python.org on **2 November 2026**: latest stable Python 3.15.2 (25 October 2026); supported branches 3.11 to 3.15, 3.10 end-of-life; the Windows Python install manager is the documented route and the traditional installer is deprecated since 3.14 and will not be produced for 3.16 or later; the macOS installer and `Install Certificates.command`; venv activation commands. The course states a minimum of Python 3.12. Examples were executed on Python 3.14.7 (author machine) and on the CI runner's system Python (first CI run: Module 1 passed all 45 executions). Re-check these facts when a new Python version is released.
+Checked against python.org and docs.python.org on **2 November 2026**: latest stable Python 3.15.2 (25 October 2026); supported branches 3.11 to 3.15, 3.10 end-of-life; the Windows Python install manager is the documented route and the traditional installer is deprecated since 3.14 and will not be produced for 3.16 or later; the macOS installer and `Install Certificates.command`; venv activation commands. The course states a minimum of **Python 3.11**, because the practice editor and the coding judge run Python 3.11.2 (Debian package; checked 2026-11-03 inside the production judge container). Every example, reference solution and project test is executed by the validator on Python 3.11, on 3.12 (CI) and on 3.14.7 (author machine). Lessons that mention newer features (for example `itertools.batched`, free-threaded builds, deferred annotations) say which version introduced them and contain no runnable example that needs them. Re-check these facts when a new Python version is released.
 
 ## Deploying
 
@@ -129,3 +129,14 @@ Checked against python.org and docs.python.org on **2 November 2026**: latest st
 ## Renaming already-seeded modules (2026-11-03)
 
 `seedPythonCourse.js` finds modules by title, so a title changed in the content files would be created a second time. After a title change, run `node scripts/renamePythonCourseTitles.js --plan`, then without `--plan`, **before** `seedPythonCourse.js --sync`. It matches modules by position, refuses any title that is neither the old nor the new form, and updates the course name and description to the values in the seed.
+
+## Python runtime (verified 2026-11-03)
+
+| Item | Value |
+|---|---|
+| Interpreter used by the judge and the editor's Run | CPython **3.11.2** (Debian apt package in the backend image, reported by `sys.version_info` through the real judge) |
+| Course minimum stated to students | 3.11 |
+| Validated on | 3.11, 3.12 (CI), 3.14.7 (author machine) |
+| Judge test suite | `backend/test/pythonJudge.test.js`: 32 tests through the real judge; run in CI on Linux and, with `PYJ_EXPECT_SANDBOX_USER=1 PYJ_EXPECT_NO_NETWORK=1`, inside the production judge container |
+| Changing the runtime | Not done silently. A new Python version changes grading for every course, so it is a deliberate change: update the Dockerfile, run the suite, then re-run the validator on that version |
+| `EXACT` comparison mode | Compares the program's output with surrounding whitespace removed against the raw expected text, so it is not byte-exact. Left as is: making it exact would change the result of stored questions |
