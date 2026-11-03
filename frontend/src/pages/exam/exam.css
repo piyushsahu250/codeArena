@@ -95,7 +95,8 @@
 .ex-field { min-width: 0; }
 .ex-field.wide { grid-column: 1 / -1; }
 .ex-form .ex-field label { display: block; font-size: 13px; font-weight: 600; margin: 12px 0 4px; }
-.ex-req { color: var(--danger-text, #b91c1c); }
+/* The required mark is generated content, so it is never part of the label text (tests and screen readers see plain "Title"). The second declaration gives it empty alternative text where supported. */
+.ex-form label.ex-required::after { content: " *"; content: " *" / ""; color: var(--danger-text, #b91c1c); }
 .ex-hint { font-size: 12px; color: var(--text-muted, #6b7280); margin-top: 4px; }
 .ex-aud { display: grid; gap: 2px; max-height: 260px; overflow: auto; border: 1px solid var(--line, #e5e7eb); border-radius: 10px; padding: 8px 10px; }
 .ex-form .ex-check { display: flex; align-items: flex-start; gap: 8px; font-size: 14px; font-weight: 400; margin: 0; padding: 6px 4px; border-radius: 6px; cursor: pointer; }

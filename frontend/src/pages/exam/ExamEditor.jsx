@@ -37,7 +37,7 @@ function newBlueprint() {
 function Field({ id, label, hint, required, wide, children }) {
   return (
     <div className={`ex-field${wide ? " wide" : ""}`}>
-      <label htmlFor={id}>{label}{required && <span className="ex-req" title="Required"> *</span>}</label>
+      <label htmlFor={id} className={required ? "ex-required" : undefined}>{label}</label>
       {children}
       {hint && <div className="ex-hint">{hint}</div>}
     </div>
@@ -177,15 +177,15 @@ export default function ExamEditor() {
           <div className="ex-card-head"><h3 id="ex-h-schedule"><span className="ex-num">2</span> Schedule</h3><p className="ex-sub">When the exam can be started and how long one attempt lasts. Times are in your own time zone ({tz}).</p></div>
           <div className="ex-grid-2">
             <Field id="ex-opens" label="Opens" required>
-              <input id="ex-opens" type="datetime-local" value={toLocal(bp.startAt)} onChange={(e) => set({ startAt: toIso(e.target.value) })} />
+              <input id="ex-opens" aria-required="true" type="datetime-local" value={toLocal(bp.startAt)} onChange={(e) => set({ startAt: toIso(e.target.value) })} />
               <div className="ex-hint">{whenText(bp.startAt)}</div>
             </Field>
             <Field id="ex-closes" label="Closes" required hint={windowHint}>
-              <input id="ex-closes" type="datetime-local" value={toLocal(bp.endAt)} onChange={(e) => set({ endAt: toIso(e.target.value) })} />
+              <input id="ex-closes" aria-required="true" type="datetime-local" value={toLocal(bp.endAt)} onChange={(e) => set({ endAt: toIso(e.target.value) })} />
               <div className="ex-hint">{whenText(bp.endAt)}</div>
             </Field>
             <Field id="ex-duration" label="Duration of one attempt (minutes)" required hint="The timer a student gets once they start.">
-              <input id="ex-duration" type="number" min="1" value={bp.durationMin} onChange={(e) => set({ durationMin: e.target.value })} />
+              <input id="ex-duration" aria-required="true" type="number" min="1" value={bp.durationMin} onChange={(e) => set({ durationMin: e.target.value })} />
             </Field>
             <Field id="ex-grace" label="Grace after time ends (seconds)" hint="Extra seconds to save answers after the timer reaches zero. Usually 0.">
               <input id="ex-grace" type="number" min="0" value={bp.graceSec} onChange={(e) => set({ graceSec: e.target.value })} />
