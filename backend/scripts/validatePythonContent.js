@@ -17,6 +17,7 @@ const onlyArg = process.argv.find((a) => a.startsWith("--only="));
 const selected = onlyArg ? modules.filter((m) => m.module.title.includes(`Module ${onlyArg.slice(7)}:`)) : modules;
 const problems = [];
 const bad = (where, msg) => problems.push(`${where}: ${msg}`);
+const COMPANY = /\b(google|amazon|microsoft|facebook|meta platforms|apple inc|netflix|infosys|tcs|wipro|accenture|cognizant|flipkart|uber|adobe|oracle|ibm|capgemini|zoho|paytm|swiggy|zomato|goldman|walmart)\b/i;
 const BANNED = /coming soon|lorem ipsum|\btodo\b|\btbd\b|placeholder (text|content)|fixme/i;
 
 // Programs run from a real file (not -c) so multiprocessing, which re-imports the main module, behaves as it does for students.
@@ -32,6 +33,7 @@ process.on("exit", () => { try { fs.rmSync(workDir, { recursive: true, force: tr
 const norm = (s) => s.replace(/[ \t]+$/gm, "").replace(/\n+$/, "");
 
 const REQUIRED = ["title", "minutes", "learn", "why", "realWorld", "simple", "detail", "diagram", "example", "lineByLine", "dryRun", "realExample", "mistakes", "practices", "interview", "practiceQs", "revision", "quiz", "tasks"];
+let problemCount = 0; const byDifficulty = {};
 let lessonCount = 0, taskCount = 0, quizCount = 0, assessmentCount = 0, ran = 0;
 const titles = new Set(), prompts = new Set();
 
@@ -40,6 +42,17 @@ function checkTask(where, t) {
   const vis = t.testCases.filter((c) => !c.isHidden).length, hid = t.testCases.filter((c) => c.isHidden).length;
   if (vis < 2) bad(where, "needs at least 2 sample test cases");
   if (hid < 1) bad(where, "needs at least 1 hidden test case");
+  if (t.meta) {
+    const m = t.meta;
+    if (!["EASY", "MEDIUM", "HARD"].includes(m.difficulty)) bad(where, `${t.title}: bad difficulty`);
+    if (!Array.isArray(m.tags) || m.tags.length < 3) bad(where, `${t.title}: needs at least 3 tags (topic tags plus the style tag)`);
+    if (!/^O\(/.test(m.timeComplexity || "") || !/^O\(/.test(m.spaceComplexity || "")) bad(where, `${t.title}: needs time and space complexity written as O(...)`);
+    if (!m.goal || m.goal.length < 20) bad(where, `${t.title}: needs a learning objective`);
+    if (!m.inputFormat || !m.outputFormat) bad(where, `${t.title}: needs input and output formats`);
+    if (!m.hints || !m.hints.length) bad(where, `${t.title}: needs a hint`);
+    if (COMPANY.test([...m.tags, m.goal, ...(m.hints || [])].join(" "))) bad(where, `${t.title}: names a company; tag problems by assessment style only`);
+    problemCount++; byDifficulty[m.difficulty] = (byDifficulty[m.difficulty] || 0) + 1;
+  }
   if (prompts.has(t.title)) bad(where, `duplicate task title "${t.title}"`);
   prompts.add(t.title);
   if (!RUN) return;
@@ -92,9 +105,11 @@ for (const m of selected) {
     }
   }
   for (const t of mod.assessment?.questions || []) { assessmentCount++; checkTask(`${mod.title} / assessment`, t); }
+  if (mod.minProblems && problemCount < mod.minProblems) bad(mod.title, `needs at least ${mod.minProblems} tagged problems, has ${problemCount}`);
   if ((mod.assessment?.questions || []).length < 3) bad(mod.title, "module assessment needs at least 3 questions");
 }
 
+if (problemCount) console.log(`bank problems=${problemCount} ${JSON.stringify(byDifficulty)}`);
 console.log(`modules=${selected.length} lessons=${lessonCount} quiz=${quizCount} tasks=${taskCount} assessmentQs=${assessmentCount}${RUN ? ` pythonRuns=${ran}` : " (lint only)"}`);
 if (problems.length) { console.error(`\n${problems.length} problem(s):\n- ` + problems.join("\n- ")); process.exit(1); }
 console.log("OK: content passed validation");

@@ -81,9 +81,15 @@ async function seedPythonCourse(prisma, { sync = false, plan = false, log = cons
         const qs = [
           ...L.quiz.map((q) => ({ key: { type: q.type, prompt: q.prompt }, data: { type: q.type, prompt: q.prompt, options: q.options ?? undefined, correctAnswer: q.correctAnswer, explanation: q.explanation } })),
           ...L.tasks.map((t) => ({ key: { type: "CODING", title: t.title }, data: {
-            type: "CODING", title: t.title, prompt: t.statement, starterCode: t.starter || null, language: "python", difficulty: "EASY",
-            testCases: t.testCases, evaluationType: "STDIO", estimatedTimeMin: 10,
+            type: "CODING", title: t.title, prompt: t.statement, starterCode: t.starter || null, language: "python", difficulty: t.meta?.difficulty || "EASY",
+            testCases: t.testCases, evaluationType: "STDIO", estimatedTimeMin: t.meta?.minutes || 10,
             explanation: "Compare your output with the sample cases. Output must match exactly.",
+            // Interview-bank problems carry structured fields the PracticeQuestion table already has.
+            ...(t.meta ? {
+              tags: t.meta.tags, timeComplexity: t.meta.timeComplexity, spaceComplexity: t.meta.spaceComplexity,
+              inputFormat: t.meta.inputFormat, outputFormat: t.meta.outputFormat, constraints: t.meta.constraints, edgeCases: t.meta.edgeCases,
+              hints: t.meta.hints, notes: "Learning objective: " + t.meta.goal,
+            } : {}),
           } })),
         ];
         for (const q of qs) {
