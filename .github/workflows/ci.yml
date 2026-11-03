@@ -309,6 +309,7 @@ jobs:
           fi
           exit $code
       - name: Judge load, 50 then 100 then 200 submissions at the same instant (correctness gates; timings are reported for THIS runner, not production)
+        working-directory: backend
         run: |
           code=0
           node scripts/loadJudge.js > /tmp/loadJudge.out 2>&1 || code=$?
