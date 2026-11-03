@@ -104,21 +104,23 @@ async function seedPythonCourse(prisma, { sync = false, plan = false, log = cons
       }
     }
 
-    // Module assessment: a Level on the module's first chapter. Draft until an admin publishes it.
-    if (m.assessment) {
+    // Module assessment and timed mock tests: Levels on the module's first chapter. All stay Draft until an admin publishes them.
+    // A mock may set its own timeLimitMin, passingPercent, securityLevel, difficulty and instructions (Module 23).
+    const assessments = [m.assessment, ...(m.mocks || [])].filter(Boolean);
+    for (let ai = 0; ai < assessments.length; ai++) {
       const firstChapter = plan ? null : await prisma.chapter.findFirst({ where: { moduleId: mod.id }, orderBy: { order: "asc" } });
-      const a = m.assessment;
+      const a = assessments[ai];
       const level = await take(plan ? null : await prisma.moduleCodingTest.findFirst({ where: { chapterId: firstChapter.id, title: a.title } }),
         () => prisma.moduleCodingTest.create({ data: {
-          chapterId: firstChapter.id, title: a.title, description: a.description, order: 100, difficulty: "Beginner", instructions: ASSESSMENT_INSTRUCTIONS,
-          allowedLanguages: ["python"], questionCount: a.questions.length, randomizeQuestions: false, passingPercent: 60, timeLimitMin: 45, maxAttempts: 3,
+          chapterId: firstChapter.id, title: a.title, description: a.description, order: 100 + ai, difficulty: a.difficulty || "Beginner", instructions: a.instructions || ASSESSMENT_INSTRUCTIONS,
+          allowedLanguages: ["python"], questionCount: a.questions.length, randomizeQuestions: false, passingPercent: a.passingPercent || 60, timeLimitMin: a.timeLimitMin || 45, maxAttempts: 3,
           cooldownMinutes: 0, maxViolations: 3, requireFullscreen: false, requireWebcam: false, allowResume: true, proctoring: true,
-          securityLevel: "STANDARD", unlockRule: "NONE", isActive: false,
+          securityLevel: a.securityLevel || "STANDARD", unlockRule: "NONE", isActive: false,
         } }), `assessment ${a.title}`);
       for (const q of a.questions) {
         const found = plan ? null : await prisma.question.findFirst({ where: { moduleCodingTestId: level.id, title: q.title } });
         await take(found, () => prisma.question.create({ data: {
-          title: q.title, description: q.statement, difficulty: "EASY", questionType: "CODING", timeLimitMs: 2000, moduleCodingTestId: level.id, questionStatus: "PUBLISHED",
+          title: q.title, description: q.statement, difficulty: q.difficulty || "EASY", questionType: "CODING", timeLimitMs: 2000, moduleCodingTestId: level.id, questionStatus: "PUBLISHED",
           starterCodeByLanguage: q.starter ? { python: q.starter } : undefined,
           testCases: { create: q.testCases.map((c) => ({ input: c.input, expected: c.expected, isHidden: c.isHidden })) },
         } }), `assessment question ${q.title}`);

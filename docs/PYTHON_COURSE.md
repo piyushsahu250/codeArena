@@ -1,6 +1,6 @@
 # Python Zero to Hero (course content and tooling)
 
-**Status (2026-11-03): in progress.** Modules 1 to 22 (Phases 0 to 5, plus the coding-interview problem bank and the technical-interview question bank of Phase 7) are authored and machine-verified, and seed as a **Draft** course. Module 23, the project catalogue and the 200-problem placement bank are **not written yet**. Nothing here is visible to students until an administrator publishes and assigns the course.
+**Status (2026-11-03): in progress.** Modules 1 to 23 (Phases 0 to 5, plus the interview and placement modules of Phase 7) are authored and machine-verified, and seed as a **Draft** course. The Phase 6 project catalogue (15 mini and 6 major projects) is **not written yet**. Nothing here is visible to students until an administrator publishes and assigns the course.
 
 ## How the course maps onto the existing LMS (nothing duplicated)
 
@@ -25,7 +25,7 @@ No schema change and no migration are needed.
 ## Files
 
 - `backend/content/python/render.js` renders one lesson spec into HTML through a single 20-part template (learning goals, why, real-world use, simple and detailed explanation, syntax, diagram, example with verified output, line by line, dry run, real example, mistakes, best practices, interview view, practice questions, revision, optional Hinglish, then quiz and coding task from `PracticeQuestion`). Helpers draw accessible SVG flowcharts (`role="img"`, `<title>`, `<desc>`, theme-aware colours, sideways scroll on phones) and terminal illustrations.
-- `backend/content/python/m01.js` ... `m22.js`: the authored modules (Module 15 is assembled from `m15a-d.js`, Modules 18 to 20 from `m18a-c.js`, `m19a-c.js` and `m20a-c.js`; Module 21 from `m21a-f.js`; Module 22 from `m22a-c.js`). `index.js` lists them in teaching order.
+- `backend/content/python/m01.js` ... `m23.js`: the authored modules (Module 15 is assembled from `m15a-d.js`, Modules 18 to 20 from `m18a-c.js`, `m19a-c.js` and `m20a-c.js`; Module 21 from `m21a-f.js`; Module 22 from `m22a-c.js`; Module 23 from `m23a-b.js`). `index.js` lists them in teaching order.
 - **Packages the examples need** (installed in the CI virtual environment; judged tasks stay standard-library only): `sqlalchemy>=2.0,<2.1`, `requests`, `flask`, `fastapi`, `httpx`, `pytest`, `ruff`, `black`, `numpy`, `pandas`, `matplotlib`, `openpyxl`, `scikit-learn` (Module 19 outputs were checked with NumPy 2.5, pandas 3.1, Matplotlib 3.11; Module 20 with scikit-learn 1.9, whose printed scores are rounded and could differ in the last digit on another platform). The Module 18 Git examples also need the `git` command (any 2.32 or newer).
 - `backend/scripts/validatePythonContent.js`: the quality gate (below).
 - `backend/scripts/seedPythonCourse.js`: idempotent seed.
@@ -35,13 +35,13 @@ No schema change and no migration are needed.
 
 | | Count |
 | --- | --- |
-| Modules | 22 (Phase 0: Modules 1-2; Phase 1: Modules 3-9; Phase 2: Modules 10-13; Phase 3: Modules 14-15; Phase 4: Modules 16-18; Phase 5: Modules 19-20; Phase 7: Modules 21-22 so far) |
-| Lessons | 169, 25 to 70 minutes each (Modules 15 and 18 have four chapters, Modules 19 and 20 three, Module 21 six, Module 22 three chapters) |
-| Quiz questions | 945 (MCQ, output prediction, debugging, fill in the blank) |
-| Coding tasks in lessons | 405 (224 of them the tagged interview bank), each with 2 sample and at least 1 hidden case |
-| Module assessments | 22, with 88 coding questions in total |
+| Modules | 23 (Phase 0: Modules 1-2; Phase 1: Modules 3-9; Phase 2: Modules 10-13; Phase 3: Modules 14-15; Phase 4: Modules 16-18; Phase 5: Modules 19-20; Phase 7: Modules 21-23) |
+| Lessons | 176, 25 to 70 minutes each (Modules 15 and 18 have four chapters, Modules 19 and 20 three, Module 21 six, Module 22 three chapters, Module 23 three chapters) |
+| Quiz questions | 1,054 (MCQ, output prediction, debugging, fill in the blank) |
+| Coding tasks in lessons | 420 (224 of them the tagged interview bank), each with 2 sample and at least 1 hidden case |
+| Module assessments | 23, with 92 coding questions in total, plus 4 timed mock tests with 13 questions |
 | Diagrams | 159 (one per lesson in Modules 1-21; the Module 22 question lessons have none) plus terminal illustrations in the setup lessons |
-| Python executions during validation | 3,502 (every example, every reference solution against every case) |
+| Python executions during validation | 3,784 (every example, every reference solution against every case) |
 
 Module 1 topics 1 to 16 and its three practicals, Module 2 topics 1 to 28, and Module 3 topics are grouped into lessons; every bullet of the spec appears inside a lesson.
 
@@ -60,6 +60,16 @@ Module 22 holds 160 interview questions in ten lessons (data types and operators
 These lessons use a separate renderer (`renderQa` in `render.js`): the program is shown first and the answer, explanation, misconceptions and follow-up sit inside a collapsed details element, so a student can try before looking. They intentionally have no diagram or 20-part template. The questions become `OUTPUT_PREDICTION` practice questions, so they are graded server-side by the existing quiz engine.
 
 **Verification.** `validatePythonContent.js --run` executes every program and compares its output (or the named exception) with the declared answer, so the answers are what Python really does. It cannot check that the three wrong options are wrong in the way the misconception text claims; only that they differ from the right answer. Behaviour that changes between Python versions was avoided or flagged in the text (for example `sum()` of floats is compensated since Python 3.12); the programs need Python 3.11 or newer (`except*`, `TaskGroup`).
+
+## Placement assessment preparation (Module 23)
+
+Module 23 has seven lessons: a strategy lesson (test formats, time plans, input/output templates, partial credit), four **practice sets** (30 concept multiple-choice questions, 24 output-prediction questions, 20 find-the-error questions and 20 code-completion questions), a debugging lesson with eight fix-the-program coding tasks, and an interview simulation (technical, project and HR rounds, think-aloud script, STAR method). The practice sets use a third renderer (`renderSet` in `render.js`) that shows the question first and the answer behind a details element; each item becomes a PracticeQuestion of type MCQ, OUTPUT_PREDICTION, DEBUG or FILL_BLANK.
+
+The validator checks them by execution: an output-prediction program must print the declared output; for find-the-error the buggy program must show the stated symptom and the fixed program the stated output; for code completion the answer is put into the blank and the program run. A debugging task's buggy starter must fail at least one test and the reference solution must pass them all.
+
+**Timed mock tests.** Four mocks (campus online-assessment style, 45 min; service-company online-test style, 75 min; product-company interview style, 60 min, proctored; advanced contest style, 90 min, proctored) are created by the seed as additional `ModuleCodingTest` Levels on the module's first chapter, each with its own time limit, pass mark and security level, and **left unpublished**. The names describe the style of test; none is claimed to be a real company's test. The existing engine supplies the timer, auto-submit and violation tracking. Mocks contain coding questions only: the aptitude and multiple-choice parts of a real test are covered by the practice sets, not by a timed multiple-choice engine, which the platform does not have.
+
+**Not covered:** aptitude and reasoning (quantitative, logical, verbal) is not part of the Python course; the interview simulation is a guide and rubric, not an interactive interview tool.
 
 ## Quality gate
 
@@ -87,7 +97,7 @@ Checked against python.org and docs.python.org on **2 November 2026**: latest st
 
 ## Known limitations and open items
 
-- **Not authored:** Module 23 (placement assessment preparation), Phase 6 (the 15 mini and 6 major projects) and the mock tests, the 15 mini and 6 major projects, 200+ placement problems, 150+ interview questions, mock tests. The structure and tooling are ready for them.
+- **Not authored:** Phase 6 (the 15 mini and 6 major projects). Whole-course checks such as a final exam or certificate gating are not configured, the 15 mini and 6 major projects, 200+ placement problems, 150+ interview questions, mock tests. The structure and tooling are ready for them.
 - **No real screenshots.** Setup lessons use drawn terminal illustrations and flowcharts. Real screenshots of installers would age with every release.
 - **Hinglish** is a short optional note per lesson, not a full translation.
 - **Rendering was checked** through the same sanitiser the student page uses (DOMPurify), on desktop, a 375 px phone viewport and dark mode. It has **not** been checked inside the live student page or on a real device.

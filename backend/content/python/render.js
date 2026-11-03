@@ -120,8 +120,40 @@ function renderQa(L) {
   return p.join("\n");
 }
 
+// Placement practice set (Module 23): mixed multiple-choice, output-prediction, find-the-error and code-completion questions.
+// Answers sit inside a details element, so a student can attempt each question before looking.
+function renderSet(L) {
+  const p = [`<div class="py-lesson">`];
+  p.push(h(2, "What will you learn?") + list(L.learn));
+  p.push(h(2, "Why does this matter for placements?") + `<p>${L.why}</p>`);
+  p.push(h(2, "How to use this practice set") + `<p>${L.howTo || "Try each question before opening the answer. For timed practice, give yourself about one minute per question and mark the ones you missed. The same questions appear as a quiz below, which records your score."}</p>`);
+  L.set.forEach((it, i) => {
+    const head = (title) => h(3, `Q${i + 1}. ${title} <small style="opacity:.7">(${it.levelName})</small>`);
+    if (it.kind === "OUT") {
+      p.push(head(esc(it.q)) + code(it.code));
+      p.push(`<details style="margin:.3rem 0 1.2rem"><summary><strong>Show the answer</strong></summary>` + (it.err ? `<p>The program raises <code>${esc(it.err)}</code>.</p>` : output(it.out)) +
+        `<p><strong>Why:</strong> ${esc(it.why)}</p><p><strong>Common misconceptions:</strong> ${esc(it.miscon)}</p><p><strong>Follow-up:</strong> ${esc(it.follow[0])}<br><em>Answer:</em> ${esc(it.follow[1])}</p></details>`);
+    } else if (it.kind === "MCQ") {
+      p.push(head(esc(it.prompt)) + `<ol type="A">${it.options.map((o) => `<li>${esc(o)}</li>`).join("")}</ol>`);
+      p.push(`<details style="margin:.3rem 0 1.2rem"><summary><strong>Show the answer</strong></summary><p><strong>Answer:</strong> ${"ABCD"[it.answer]}. ${esc(it.options[it.answer])}</p><p>${esc(it.why)}</p></details>`);
+    } else if (it.kind === "FILL") {
+      p.push(head(esc(it.prompt)) + code(it.template));
+      p.push(`<details style="margin:.3rem 0 1.2rem"><summary><strong>Show the answer</strong></summary><p><strong>Fill in:</strong> <code>${esc(it.answer)}</code></p>${output(it.out)}<p>${esc(it.why)}</p></details>`);
+    } else {
+      const shows = it.symptom.startsWith("!") ? `it raises <code>${esc(it.symptom.slice(1))}</code>` : "it prints:";
+      p.push(head("Find the error") + `<p>The program should ${esc(it.intent)}, but when run ${shows}</p>` + (it.symptom.startsWith("!") ? "" : output(it.symptom)) + code(it.code) +
+        `<ol type="A">${it.options.map((o) => `<li>${esc(o)}</li>`).join("")}</ol>`);
+      p.push(`<details style="margin:.3rem 0 1.2rem"><summary><strong>Show the answer</strong></summary><p><strong>Answer:</strong> ${"ABCD"[it.answer]}. ${esc(it.options[it.answer])}</p><p>${esc(it.why)}</p><p><strong>Fixed program:</strong></p>${code(it.fixed)}${output(it.fixedOut)}</details>`);
+    }
+  });
+  p.push(h(2, "Quick revision") + list(L.revision));
+  p.push(`<p style="margin-top:1.4rem"><em>Next: answer the quiz below (the same questions, graded) and finish the coding task in the practice section.</em></p></div>`);
+  return p.join("\n");
+}
+
 function renderLesson(L) {
   if (L.items) return renderQa(L);
+  if (L.set) return renderSet(L);
   const p = [];
   p.push(`<div class="py-lesson">`);
   p.push(h(2, "What will you learn?") + list(L.learn));

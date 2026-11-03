@@ -69,7 +69,7 @@ function checkTask(where, t) {
 
 // Interview question (Module 22): structure always, and with --run the program is executed and its output (or exception) must match.
 const QA_REQUIRED = ["title", "minutes", "learn", "why", "items", "revision", "quiz", "tasks"];
-let qaCount = 0;
+let qaCount = 0, mockCount = 0, mockQuestionCount = 0;
 function checkQuestion(where, it) {
   qaCount++;
   if (!it.q || !it.code || !it.why || !it.miscon || !Array.isArray(it.follow) || it.follow.length !== 2 || !it.follow[0] || !it.follow[1]) bad(where, "needs question, code, explanation, misconceptions and a follow-up (question and answer)");
@@ -83,6 +83,35 @@ function checkQuestion(where, it) {
   else if (norm(r.out) !== norm(it.out)) bad(where, `output mismatch. declared ${JSON.stringify(it.out)} actual ${JSON.stringify(r.out)}`);
 }
 
+// Placement practice sets (Module 23): MCQ (structure), FILL (the answer is put into the blank and the program run),
+// DEBUG (the buggy program shows its symptom, the fixed program gives the stated output), OUT (as in checkQuestion).
+const SET_REQUIRED = ["title", "minutes", "learn", "why", "set", "revision", "quiz", "tasks"];
+let setCount = 0;
+function runExpect(where, label, src, expected) {
+  const r = py(src);
+  ran++;
+  if (expected.startsWith("!")) { if (r.status === 0 || !r.err.includes(expected.slice(1))) bad(where, `${label} should raise ${expected.slice(1)}, got status ${r.status}: ${r.err.slice(-160)}`); return; }
+  if (r.status !== 0) bad(where, `${label} crashed: ${r.err.slice(-200)}`);
+  else if (norm(r.out) !== norm(expected)) bad(where, `${label} output mismatch. declared ${JSON.stringify(expected)} actual ${JSON.stringify(r.out)}`);
+}
+function checkSetItem(where, it) {
+  setCount++;
+  if (it.kind === "OUT") { checkQuestion(where, it); return; }
+  if (!it.why) bad(where, "needs an explanation");
+  if (it.kind === "MCQ" || it.kind === "DEBUG") {
+    if (!Array.isArray(it.options) || it.options.length !== 4 || new Set(it.options).size !== 4 || !Number.isInteger(it.answer) || it.answer < 0 || it.answer > 3) bad(where, "needs four different options and a valid answer index");
+  }
+  if (it.kind === "FILL") {
+    if (!it.template.includes("___")) bad(where, "template needs a ___ blank");
+    if (!it.answer || /\s/.test(it.answer)) bad(where, "answer must be one token without spaces (FILL_BLANK is compared as text)");
+    if (RUN) runExpect(where, "completed program", it.template.split("___").join(it.answer), it.out);
+  }
+  if (it.kind === "DEBUG" && RUN) {
+    runExpect(where, "buggy program", it.code, it.symptom);
+    runExpect(where, "fixed program", it.fixed, it.fixedOut);
+  }
+}
+
 for (const m of selected) {
   const mod = m.module;
   if (!mod.title || !mod.chapters?.length) bad(mod.title || "module", "missing title or chapters");
@@ -90,14 +119,15 @@ for (const m of selected) {
     for (const L of ch.lessons) {
       const w = `${mod.title} / ${L.title}`;
       lessonCount++;
-      for (const f of L.items ? QA_REQUIRED : REQUIRED) if (L[f] == null || (Array.isArray(L[f]) && !L[f].length)) bad(w, `missing ${f}`);
+      for (const f of L.items ? QA_REQUIRED : L.set ? SET_REQUIRED : REQUIRED) if (L[f] == null || (Array.isArray(L[f]) && !L[f].length)) bad(w, `missing ${f}`);
       if (titles.has(L.title)) bad(w, "duplicate lesson title");
       titles.add(L.title);
       let html = "";
       try { html = renderLesson(L); } catch (e) { bad(w, `render failed: ${e.message}`); continue; }
       if (BANNED.test(html)) bad(w, `contains banned placeholder wording: ${html.match(BANNED)[0]}`);
-      if (!L.items && (!/<svg[^>]*role="img"/.test(html) || !/<title[^>]*>[^<]+<\/title>/.test(html) || !/<desc[^>]*>[^<]+<\/desc>/.test(html))) bad(w, "diagram needs role=img, title and desc");
+      if (!L.items && !L.set && (!/<svg[^>]*role="img"/.test(html) || !/<title[^>]*>[^<]+<\/title>/.test(html) || !/<desc[^>]*>[^<]+<\/desc>/.test(html))) bad(w, "diagram needs role=img, title and desc");
       for (const [n, it] of (L.items || []).entries()) checkQuestion(`${w} / Q${n + 1}`, it);
+      for (const [n, it] of (L.set || []).entries()) checkSetItem(`${w} / Q${n + 1}`, it);
       if (html.length < 4000) bad(w, `lesson looks too thin (${html.length} chars)`);
       if (/<script|onerror=|onload=|javascript:/i.test(html)) bad(w, "unsafe markup");
       if ((L.quiz || []).length < 3) bad(w, "needs at least 3 quiz questions");
@@ -110,7 +140,7 @@ for (const m of selected) {
         if (!q.explanation) bad(w, "quiz question needs an explanation");
       }
       for (const t of L.tasks || []) { taskCount++; checkTask(w, t); }
-      if (RUN && !L.items) {
+      if (RUN && !L.items && !L.set) {
         for (const [name, ex] of [["example", L.example], ["realExample", L.realExample]]) {
           const r = py(ex.code, ex.stdin || "");
           ran++;
@@ -122,6 +152,13 @@ for (const m of selected) {
     }
   }
   for (const t of mod.assessment?.questions || []) { assessmentCount++; checkTask(`${mod.title} / assessment`, t); }
+  for (const mock of mod.mocks || []) {
+    mockCount++;
+    if (!mock.title || !mock.timeLimitMin || mock.timeLimitMin < 20) bad(mod.title, `mock "${mock.title}" needs a time limit of at least 20 minutes`);
+    if ((mock.questions || []).length < 2) bad(mod.title, `mock "${mock.title}" needs at least 2 questions`);
+    if (COMPANY.test(`${mock.title} ${mock.description}`)) bad(mod.title, `mock "${mock.title}" names a company; label mocks by assessment style only`);
+    for (const t of mock.questions || []) { mockQuestionCount++; checkTask(`${mod.title} / mock ${mock.title}`, t); }
+  }
   if (mod.minQuestions && qaCount < mod.minQuestions) bad(mod.title, `needs at least ${mod.minQuestions} interview questions, has ${qaCount}`);
   if (mod.minProblems && problemCount < mod.minProblems) bad(mod.title, `needs at least ${mod.minProblems} tagged problems, has ${problemCount}`);
   if ((mod.assessment?.questions || []).length < 3) bad(mod.title, "module assessment needs at least 3 questions");
@@ -129,6 +166,8 @@ for (const m of selected) {
 
 if (problemCount) console.log(`bank problems=${problemCount} ${JSON.stringify(byDifficulty)}`);
 if (qaCount) console.log(`interview questions=${qaCount}`);
+if (setCount) console.log(`practice-set questions=${setCount}`);
+if (mockCount) console.log(`timed mocks=${mockCount} mockQuestions=${mockQuestionCount}`);
 console.log(`modules=${selected.length} lessons=${lessonCount} quiz=${quizCount} tasks=${taskCount} assessmentQs=${assessmentCount}${RUN ? ` pythonRuns=${ran}` : " (lint only)"}`);
 if (problems.length) { console.error(`\n${problems.length} problem(s):\n- ` + problems.join("\n- ")); process.exit(1); }
 console.log("OK: content passed validation");

@@ -24,7 +24,7 @@ const prob = ({ t, d, tags, tc, sc, goal, s, inp, out, con, edge, hint, sol, c, 
 // The program is executed by the validator, so the expected output cannot drift from what Python really does.
 const LEVEL = { E: "Easy", M: "Medium", H: "Hard" };
 const iq = (level, q, code, out, wrong, why, miscon, follow) => ({
-  level, levelName: LEVEL[level], q, code, out: out.startsWith("!") ? null : out, err: out.startsWith("!") ? out.slice(1) : null,
+  kind: "OUT", level, levelName: LEVEL[level], q, code, out: out.startsWith("!") ? null : out, err: out.startsWith("!") ? out.slice(1) : null,
   answerText: out.startsWith("!") ? "Raises " + out.slice(1) : out, wrong, why, miscon, follow,
 });
 let rotation = 0;
@@ -36,4 +36,18 @@ const qaQuiz = (items) => items.map((it) => {
   return mcq(`${it.q}\n\n${it.code}`, options, slot,
     `${it.why} Common misconceptions: ${it.miscon} Follow-up: ${it.follow[0]} ${it.follow[1]}`, "OUTPUT_PREDICTION");
 });
-module.exports = { mcq, blank, task, prob, iq, qaQuiz };
+// ---- Placement practice sets (Module 23): mixed question kinds in one lesson ----
+// mc: a concept multiple-choice question. fi: code completion (the blank ___ is replaced by the answer and the program is run).
+// db: find the error (the buggy program is run to confirm its symptom and the fixed program to confirm its output).
+// An out/symptom starting with "!" means the program must raise that exception.
+const mc = (level, prompt, options, answer, why) => ({ kind: "MCQ", level, levelName: LEVEL[level], prompt, options, answer, why });
+const fi = (level, prompt, template, answer, out, why) => ({ kind: "FILL", level, levelName: LEVEL[level], prompt, template, answer, out, why });
+const db = (level, intent, code, symptom, options, answer, fixed, fixedOut, why) => ({ kind: "DEBUG", level, levelName: LEVEL[level], intent, code, symptom, options, answer, fixed, fixedOut, why });
+const setQuiz = (items) => items.map((it) => {
+  if (it.kind === "OUT") return qaQuiz([it])[0];
+  if (it.kind === "MCQ") return mcq(it.prompt, it.options, it.answer, it.why);
+  if (it.kind === "FILL") return blank(`${it.prompt}\n\n${it.template}`, it.answer, it.why);
+  const shows = it.symptom.startsWith("!") ? "it raises " + it.symptom.slice(1) : "it prints:\n" + it.symptom;
+  return mcq(`Find the error. The program should ${it.intent}, but when run ${shows}\n\n${it.code}\n\nWhat is wrong?`, it.options, it.answer, `${it.why} Fixed program output: ${it.fixedOut}`, "DEBUG");
+});
+module.exports = { mcq, blank, task, prob, iq, qaQuiz, mc, fi, db, setQuiz };
