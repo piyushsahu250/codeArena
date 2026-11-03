@@ -16,10 +16,10 @@ let lastCall = "";
 const strictEqual = assert.equal;
 assert.equal = (a, b, m) => strictEqual(a, b, m || `last call: ${lastCall}`);
 
-function request(method, path, token, body) {
+function request(method, path, token, body, extra = {}) {
   return new Promise((resolve, reject) => {
     const data = body !== undefined ? JSON.stringify(body) : null;
-    const req = http.request({ hostname: "localhost", port: PORT, path, method, headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(data ? { "Content-Length": Buffer.byteLength(data) } : {}) } }, (res) => {
+    const req = http.request({ hostname: "localhost", port: PORT, path, method, headers: { "Content-Type": "application/json", ...extra, ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(data ? { "Content-Length": Buffer.byteLength(data) } : {}) } }, (res) => {
       let chunks = "";
       res.on("data", (d) => (chunks += d));
       res.on("end", () => { lastCall = `${method} ${path} -> ${res.statusCode} ${chunks.slice(0, 300)}`; try { resolve({ status: res.statusCode, body: JSON.parse(chunks || "{}") }); } catch { resolve({ status: res.statusCode, body: {} }); } });
@@ -263,4 +263,91 @@ test("a student has to pass every module test, and the certificate is issued aut
   const overview = await request("GET", `/api/learning/courses/${SLUG}`, studentAT);
   assert.equal(overview.body.overall.percent, 100);
   assert.equal((await request("GET", `/api/learning/courses/${SLUG}/certificate`, studentBT)).status === 200, false, "another student gets nothing");
+});
+
+test("a module assessment works end to end for a student: list, start, run, submit, finalize, result, retake, isolation", async (t) => {
+  if (!needs(t)) return;
+  if (spawnSync("python3", ["--version"]).status !== 0) return console.log("python3 not available here; assessment step skipped");
+  const { modules: specs } = require("../content/python");
+  const spec = specs[0].module.assessment;
+  const mod = course.modules[0];
+  const level = await prisma.moduleCodingTest.findFirst({ where: { chapterId: mod.chapters[0].id } });
+  assert.equal(level.isActive, true, "published by the earlier test, as an administrator would");
+  assert.deepEqual(level.allowedLanguages, ["python"]);
+
+  // 1. the student sees it, not started, with its rules
+  const list = await request("GET", `/api/module-coding/module/${mod.id}/levels`, studentAT);
+  assert.equal(list.status, 200);
+  const entry = list.body.find((l) => l.id === level.id);
+  assert.ok(entry, "the published assessment is listed");
+  assert.equal(entry.status, "NOT_STARTED");
+  assert.equal(entry.questionCount, spec.questions.length);
+  assert.equal(entry.passingPercent, level.passingPercent);
+
+  // 2. another institute's student and an anonymous caller get nothing
+  assert.equal((await request("POST", `/api/module-coding/level/${level.id}/start`, studentBT)).status, 404, "another institute's student cannot start it");
+  assert.equal((await request("POST", `/api/module-coding/level/${level.id}/start`, null)).status, 401, "nor can an anonymous caller");
+
+  // 3. start: questions arrive without hidden cases or reference solutions; there is a deadline in the future
+  const start = await request("POST", `/api/module-coding/level/${level.id}/start`, studentAT);
+  assert.equal(start.status, 200);
+  const attemptId = start.body.attemptId;
+  assert.ok(attemptId && start.body.deadline > Date.now());
+  assert.deepEqual(start.body.allowedLanguages, ["python"]);
+  assert.equal(start.body.questions.length, spec.questions.length);
+  const raw = JSON.stringify(start.body);
+  assert.ok(!/"isHidden":true/.test(raw), "no hidden test case is sent");
+  assert.ok(!/"(referenceSolution|solution)"/.test(raw), "no reference solution is sent");
+  for (const q of start.body.questions) assert.ok((q.testCases || []).every((c) => !c.isHidden) && (q.testCases || []).length >= 1, "only sample cases are shown");
+  const solutionOf = (title) => spec.questions.find((q) => q.title === title).solution;
+
+  // 4. starting again resumes the same attempt, it does not create a second one
+  const again = await request("POST", `/api/module-coding/level/${level.id}/start`, studentAT);
+  assert.equal(again.body.attemptId, attemptId, "resumes the attempt in progress");
+  assert.ok(again.body.sessionId && again.body.sessionId !== start.body.sessionId, "a resume hands out a new session, the newest tab owns the attempt");
+  const H = { "x-exam-session": again.body.sessionId }; // the page sends this on every call after start
+
+  // 5. run (sample cases only), autosave, a wrong submission, then the right one
+  const [first, ...others] = start.body.questions;
+  const run = await request("POST", `/api/module-coding/attempts/${attemptId}/run`, studentAT, { questionId: first.id, language: "python", code: solutionOf(first.title) }, H);
+  assert.equal(run.status, 200);
+  assert.equal(run.body.verdict, "ACCEPTED", "the reference solution passes the sample cases");
+  assert.equal((await request("POST", `/api/module-coding/attempts/${attemptId}/autosave`, studentAT, { questionId: first.id, language: "python", code: "# draft", seq: Date.now() }, H)).status, 200);
+  const wrong = await request("POST", `/api/module-coding/attempts/${attemptId}/submit-code`, studentAT, { questionId: first.id, language: "python", code: 'print("wrong")' }, H);
+  assert.equal(wrong.status, 200);
+  assert.notEqual(wrong.body.verdict, "ACCEPTED", "a wrong submission is rejected");
+  assert.ok(!JSON.stringify(wrong.body).includes('"details"'), "the submission result carries no per-case detail (hidden cases stay hidden)");
+  const right = await request("POST", `/api/module-coding/attempts/${attemptId}/submit-code`, studentAT, { questionId: first.id, language: "python", code: solutionOf(first.title) }, H);
+  assert.equal(right.body.verdict, "ACCEPTED");
+  for (const q of others) assert.equal((await request("POST", `/api/module-coding/attempts/${attemptId}/submit-code`, studentAT, { questionId: q.id, language: "python", code: solutionOf(q.title) }, H)).body.verdict, "ACCEPTED", q.title);
+
+  // 6. a question that is not part of this attempt is refused
+  assert.equal((await request("POST", `/api/module-coding/attempts/${attemptId}/run`, studentAT, { questionId: "00000000-0000-0000-0000-000000000000", language: "python", code: "print(1)" }, H)).status, 403);
+  // and another student cannot touch this attempt
+  assert.equal((await request("POST", `/api/module-coding/attempts/${attemptId}/submit-code`, studentBT, { questionId: first.id, language: "python", code: "print(1)" })).status, 403);
+
+  // 7. finalize: graded on the server, passed, every question accounted for
+  const fin = await request("POST", `/api/module-coding/attempts/${attemptId}/finalize`, studentAT, {}, H);
+  assert.equal(fin.status, 200);
+  assert.equal(fin.body.passed, true);
+  assert.equal(fin.body.score, 100);
+  assert.notEqual(fin.body.status, "IN_PROGRESS");
+  assert.equal((fin.body.questionBreakdown || []).length, spec.questions.length);
+  assert.equal((await request("POST", `/api/module-coding/attempts/${attemptId}/finalize`, studentAT, {}, H)).body.passed, true, "finalizing twice is harmless");
+  assert.equal((await request("POST", `/api/module-coding/attempts/${attemptId}/submit-code`, studentAT, { questionId: first.id, language: "python", code: "print(1)" }, H)).status >= 400, true, "no submitting after the attempt is finished");
+
+  // 8. the result persists and shows on the list
+  const after = (await request("GET", `/api/module-coding/module/${mod.id}/levels`, studentAT)).body.find((l) => l.id === level.id);
+  assert.equal(after.status, "PASSED");
+  assert.equal(after.bestScore, 100);
+
+  // 9. a retake that scores worse never undoes the pass or the best score
+  const retake = await request("POST", `/api/module-coding/level/${level.id}/start`, studentAT);
+  assert.equal(retake.status, 200);
+  assert.notEqual(retake.body.attemptId, attemptId, "a new attempt after the first was finished");
+  const weak = await request("POST", `/api/module-coding/attempts/${retake.body.attemptId}/finalize`, studentAT, {}, { "x-exam-session": retake.body.sessionId });
+  assert.equal(weak.body.passed, false);
+  const kept = (await request("GET", `/api/module-coding/module/${mod.id}/levels`, studentAT)).body.find((l) => l.id === level.id);
+  assert.equal(kept.status, "PASSED", "the earlier pass stands");
+  assert.equal(kept.bestScore, 100, "and so does the best score");
 });
