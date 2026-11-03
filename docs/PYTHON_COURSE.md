@@ -1,6 +1,6 @@
 # Python Zero to Hero (course content and tooling)
 
-**Status (2026-11-03): content complete, not yet deployed or reviewed in the live app.** Modules 1 to 23 (Phases 0 to 5, plus the interview and placement modules of Phase 7) and the Phase 6 project catalogue (15 mini and 6 major projects) are authored and machine-verified, and seed as a **Draft** course. Nothing here is visible to students until an administrator publishes and assigns the course. The remaining open items are listed under Known limitations.
+**Status (2026-11-03): content complete, merged (`8b8baf3`), deployed and seeded on the live backend as a Draft; not yet reviewed in the live app.** The live database holds 24 modules, 197 lessons, 21 projects and 77 project tasks; the course is inactive with no institute or group assignment. Modules 1 to 23 (Phases 0 to 5, plus the interview and placement modules of Phase 7) and the Phase 6 project catalogue (15 mini and 6 major projects) are authored and machine-verified, and seed as a **Draft** course. Nothing here is visible to students until an administrator publishes and assigns the course. The remaining open items are listed under Known limitations.
 
 ## How the course maps onto the existing LMS (nothing duplicated)
 
@@ -100,7 +100,7 @@ Checked against python.org and docs.python.org on **2 November 2026**: latest st
 ## Deploying
 
 1. Merge the branch (CI green on the merge commit). No schema push is needed.
-2. On the backend host run, once: `docker exec codearena-backend node scripts/seedPythonCourse.js` (use `--plan` first to list what would be created; it touches no data).
+2. On the backend host run, once: `docker exec codearena-backend node scripts/seedPythonCourse.js` (use `--plan` first to list what would be created; it touches no data and never reads the database, so it always reports everything as "created". Done on 2026-11-03.)
 3. In **Learning Management**: review the course, publish the course, modules, chapters and lessons, publish the module assessments, then assign the course to institutes or groups. Until the assignment exists no student sees it.
 4. To refresh lesson text after editing content files: `node scripts/seedPythonCourse.js --sync` (updates lesson HTML and practice questions that exist; never deletes). For a course that students are already using, prefer editing through the lesson version history.
 
