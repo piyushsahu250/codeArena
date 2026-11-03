@@ -14,7 +14,7 @@ const chapters = parts.map((part) => ({ title: part.title, description: part.des
 
 module.exports = {
   module: {
-    title: "Phase 7 - Module 21: Python Coding Interview Preparation",
+    title: "Phase 7 - Python Coding Interview Preparation",
     description: "A method for solving coding problems and a tagged bank of more than 200 original problems across arrays, strings, hashing, two pointers, stacks, binary search, recursion, trees and graphs, dynamic programming and greedy techniques, each with difficulty, topic and style tags, intended complexity and a learning objective.",
     minProblems: 200,
     chapters,

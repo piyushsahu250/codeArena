@@ -44,7 +44,11 @@ const titles = new Set(), prompts = new Set();
 function checkTask(where, t) {
   if (!t.title || !t.statement || t.statement.length < 20) bad(where, "task needs title and statement");
   const vis = t.testCases.filter((c) => !c.isHidden).length, hid = t.testCases.filter((c) => c.isHidden).length;
-  if (vis < 2) bad(where, "needs at least 2 sample test cases");
+  // A fixed-output program (no input at all) has one distinct sample; every other task needs two different ones.
+  const fixedOutput = t.testCases.every((c) => c.input === "");
+  if (vis < (fixedOutput ? 1 : 2)) bad(where, "needs at least 2 different sample test cases");
+  const seen = new Set();
+  for (const c of t.testCases.filter((c) => !c.isHidden)) { const k = c.input + "\u0000" + c.expected; if (seen.has(k)) bad(where, `${t.title}: the same sample case is shown twice`); seen.add(k); }
   if (hid < 1) bad(where, "needs at least 1 hidden test case");
   if (t.meta) {
     const m = t.meta;

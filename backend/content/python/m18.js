@@ -5,7 +5,7 @@ const lessons = [...require("./m18a").lessons, ...require("./m18b").lessons, ...
 
 module.exports = {
   module: {
-    title: "Phase 4 - Module 18: Software Engineering and Development Tools",
+    title: "Phase 4 - Software Engineering and Development Tools",
     description: "Git and GitHub, branching and pull requests, debugging with tracebacks and pdb, testing with pytest, test-driven development and mocks, code quality with PEP 8, Ruff and Black, logging and configuration, project structure and packaging, and secure coding.",
     chapters: [
       { title: "Version Control and Collaboration", description: "Git, branches, merges, conflicts and pull requests.", lessons: lessons.slice(0, 2) },

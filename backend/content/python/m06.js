@@ -245,7 +245,7 @@ lessons.push({
 
 module.exports = {
   module: {
-    title: "Phase 1 - Module 6: Loops and Iterations",
+    title: "Phase 1 - Loops and Iterations",
     description: "for and while loops, range, nested loops and patterns, break, continue, pass and loop else, standard iteration patterns, and an introduction to time complexity and loop optimisation, with a flowchart for every loop form.",
     chapters: [{ title: "Loops and Iterations", description: "Repeating work correctly and efficiently.", lessons }],
     assessment: {

@@ -5,7 +5,7 @@ const blank = (prompt, answer, explanation) => ({ type: "FILL_BLANK", prompt, co
 // cases: [[stdin, expected], ...]; the first two are shown as samples, every case is also used as a hidden case.
 const task = (title, statement, starter, solution, cases, hiddenCases = cases) => ({
   title, statement, starter, solution,
-  testCases: [...cases.slice(0, 2).map(([input, expected]) => ({ input, expected, isHidden: false })), ...hiddenCases.map(([input, expected]) => ({ input, expected, isHidden: true }))],
+  testCases: [...cases.slice(0, 2).filter(([i, e], k, a) => a.findIndex(([i2, e2]) => i2 === i && e2 === e) === k).map(([input, expected]) => ({ input, expected, isHidden: false })), ...hiddenCases.map(([input, expected]) => ({ input, expected, isHidden: true }))],
 });
 // Interview-bank problem (Modules 21 onward): a task plus the structured fields the PracticeQuestion table already has
 // (difficulty, tags, estimated time, intended complexity, learning objective, hint). d is E, M or H.

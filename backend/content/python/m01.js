@@ -6,7 +6,7 @@ const { chain, graph, table } = require("./render");
 const mcq = (prompt, options, answer, explanation, type = "MCQ") => ({ type, prompt, options, correctAnswer: answer, explanation });
 const task = (title, statement, starter, solution, cases, hiddenCases = cases) => ({
   title, statement, starter, solution,
-  testCases: [...cases.slice(0, 2).map(([input, expected]) => ({ input, expected, isHidden: false })), ...hiddenCases.map(([input, expected]) => ({ input, expected, isHidden: true }))],
+  testCases: [...cases.slice(0, 2).filter(([i, e], k, a) => a.findIndex(([i2, e2]) => i2 === i && e2 === e) === k).map(([input, expected]) => ({ input, expected, isHidden: false })), ...hiddenCases.map(([input, expected]) => ({ input, expected, isHidden: true }))],
 });
 
 const lessons = [];
@@ -230,7 +230,7 @@ lessons.push({
 
 module.exports = {
   module: {
-    title: "Phase 0 - Module 1: Introduction to Programming",
+    title: "Phase 0 - Introduction to Programming",
     description: "What programming is, what Python is, how Python runs a program, and your first working programs.",
     chapters: [{ title: "Introduction to Programming", description: "Concepts, history, execution model and first programs.", lessons }],
     assessment: {

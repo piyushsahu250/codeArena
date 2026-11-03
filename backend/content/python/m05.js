@@ -208,7 +208,7 @@ ${table(["Program", "Inputs to try"], [["Triangle", "3 3 3, 3 3 5, 3 4 5, 1 2 3 
 
 module.exports = {
   module: {
-    title: "Phase 1 - Module 5: Conditional Statements",
+    title: "Phase 1 - Conditional Statements",
     description: "if, if-else, if-elif-else, nested decisions, truthy and falsy values, the conditional expression, boundary testing and complete decision programs, with decision-tree diagrams.",
     chapters: [{ title: "Conditional Statements", description: "Making programs choose.", lessons }],
     assessment: {

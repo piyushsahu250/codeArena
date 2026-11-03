@@ -330,7 +330,7 @@ ${table(["Piece", "Role"], [["<code>create_engine(url)</code>", "the connection 
 
 module.exports = {
   module: {
-    title: "Phase 4 - Module 16: Database Programming",
+    title: "Phase 4 - Database Programming",
     description: "Database fundamentals, SQL revision, SQLite CRUD with the DB-API, parameterised queries and SQL injection prevention, transactions, schema design with relationships and indexes, MySQL connectivity and an introduction to ORMs with SQLAlchemy.",
     chapters: [{ title: "Database Programming", description: "From tables and SQL to safe, transactional Python database code.", lessons }],
     assessment: {

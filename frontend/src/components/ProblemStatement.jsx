@@ -149,8 +149,9 @@ export default function ProblemStatement({ question }) {
           <div style={{ marginTop: 8 }}>
             {testCases.map((tc, i) => (
               <div key={i} className="card" style={{ padding: 12, marginTop: 8, fontSize: 13 }}>
-                <div className="mono"><strong>Input:</strong> {tc.input}</div>
-                <div className="mono"><strong>Expected:</strong> {tc.expected}</div>
+                {/* pre-wrap keeps the line breaks: a multi-line input or expected output must not read as one line, since judged output has to match exactly */}
+                <div className="mono" style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}><strong>Input:</strong> {tc.input}</div>
+                <div className="mono" style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}><strong>Expected:</strong> {tc.expected}</div>
                 {tc.explanation && <div style={{ marginTop: 6, color: "var(--ink-dim)" }}><MathText text={tc.explanation} /></div>}
               </div>
             ))}

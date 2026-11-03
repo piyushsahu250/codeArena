@@ -7,7 +7,7 @@
 | Spec concept | Existing structure used | Notes |
 | --- | --- | --- |
 | Course | `Course` (`slug python-zero-to-hero`, `kind LEARNING`) | Created `DRAFT`, `isActive false`, no assignments |
-| Phase | Prefix in the `CourseModule.title` ("Phase 0 - Module 1: ...") | The schema has no Phase entity; adding one would touch every LMS screen for little gain |
+| Phase | Prefix in the `CourseModule.title` ("Phase 0 - Introduction to Programming") | The schema has no Phase entity; adding one would touch every LMS screen for little gain. The student page adds its own "Module N:" in front of the title, so the title carries no number of its own. Because the Phase 6 project module takes a slot in that sequence, the three Phase 7 modules appear as Modules 22 to 24 in the app |
 | Module | `CourseModule` | One per spec module |
 | Chapter | `Chapter` | One chapter per module in the pilot |
 | Topic / Lesson | `Lesson` with `content` HTML | **Student pages render `content` only, not `blocks`** (`LessonView.jsx` never reads `blocks`), so lessons are HTML with inline SVG |

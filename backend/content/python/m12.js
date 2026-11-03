@@ -213,7 +213,7 @@ ${table(["You mostly...", "Use"], [["test membership", "<code>set</code> / <code
 
 module.exports = {
   module: {
-    title: "Phase 2 - Module 12: Python Memory and Performance",
+    title: "Phase 2 - Python Memory and Performance",
     description: "The object model, references and identity, reference counting and garbage collection, stack and heap, time and space complexity with Big O, measuring with timeit, cProfile and tracemalloc, and efficient data structures.",
     chapters: [{ title: "Python Memory and Performance", description: "How Python stores objects and how to make programs fast and lean.", lessons }],
     assessment: {

@@ -18,7 +18,7 @@ const withLevel = (t, difficulty) => ({ ...t, difficulty });
 
 module.exports = {
   module: {
-    title: "Phase 7 - Module 23: Placement Assessment Preparation",
+    title: "Phase 7 - Placement Assessment Preparation",
     description: "How online placement assessments work, practice sets for multiple-choice, output-prediction, find-the-error and code-completion questions, debugging challenges, an interview simulation, and four timed mock tests in the style of campus, service-company, product-company and contest assessments.",
     chapters,
     assessment: {

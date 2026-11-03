@@ -11,7 +11,7 @@ const chapters = parts.map((part) => ({ title: part.title, description: part.des
 
 module.exports = {
   module: {
-    title: "Phase 7 - Module 22: Python Technical Interview Questions",
+    title: "Phase 7 - Python Technical Interview Questions",
     description: "More than 150 technical interview questions, each a short program whose output you predict: with the explanation, the common misconceptions behind the wrong answers and a follow-up question. Every program is executed by the course's quality gate, so the answers are what Python really prints.",
     minQuestions: 150,
     chapters,

@@ -5,7 +5,7 @@ const { chain, graph, table, terminal } = require("./render");
 const mcq = (prompt, options, answer, explanation, type = "MCQ") => ({ type, prompt, options, correctAnswer: answer, explanation });
 const task = (title, statement, starter, solution, cases, hiddenCases = cases) => ({
   title, statement, starter, solution,
-  testCases: [...cases.slice(0, 2).map(([input, expected]) => ({ input, expected, isHidden: false })), ...hiddenCases.map(([input, expected]) => ({ input, expected, isHidden: true }))],
+  testCases: [...cases.slice(0, 2).filter(([i, e], k, a) => a.findIndex(([i2, e2]) => i2 === i && e2 === e) === k).map(([input, expected]) => ({ input, expected, isHidden: false })), ...hiddenCases.map(([input, expected]) => ({ input, expected, isHidden: true }))],
 });
 
 const lessons = [];
@@ -308,7 +308,7 @@ ${table(["Level", "Operators"], [["1 (first)", "( ) brackets"], ["2", "** (power
 
 module.exports = {
   module: {
-    title: "Phase 1 - Module 3: Python Syntax and Basic Concepts",
+    title: "Phase 1 - Python Syntax and Basic Concepts",
     description: "Syntax and indentation, comments, keywords and identifiers, variables, input and output, type conversion and every operator family with precedence.",
     chapters: [{ title: "Python Syntax and Basic Concepts", description: "From the first valid line of Python to confident use of expressions.", lessons }],
     assessment: {

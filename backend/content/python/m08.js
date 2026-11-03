@@ -298,7 +298,7 @@ ${table(["Module", "Use"], [["math", "sqrt, pi, floor, ceil, gcd, factorial, isc
 
 module.exports = {
   module: {
-    title: "Phase 1 - Module 8: Functions and Modular Programming",
+    title: "Phase 1 - Functions and Modular Programming",
     description: "Defining functions, parameters and arguments, scope and closures, recursion, lambda with map, filter and reduce, decorators and generators, modules, packages and the standard library.",
     chapters: [{ title: "Functions and Modular Programming", description: "Building programs from reusable parts.", lessons }],
     assessment: {

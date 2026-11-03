@@ -6,7 +6,7 @@ const { chain, graph, table, terminal } = require("./render");
 const mcq = (prompt, options, answer, explanation, type = "MCQ") => ({ type, prompt, options, correctAnswer: answer, explanation });
 const task = (title, statement, starter, solution, cases, hiddenCases = cases) => ({
   title, statement, starter, solution,
-  testCases: [...cases.slice(0, 2).map(([input, expected]) => ({ input, expected, isHidden: false })), ...hiddenCases.map(([input, expected]) => ({ input, expected, isHidden: true }))],
+  testCases: [...cases.slice(0, 2).filter(([i, e], k, a) => a.findIndex(([i2, e2]) => i2 === i && e2 === e) === k).map(([input, expected]) => ({ input, expected, isHidden: false })), ...hiddenCases.map(([input, expected]) => ({ input, expected, isHidden: true }))],
 });
 const VERSION_NOTE = `<p><em>Checked against python.org and docs.python.org on 2 November 2026: the latest stable release is Python 3.15 (3.15.2 on 25 October 2026). Release numbers change, so always confirm on <a href="https://www.python.org/downloads/" rel="noopener noreferrer" target="_blank">python.org/downloads</a> before you install.</em></p>`;
 
@@ -302,7 +302,7 @@ ${terminal("Terminal", `$ git --version\n$ git init\n$ git add .\n$ git commit -
 
 module.exports = {
   module: {
-    title: "Phase 0 - Module 2: Installation and Environment Setup",
+    title: "Phase 0 - Installation and Environment Setup",
     description: "Install Python on Windows, Linux or macOS; run programs from the shell, IDLE, terminal and VS Code; use notebooks; create virtual environments; fix common problems; start with Git and GitHub.",
     chapters: [{ title: "Installation and Environment Setup", description: "Version choice, OS-specific installation, editors, notebooks, virtual environments, troubleshooting and Git.", lessons }],
     assessment: {

@@ -245,7 +245,7 @@ lessons.push({
 
 module.exports = {
   module: {
-    title: "Phase 1 - Module 9: Exception Handling and File Management",
+    title: "Phase 1 - Exception Handling and File Management",
     description: "Kinds of errors and tracebacks, try/except/else/finally, raising and custom exceptions, reading and writing files with with, CSV and JSON, and folders and paths with pathlib.",
     chapters: [{ title: "Exception Handling and File Management", description: "Writing programs that survive bad input and keep data on disk.", lessons }],
     assessment: {

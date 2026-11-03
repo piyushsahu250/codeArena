@@ -208,7 +208,7 @@ lessons.push({
 
 module.exports = {
   module: {
-    title: "Phase 2 - Module 13: Concurrency and Asynchronous Programming",
+    title: "Phase 2 - Concurrency and Asynchronous Programming",
     description: "Processes, threads and the GIL, threading with locks and queues, multiprocessing, asyncio with async and await, and how to choose between threads, processes and asyncio.",
     chapters: [{ title: "Concurrency and Asynchronous Programming", description: "Doing many things at once, safely.", lessons }],
     assessment: {

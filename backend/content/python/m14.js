@@ -250,7 +250,7 @@ ${table(["Call", "Effect"], [["<code>sorted(it)</code>", "new sorted list from a
 
 module.exports = {
   module: {
-    title: "Phase 3 - Module 14: DSA Fundamentals",
+    title: "Phase 3 - DSA Fundamentals",
     description: "Problem solving and algorithm analysis, linear and binary search with boundary variations, bubble, selection, insertion, merge and quick sort, and mastering Python's built-in sorting with custom keys.",
     chapters: [{ title: "DSA Fundamentals", description: "Analysing, searching and sorting.", lessons }],
     assessment: {

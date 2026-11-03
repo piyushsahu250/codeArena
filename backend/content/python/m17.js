@@ -336,7 +336,7 @@ ${terminal("curl (needs a running server; shown, not executed here)", `$ curl -s
 
 module.exports = {
   module: {
-    title: "Phase 4 - Module 17: APIs and Web Development",
+    title: "Phase 4 - APIs and Web Development",
     description: "HTTP fundamentals, REST and JSON design, the requests library, integration patterns (retries, pagination, caching), Flask and FastAPI, authentication with password hashing and JWT, and API testing with OpenAPI and Swagger.",
     chapters: [{ title: "APIs and Web Development", description: "Building and consuming web APIs safely.", lessons }],
     assessment: {

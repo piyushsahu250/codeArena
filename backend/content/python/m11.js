@@ -322,7 +322,7 @@ lessons.push({
 
 module.exports = {
   module: {
-    title: "Phase 2 - Module 11: Advanced Python Features",
+    title: "Phase 2 - Advanced Python Features",
     description: "Iterators and generators, decorators with arguments and caching, zip, enumerate and context managers, type hints and pattern matching, regular expressions, collections and itertools, datetime, math, random and logging, command-line arguments and environment variables.",
     chapters: [{ title: "Advanced Python Features", description: "The tools that make Python code short, fast and professional.", lessons }],
     assessment: {

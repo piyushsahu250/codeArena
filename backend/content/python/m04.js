@@ -5,7 +5,7 @@ const { chain, graph, table } = require("./render");
 const mcq = (prompt, options, answer, explanation, type = "MCQ") => ({ type, prompt, options, correctAnswer: answer, explanation });
 const task = (title, statement, starter, solution, cases, hiddenCases = cases) => ({
   title, statement, starter, solution,
-  testCases: [...cases.slice(0, 2).map(([input, expected]) => ({ input, expected, isHidden: false })), ...hiddenCases.map(([input, expected]) => ({ input, expected, isHidden: true }))],
+  testCases: [...cases.slice(0, 2).filter(([i, e], k, a) => a.findIndex(([i2, e2]) => i2 === i && e2 === e) === k).map(([input, expected]) => ({ input, expected, isHidden: false })), ...hiddenCases.map(([input, expected]) => ({ input, expected, isHidden: true }))],
 });
 
 const lessons = [];
@@ -296,7 +296,7 @@ ${table(["Problem", "Idea", "Time", "Extra space"], [["Reverse a string", "<code
 const pad = (s, n) => String(s).padEnd(n), padl = (s, n) => String(s).padStart(n);
 module.exports = {
   module: {
-    title: "Phase 1 - Module 4: Data Types and Data Handling",
+    title: "Phase 1 - Data Types and Data Handling",
     description: "Numbers, booleans and None, mutable and immutable objects, references and identity, and complete string handling: indexing, slicing, methods, formatting and interview problems.",
     chapters: [{ title: "Data Types and Data Handling", description: "From numeric types to confident string manipulation.", lessons }],
     assessment: {

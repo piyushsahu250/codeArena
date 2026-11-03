@@ -5,7 +5,7 @@ const lessons = [...require("./m19a").lessons, ...require("./m19b").lessons, ...
 
 module.exports = {
   module: {
-    title: "Phase 5 - Module 19: Python for Data Analysis",
+    title: "Phase 5 - Python for Data Analysis",
     description: "NumPy arrays, indexing and statistics; pandas Series and DataFrames; selecting, cleaning, grouping, joining and reshaping data; reading and writing CSV, Excel and JSON; exploratory data analysis; and charts with Matplotlib.",
     chapters: [
       { title: "NumPy", description: "Arrays, vectorised maths, masks and statistics.", lessons: lessons.slice(0, 2) },

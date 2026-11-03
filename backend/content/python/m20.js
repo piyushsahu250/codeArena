@@ -5,7 +5,7 @@ const lessons = [...require("./m20a").lessons, ...require("./m20b").lessons, ...
 
 module.exports = {
   module: {
-    title: "Phase 5 - Module 20: Introduction to AI and Machine Learning with Python",
+    title: "Phase 5 - Introduction to AI and Machine Learning with Python",
     description: "Machine learning concepts and workflow, the scikit-learn estimator API, preprocessing pipelines, regression, classification, evaluation with cross-validation, overfitting and underfitting, tuning and ensembles, and saving, serving and monitoring a model responsibly.",
     chapters: [
       { title: "Foundations", description: "Concepts, the scikit-learn pattern and data preparation.", lessons: lessons.slice(0, 3) },

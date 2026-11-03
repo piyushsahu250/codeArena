@@ -328,7 +328,7 @@ lessons.push({
 
 module.exports = {
   module: {
-    title: "Phase 2 - Module 10: Object-Oriented Programming",
+    title: "Phase 2 - Object-Oriented Programming",
     description: "Classes and objects, class and static methods, encapsulation and properties, inheritance, multiple inheritance and the MRO, polymorphism and magic methods, abstraction, composition, dataclasses and an introduction to SOLID.",
     chapters: [{ title: "Object-Oriented Programming", description: "Modelling real-world things as objects.", lessons }],
     assessment: {

@@ -83,8 +83,8 @@ export default function TestPreview() {
                   <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-dim)" }}>TEST CASES ({tq.question.testCases.length})</div>
                   {tq.question.testCases.map((tc) => (
                     <div key={tc.id} className="card" style={{ padding: 10, marginTop: 6, fontSize: 12 }}>
-                      <div className="mono"><strong>Input:</strong> {tc.input}</div>
-                      <div className="mono"><strong>Expected:</strong> {tc.expected}</div>
+                      <div className="mono" style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}><strong>Input:</strong> {tc.input}</div>
+                      <div className="mono" style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}><strong>Expected:</strong> {tc.expected}</div>
                       {tc.isHidden && <div className="mono" style={{ color: "var(--ink-dim)" }}>hidden from students during the attempt</div>}
                     </div>
                   ))}

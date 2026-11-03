@@ -335,7 +335,7 @@ ${table(["Operation", "list", "set / dict"], [["x in c", "O(n)", "O(1)"], ["add 
 
 module.exports = {
   module: {
-    title: "Phase 1 - Module 7: Python Collections",
+    title: "Phase 1 - Python Collections",
     description: "Lists, tuples, sets and dictionaries taught independently, with copying rules, comprehensions, nested data, performance and a guide to choosing the right collection.",
     chapters: [{ title: "Python Collections", description: "Storing and organising many values.", lessons }],
     assessment: {
