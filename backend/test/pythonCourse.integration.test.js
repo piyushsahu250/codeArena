@@ -351,3 +351,157 @@ test("a module assessment works end to end for a student: list, start, run, subm
   assert.equal(kept.status, "PASSED", "the earlier pass stands");
   assert.equal(kept.bestScore, 100, "and so does the best score");
 });
+
+test("proctoring on a module assessment: refresh recovery, what is never penalised, escalation, auto-submit at the limit, what is stored", async (t) => {
+  if (!needs(t)) return;
+  if (spawnSync("python3", ["--version"]).status !== 0) return console.log("python3 not available here; proctoring step skipped");
+  const { SUSPICIOUS_ESCALATION_THRESHOLD } = require("../src/utils/proctoringSeverity");
+  const { modules: specs } = require("../content/python");
+  const spec = specs[0].module.assessment;
+  const mod = course.modules[0];
+  const level = await prisma.moduleCodingTest.findFirst({ where: { chapterId: mod.chapters[0].id } });
+  assert.equal(level.proctoring, true, "the course assessments are proctored");
+  assert.equal(level.maxViolations, 3);
+  const url = (p) => `/api/module-coding/${p}`;
+  const solutionOf = (title) => spec.questions.find((q) => q.title === title).solution;
+
+  const start = await request("POST", url(`level/${level.id}/start`), studentAT);
+  assert.equal(start.status, 200, "a third attempt is allowed (three are configured)");
+  const attemptId = start.body.attemptId;
+  let H = { "x-exam-session": start.body.sessionId };
+  const [q1, q2] = start.body.questions;
+
+  // 1. work is kept across a refresh: a draft saved before, comes back when the page asks to start again
+  assert.equal((await request("POST", url(`attempts/${attemptId}/autosave`), studentAT, { questionId: q2.id, language: "python", code: "# my unfinished draft", seq: Date.now() }, H)).status, 200);
+  const resumed = await request("POST", url(`level/${level.id}/start`), studentAT);
+  assert.equal(resumed.body.attemptId, attemptId, "a refresh resumes the same attempt");
+  assert.equal(resumed.body.savedAnswers[q2.id].code, "# my unfinished draft", "and the saved draft is restored");
+  H = { "x-exam-session": resumed.body.sessionId };
+  assert.equal((await request("POST", url(`attempts/${attemptId}/submit-code`), studentAT, { questionId: q1.id, language: "python", code: solutionOf(q1.title) }, H)).body.verdict, "ACCEPTED");
+
+  const report = async (type) => (await request("POST", url(`attempts/${attemptId}/violation`), studentAT, { type }, H)).body;
+  const countRows = () => prisma.proctoringViolation.count({ where: { attemptId } });
+
+  // 2. events that are usually innocent are logged and never counted, however often they happen: a lost face, a dropped network, a refresh, an unknown event from a newer client
+  for (const type of ["FACE_MISSING", "MULTIPLE_FACES", "NETWORK_LOSS", "REFRESH_ATTEMPT", "SOME_FUTURE_EVENT_NOBODY_KNOWS"]) {
+    const r = await report(type);
+    assert.equal(r.penalized, false, `${type} is never a strike`);
+    assert.equal(r.violationCount, 0);
+    assert.equal(r.autoSubmitted, false);
+  }
+  assert.equal(await countRows(), 5, "all five were still recorded for the reviewer");
+
+  // 3. ambiguous actions are warnings until they repeat: every SUSPICIOUS_ESCALATION_THRESHOLD-th one becomes a strike
+  const warnings = ["COPY", "PASTE", "RIGHT_CLICK"].slice(0, SUSPICIOUS_ESCALATION_THRESHOLD - 1);
+  for (const type of warnings) { const r = await report(type); assert.equal(r.severity, "SUSPICIOUS"); assert.equal(r.penalized, false, `a first ${type} is only a warning`); assert.equal(r.violationCount, 0); }
+  const third = await report("RIGHT_CLICK");
+  assert.equal(third.penalized, true, "the repeat that reaches the threshold is a strike");
+  assert.equal(third.violationCount, 1);
+
+  // 4. leaving the proctored environment is a strike at once, and the strike that reaches the limit submits the attempt
+  const tab = await report("TAB_SWITCH");
+  assert.equal(tab.severity, "CONFIRMED_VIOLATION"); assert.equal(tab.penalized, true); assert.equal(tab.violationCount, 2); assert.equal(tab.autoSubmitted, false);
+  const last = await report("CAMERA_DROPPED");
+  assert.equal(last.violationCount, 3);
+  assert.equal(last.maxViolations, 3);
+  assert.equal(last.autoSubmitted, true, "reaching the limit submits the attempt");
+
+  // 5. after that: finished, graded from what was saved, nothing more can be changed or counted
+  const attempt = await prisma.moduleCodingAttempt.findUnique({ where: { id: attemptId } });
+  assert.notEqual(attempt.status, "IN_PROGRESS");
+  assert.equal(attempt.violationCount, 3);
+  const graded = await prisma.moduleCodingSubmission.findFirst({ where: { attemptId, questionId: q1.id } });
+  assert.equal(graded.verdict, "ACCEPTED", "the answer submitted before the auto-submit is kept and graded");
+  const draftOnly = await prisma.moduleCodingSubmission.findFirst({ where: { attemptId, questionId: q2.id } });
+  assert.notEqual(draftOnly.verdict, "PENDING", "an unfinished draft is graded too, not left pending");
+  assert.ok(attempt.score > 0 && attempt.score < 100, `a partly done attempt gets a partial score (${attempt.score})`);
+  const late = await report("TAB_SWITCH");
+  assert.equal(late.autoSubmitted, true); assert.equal(late.violationCount, 3, "no further strikes after the attempt ended");
+  assert.ok((await request("POST", url(`attempts/${attemptId}/submit-code`), studentAT, { questionId: q1.id, language: "python", code: "print(1)" }, H)).status >= 400, "no submitting after the auto-submit");
+
+  // 6. what is stored for the reviewer: every event, its severity and whether it counted, with no student code in the log
+  const rows = await prisma.proctoringViolation.findMany({ where: { attemptId }, orderBy: { createdAt: "asc" } });
+  assert.equal(rows.length, 5 + warnings.length + 1 + 1 + 1, "every event is on record");
+  const { classifyViolation } = require("../src/utils/proctoringSeverity");
+  let suspicious = 0;
+  for (const row of rows) {
+    const want = classifyViolation(row.type, suspicious);
+    if (want.severity === "SUSPICIOUS") suspicious++;
+    assert.equal(row.severity, want.severity, `${row.type} is stored as ${want.severity}`);
+    assert.equal(row.penalized, want.penalized, `${row.type} penalised=${want.penalized}`);
+  }
+  assert.equal(rows.filter((r) => r.penalized).length, 3, "exactly three strikes were counted");
+  assert.ok(!JSON.stringify(rows).includes("my unfinished draft"), "the log holds no student code");
+
+  // 7. only the student who owns the attempt can report on it, and only when signed in
+  assert.equal((await request("POST", url(`attempts/${attemptId}/violation`), studentBT, { type: "TAB_SWITCH" })).status, 403);
+  assert.equal((await request("POST", url(`attempts/${attemptId}/violation`), null, { type: "TAB_SWITCH" })).status, 401);
+});
+
+test("permissions: who can read, change, publish and assign the Python course, for every role", async (t) => {
+  if (!needs(t)) return;
+  // Runs last on purpose: the write attempts below must all be refused, and if one were not it would damage the course the earlier tests used.
+  const staffA = await mkUser("STAFF", F.A, "staffa"), instA = await mkUser("INSTITUTE_ADMIN", F.A, "iaa"), instB = await mkUser("INSTITUTE_ADMIN", F.institutes[1], "iab");
+  const T = { anon: null, studentA: studentAT, studentB: studentBT, staff: tokenFor(staffA), instA: tokenFor(instA), instB: tokenFor(instB), admin: adminT };
+  const lessonId = course.modules[0].chapters[0].topics[0].id;
+  const before = await prisma.lesson.findUnique({ where: { id: lessonId } });
+
+  // 1. The platform's own course (no owning institute) can be changed by a platform administrator and nobody else, whatever the role or institute.
+  const writes = [
+    ["edit a lesson", "PATCH", `/api/learning/lessons/${lessonId}`, { title: "changed by a role that must not" }],
+    ["unpublish a lesson", "POST", `/api/learning/publish/lesson/${lessonId}/unpublish`, {}],
+    ["rename the course", "PATCH", `/api/learning/courses/${course.id}`, { name: "changed by a role that must not" }],
+    ["assign the course to an institute", "POST", `/api/learning/courses/${course.id}/assignments`, { instituteIds: [F.A] }],
+    ["add a module", "POST", `/api/learning/courses/${course.id}/modules`, { title: "extra module" }],
+    ["delete a lesson", "DELETE", `/api/learning/lessons/${lessonId}`, undefined],
+    ["delete the course", "DELETE", `/api/learning/courses/${course.id}`, undefined],
+  ];
+  for (const who of ["anon", "studentA", "studentB", "staff", "instA", "instB"]) {
+    for (const [what, method, path, body] of writes) {
+      const r = await request(method, path, T[who], body);
+      assert.ok([401, 403, 404].includes(r.status), `${who} must not ${what}: got ${r.status}`);
+    }
+  }
+  const after = await prisma.lesson.findUnique({ where: { id: lessonId } });
+  assert.equal(after.title, before.title, "the lesson title is untouched");
+  assert.equal(after.isActive, true, "the lesson is still published");
+  assert.equal((await prisma.course.findUnique({ where: { id: course.id } })).name, course.name, "the course is untouched");
+  assert.equal(await prisma.courseModule.count({ where: { courseId: course.id } }), 24, "no module was added or removed");
+  // Positive control: the same route does work for a platform administrator, so the refusals above mean something.
+  assert.equal((await request("PATCH", `/api/learning/lessons/${lessonId}`, T.admin, { order: before.order })).status, 200, "a platform administrator can edit");
+
+  // 2. Reading: the assigned institute's student, any administrator or staff member (the course belongs to the platform), but not an unassigned student, and nobody anonymous.
+  for (const [who, want] of [["studentA", 200], ["studentB", 404], ["staff", 200], ["instA", 200], ["instB", 200], ["admin", 200], ["anon", 401]]) {
+    assert.equal((await request("GET", `/api/learning/courses/${SLUG}`, T[who])).status, want, `${who} reading the course`);
+  }
+  // Only a student's own view is trimmed: staff see the full question data (answers) for review, a student never does.
+  const asStudent = JSON.stringify((await request("GET", `/api/learning/lessons/${lessonId}`, T.studentA)).body);
+  const asStaff = JSON.stringify((await request("GET", `/api/learning/lessons/${lessonId}`, T.staff)).body);
+  assert.ok(!asStudent.includes("correctAnswer"), "a student never sees an answer key");
+  assert.ok(asStaff.includes("correctAnswer"), "staff can review the answer key");
+
+  // 3. Learner actions belong to students: an administrator or staff member cannot record progress, take a test, or start an assessment.
+  const testLesson = (await prisma.lesson.findFirst({ where: { module: { courseId: course.id }, isModuleTest: true }, orderBy: { order: "asc" } }));
+  const level = await prisma.moduleCodingTest.findFirst({ where: { chapterId: course.modules[0].chapters[0].id } });
+  for (const who of ["staff", "instA", "instB", "admin", "anon"]) {
+    for (const [what, method, path, body] of [
+      ["record lesson progress", "POST", `/api/learning/lessons/${lessonId}/progress`, { status: "COMPLETED" }],
+      ["submit a module test", "POST", `/api/learning/lessons/${testLesson.id}/test-submit`, { answers: {} }],
+      ["start an assessment", "POST", `/api/module-coding/level/${level.id}/start`, {}],
+    ]) {
+      const r = await request(method, path, T[who], body);
+      assert.ok([401, 403].includes(r.status), `${who} must not ${what}: got ${r.status}`);
+    }
+  }
+  // and no student can write progress for a course that was not assigned to them
+  assert.equal((await request("POST", `/api/learning/lessons/${lessonId}/progress`, T.studentB, { status: "COMPLETED" })).status, 404, "an unassigned student cannot record progress");
+  assert.equal(await prisma.lessonProgress.count({ where: { studentId: studentB.id } }), 0, "and nothing was written for them");
+
+  // 4. A student cannot read another student's work: practice drafts are keyed to the signed-in student.
+  const practice = await prisma.practiceQuestion.findFirst({ where: { lessonId, type: "CODING" } });
+  assert.equal((await request("POST", `/api/learning/practice/${practice.id}/autosave`, T.studentA, { language: "python", code: "# only mine" })).status, 200);
+  const mine = await request("GET", `/api/learning/practice/${practice.id}/draft`, T.studentA);
+  assert.equal(mine.body.code, "# only mine");
+  const theirs = await request("GET", `/api/learning/practice/${practice.id}/draft`, T.studentB);
+  assert.ok(theirs.status === 404 || !theirs.body || theirs.body.code !== "# only mine", "another student does not get my draft");
+});
