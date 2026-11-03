@@ -109,7 +109,7 @@ fi
 run_judge() {
   grep -E '^JUDGE_' "$ENV_FILE" | grep -vE '^JUDGE_(REMOTE_ENABLED|URL|CONCURRENCY|MAX_QUEUE_SIZE)=' > /tmp/judge.env
   docker run -d --name "$JUDGE_NAME" --restart unless-stopped --network "$NETWORK" \
-    --pids-limit=512 --cap-add=NET_ADMIN --cpus="${JUDGE_CPUS:-1.6}" --memory="${JUDGE_MEMORY:-3g}" \
+    --init --pids-limit=512 --cap-add=NET_ADMIN --cpus="${JUDGE_CPUS:-1.6}" --memory="${JUDGE_MEMORY:-3g}" \
     --env-file /tmp/judge.env -e JUDGE_ROLE=server \
     -e JUDGE_CONCURRENCY="${JUDGE_SERVER_CONCURRENCY:-2}" -e JUDGE_MAX_QUEUE_SIZE="${JUDGE_SERVER_QUEUE:-200}" \
     "$1" >/dev/null
@@ -140,6 +140,7 @@ fi
 
 run_container() {
   docker run -d --name "$NAME" --restart unless-stopped --network "$NETWORK" \
+    --init \
     --pids-limit=512 \
     --cap-add=NET_ADMIN \
     -p 127.0.0.1:4000:4000 \

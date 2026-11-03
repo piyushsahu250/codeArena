@@ -32,6 +32,7 @@ rather than assuming the doc is still right.
 - **Run** (the complete, correct command — every flag here was added for a real reason, don't drop one):
   ```bash
   docker run -d --name codearena-backend --restart unless-stopped \
+    --init \
     --pids-limit=512 \
     --cap-add=NET_ADMIN \
     -p 127.0.0.1:4000:4000 \
@@ -39,6 +40,15 @@ rather than assuming the doc is still right.
     --mount source=codearena-backend-logs,target=/app/logs \
     codearena-backend:latest
   ```
+  - `--init`: **required for the judge to stay usable (added 2026-11-03).** A submission that forks (a fork
+    bomb, or just `os.fork`) leaves its killed children as zombies, and a zombie is reaped only by PID 1.
+    PID 1 here is the Node server, which never reaps, so without an init process every fork-bomb submission
+    left 64 zombies owned by the sandbox user. They count against that user's process limit, so afterwards
+    any program that starts a thread failed with `can't start new thread` until the container was restarted,
+    and about 7 such submissions would have exhausted `--pids-limit`. Reproduced on the live judge on
+    2026-11-03 with a bounded probe. `--init` makes Docker's init (tini) PID 1, which reaps them. The judge
+    container in `scripts/deploy-aws-host.sh` has it too, and `test/containerFlags.test.js` fails if either
+    loses it.
   - `--pids-limit=512`: **security-critical, not optional.** The judge's in-process `ulimit -u`
     (meant to cap a single submission's process count as fork-bomb protection) does not actually
     bind on this host/kernel combination — confirmed via live testing 2026-08-25 (see
