@@ -1,5 +1,6 @@
 import { useState } from "react";
 import MathText from "./MathText";
+import { inputText, outputText, fullProgramLabel, NO_INPUT, NO_OUTPUT } from "../utils/caseText";
 
 // Shared student-facing problem-statement renderer — the read-side counterpart to
 // ProblemStatementFields.jsx. Used by every coding surface (formal Tests, Module Coding Tests,
@@ -18,6 +19,8 @@ import MathText from "./MathText";
 // for proctored Formal Tests and Module Coding Assessments — see tests.js's explicit `select` and
 // moduleCoding.js's sanitizeQuestion() — so this component needs no awareness of "formal" vs
 // "practice" context itself; it only ever renders what the backend actually sent.
+const DIM = { color: "var(--ink-dim)", fontStyle: "italic" };
+
 export default function ProblemStatement({ question }) {
   const q = question || {};
   const description = q.description ?? q.prompt ?? "";
@@ -39,7 +42,7 @@ export default function ProblemStatement({ question }) {
               title="Write a complete, runnable program — your own class/main() (or equivalent) that reads input and prints output."
               style={{ fontSize: 11, padding: "2px 8px", borderRadius: 999, background: "var(--card-bg, #F7F7F5)", border: "1px solid var(--line)", color: "var(--ink-dim)", fontWeight: 700 }}
             >
-              ▤ Full program — read input, print output yourself
+              ▤ {fullProgramLabel(testCases)}
             </span>
           ) : null
         )}
@@ -150,8 +153,8 @@ export default function ProblemStatement({ question }) {
             {testCases.map((tc, i) => (
               <div key={i} className="card" style={{ padding: 12, marginTop: 8, fontSize: 13 }}>
                 {/* pre-wrap keeps the line breaks: a multi-line input or expected output must not read as one line, since judged output has to match exactly */}
-                <div className="mono" style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}><strong>Input:</strong> {tc.input}</div>
-                <div className="mono" style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}><strong>Expected:</strong> {tc.expected}</div>
+                <div className="mono" style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}><strong>Input:</strong> <span style={inputText(tc.input) === NO_INPUT ? DIM : undefined}>{inputText(tc.input)}</span></div>
+                <div className="mono" style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}><strong>Expected:</strong> <span style={outputText(tc.expected) === NO_OUTPUT ? DIM : undefined}>{outputText(tc.expected)}</span></div>
                 {tc.explanation && <div style={{ marginTop: 6, color: "var(--ink-dim)" }}><MathText text={tc.explanation} /></div>}
               </div>
             ))}

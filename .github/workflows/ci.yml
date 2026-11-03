@@ -112,6 +112,8 @@ jobs:
         run: node scripts/dedupeWritesRegression.mjs
       - name: Practice answer regression (a wrong answer shows the correct one and highlights it)
         run: node scripts/practiceAnswerRegression.mjs
+      - name: Case text regression (a test case input and output are always visible; a blank one is named)
+        run: node scripts/caseTextRegression.mjs
       - name: Browser voice regression (voice picking, speech chunking, transcript merging, recognition errors)
         run: node scripts/browserSpeechRegression.mjs
       - name: AI error wording regression (a daily AI limit tells the student nothing is lost and when to retry)

@@ -1,3 +1,5 @@
+import { inputText, outputText } from "../utils/caseText";
+
 // Shared judge-result renderer for every coding surface (Coding Tests, Module Coding Tests,
 // Practice Coding, Mock Interview coding) — one visual format for Run/Submit results platform-wide,
 // per-case input/expected/actual/status/time/memory, and the same compile/runtime-error and
@@ -45,11 +47,11 @@ export default function CodeResultBlock({ title, result, hideCaseCount, submitte
       {result.details?.map((d, i) => (
         <div key={i} style={{ fontSize: 12, marginTop: 8 }} className="mono">
           <span style={{ color: d.verdict === "PASSED" ? "var(--mint)" : "var(--rust)" }}>[{d.verdict}]</span>{" "}
-          input: {d.input}
+          input: <span style={{ whiteSpace: "pre-wrap" }}>{inputText(d.input)}</span>
           {d.verdict === "PASSED" ? (
-            <> | output: {d.actual}</>
+            <> | output: <span style={{ whiteSpace: "pre-wrap" }}>{outputText(d.actual)}</span></>
           ) : d.verdict === "WRONG_ANSWER" ? (
-            <> | expected: {d.expected} | your output: {d.actual}</>
+            <> | expected: <span style={{ whiteSpace: "pre-wrap" }}>{outputText(d.expected)}</span> | your output: <span style={{ whiteSpace: "pre-wrap" }}>{outputText(d.actual)}</span></>
           ) : (
             <> | {d.error || "no output"}</>
           )}
