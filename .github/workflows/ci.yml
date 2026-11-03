@@ -308,6 +308,16 @@ jobs:
             echo "::error title=Python course tests failed::$MSG"
           fi
           exit $code
+      - name: Judge load, 50 then 100 then 200 submissions at the same instant (correctness gates; timings are reported for THIS runner, not production)
+        run: |
+          code=0
+          node scripts/loadJudge.js > /tmp/loadJudge.out 2>&1 || code=$?
+          cat /tmp/loadJudge.out
+          if [ "$code" -ne 0 ]; then
+            MSG=$(grep -E "unexpected|must|firstFailure|Error" /tmp/loadJudge.out | cut -c1-400 | head -20 | sed "s/%/%25/g" | awk "BEGIN{ORS=\"%0A\"} {print}")
+            echo "::error title=Judge load test failed::$MSG"
+          fi
+          exit $code
       - name: Build the SPA and serve it
         working-directory: frontend
         run: |
