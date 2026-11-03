@@ -33,6 +33,20 @@ function newBlueprint() {
   };
 }
 
+// A labelled form field: the label is tied to the input by id (clicking it focuses the field), a required field is marked, and a hint sits under the input.
+function Field({ id, label, hint, required, wide, children }) {
+  return (
+    <div className={`ex-field${wide ? " wide" : ""}`}>
+      <label htmlFor={id}>{label}{required && <span className="ex-req" title="Required"> *</span>}</label>
+      {children}
+      {hint && <div className="ex-hint">{hint}</div>}
+    </div>
+  );
+}
+// A date and time spelled out, so "10:00" can never be mistaken for morning or night.
+const whenText = (iso) => (iso ? new Date(iso).toLocaleString(undefined, { weekday: "short", day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" }) : "Not set");
+const fmtMin = (m) => (m >= 60 ? `${Math.floor(m / 60)} h${m % 60 ? ` ${m % 60} min` : ""}` : `${m} min`);
+
 // Creating and editing a section-wise examination. The page only edits the configuration; every rule (enough valid questions, marks that add up, locked fields once students have
 // started) is checked by the server, and its messages are shown beside the fields they belong to.
 export default function ExamEditor() {
@@ -69,6 +83,20 @@ export default function ExamEditor() {
   const setProc = (patch) => setBp((b) => ({ ...b, proctoring: { ...b.proctoring, ...patch } }));
   const errorsFor = (prefix) => (check?.errors || []).filter((e) => e.path === prefix || e.path.startsWith(`${prefix}.`) || e.path.startsWith(`${prefix}[`));
   const totalMarks = useMemo(() => Math.round(bp.sections.reduce((a, s) => a + (Number(s.maxMarks) || 0), 0) * 100) / 100, [bp.sections]);
+  // How many questions each section will ask, from what was chosen (the same rule payload() applies); shown in the summary and on every section.
+  const countOf = (s) => (s.key === "APTITUDE" ? (s.source.distribution || []).reduce((a, x) => a + (Number(x.count) || 0), 0)
+    : s.key === "TECHNICAL" ? (s.source.subjects || []).reduce((a, x) => a + (Number(x.count) || 0), 0)
+    : s.key === "CODING" ? (s.source.questionIds || []).length : Number(s.questionCount) || 0);
+  const questionTotal = bp.sections.reduce((a, s) => a + countOf(s), 0);
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "local time";
+  const windowMin = bp.startAt && bp.endAt ? Math.round((new Date(bp.endAt) - new Date(bp.startAt)) / 60000) : 0;
+  const attemptMin = Number(bp.durationMin) || 0;
+  const windowHint = windowMin <= 0 ? "Closing time must be after the opening time."
+    : windowMin < attemptMin ? `The window (${fmtMin(windowMin)}) is shorter than one attempt (${fmtMin(attemptMin)}).`
+    : `Students can start at any time in this ${fmtMin(windowMin)} window.`;
+  const passingHint = bp.passingMarks === "" || bp.passingMarks == null ? "Leave empty for no pass mark."
+    : Number(bp.passingMarks) > totalMarks ? "More than the total marks, so nobody could pass."
+    : `${Math.round((Number(bp.passingMarks) / (totalMarks || 1)) * 100)}% of the total marks.`;
 
   // The counts follow from what was chosen, so they can never disagree with it.
   function payload() {
@@ -127,34 +155,90 @@ export default function ExamEditor() {
           <Link to="/exam-admin" className="btn btn-ghost">← All section exams</Link>
         </div>
 
-        <div className="ex-card ex-form">
-          <h3>General</h3>
-          <label htmlFor="ex-title">Title</label><input id="ex-title" type="text" value={bp.title} onChange={(e) => set({ title: e.target.value })} /><Err prefix="title" />
-          <label htmlFor="ex-desc">Description (shown to students)</label><textarea id="ex-desc" rows={2} value={description} onChange={(e) => setDescription(e.target.value)} />
-          <div className="ex-two">
-            <div><label>Mode</label><select value={bp.mode} onChange={(e) => set({ mode: e.target.value })}><option value="PROCTORED">Official (proctored, one attempt)</option><option value="PRACTICE">Practice only</option></select></div>
-            <div><label>Practice attempts</label><select value={bp.practiceEnabled ? "1" : "0"} onChange={(e) => set({ practiceEnabled: e.target.value === "1" })}><option value="1">Allowed (unofficial)</option><option value="0">Not allowed</option></select></div>
-            <div><label>Opens</label><input type="datetime-local" value={toLocal(bp.startAt)} onChange={(e) => set({ startAt: toIso(e.target.value) })} /></div>
-            <div><label>Closes</label><input type="datetime-local" value={toLocal(bp.endAt)} onChange={(e) => set({ endAt: toIso(e.target.value) })} /></div>
-            <div><label>Duration (minutes)</label><input type="number" min="1" value={bp.durationMin} onChange={(e) => set({ durationMin: e.target.value })} /></div>
-            <div><label>Grace after time (seconds)</label><input type="number" min="0" value={bp.graceSec} onChange={(e) => set({ graceSec: e.target.value })} /></div>
-            <div><label>Passing marks (of {totalMarks})</label><input type="number" min="0" step="0.5" value={bp.passingMarks ?? ""} onChange={(e) => set({ passingMarks: e.target.value })} /></div>
-            <div><label>Timers</label><select value={bp.timingPolicy} onChange={(e) => set({ timingPolicy: e.target.value })}><option value="OVERALL_ONLY">Overall timer only</option><option value="OVERALL_AND_SECTION">Overall and per-section timers</option></select></div>
-            <div><label>Results</label><select value={bp.resultVisibility} onChange={(e) => set({ resultVisibility: e.target.value })}><option value="AFTER_PUBLISH">Shown after I publish</option><option value="IMMEDIATE">Shown as soon as final</option></select></div>
-          </div>
-          <Err prefix="startAt" /><Err prefix="endAt" /><Err prefix="durationMin" /><Err prefix="passingMarks" /><Err prefix="passingPercent" /><Err prefix="totalMarks" /><Err prefix="timingPolicy" />
-          <label>Who can take it (leave empty for every student of the institute)</label>
-          <select multiple size={Math.min(6, Math.max(3, groups.length))} value={groupIds} onChange={(e) => setGroupIds([...e.target.selectedOptions].map((o) => o.value))}>
-            {groups.map((g) => <option key={g.id} value={g.id}>{g.name || [g.department?.name, g.batch, g.section].filter(Boolean).join(" · ")}</option>)}
-          </select>
+        <div className="ex-glance" role="group" aria-label="Summary of this exam">
+          <div><span className="ex-glance-n">{totalMarks}</span><span>total marks</span></div>
+          <div><span className="ex-glance-n">{Number(bp.durationMin) || 0}</span><span>minutes</span></div>
+          <div><span className="ex-glance-n">{questionTotal}</span><span>questions in 4 sections</span></div>
+          <div><span className="ex-glance-n">{bp.passingMarks === "" || bp.passingMarks == null ? "–" : bp.passingMarks}</span><span>marks to pass</span></div>
         </div>
+
+        <section className="ex-card ex-form" aria-labelledby="ex-h-basics">
+          <div className="ex-card-head"><h3 id="ex-h-basics"><span className="ex-num">1</span> Basics</h3><p className="ex-sub">What students see in their list of exams.</p></div>
+          <Field id="ex-title" label="Title" required hint="A clear name, for example “Placement Readiness Exam, Batch 2026”.">
+            <input id="ex-title" type="text" value={bp.title} onChange={(e) => set({ title: e.target.value })} placeholder="Exam title" aria-required="true" />
+          </Field>
+          <Err prefix="title" />
+          <Field id="ex-desc" label="Description (shown to students)" hint="Optional. Say what the exam covers and anything students should prepare.">
+            <textarea id="ex-desc" rows={3} value={description} onChange={(e) => setDescription(e.target.value)} />
+          </Field>
+        </section>
+
+        <section className="ex-card ex-form" aria-labelledby="ex-h-schedule">
+          <div className="ex-card-head"><h3 id="ex-h-schedule"><span className="ex-num">2</span> Schedule</h3><p className="ex-sub">When the exam can be started and how long one attempt lasts. Times are in your own time zone ({tz}).</p></div>
+          <div className="ex-grid-2">
+            <Field id="ex-opens" label="Opens" required>
+              <input id="ex-opens" type="datetime-local" value={toLocal(bp.startAt)} onChange={(e) => set({ startAt: toIso(e.target.value) })} />
+              <div className="ex-hint">{whenText(bp.startAt)}</div>
+            </Field>
+            <Field id="ex-closes" label="Closes" required hint={windowHint}>
+              <input id="ex-closes" type="datetime-local" value={toLocal(bp.endAt)} onChange={(e) => set({ endAt: toIso(e.target.value) })} />
+              <div className="ex-hint">{whenText(bp.endAt)}</div>
+            </Field>
+            <Field id="ex-duration" label="Duration of one attempt (minutes)" required hint="The timer a student gets once they start.">
+              <input id="ex-duration" type="number" min="1" value={bp.durationMin} onChange={(e) => set({ durationMin: e.target.value })} />
+            </Field>
+            <Field id="ex-grace" label="Grace after time ends (seconds)" hint="Extra seconds to save answers after the timer reaches zero. Usually 0.">
+              <input id="ex-grace" type="number" min="0" value={bp.graceSec} onChange={(e) => set({ graceSec: e.target.value })} />
+            </Field>
+          </div>
+          <Err prefix="startAt" /><Err prefix="endAt" /><Err prefix="durationMin" />
+        </section>
+
+        <section className="ex-card ex-form" aria-labelledby="ex-h-rules">
+          <div className="ex-card-head"><h3 id="ex-h-rules"><span className="ex-num">3</span> Attempt rules and results</h3><p className="ex-sub">How the exam is taken, scored and reported.</p></div>
+          <div className="ex-grid-2">
+            <Field id="ex-mode" label="Mode">
+              <select id="ex-mode" value={bp.mode} onChange={(e) => set({ mode: e.target.value })}><option value="PROCTORED">Official (proctored, one attempt)</option><option value="PRACTICE">Practice only</option></select>
+            </Field>
+            <Field id="ex-practice" label="Practice attempts" hint="Unofficial tries before the official attempt. They never count.">
+              <select id="ex-practice" value={bp.practiceEnabled ? "1" : "0"} onChange={(e) => set({ practiceEnabled: e.target.value === "1" })}><option value="1">Allowed (unofficial)</option><option value="0">Not allowed</option></select>
+            </Field>
+            <Field id="ex-timers" label="Timers">
+              <select id="ex-timers" value={bp.timingPolicy} onChange={(e) => set({ timingPolicy: e.target.value })}><option value="OVERALL_ONLY">Overall timer only</option><option value="OVERALL_AND_SECTION">Overall and per-section timers</option></select>
+            </Field>
+            <Field id="ex-passing" label={`Passing marks (out of ${totalMarks})`} hint={passingHint}>
+              <input id="ex-passing" type="number" min="0" step="0.5" value={bp.passingMarks ?? ""} onChange={(e) => set({ passingMarks: e.target.value })} />
+            </Field>
+            <Field id="ex-results" label="When students see their result" wide>
+              <select id="ex-results" value={bp.resultVisibility} onChange={(e) => set({ resultVisibility: e.target.value })}><option value="AFTER_PUBLISH">Shown after I publish</option><option value="IMMEDIATE">Shown as soon as final</option></select>
+            </Field>
+          </div>
+          <Err prefix="passingMarks" /><Err prefix="passingPercent" /><Err prefix="totalMarks" /><Err prefix="timingPolicy" />
+        </section>
+
+        <section className="ex-card ex-form" aria-labelledby="ex-h-audience">
+          <div className="ex-card-head"><h3 id="ex-h-audience"><span className="ex-num">4</span> Who can take it</h3><p className="ex-sub">{groupIds.length === 0 ? "Every student of the institute can take this exam." : `${groupIds.length} group${groupIds.length === 1 ? "" : "s"} selected. Only their students can take this exam.`}</p></div>
+          <div className="ex-aud" role="group" aria-label="Who can take this exam">
+            <label className="ex-check"><input type="checkbox" checked={groupIds.length === 0} onChange={() => setGroupIds([])} /> <span><strong>Every student of the institute</strong></span></label>
+            {groups.map((g) => {
+              const name = g.name || [g.department?.name, g.batch, g.section].filter(Boolean).join(" · ") || "Unnamed group";
+              return (
+                <label key={g.id} className="ex-check"><input type="checkbox" checked={groupIds.includes(g.id)} onChange={() => setGroupIds((ids) => (ids.includes(g.id) ? ids.filter((x) => x !== g.id) : [...ids, g.id]))} /> <span>{name}</span></label>
+              );
+            })}
+            {groups.length === 0 && <p className="ex-sub">No academic groups exist yet, so the exam is open to every student of the institute.</p>}
+          </div>
+        </section>
+
+        <h2 className="ex-part">Sections</h2>
+        <p className="ex-sub ex-part-sub">The four parts of the attempt, in the order students take them. The marks of all sections add up to {totalMarks}.</p>
 
         {SECTION_META.map(({ key, label }) => {
           const s = sectionOf(key);
           return (
-            <div key={key} className="ex-card ex-form">
-              <h3>{label}</h3>
-              <div className="ex-two">
+            <section key={key} className="ex-card ex-form" aria-label={label}>
+              <div className="ex-card-head ex-split-head"><h3>{label}</h3><span className="ex-chip">{Number(s.maxMarks) || 0} marks · {countOf(s)} question{countOf(s) === 1 ? "" : "s"}</span></div>
+              <div className="ex-two ex-settings">
                 <div><label>Marks</label><input type="number" min="0" step="0.5" value={s.maxMarks} onChange={(e) => setSection(key, { maxMarks: e.target.value })} /></div>
                 {bp.timingPolicy === "OVERALL_AND_SECTION" && <div><label>Section minutes</label><input type="number" min="1" value={s.durationMin ?? ""} onChange={(e) => setSection(key, { durationMin: e.target.value })} /></div>}
                 <div><label>Navigation</label><select value={s.navigation} onChange={(e) => setSection(key, { navigation: e.target.value })}><option value="FREE">Move freely</option><option value="FORWARD_ONLY">Forward only</option></select></div>
@@ -206,7 +290,7 @@ export default function ExamEditor() {
               )}
               {key === "AI_INTERVIEW" && (
                 <>
-                  <div className="ex-two">
+                  <div className="ex-two ex-wide-cols">
                     <div><label>Questions</label><input type="number" min="1" value={iv.questionCount} onChange={(e) => setSection("AI_INTERVIEW", { questionCount: e.target.value })} /></div>
                     <div><label>Category</label><select value={iv.interview.category} onChange={(e) => setInterview({ category: e.target.value })}>{["HR", "TECHNICAL", "BEHAVIORAL", "SITUATIONAL", "PROJECT", "ROLE_SPECIFIC"].map((c) => <option key={c}>{c}</option>)}</select></div>
                     <div><label>Difficulty</label><select value={iv.interview.difficulty} onChange={(e) => setInterview({ difficulty: e.target.value })}>{["EASY", "MEDIUM", "HARD"].map((c) => <option key={c}>{c}</option>)}</select></div>
@@ -220,12 +304,13 @@ export default function ExamEditor() {
                   </div>
                 </>
               )}
-            </div>
+            </section>
           );
         })}
 
-        <div className="ex-card ex-form">
-          <h3>Proctoring (official attempts)</h3>
+        <h2 className="ex-part">Proctoring and review</h2>
+        <section className="ex-card ex-form" aria-label="Proctoring">
+          <div className="ex-card-head"><h3>Proctoring (official attempts)</h3></div>
           <div className="ex-row">
             {[["cameraRequired", "Camera"], ["microphoneRequired", "Microphone"], ["fullscreenRequired", "Fullscreen"], ["autoSubmitOnExpiry", "Submit saved answers when time ends"], ["reviewRequired", "A person reviews flagged events before results are final"]].map(([k, l]) => <label key={k} style={{ fontWeight: 400 }}><input type="checkbox" checked={!!bp.proctoring[k]} onChange={(e) => setProc({ [k]: e.target.checked })} /> {l}</label>)}
           </div>
@@ -236,7 +321,7 @@ export default function ExamEditor() {
           </div>
           <p className="ex-sub">Events are recorded for review. They never fail or end an attempt on their own.</p>
           <Err prefix="proctoring" />
-        </div>
+        </section>
 
         {check && (
           <div className="ex-card">
@@ -251,8 +336,9 @@ export default function ExamEditor() {
           </div>
         )}
         {msg && <div className={`ex-notice ${msg.ok ? "ok" : "bad"}`} role="status">{msg.text}</div>}
-        <div className="ex-row" style={{ position: "sticky", bottom: 0, background: "var(--bg, #fff)", padding: "10px 0" }}>
+        <div className="ex-row ex-actions">
           <button className="btn btn-primary" disabled={busy} onClick={save}>{busy ? "Working…" : "Save"}</button>
+          {!examId && <span className="ex-sub">Save first, then you can check question availability and publish.</span>}
           {examId && <button className="btn btn-ghost" disabled={busy} onClick={validate}>Check availability</button>}
           {examId && <button className="btn btn-ghost" disabled={busy} onClick={publish}>{status === "PUBLISHED" ? "Publish changes" : "Publish"}</button>}
           {examId && <Link className="btn btn-ghost" to={`/exam-admin/${examId}/results`}>Results</Link>}
