@@ -24,10 +24,13 @@ const BANNED = /coming soon|lorem ipsum|\btodo\b|\btbd\b|placeholder (text|conte
 // Programs run from a real file (not -c) so multiprocessing, which re-imports the main module, behaves as it does for students.
 const workDir = fs.mkdtempSync(path.join(os.tmpdir(), "pycontent-"));
 let runCounter = 0;
+// The examples must behave the same on every machine, so the CI/app settings of this process (database URL, secrets, ports...)
+// are not handed to them: an example that reads os.environ.get("DATABASE_URL", "sqlite:///dev.db") must see the default.
+const CLEAN_ENV = Object.fromEntries(Object.entries(process.env).filter(([k]) => !/^(DATABASE_URL|DIRECT_DATABASE_URL|JWT_SECRET|SECRET_KEY|PORT|NODE_ENV|DEBUG|LOG_LEVEL|REQUIRE_INTEGRATION|CI|APP_.*)$/.test(k)));
 const py = (src, input = "") => {
   const file = path.join(workDir, `main${runCounter++}.py`);
   fs.writeFileSync(file, src);
-  const r = spawnSync(process.env.PYTHON || "python3", ["-I", file], { input, encoding: "utf8", timeout: 20000 });
+  const r = spawnSync(process.env.PYTHON || "python3", ["-I", file], { input, encoding: "utf8", timeout: 20000, env: CLEAN_ENV });
   return { out: (r.stdout || "").replace(/\r\n/g, "\n"), err: r.stderr || "", status: r.status };
 };
 process.on("exit", () => { try { fs.rmSync(workDir, { recursive: true, force: true }); } catch { /* best effort */ } });
@@ -90,7 +93,7 @@ function checkQuestion(where, it) {
 const PROJECT_REQUIRED = ["title", "minutes", "project"];
 let projectCount = 0, miniCount = 0, majorCount = 0, scratchCount = 0;
 const runIn = (dir, args, input = "") => {
-  const r = spawnSync(process.env.PYTHON || "python3", ["-E", "-s", ...args], { cwd: dir, input, encoding: "utf8", timeout: 90000 });
+  const r = spawnSync(process.env.PYTHON || "python3", ["-E", "-s", ...args], { cwd: dir, input, encoding: "utf8", timeout: 90000, env: CLEAN_ENV });
   return { out: (r.stdout || "").replace(/\r\n/g, "\n"), err: r.stderr || "", status: r.status };
 };
 function checkProject(where, P) {
