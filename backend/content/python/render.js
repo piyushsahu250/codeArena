@@ -101,7 +101,27 @@ function graph(title, desc, W, H, nodes, edges) {
 }
 
 // ---- The standard 20-part lesson ----
+// Interview question-and-answer lesson (Module 22): each question shows a program first; the answer, explanation,
+// common misconceptions and a follow-up sit behind a details element so students can try before looking.
+function renderQa(L) {
+  const p = [`<div class="py-lesson">`];
+  p.push(h(2, "What will you learn?") + list(L.learn));
+  p.push(h(2, "Why is this topic asked in interviews?") + `<p>${L.why}</p>`);
+  p.push(h(2, "How to use this lesson") + `<p>${L.howTo || "Read each program, decide what it prints (or which error it raises) before opening the answer, then read the explanation, the common misconceptions and the follow-up question. The same questions appear as a quiz below, so you can test yourself again later."}</p>`);
+  L.items.forEach((it, i) => {
+    p.push(h(3, `Q${i + 1}. ${esc(it.q)} <small style="opacity:.7">(${it.levelName})</small>`) + code(it.code));
+    p.push(`<details style="margin:.3rem 0 1.2rem"><summary><strong>Show the answer</strong></summary>` +
+      (it.err ? `<p>The program raises <code>${esc(it.err)}</code>.</p>` : output(it.out)) +
+      `<p><strong>Why:</strong> ${esc(it.why)}</p><p><strong>Common misconceptions:</strong> ${esc(it.miscon)}</p>` +
+      `<p><strong>Follow-up:</strong> ${esc(it.follow[0])}<br><em>Answer:</em> ${esc(it.follow[1])}</p></details>`);
+  });
+  p.push(h(2, "Quick revision") + list(L.revision));
+  p.push(`<p style="margin-top:1.4rem"><em>Next: answer the quiz (the same programs, multiple choice) and solve the coding task in the practice section.</em></p></div>`);
+  return p.join("\n");
+}
+
 function renderLesson(L) {
+  if (L.items) return renderQa(L);
   const p = [];
   p.push(`<div class="py-lesson">`);
   p.push(h(2, "What will you learn?") + list(L.learn));

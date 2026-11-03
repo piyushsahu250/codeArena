@@ -67,6 +67,22 @@ function checkTask(where, t) {
   }
 }
 
+// Interview question (Module 22): structure always, and with --run the program is executed and its output (or exception) must match.
+const QA_REQUIRED = ["title", "minutes", "learn", "why", "items", "revision", "quiz", "tasks"];
+let qaCount = 0;
+function checkQuestion(where, it) {
+  qaCount++;
+  if (!it.q || !it.code || !it.why || !it.miscon || !Array.isArray(it.follow) || it.follow.length !== 2 || !it.follow[0] || !it.follow[1]) bad(where, "needs question, code, explanation, misconceptions and a follow-up (question and answer)");
+  if (!Array.isArray(it.wrong) || it.wrong.length !== 3 || new Set([...it.wrong, it.answerText]).size !== 4) bad(where, "needs exactly three wrong answers, all different from the right one and from each other");
+  if (it.out == null && !it.err) bad(where, "needs an expected output or an expected exception");
+  if (!RUN) return;
+  const r = py(it.code);
+  ran++;
+  if (it.err) { if (r.status === 0 || !r.err.includes(it.err)) bad(where, `should raise ${it.err}, got status ${r.status}: ${r.err.slice(-160)}`); return; }
+  if (r.status !== 0) bad(where, `crashed: ${r.err.slice(-200)}`);
+  else if (norm(r.out) !== norm(it.out)) bad(where, `output mismatch. declared ${JSON.stringify(it.out)} actual ${JSON.stringify(r.out)}`);
+}
+
 for (const m of selected) {
   const mod = m.module;
   if (!mod.title || !mod.chapters?.length) bad(mod.title || "module", "missing title or chapters");
@@ -74,13 +90,14 @@ for (const m of selected) {
     for (const L of ch.lessons) {
       const w = `${mod.title} / ${L.title}`;
       lessonCount++;
-      for (const f of REQUIRED) if (L[f] == null || (Array.isArray(L[f]) && !L[f].length)) bad(w, `missing ${f}`);
+      for (const f of L.items ? QA_REQUIRED : REQUIRED) if (L[f] == null || (Array.isArray(L[f]) && !L[f].length)) bad(w, `missing ${f}`);
       if (titles.has(L.title)) bad(w, "duplicate lesson title");
       titles.add(L.title);
       let html = "";
       try { html = renderLesson(L); } catch (e) { bad(w, `render failed: ${e.message}`); continue; }
       if (BANNED.test(html)) bad(w, `contains banned placeholder wording: ${html.match(BANNED)[0]}`);
-      if (!/<svg[^>]*role="img"/.test(html) || !/<title[^>]*>[^<]+<\/title>/.test(html) || !/<desc[^>]*>[^<]+<\/desc>/.test(html)) bad(w, "diagram needs role=img, title and desc");
+      if (!L.items && (!/<svg[^>]*role="img"/.test(html) || !/<title[^>]*>[^<]+<\/title>/.test(html) || !/<desc[^>]*>[^<]+<\/desc>/.test(html))) bad(w, "diagram needs role=img, title and desc");
+      for (const [n, it] of (L.items || []).entries()) checkQuestion(`${w} / Q${n + 1}`, it);
       if (html.length < 4000) bad(w, `lesson looks too thin (${html.length} chars)`);
       if (/<script|onerror=|onload=|javascript:/i.test(html)) bad(w, "unsafe markup");
       if ((L.quiz || []).length < 3) bad(w, "needs at least 3 quiz questions");
@@ -93,7 +110,7 @@ for (const m of selected) {
         if (!q.explanation) bad(w, "quiz question needs an explanation");
       }
       for (const t of L.tasks || []) { taskCount++; checkTask(w, t); }
-      if (RUN) {
+      if (RUN && !L.items) {
         for (const [name, ex] of [["example", L.example], ["realExample", L.realExample]]) {
           const r = py(ex.code, ex.stdin || "");
           ran++;
@@ -105,11 +122,13 @@ for (const m of selected) {
     }
   }
   for (const t of mod.assessment?.questions || []) { assessmentCount++; checkTask(`${mod.title} / assessment`, t); }
+  if (mod.minQuestions && qaCount < mod.minQuestions) bad(mod.title, `needs at least ${mod.minQuestions} interview questions, has ${qaCount}`);
   if (mod.minProblems && problemCount < mod.minProblems) bad(mod.title, `needs at least ${mod.minProblems} tagged problems, has ${problemCount}`);
   if ((mod.assessment?.questions || []).length < 3) bad(mod.title, "module assessment needs at least 3 questions");
 }
 
 if (problemCount) console.log(`bank problems=${problemCount} ${JSON.stringify(byDifficulty)}`);
+if (qaCount) console.log(`interview questions=${qaCount}`);
 console.log(`modules=${selected.length} lessons=${lessonCount} quiz=${quizCount} tasks=${taskCount} assessmentQs=${assessmentCount}${RUN ? ` pythonRuns=${ran}` : " (lint only)"}`);
 if (problems.length) { console.error(`\n${problems.length} problem(s):\n- ` + problems.join("\n- ")); process.exit(1); }
 console.log("OK: content passed validation");

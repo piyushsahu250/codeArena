@@ -18,4 +18,22 @@ const prob = ({ t, d, tags, tc, sc, goal, s, inp, out, con, edge, hint, sol, c, 
   base.meta = { difficulty: DIFF[d], tags: [...tags, STYLE[d]], timeComplexity: tc, spaceComplexity: sc, goal, inputFormat: inp, outputFormat: out, constraints: con || null, edgeCases: edge || null, hints: hint ? [hint] : [], minutes: min || MINUTES[d] };
   return base;
 };
-module.exports = { mcq, blank, task, prob };
+// Interview question (Module 22): a short program, its exact output, three wrong answers that match common misconceptions,
+// the explanation, the misconceptions and a follow-up question. level is E, M or H.
+// out starting with "!" means the program must raise that exception, for example "!TypeError".
+// The program is executed by the validator, so the expected output cannot drift from what Python really does.
+const LEVEL = { E: "Easy", M: "Medium", H: "Hard" };
+const iq = (level, q, code, out, wrong, why, miscon, follow) => ({
+  level, levelName: LEVEL[level], q, code, out: out.startsWith("!") ? null : out, err: out.startsWith("!") ? out.slice(1) : null,
+  answerText: out.startsWith("!") ? "Raises " + out.slice(1) : out, wrong, why, miscon, follow,
+});
+let rotation = 0;
+// Turns interview questions into output-prediction quiz questions; the correct option rotates through the four positions.
+const qaQuiz = (items) => items.map((it) => {
+  const slot = rotation++ % 4;
+  const options = [...it.wrong];
+  options.splice(slot, 0, it.answerText);
+  return mcq(`${it.q}\n\n${it.code}`, options, slot,
+    `${it.why} Common misconceptions: ${it.miscon} Follow-up: ${it.follow[0]} ${it.follow[1]}`, "OUTPUT_PREDICTION");
+});
+module.exports = { mcq, blank, task, prob, iq, qaQuiz };
