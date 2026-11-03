@@ -151,7 +151,70 @@ function renderSet(L) {
   return p.join("\n");
 }
 
+// ---- Real-world projects (Phase 6): the 19-part project guide ----
+// A flowchart as a snake of boxes: left to right on the top row, right to left on the bottom row, with an optional return arrow
+// from the last box up to the first (a program that repeats until the user quits). Every arrow joins neighbouring boxes.
+function flow(title, desc, labels, { loop = false } = {}) {
+  const n = labels.length, cols = Math.ceil(n / 2), W = cols * 190 + 40, H = n > 1 ? 210 : 110, bw = 160, bh = 56;
+  const colX = (c) => 20 + 95 + c * 190;
+  const nodes = labels.map((t, i) => {
+    const top = i < cols;
+    const c = top ? i : cols - 1 - (i - cols);
+    return { id: `n${i}`, k: i === 0 ? "term" : /\?$/.test(t) ? "dec" : "proc", t, x: colX(c), y: top ? 60 : 160, w: bw, h: bh };
+  });
+  const edges = nodes.slice(1).map((_, i) => ({ from: `n${i}`, to: `n${i + 1}` }));
+  if (loop && n > 2) edges.push({ from: `n${n - 1}`, to: "n0", label: "repeat" });
+  return graph(title, desc, W, H, nodes, edges);
+}
+
+const projectReadme = (P) => [
+  `# ${P.title}`, "", P.problem, "",
+  "## Features", ...P.requirements.map((r) => `- ${r}`), "",
+  "## Requirements", `- Python 3.11 or newer${P.packages && P.packages.length ? "\n- Packages: " + P.packages.join(", ") : " (standard library only)"}`, "",
+  "## How to run", "```bash", `python ${P.run}${P.args ? " " + P.args : ""}`, "```", "",
+  "## Example", "```text", String(P.sample.out).replace(/\n$/, ""), "```", "",
+  "## Tests", "```bash", `python -m unittest ${P.test.replace(/\.py$/, "")} -v`, "```", "",
+  "## Project layout", "```text", ...(P.layout || Object.keys(P.files)), "README.md", "```", "",
+  "## What I learned", "(Write three sentences about what was hard and how you solved it.)", "",
+].join("\n");
+
+function renderProject(P) {
+  const p = [`<div class="py-lesson">`];
+  const numbered = (n, t) => h(2, `${n}. ${t}`);
+  const filesHtml = () => Object.entries(P.files).map(([name, src]) => `<p style="margin:.8rem 0 .2rem"><strong><code>${esc(name)}</code></strong></p>` + code(src)).join("");
+  p.push(`<p><em>${P.kind === "MAJOR" ? "Major project" : "Mini project"} &middot; about ${P.minutes} minutes &middot; ${P.difficulty.toLowerCase()}${P.scratch ? " &middot; <strong>build from scratch: no step-by-step solution is published</strong>" : ""}</em></p>`);
+  p.push(numbered(1, "Problem statement") + `<p>${esc(P.problem)}</p>`);
+  p.push(numbered(2, "Real-world scenario") + `<p>${esc(P.scenario)}</p>`);
+  p.push(numbered(3, "Learning objectives") + list(P.objectives.map(esc)));
+  p.push(numbered(4, "Prerequisites") + list(P.prerequisites.map(esc)));
+  p.push(numbered(5, "Requirements") + list(P.requirements.map(esc)));
+  p.push(numbered(6, "System architecture") + P.architecture);
+  p.push(numbered(7, "Flowchart") + P.flowchart);
+  p.push(numbered(8, "Database schema") + (P.schema
+    ? P.schema.map((t) => `<p><strong>Table <code>${esc(t.table)}</code></strong></p>` + table(["Column", "Type", "Notes"], t.columns.map((c) => c.map(esc)))).join("")
+    : `<p>This project does not use a database.</p>`));
+  if (P.scratch) {
+    p.push(numbered(9, "Step-by-step implementation") + `<p>This is a <strong>build-from-scratch</strong> project, so no step-by-step solution is published. Work through the milestones in the Project tasks section: each one is checked by the platform, and the hints open up gradually. Plan first: sketch the data you need, the commands the program accepts and the order in which you will build them.</p>` + `<ol>${P.milestones.map((m) => `<li>${esc(m)}</li>`).join("")}</ol>`);
+    p.push(numbered(10, "Complete source code") + `<p>Not published for this project, so that you practise solving it independently. A reference solution exists and is used to check the acceptance tests; your instructor may share it after the deadline.</p>`);
+  } else {
+    p.push(numbered(9, "Step-by-step implementation") + `<ol>${P.steps.map(([t, x]) => `<li><strong>${esc(t)}</strong> ${esc(x)}</li>`).join("")}</ol>`);
+    p.push(numbered(10, "Complete source code") + `<p>Type the code yourself, run it, and read it line by line. Every file below has been executed and tested.</p>` + filesHtml());
+  }
+  p.push(numbered(11, "Explanation of the important components") + table(["Component", "What it does and why"], P.explain.map(([a, b]) => [`<code>${esc(a)}</code>`, esc(b)])));
+  p.push(numbered(12, "Sample input and output") + `<p>Run: <code>python ${esc(P.run)}${P.args ? " " + esc(P.args) : ""}</code></p>` + stdinBlock(P.stdin) + output(P.sample.out));
+  p.push(numbered(13, "Testing instructions") + list(P.testing.map(esc)) + (P.scratch ? `<p>Write your own tests in <code>${esc(P.test)}</code> as you build; the platform's acceptance tests check the same behaviour.</p>` : `<p>The test file <code>${esc(P.test)}</code>, run with <code>python -m unittest ${esc(P.test.replace(/\.py$/, ""))} -v</code>:</p>` + code(P.files[P.test])));
+  p.push(numbered(14, "Common bugs and debugging") + table(["Symptom", "Likely cause and fix"], P.bugs.map((b) => b.map(esc))));
+  p.push(numbered(15, "Extension challenges") + list(P.extensions.map(esc)));
+  p.push(numbered(16, "GitHub repository preparation") + `<ol><li>Create a new empty repository named <code>${esc(P.id)}</code> on GitHub (no generated files), then <code>git init</code> in your project folder.</li><li>Add a <code>.gitignore</code> containing <code>__pycache__/</code>, <code>.venv/</code>, <code>*.db</code>, <code>.env</code>.</li><li>Layout: ${(P.layout || Object.keys(P.files)).map((f) => `<code>${esc(f)}</code>`).join(", ")}${P.packages && P.packages.length ? ", <code>requirements.txt</code>" : ""}, <code>README.md</code>.</li><li>Commit in small steps with clear messages (for example <code>feat: add expense totals</code>, <code>test: cover empty input</code>).</li><li><code>git remote add origin &lt;your repository URL&gt;</code>, <code>git push -u origin main</code>, then check that the README shows correctly on GitHub.</li><li>Never commit passwords, tokens or personal data. Add a licence only if you understand it.</li></ol>`);
+  p.push(numbered(17, "README creation") + `<p>Use this README as a starting point and replace the last section with your own words:</p>` + code(projectReadme(P), "markdown"));
+  p.push(numbered(18, "Interview questions based on the project") + list(P.interview.map(esc), "ol"));
+  p.push(numbered(19, "Project evaluation rubric") + table(["Criterion", "Points", "What is expected"], [...P.rubric.map(([a, pts, d]) => [esc(a), String(pts), esc(d)]), ["<strong>Total</strong>", `<strong>${P.rubric.reduce((s, r) => s + r[1], 0)}</strong>`, ""]]));
+  p.push(`<p style="margin-top:1.4rem"><em>Next: open the Project tasks for this project, complete them in order, and submit your repository link to your instructor.</em></p></div>`);
+  return p.join("\n");
+}
+
 function renderLesson(L) {
+  if (L.project) return renderProject(L.project);
   if (L.items) return renderQa(L);
   if (L.set) return renderSet(L);
   const p = [];
@@ -178,4 +241,4 @@ function renderLesson(L) {
   return p.join("\n");
 }
 
-module.exports = { esc, list, code, output, h, table, terminal, chain, graph, svgWrap, renderLesson };
+module.exports = { esc, list, code, output, h, table, terminal, chain, graph, svgWrap, flow, projectReadme, renderLesson };

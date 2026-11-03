@@ -1,0 +1,34 @@
+Public sign-up creates a student, never an admin.
+Second admin bootstrap: Error: an admin already exists.
+Login with a wrong password: Error: invalid username or password.
+Login with an unknown user: Error: invalid username or password.
+Student adds a question: Error: only admins can do that.
+Exam ready: 5 questions, 30 minutes, pass mark 60%.
+Paper for asha: 5 questions, answers hidden.
+asha starts again: Error: you have already started this exam.
+Ravi reads asha's attempt: Error: no such attempt.
+asha reads the result too early: Error: finish the exam to see the result.
+asha answers the last question: Error: time is up.
+Result for asha:
+  Score: 3/5 (60.0%) PASS - finished after the time limit
+    Review: Which of these is immutable? - you answered list; correct answer: tuple
+    Review: What does 'abc'.upper() return? - you answered nothing; correct answer: 'ABC'
+Result for ravi:
+  Score: 2/5 (40.0%) FAIL - finished after the time limit
+    Review: What does len([1, 2, 3]) return? - you answered 2; correct answer: 3
+    Review: What is the type of 3 / 2 in Python 3? - you answered int; correct answer: float
+    Review: What does 'abc'.upper() return? - you answered 'abc'; correct answer: 'ABC'
+Result for kabir:
+  Score: 0/5 (0.0%) FAIL - finished after the time limit
+    Review: What does len([1, 2, 3]) return? - you answered nothing; correct answer: 3
+    Review: Which keyword defines a function? - you answered nothing; correct answer: def
+    Review: What is the type of 3 / 2 in Python 3? - you answered nothing; correct answer: float
+    Review: Which of these is immutable? - you answered nothing; correct answer: tuple
+    Review: What does 'abc'.upper() return? - you answered nothing; correct answer: 'ABC'
+Report for Python Basics Test
+Finished attempts: 3, average 33.3%, highest 60.0%, passed 1
+   33.3% correct: What does len([1, 2, 3]) return?
+   66.7% correct: Which keyword defines a function?
+   33.3% correct: What is the type of 3 / 2 in Python 3?
+   33.3% correct: Which of these is immutable?
+    0.0% correct: What does 'abc'.upper() return?

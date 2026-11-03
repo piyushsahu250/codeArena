@@ -1,0 +1,22 @@
+GET /tasks -> 401 {"detail": "missing token"}
+POST /auth/register -> 201 {"id": 1, "username": "asha"}
+POST /auth/register -> 409 {"detail": "username is taken"}
+POST /auth/register -> 201 {"id": 2, "username": "ravi"}
+POST /auth/register -> 422 validation error on username, password
+POST /auth/login -> 401 {"detail": "invalid username or password"}
+POST /auth/login -> 200 {"token_type": "bearer", "access_token": "..."}
+POST /auth/login -> 200 {"token_type": "bearer", "access_token": "..."}
+POST /tasks -> 201 {"id": 1, "title": "Write the report", "description": "", "priority": "high", "status": "open", "due_date": "2026-11-10"}
+POST /tasks -> 201 {"id": 2, "title": "Read chapter 4", "description": "", "priority": "medium", "status": "open", "due_date": null}
+POST /tasks -> 201 {"id": 3, "title": "Report bugs", "description": "", "priority": "high", "status": "open", "due_date": null}
+POST /tasks -> 422 validation error on priority
+GET /tasks?priority=high -> 200 [{"id": 1, "title": "Write the report", "description": "", "priority": "high", "status": "open", "due_date": "2026-11-10"}, {"id": 3, "title": "Report bugs", "description": "", "priority": "high", "status": "open", "due_date": null}]
+GET /tasks?q=report&limit=1&offset=1 -> 200 [{"id": 3, "title": "Report bugs", "description": "", "priority": "high", "status": "open", "due_date": null}]
+PATCH /tasks/1 -> 200 {"id": 1, "title": "Write the report", "description": "", "priority": "high", "status": "done", "due_date": "2026-11-10"}
+PATCH /tasks/1 -> 422 validation error on status
+GET /tasks?status=done -> 200 [{"id": 1, "title": "Write the report", "description": "", "priority": "high", "status": "done", "due_date": "2026-11-10"}]
+GET /tasks/1 -> 404 {"detail": "task not found"}
+DELETE /tasks/1 -> 404 {"detail": "task not found"}
+DELETE /tasks/1 -> 204
+GET /tasks/1 -> 404 {"detail": "task not found"}
+Documented paths: /auth/login, /auth/register, /health, /tasks, /tasks/{task_id}

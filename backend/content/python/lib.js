@@ -50,4 +50,14 @@ const setQuiz = (items) => items.map((it) => {
   const shows = it.symptom.startsWith("!") ? "it raises " + it.symptom.slice(1) : "it prints:\n" + it.symptom;
   return mcq(`Find the error. The program should ${it.intent}, but when run ${shows}\n\n${it.code}\n\nWhat is wrong?`, it.options, it.answer, `${it.why} Fixed program output: ${it.fixedOut}`, "DEBUG");
 });
-module.exports = { mcq, blank, task, prob, iq, qaQuiz, mc, fi, db, setQuiz };
+// Project evaluation rubric (Phase 6): the seven criteria add up to 100; functionality and specific describe this project.
+const rubric = (functionality, specific) => [
+  ["Working program", 30, functionality],
+  ["Project-specific quality", 15, specific],
+  ["Code quality and structure", 15, "Clear names, small functions, no duplicated code, formatted with a standard tool"],
+  ["Testing", 15, "Unit tests for the main logic and the edge cases; the tests pass"],
+  ["Error handling and validation", 10, "Bad input never crashes the program and the messages are helpful"],
+  ["README and documentation", 10, "Purpose, how to run, example output and project layout"],
+  ["Git and repository hygiene", 5, "Small commits with clear messages, a .gitignore and no secrets"],
+];
+module.exports = { mcq, blank, task, prob, iq, qaQuiz, mc, fi, db, setQuiz, rubric };

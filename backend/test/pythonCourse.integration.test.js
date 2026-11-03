@@ -87,6 +87,14 @@ test("seeding creates a Draft, unassigned course that no student can see", async
   assert.equal(mod.isActive, false); assert.equal(ch.isActive, false);
   assert.ok(ch.topics.length >= 6 && ch.topics.every((l) => !l.isActive && (l.content || "").includes("<svg")), "all lessons Draft, each carrying real content with a diagram");
   assert.equal(ch.levels[0].isActive, false);
+  // Phase 6: 21 unpublished projects (15 mini, 6 major), each with at least three tasks, some auto-judged and some manual
+  const projects = await prisma.courseProject.findMany({ where: { module: { courseId: course.id } }, include: { tasks: true } });
+  assert.equal(projects.length, 21);
+  assert.equal(projects.filter((p) => p.level === "COURSE_PROJECT").length, 6);
+  assert.equal(projects.filter((p) => p.level === "MINI_PROJECT").length, 15);
+  assert.ok(projects.every((p) => !p.isActive && p.tasks.length >= 3 && Array.isArray(p.requirements) && p.requirements.length >= 4), "projects are Draft and complete");
+  const allTasks = projects.flatMap((p) => p.tasks);
+  assert.ok(allTasks.some((tk) => Array.isArray(tk.testCases) && tk.testCases.length) && allTasks.some((tk) => !tk.testCases), "both judged and manual project tasks exist");
   const r = await request("GET", `/api/learning/courses/${SLUG}`, studentAT);
   assert.equal(r.status, 404, "a Draft course must not be visible to a student");
 });

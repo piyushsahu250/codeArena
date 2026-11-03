@@ -1,0 +1,28 @@
+Added Asha Rao (roll 101).
+Added Ravi Kumar (roll 102).
+Added Zoya Khan (roll 103).
+Error: roll number or email already exists.
+Error: invalid email.
+Error: year must be between 1 and 4.
+Updated Ravi Kumar.
+Error: email already exists.
+Error: no student with roll number 999.
+101 | Asha Rao | asha@example.com | CSE | year 2
+101 | Asha Rao | asha@example.com | CSE | year 2
+103 | Zoya Khan | zoya@example.com | CSE | year 3
+103 | Zoya Khan | zoya@example.com | CSE | year 3
+101 | Asha Rao | asha@example.com | CSE | year 2
+102 | Ravi Kumar | ravi@example.com | ECE | year 4
+Recorded Maths for roll 101.
+Recorded Physics for roll 101.
+Recorded Maths for roll 103.
+Recorded Maths for roll 101.
+Error: score must be between 0 and 100.
+101 Asha Rao: 2 subjects, average 86.50
+102 Ravi Kumar: no marks yet
+103 Zoya Khan: 1 subject, average 70.00
+Course averages: CSE 81.00
+Deleted roll 102.
+Error: no student with roll number 102.
+101 | Asha Rao | asha@example.com | CSE | year 2
+103 | Zoya Khan | zoya@example.com | CSE | year 3

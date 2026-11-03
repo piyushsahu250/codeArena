@@ -1,0 +1,21 @@
+Loaded 30 students from 4 branches (synthetic data).
+Readiness bands: Ready 10, Almost ready 5, Needs work 15
+Branch summary (average readiness, share ready):
+  CIVIL  n=8   average 56.5  ready 25%
+  CSE    n=8   average 70.6  ready 50%
+  ECE    n=7   average 62.5  ready 43%
+  ME     n=7   average 53.3  ready 14%
+Placed by band:
+  Ready         10 of 10 placed (100%)
+  Almost ready  4 of 5 placed (80%)
+  Needs work    3 of 15 placed (20%)
+Correlation of problems solved with mock score: 0.83
+Most common weakest area: internship (14), practice (6), mock tests (4)
+Five lowest readiness scores:
+  S021 ME    29.2  weakest: projects
+  S025 CIVIL 31.7  weakest: projects
+  S015 ECE   31.8  weakest: projects
+  S017 ME    36.1  weakest: internship
+  S008 CSE   36.8  weakest: projects
+Note: bands and placement move together here, but this data cannot show that readiness caused placement.
+Chart drawn: readiness.png (valid PNG)

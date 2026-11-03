@@ -1,0 +1,35 @@
+Today is 2026-11-03.
+Added #1.
+Added #2.
+Error: duplicate application.
+Error: invalid date.
+Error: usage: add COMPANY | ROLE | DATE.
+Added #3.
+#1 is now screening.
+Error: cannot move from screening to offer.
+#1 is now interview.
+#2 is now rejected.
+Error: no application #9.
+Error: unknown status maybe.
+Noted #1.
+Noted #1.
+#1 Acme Corp | Backend Developer | interview | 2026-10-01
+  - Phone screen went well
+  - Send portfolio link
+Imported 1 new, skipped 3.
+Error: invalid API response.
+#1 Acme Corp | Backend Developer | interview | 2026-10-01
+#2 Globex | Data Analyst | rejected | 2026-10-25
+#3 Umbrella | DevOps Intern | applied | 2026-10-10
+#4 Hooli | Python Developer | saved | 2026-11-03
+#3 Umbrella | DevOps Intern | applied | 2026-10-10
+#1 Acme Corp | Backend Developer | interview | 2026-10-01
+#1 Acme Corp | Backend Developer | interview | 2026-10-01
+#4 Hooli | Python Developer | saved | 2026-11-03
+Applications: 4
+saved: 1
+applied: 1
+interview: 1
+rejected: 1
+Response rate: 66.7%
+Stale (applied 14+ days ago): 1

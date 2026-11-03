@@ -1,0 +1,27 @@
+Today is 2026-11-03.
+Added expense #1.
+Added expense #2.
+Added expense #3.
+Added expense #4.
+Added expense #5.
+Added expense #6.
+Error: amount must be greater than zero.
+Error: amount can have at most two decimals.
+Error: date is in the future.
+Error: amount must be a number.
+Budget for food set to 800.00.
+Budget for transport set to 150.00.
+Report for 2026-10
+Total: 2,290.49
+  rent        1,200.00   52.4%
+  food          890.50   38.9%
+  transport     199.99    8.7%
+Budgets:
+  food: spent 890.50 of 800.00 (OVER by 90.50)
+  transport: spent 199.99 of 150.00 (OVER by 49.99)
+No expenses in 2026-12.
+Deleted expense #3.
+Error: no expense with id 99.
+2026-09 #################### 1,510.75
+2026-10 ##############       1,090.49
+Chart saved: monthly.png

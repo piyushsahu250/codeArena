@@ -14,7 +14,8 @@ const { renderLesson } = require("../content/python/render");
 const RUN = process.argv.includes("--run");
 // --only=16 checks just "Module 16" (handy while authoring; CI always checks everything)
 const onlyArg = process.argv.find((a) => a.startsWith("--only="));
-const selected = onlyArg ? modules.filter((m) => m.module.title.includes(`Module ${onlyArg.slice(7)}:`)) : modules;
+const onlyValue = onlyArg ? onlyArg.slice(7) : "";
+const selected = onlyArg ? modules.filter((m) => (/^\d+$/.test(onlyValue) ? m.module.title.includes(`Module ${onlyValue}:`) : m.module.title.includes(onlyValue))) : modules;
 const problems = [];
 const bad = (where, msg) => problems.push(`${where}: ${msg}`);
 const COMPANY = /\b(google|amazon|microsoft|facebook|meta platforms|apple inc|netflix|infosys|tcs|wipro|accenture|cognizant|flipkart|uber|adobe|oracle|ibm|capgemini|zoho|paytm|swiggy|zomato|goldman|walmart)\b/i;
@@ -83,6 +84,51 @@ function checkQuestion(where, it) {
   else if (norm(r.out) !== norm(it.out)) bad(where, `output mismatch. declared ${JSON.stringify(it.out)} actual ${JSON.stringify(r.out)}`);
 }
 
+// Real-world projects (Phase 6): the 19-part guide is checked for completeness, the rubric must add up to 100, and with --run the
+// project's files are written to a folder, the sample run must print the stated output and the unit tests must pass.
+// A build-from-scratch project publishes no source: its hidden reference solution is what gets executed.
+const PROJECT_REQUIRED = ["title", "minutes", "project"];
+let projectCount = 0, miniCount = 0, majorCount = 0, scratchCount = 0;
+const runIn = (dir, args, input = "") => {
+  const r = spawnSync(process.env.PYTHON || "python3", ["-E", "-s", ...args], { cwd: dir, input, encoding: "utf8", timeout: 90000 });
+  return { out: (r.stdout || "").replace(/\r\n/g, "\n"), err: r.stderr || "", status: r.status };
+};
+function checkProject(where, P) {
+  projectCount++;
+  if (P.kind === "MAJOR") majorCount++; else miniCount++;
+  if (P.scratch) scratchCount++;
+  const need = ["id", "title", "problem", "scenario", "architecture", "flowchart", "run", "test", "stdin", "sample"];
+  for (const f of need) if (P[f] == null || (P[f] === "" && f !== "stdin")) bad(where, `project missing ${f}`);
+  for (const [f, min] of [["objectives", 3], ["prerequisites", 2], ["requirements", 4], ["explain", 3], ["testing", 2], ["bugs", 3], ["extensions", 3], ["interview", 5], ["rubric", 5], ["tasks", 2]]) {
+    if (!Array.isArray(P[f]) || P[f].length < min) bad(where, `project needs at least ${min} ${f}`);
+  }
+  if (!P.scratch && (!Array.isArray(P.steps) || P.steps.length < 4)) bad(where, "project needs at least 4 implementation steps");
+  if (P.scratch && (!Array.isArray(P.milestones) || P.milestones.length < 4)) bad(where, "a from-scratch project needs at least 4 milestones");
+  if (P.scratch && P.files) bad(where, "a from-scratch project must not publish source files (use reference)");
+  if (!P.scratch && (!P.files || !P.files[P.run] || !P.files[P.test])) bad(where, "project files must include the run file and the test file");
+  if (P.scratch && (!P.reference || !P.reference[P.run])) bad(where, "a from-scratch project needs a hidden reference containing the run file");
+  if (!/<svg[^>]*role="img"/.test(P.architecture) || !/<svg[^>]*role="img"/.test(P.flowchart)) bad(where, "architecture and flowchart need accessible diagrams");
+  if (Array.isArray(P.rubric) && P.rubric.reduce((s, r) => s + r[1], 0) !== 100) bad(where, `rubric must add up to 100, not ${P.rubric.reduce((s, r) => s + r[1], 0)}`);
+  if (Array.isArray(P.tasks)) {
+    for (const t of P.tasks) {
+      if (t.testCases) checkTask(where, t);
+      else if (!t.title || !t.instructions || t.instructions.length < 20) bad(where, "a manual task needs a title and instructions");
+    }
+    if (!P.tasks.some((t) => t.testCases)) bad(where, "a project needs at least one auto-judged task");
+  }
+  if (!RUN) return;
+  const files = P.scratch ? P.reference : P.files;
+  const dir = fs.mkdtempSync(path.join(workDir, "proj-"));
+  for (const [name, src] of Object.entries(files || {})) fs.writeFileSync(path.join(dir, name), src);
+  const sample = runIn(dir, [P.run, ...(P.args ? P.args.split(" ") : [])], P.stdin);
+  ran++;
+  if (sample.status !== 0) bad(where, `sample run crashed: ${sample.err.slice(-300)}`);
+  else if (norm(sample.out) !== norm(P.sample.out)) bad(where, `sample output mismatch.\n  declared: ${JSON.stringify(P.sample.out)}\n  actual:   ${JSON.stringify(sample.out)}`);
+  const unit = runIn(dir, ["-m", "unittest", P.test.replace(/\.py$/, "")]);
+  ran++;
+  if (unit.status !== 0 || !/\nOK\b/.test("\n" + unit.err)) bad(where, `unit tests failed: ${unit.err.slice(-500)}`);
+}
+
 // Placement practice sets (Module 23): MCQ (structure), FILL (the answer is put into the blank and the program run),
 // DEBUG (the buggy program shows its symptom, the fixed program gives the stated output), OUT (as in checkQuestion).
 const SET_REQUIRED = ["title", "minutes", "learn", "why", "set", "revision", "quiz", "tasks"];
@@ -119,18 +165,19 @@ for (const m of selected) {
     for (const L of ch.lessons) {
       const w = `${mod.title} / ${L.title}`;
       lessonCount++;
-      for (const f of L.items ? QA_REQUIRED : L.set ? SET_REQUIRED : REQUIRED) if (L[f] == null || (Array.isArray(L[f]) && !L[f].length)) bad(w, `missing ${f}`);
+      for (const f of L.project ? PROJECT_REQUIRED : L.items ? QA_REQUIRED : L.set ? SET_REQUIRED : REQUIRED) if (L[f] == null || (Array.isArray(L[f]) && !L[f].length)) bad(w, `missing ${f}`);
       if (titles.has(L.title)) bad(w, "duplicate lesson title");
       titles.add(L.title);
       let html = "";
       try { html = renderLesson(L); } catch (e) { bad(w, `render failed: ${e.message}`); continue; }
       if (BANNED.test(html)) bad(w, `contains banned placeholder wording: ${html.match(BANNED)[0]}`);
-      if (!L.items && !L.set && (!/<svg[^>]*role="img"/.test(html) || !/<title[^>]*>[^<]+<\/title>/.test(html) || !/<desc[^>]*>[^<]+<\/desc>/.test(html))) bad(w, "diagram needs role=img, title and desc");
+      if (!L.items && !L.set && !L.project && (!/<svg[^>]*role="img"/.test(html) || !/<title[^>]*>[^<]+<\/title>/.test(html) || !/<desc[^>]*>[^<]+<\/desc>/.test(html))) bad(w, "diagram needs role=img, title and desc");
       for (const [n, it] of (L.items || []).entries()) checkQuestion(`${w} / Q${n + 1}`, it);
       for (const [n, it] of (L.set || []).entries()) checkSetItem(`${w} / Q${n + 1}`, it);
       if (html.length < 4000) bad(w, `lesson looks too thin (${html.length} chars)`);
       if (/<script|onerror=|onload=|javascript:/i.test(html)) bad(w, "unsafe markup");
-      if ((L.quiz || []).length < 3) bad(w, "needs at least 3 quiz questions");
+      if (!L.project && (L.quiz || []).length < 3) bad(w, "needs at least 3 quiz questions");
+      if (L.project) checkProject(w, L.project);
       for (const q of L.quiz || []) {
         quizCount++;
         if (prompts.has(q.prompt)) bad(w, `duplicate quiz prompt: ${q.prompt.slice(0, 40)}`);
@@ -140,7 +187,7 @@ for (const m of selected) {
         if (!q.explanation) bad(w, "quiz question needs an explanation");
       }
       for (const t of L.tasks || []) { taskCount++; checkTask(w, t); }
-      if (RUN && !L.items && !L.set) {
+      if (RUN && !L.items && !L.set && !L.project) {
         for (const [name, ex] of [["example", L.example], ["realExample", L.realExample]]) {
           const r = py(ex.code, ex.stdin || "");
           ran++;
@@ -160,13 +207,17 @@ for (const m of selected) {
     for (const t of mock.questions || []) { mockQuestionCount++; checkTask(`${mod.title} / mock ${mock.title}`, t); }
   }
   if (mod.minQuestions && qaCount < mod.minQuestions) bad(mod.title, `needs at least ${mod.minQuestions} interview questions, has ${qaCount}`);
+  if (mod.minMini && miniCount < mod.minMini) bad(mod.title, `needs at least ${mod.minMini} mini projects, has ${miniCount}`);
+  if (mod.minMajor && majorCount < mod.minMajor) bad(mod.title, `needs at least ${mod.minMajor} major projects, has ${majorCount}`);
+  if (mod.minScratch && scratchCount < mod.minScratch) bad(mod.title, `needs at least ${mod.minScratch} build-from-scratch projects, has ${scratchCount}`);
   if (mod.minProblems && problemCount < mod.minProblems) bad(mod.title, `needs at least ${mod.minProblems} tagged problems, has ${problemCount}`);
-  if ((mod.assessment?.questions || []).length < 3) bad(mod.title, "module assessment needs at least 3 questions");
+  if (mod.assessment !== null && (mod.assessment?.questions || []).length < 3) bad(mod.title, "module assessment needs at least 3 questions");
 }
 
 if (problemCount) console.log(`bank problems=${problemCount} ${JSON.stringify(byDifficulty)}`);
 if (qaCount) console.log(`interview questions=${qaCount}`);
 if (setCount) console.log(`practice-set questions=${setCount}`);
+if (projectCount) console.log(`projects=${projectCount} mini=${miniCount} major=${majorCount} fromScratch=${scratchCount}`);
 if (mockCount) console.log(`timed mocks=${mockCount} mockQuestions=${mockQuestionCount}`);
 console.log(`modules=${selected.length} lessons=${lessonCount} quiz=${quizCount} tasks=${taskCount} assessmentQs=${assessmentCount}${RUN ? ` pythonRuns=${ran}` : " (lint only)"}`);
 if (problems.length) { console.error(`\n${problems.length} problem(s):\n- ` + problems.join("\n- ")); process.exit(1); }

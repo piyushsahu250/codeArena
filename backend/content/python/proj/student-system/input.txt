@@ -1,0 +1,22 @@
+add 101 | Asha Rao | Asha@Example.com | cse | 2
+add 102 | Ravi Kumar | ravi@example.com | ECE | 3
+add 103 | Zoya Khan | zoya@example.com | CSE | 3
+add 101 | Meera Iyer | meera@example.com | ME | 1
+add 104 | Kabir | kabir@example | CSE | 1
+add 105 | Meera Iyer | meera@example.com | ME | 5
+update 102 year 4
+update 102 email asha@example.com
+update 999 year 2
+show 101
+list course=CSE
+list year=3
+search ra
+mark 101 Maths 88
+mark 101 Physics 83
+mark 103 Maths 70
+mark 101 Maths 90
+mark 103 Chemistry 101
+report
+delete 102
+delete 102
+list

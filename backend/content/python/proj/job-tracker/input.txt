@@ -1,0 +1,23 @@
+today 2026-11-03
+add Acme Corp | Backend Developer | 2026-10-01
+add Globex | Data Analyst | 2026-10-25
+add acme corp | backend developer | 2026-10-02
+add Initech | QA Engineer | 2026-31-10
+add Initech | QA Engineer
+add Umbrella | DevOps Intern | 2026-10-10
+status 1 screening
+status 1 offer
+status 1 interview
+status 2 rejected
+status 9 applied
+status 1 maybe
+note 1 Phone screen went well
+note 1 Send portfolio link
+show 1
+import {"jobs": [{"company": "Hooli", "title": "Python Developer"}, {"company": "Globex", "title": "Data Analyst"}, {"company": "", "title": "X"}, "junk"]}
+import not json
+list
+list status=applied
+list company=AC
+search developer
+dashboard

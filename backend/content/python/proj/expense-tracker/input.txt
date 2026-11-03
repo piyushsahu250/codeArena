@@ -1,0 +1,19 @@
+today 2026-11-03
+add 2026-09-05 1200 rent September rent
+add 2026-09-12 310.75 food groceries
+add 2026-10-01 1200 rent
+add 2026-10-03 250.50 food Lunch with team
+add 2026-10-09 199.99 transport Metro card
+add 2026-10-20 640 Food Weekly groceries
+add 2026-10-21 0 food free lunch
+add 2026-10-22 12.345 food odd amount
+add 2026-11-10 50 food in the future
+add 2026-10-30 ten food words
+budget food 800
+budget transport 150
+report 2026-10
+report 2026-12
+delete 3
+delete 99
+trend
+chart monthly.png

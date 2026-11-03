@@ -78,9 +78,29 @@ async function seedPythonCourse(prisma, { sync = false, plan = false, log = cons
 
         // Quiz questions first, then the coding task(s); order is the position inside the lesson.
         let order = 0;
+        // Phase 6 projects: the guide is the lesson above; the structured project and its tasks go into CourseProject / ProjectTask.
+        if (L.project) {
+          const P = L.project;
+          const project = await take(plan ? null : await prisma.courseProject.findUnique({ where: { moduleId_title: { moduleId: mod.id, title: P.title } } }),
+            () => prisma.courseProject.create({ data: {
+              moduleId: mod.id, title: P.title, description: P.problem, objective: P.objectives.join(" "), realWorldScenario: P.scenario,
+              requirements: P.requirements, expectedOutput: P.sample.out, skillsRequired: P.prerequisites, interviewQuestions: P.interview,
+              possibleImprovements: P.extensions, level: P.kind === "MAJOR" ? "COURSE_PROJECT" : "MINI_PROJECT", difficulty: P.difficulty,
+              order: li, isActive: false,
+            } }), `project ${P.title}`);
+          for (let ti = 0; ti < P.tasks.length; ti++) {
+            const t = P.tasks[ti];
+            const found = plan ? null : await prisma.projectTask.findFirst({ where: { projectId: project.id, title: t.title } });
+            await take(found, () => prisma.projectTask.create({ data: {
+              projectId: project.id, order: ti, title: t.title, instructions: t.testCases ? t.statement : t.instructions, hints: t.hints || undefined,
+              starterCode: t.starter || null, language: "python", evaluationType: "STDIO", testCases: t.testCases || undefined,
+            } }), `project task ${t.title}`);
+          }
+        }
+
         const qs = [
-          ...L.quiz.map((q) => ({ key: { type: q.type, prompt: q.prompt }, data: { type: q.type, prompt: q.prompt, options: q.options ?? undefined, correctAnswer: q.correctAnswer, explanation: q.explanation } })),
-          ...L.tasks.map((t) => ({ key: { type: "CODING", title: t.title }, data: {
+          ...(L.quiz || []).map((q) => ({ key: { type: q.type, prompt: q.prompt }, data: { type: q.type, prompt: q.prompt, options: q.options ?? undefined, correctAnswer: q.correctAnswer, explanation: q.explanation } })),
+          ...(L.tasks || []).map((t) => ({ key: { type: "CODING", title: t.title }, data: {
             type: "CODING", title: t.title, prompt: t.statement, starterCode: t.starter || null, language: "python", difficulty: t.meta?.difficulty || "EASY",
             testCases: t.testCases, evaluationType: "STDIO", estimatedTimeMin: t.meta?.minutes || 10,
             explanation: "Compare your output with the sample cases. Output must match exactly.",
