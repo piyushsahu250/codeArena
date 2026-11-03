@@ -284,7 +284,7 @@ jobs:
         run: |
           # Course examples that need third-party packages run in a virtual environment (the system Python stays untouched).
           python3 -m venv /tmp/coursevenv
-          /tmp/coursevenv/bin/python -m pip install --quiet "sqlalchemy>=2.0,<2.1" requests flask fastapi httpx pytest ruff black
+          /tmp/coursevenv/bin/python -m pip install --quiet "sqlalchemy>=2.0,<2.1" requests flask fastapi httpx pytest ruff black numpy pandas matplotlib openpyxl
           PYTHON=/tmp/coursevenv/bin/python node scripts/validatePythonContent.js --run
           code=0
           node --test --test-timeout=240000 test/pythonCourse.integration.test.js > /tmp/pythonCourse.out 2>&1 || code=$?

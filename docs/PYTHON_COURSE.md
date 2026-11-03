@@ -1,6 +1,6 @@
 # Python Zero to Hero (course content and tooling)
 
-**Status (2026-11-03): in progress.** Modules 1 to 18 (Phases 0 to 4, up to software engineering tools) are authored and machine-verified, and seed as a **Draft** course. Modules 19 to 23, the project catalogue and the 200-problem placement bank are **not written yet**. Nothing here is visible to students until an administrator publishes and assigns the course.
+**Status (2026-11-03): in progress.** Modules 1 to 19 (Phases 0 to 5, up to data analysis) are authored and machine-verified, and seed as a **Draft** course. Modules 20 to 23, the project catalogue and the 200-problem placement bank are **not written yet**. Nothing here is visible to students until an administrator publishes and assigns the course.
 
 ## How the course maps onto the existing LMS (nothing duplicated)
 
@@ -25,8 +25,8 @@ No schema change and no migration are needed.
 ## Files
 
 - `backend/content/python/render.js` renders one lesson spec into HTML through a single 20-part template (learning goals, why, real-world use, simple and detailed explanation, syntax, diagram, example with verified output, line by line, dry run, real example, mistakes, best practices, interview view, practice questions, revision, optional Hinglish, then quiz and coding task from `PracticeQuestion`). Helpers draw accessible SVG flowcharts (`role="img"`, `<title>`, `<desc>`, theme-aware colours, sideways scroll on phones) and terminal illustrations.
-- `backend/content/python/m01.js` ... `m18.js`: the authored modules (Module 15 is assembled from `m15a-d.js`, Module 18 from `m18a-c.js`). `index.js` lists them in teaching order.
-- **Packages the examples need** (installed in the CI virtual environment; judged tasks stay standard-library only): `sqlalchemy>=2.0,<2.1`, `requests`, `flask`, `fastapi`, `httpx`, `pytest`, `ruff`, `black`. The Module 18 Git examples also need the `git` command (any 2.32 or newer).
+- `backend/content/python/m01.js` ... `m19.js`: the authored modules (Module 15 is assembled from `m15a-d.js`, Modules 18 and 19 from `m18a-c.js` and `m19a-c.js`). `index.js` lists them in teaching order.
+- **Packages the examples need** (installed in the CI virtual environment; judged tasks stay standard-library only): `sqlalchemy>=2.0,<2.1`, `requests`, `flask`, `fastapi`, `httpx`, `pytest`, `ruff`, `black`, `numpy`, `pandas`, `matplotlib`, `openpyxl` (Module 19 outputs were checked with NumPy 2.5, pandas 3.1, Matplotlib 3.11). The Module 18 Git examples also need the `git` command (any 2.32 or newer).
 - `backend/scripts/validatePythonContent.js`: the quality gate (below).
 - `backend/scripts/seedPythonCourse.js`: idempotent seed.
 - `backend/test/pythonCourse.integration.test.js`: HTTP test of the whole flow.
@@ -35,13 +35,13 @@ No schema change and no migration are needed.
 
 | | Count |
 | --- | --- |
-| Modules | 18 (Phase 0: Modules 1-2; Phase 1: Modules 3-9; Phase 2: Modules 10-13; Phase 3: Modules 14-15; Phase 4: Modules 16-18) |
-| Lessons | 130, 25 to 70 minutes each (Modules 15 and 18 have four chapters) |
-| Quiz questions | 640 (MCQ, output prediction, debugging, fill in the blank) |
-| Coding tasks in lessons | 153, each with 2 sample and at least 1 hidden case |
-| Module assessments | 18, with 72 coding questions in total |
-| Diagrams | 130 (one per lesson) plus terminal illustrations in the setup lessons |
-| Python executions during validation | 1,676 (every example, every reference solution against every case) |
+| Modules | 19 (Phase 0: Modules 1-2; Phase 1: Modules 3-9; Phase 2: Modules 10-13; Phase 3: Modules 14-15; Phase 4: Modules 16-18; Phase 5: Module 19 so far) |
+| Lessons | 139, 25 to 70 minutes each (Modules 15 and 18 have four chapters, Module 19 three) |
+| Quiz questions | 685 (MCQ, output prediction, debugging, fill in the blank) |
+| Coding tasks in lessons | 162, each with 2 sample and at least 1 hidden case |
+| Module assessments | 19, with 76 coding questions in total |
+| Diagrams | 139 (one per lesson) plus terminal illustrations in the setup lessons |
+| Python executions during validation | 1,772 (every example, every reference solution against every case) |
 
 Module 1 topics 1 to 16 and its three practicals, Module 2 topics 1 to 28, and Module 3 topics are grouped into lessons; every bullet of the spec appears inside a lesson.
 
@@ -71,7 +71,7 @@ Checked against python.org and docs.python.org on **2 November 2026**: latest st
 
 ## Known limitations and open items
 
-- **Not authored:** Modules 19 to 23 (data analysis, AI/ML, interview and placement preparation), Phase 5 to 7 content, the 15 mini and 6 major projects, 200+ placement problems, 150+ interview questions, mock tests. The structure and tooling are ready for them.
+- **Not authored:** Modules 20 to 23 (AI/ML, interview and placement preparation), the rest of Phase 5 (machine learning) and Phases 6 and 7, the 15 mini and 6 major projects, 200+ placement problems, 150+ interview questions, mock tests. The structure and tooling are ready for them.
 - **No real screenshots.** Setup lessons use drawn terminal illustrations and flowcharts. Real screenshots of installers would age with every release.
 - **Hinglish** is a short optional note per lesson, not a full translation.
 - **Rendering was checked** through the same sanitiser the student page uses (DOMPurify), on desktop, a 375 px phone viewport and dark mode. It has **not** been checked inside the live student page or on a real device.
