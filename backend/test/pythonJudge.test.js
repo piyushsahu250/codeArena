@@ -74,13 +74,19 @@ test("9b reading more input than was given is explained, not a bare traceback", 
 });
 
 test("10 an infinite loop is stopped at the time limit and leaves nothing behind", opts, async () => {
-  await settle(); const before = judgeDirs().length;
+  // Other test files run at the same time and create their own judge-* folders, so only folders that appeared during this run AND hold a Python source file count.
+  const beforeDirs = new Set(judgeDirs());
   const t0 = Date.now();
   const r = await run("while True:\n    pass", [tc("", "x")], { timeLimitMs: 1000 });
   assert.equal(r.verdict, "TLE");
   assert.ok(Date.now() - t0 < 5000, `stopped promptly, took ${Date.now() - t0} ms`);
-  await settle();
-  assert.equal(judgeDirs().length, before, "the temporary directory was removed");
+  let stale = [];
+  for (let i = 0; i < 10; i++) { // removal is asynchronous; give it up to 4 s
+    await settle();
+    stale = judgeDirs().filter((d) => !beforeDirs.has(d) && fs.existsSync(`${os.tmpdir()}/${d}/sol.py`));
+    if (!stale.length) break;
+  }
+  assert.deepEqual(stale, [], "the temporary directory was removed");
   // Read /proc directly: pgrep is not installed in the production image.
   const orphans = fs.readdirSync("/proc").filter((p) => /^\d+$/.test(p)).filter((p) => {
     try { return /judge-[^\0]*sol\.py/.test(fs.readFileSync(`/proc/${p}/cmdline`, "utf8")); } catch { return false; }
