@@ -6,6 +6,7 @@ const { normalizeVerifyCode } = require("../utils/secureCode");
 const { authenticate, requireRole } = require("../middleware/auth");
 const { judgeSubmission } = require("../utils/judgeGateway");
 const { runQueued, mapWithConcurrency } = require("../utils/queue");
+const { codeBodyProblem, sendJudgeError } = require("../utils/judgeErrors");
 const { guardStarterCodeIsNotSolution } = require("../utils/starterCodeGuard");
 const { resolveCodingFields } = require("../utils/functionHarness");
 const { generateCertificatePdf } = require("../utils/certificatePdf");
@@ -833,12 +834,13 @@ router.post("/practice/:id/run", authenticate, requireRole("STUDENT"), attachReq
     if (q.type !== "CODING") return res.status(400).json({ error: "Not a coding question" });
 
     const { language, code } = req.body;
+    const bad = codeBodyProblem(req.body);
+    if (bad) return res.status(400).json({ error: bad });
     const { visible } = splitPracticeCases(q.testCases);
     const result = await runQueued(() => judgeSubmission({ language, code, testCases: visible, timeLimitMs: 3000, evaluationType: q.evaluationType, functionSignature: q.functionSignature }));
     res.json(result);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Execution failed" });
+    sendJudgeError(res, err, "Execution failed");
   }
 });
 
@@ -853,6 +855,8 @@ router.post("/practice/:id/submit", authenticate, requireRole("STUDENT"), attach
     if (q.type !== "CODING") return res.status(400).json({ error: "Not a coding question" });
 
     const { language, code } = req.body;
+    const bad = codeBodyProblem(req.body);
+    if (bad) return res.status(400).json({ error: bad });
     const { visible, hidden } = splitPracticeCases(q.testCases);
     const gradingCases = hidden.length > 0 ? hidden : visible;
     const result = await runQueued(() => judgeSubmission({ language, code, testCases: gradingCases, timeLimitMs: 3000, evaluationType: q.evaluationType, functionSignature: q.functionSignature }));
@@ -882,8 +886,7 @@ router.post("/practice/:id/submit", authenticate, requireRole("STUDENT"), attach
     const { details, ...safeResult } = result;
     res.json({ ...safeResult, gamification });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Submission failed" });
+    sendJudgeError(res, err, "Submission failed");
   }
 });
 
@@ -2727,12 +2730,13 @@ router.post("/tasks/:id/run", authenticate, requireRole("STUDENT"), attachReques
     const { task } = access;
     if (!Array.isArray(task.testCases) || task.testCases.length === 0) return res.status(400).json({ error: "This task has no auto-graded test cases — use Mark Complete instead" });
     const { language, code } = req.body;
+    const bad = codeBodyProblem(req.body);
+    if (bad) return res.status(400).json({ error: bad });
     const { visible } = splitProjectTaskCases(task.testCases);
     const result = await runQueued(() => judgeSubmission({ language, code, testCases: visible, timeLimitMs: 3000, evaluationType: task.evaluationType, functionSignature: task.functionSignature }));
     res.json(result);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Execution failed" });
+    sendJudgeError(res, err, "Execution failed");
   }
 });
 
@@ -2749,6 +2753,8 @@ router.post("/tasks/:id/submit", authenticate, requireRole("STUDENT"), attachReq
     if (!Array.isArray(task.testCases) || task.testCases.length === 0) return res.status(400).json({ error: "This task has no auto-graded test cases — use Mark Complete instead" });
 
     const { language, code } = req.body;
+    const bad = codeBodyProblem(req.body);
+    if (bad) return res.status(400).json({ error: bad });
     const { visible, hidden } = splitProjectTaskCases(task.testCases);
     const gradingCases = hidden.length > 0 ? hidden : visible;
     const result = await runQueued(() => judgeSubmission({ language, code, testCases: gradingCases, timeLimitMs: 3000, evaluationType: task.evaluationType, functionSignature: task.functionSignature }));
@@ -2787,8 +2793,7 @@ router.post("/tasks/:id/submit", authenticate, requireRole("STUDENT"), attachReq
     const { details, ...safeResult } = result;
     res.json({ ...safeResult, gamification });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Submission failed" });
+    sendJudgeError(res, err, "Submission failed");
   }
 });
 

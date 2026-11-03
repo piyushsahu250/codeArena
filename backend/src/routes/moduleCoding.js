@@ -9,6 +9,7 @@ const { Prisma } = require("@prisma/client");
 const { authenticate, requireRole, logUnauthorizedAttempt } = require("../middleware/auth");
 const { judgeSubmission } = require("../utils/judgeGateway");
 const { runQueued } = require("../utils/queue");
+const { sendJudgeError } = require("../utils/judgeErrors");
 const { gradeModuleCodingAttempt, gradeOneModuleCodingSubmission } = require("../utils/gradeModuleCodingAttempt");
 const { getModuleLockMap } = require("../utils/learningLock");
 const { statusOf } = require("../utils/publishState");
@@ -551,8 +552,7 @@ router.post("/attempts/:attemptId/run", authenticate, requireRole("STUDENT"), ex
     const result = await runQueued(() => judgeSubmission({ language, code, testCases: question.testCases, timeLimitMs: question.timeLimitMs, memoryLimitKb: question.memoryLimitKb || undefined, evaluationType: question.evaluationType, functionSignature: question.functionSignature }));
     res.json(result);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Execution failed" });
+    sendJudgeError(res, err, "Execution failed");
   }
 });
 
@@ -654,8 +654,7 @@ router.post("/attempts/:attemptId/submit-code", authenticate, requireRole("STUDE
     const { details, ...safeResult } = result;
     res.json(safeResult);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Submission failed" });
+    sendJudgeError(res, err, "Submission failed");
   }
 });
 
