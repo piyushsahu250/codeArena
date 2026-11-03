@@ -125,3 +125,7 @@ Checked against python.org and docs.python.org on **2 November 2026**: latest st
 - **Webcam/identity proctoring** works only as far as the existing module-coding assessment supports; browser proctoring cannot prevent all cheating and flagged events need faculty review.
 - The student dashboard items "weak topics" and "recommended next lesson" are whatever the existing LMS provides; nothing course-specific was added.
 - Questions are original teaching exercises. No question is claimed to come from any company.
+
+## Renaming already-seeded modules (2026-11-03)
+
+`seedPythonCourse.js` finds modules by title, so a title changed in the content files would be created a second time. After a title change, run `node scripts/renamePythonCourseTitles.js --plan`, then without `--plan`, **before** `seedPythonCourse.js --sync`. It matches modules by position, refuses any title that is neither the old nor the new form, and updates the course name and description to the values in the seed.

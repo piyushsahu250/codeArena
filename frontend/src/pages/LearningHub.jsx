@@ -74,6 +74,8 @@ const FALLBACK_VISUALS = [
   { icon: Code2, gradient: "linear-gradient(135deg, #2C5B45, #C0533B)" },
 ];
 
+const LEVEL_LABEL = { EASY: "Beginner", MEDIUM: "Intermediate", HARD: "Advanced" };
+
 function courseVisual(course, index) {
   const label = `${course.name} ${course.slug}`;
   const found = COURSE_VISUALS.find((v) => v.match.test(label));
@@ -88,26 +90,38 @@ function CourseCard({ course, index }) {
       <Icon size={40} color="#F4EFE3" strokeWidth={1.75} />
     </div>
   );
+  // Same height and alignment for every card whatever the length of the name or description: the text is clamped and the button sits at the bottom.
+  const clamp = (lines) => ({ display: "-webkit-box", WebkitLineClamp: lines, WebkitBoxOrient: "vertical", overflow: "hidden" });
+  const meta = [
+    course.category,
+    LEVEL_LABEL[course.difficulty],
+    course.estimatedDurationMin > 0 ? `~${Math.max(1, Math.round(course.estimatedDurationMin / 60))} h` : null,
+  ].filter(Boolean);
   const body = (
-    <div style={{ padding: "16px 20px 20px" }}>
-      <h3 style={{ fontSize: 17 }}>{course.name}</h3>
-      <p style={{ fontSize: 13, color: "var(--ink-dim)", marginTop: 6, minHeight: 34 }}>{course.description}</p>
-      {course.isActive
-        ? <span className="btn btn-primary" style={{ marginTop: 14, display: "inline-block", pointerEvents: "none" }}>Start learning →</span>
-        : <span className="badge" style={{ marginTop: 14, display: "inline-block" }}>Coming soon</span>}
+    <div style={{ padding: "16px 20px 20px", display: "flex", flexDirection: "column", flex: 1 }}>
+      {meta.length > 0 && (
+        <div className="mono" style={{ fontSize: 11, color: "var(--ink-dim)", letterSpacing: 0.3, textTransform: "uppercase", marginBottom: 6 }}>{meta.join(" · ")}</div>
+      )}
+      <h3 style={{ fontSize: 17, lineHeight: 1.3, ...clamp(2) }} title={course.name}>{course.name}</h3>
+      <p style={{ fontSize: 13, lineHeight: 1.5, color: "var(--ink-dim)", marginTop: 6, ...clamp(3) }} title={course.description || undefined}>{course.description}</p>
+      <div style={{ marginTop: "auto", paddingTop: 14 }}>
+        {course.isActive
+          ? <span className="btn btn-primary" style={{ display: "inline-block", pointerEvents: "none" }}>Start learning →</span>
+          : <span className="badge" style={{ display: "inline-block" }}>Coming soon</span>}
+      </div>
     </div>
   );
 
   if (!course.isActive) {
     return (
-      <div className="card" style={{ overflow: "hidden", opacity: 0.65 }}>
+      <div className="card" style={{ overflow: "hidden", opacity: 0.65, display: "flex", flexDirection: "column" }}>
         {banner}
         {body}
       </div>
     );
   }
   return (
-    <Link to={`/learning/${course.slug}`} className="card course-card" style={{ overflow: "hidden", textDecoration: "none", color: "inherit", display: "block" }}>
+    <Link to={`/learning/${course.slug}`} className="card course-card" style={{ overflow: "hidden", textDecoration: "none", color: "inherit", display: "flex", flexDirection: "column" }}>
       {banner}
       {body}
     </Link>

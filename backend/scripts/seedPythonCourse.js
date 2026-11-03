@@ -15,8 +15,8 @@ const { renderLesson } = require("../content/python/render");
 const SLUG = "python-zero-to-hero";
 const COURSE = {
   slug: SLUG,
-  name: "Python Zero to Hero: Programming and Placement Mastery",
-  description: "A beginner-to-job-ready Python course: programming basics, Python fundamentals, OOP, data structures and algorithms, databases, APIs, projects and placement preparation. Every lesson follows the same structure: explanation, diagram, worked example with verified output, practice, quiz and a coding task.",
+  name: "Python Zero to Hero",
+  description: "Learn Python from your first program to placement-ready skills: fundamentals, OOP, data structures and algorithms, databases, APIs, real-world projects and interview preparation.",
   category: "Programming",
   instructorName: "CodeArena Learning Team",
   skillsCovered: ["Python syntax", "Problem solving", "Debugging", "Data structures", "OOP", "SQL and APIs", "Placement preparation"],
@@ -153,7 +153,7 @@ async function seedPythonCourse(prisma, { sync = false, plan = false, log = cons
   return stats;
 }
 
-module.exports = { seedPythonCourse, SLUG };
+module.exports = { seedPythonCourse, SLUG, COURSE };
 
 if (require.main === module) {
   const plan = process.argv.includes("--plan");
