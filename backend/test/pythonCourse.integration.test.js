@@ -141,7 +141,11 @@ test("students never receive answers or hidden test cases", async (t) => {
     assert.equal(r.status, 200);
     const raw = JSON.stringify(r.body);
     assert.ok(!raw.includes("correctAnswer"), "no correctAnswer key in the student payload");
-    for (const q of r.body.questions) if (q.type === "CODING") assert.ok(q.testCases.length >= 2 && q.testCases.every((c) => !c.isHidden), "only sample cases are sent");
+    for (const q of r.body.questions) if (q.type === "CODING") {
+      // A fixed-output program has one distinct sample; every sample sent must be visible and none may repeat.
+      assert.ok(q.testCases.length >= 1 && q.testCases.every((c) => !c.isHidden), "only sample cases are sent");
+      assert.equal(new Set(q.testCases.map((c) => `${c.input}\u0000${c.expected}`)).size, q.testCases.length, "no sample case is shown twice");
+    }
   }
 });
 
