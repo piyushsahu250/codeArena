@@ -25,7 +25,7 @@ function norm(v, keepMasked) {
   if (v === null || v === undefined) return null;
   if (typeof v === "string") return v.replace(UUID, "<id>").replace(ISO, "<time>").replace(/\d{13}/g, "<ts>");
   if (Array.isArray(v)) return v.map((x) => norm(x, keepMasked));
-  if (typeof v === "object") { const o = {}; for (const k of Object.keys(v).sort()) o[k] = k === "token" ? (v[k] ? "<token>" : null) : !keepMasked && MASKED.has(k) && v[k] ? "<masked>" : norm(v[k], keepMasked); return o; }
+  if (typeof v === "object") { const o = {}; for (const k of Object.keys(v).sort()) o[k] = k === "token" ? (v[k] ? "<token>" : null) : k === "month" && typeof v[k] === "string" && /^\d{4}-\d{2}$/.test(v[k]) ? "<month>" : !keepMasked && MASKED.has(k) && v[k] ? "<masked>" : norm(v[k], keepMasked); return o; }
   return v;
 }
 // Structure only (keys, nesting), never values or types: platform-wide reads return real production rows whose nulls and strings the snapshot must not depend on.

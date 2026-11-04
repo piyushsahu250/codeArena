@@ -3087,7 +3087,7 @@
         "monthly": [
           {
             "averagePercentage": 0,
-            "month": "2026-10",
+            "month": "<month>",
             "testsCount": 1
           }
         ],
@@ -3205,7 +3205,7 @@
         "monthly": [
           {
             "averagePercentage": 0,
-            "month": "2026-10",
+            "month": "<month>",
             "testsCount": 1
           }
         ],
@@ -3316,7 +3316,7 @@
         "monthly": [
           {
             "averagePercentage": 0,
-            "month": "2026-10",
+            "month": "<month>",
             "testsCount": 1
           }
         ],
@@ -3441,7 +3441,7 @@
         "monthly": [
           {
             "averagePercentage": 0,
-            "month": "2026-10",
+            "month": "<month>",
             "testsCount": 1
           }
         ],
