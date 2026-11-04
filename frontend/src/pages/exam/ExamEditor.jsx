@@ -279,7 +279,7 @@ export default function ExamEditor() {
                   <div style={{ maxHeight: 220, overflow: "auto", marginTop: 6 }}>
                     {src.codingQuestions.map((q) => {
                       const on = (cod.source.questionIds || []).includes(q.id);
-                      return <label key={q.id} style={{ fontWeight: 400, display: "flex", gap: 8 }}><input type="checkbox" checked={on} onChange={() => setSource("CODING", { questionIds: on ? cod.source.questionIds.filter((x) => x !== q.id) : [...(cod.source.questionIds || []), q.id] })} />#{q.questionNumber} {q.title} <span className="ex-chip">{q.difficulty}</span></label>;
+                      return <label key={q.id} style={{ fontWeight: 400, display: "flex", gap: 8 }}><input type="checkbox" checked={on} onChange={() => setSource("CODING", { questionIds: on ? cod.source.questionIds.filter((x) => x !== q.id) : [...(cod.source.questionIds || []), q.id] })} />#{q.questionNumber} {q.title} <span className="ex-chip">{q.difficulty}</span>{q.sharedWithAll === false && <span className="ex-chip warn" title="Students of other institutes cannot be given this problem">{q.ownerName} only</span>}</label>;
                     })}
                   </div>
                   <label>Languages allowed</label>
@@ -329,8 +329,9 @@ export default function ExamEditor() {
             {check.valid ? <div className="ex-notice ok">The configuration is valid.</div> : <div className="ex-notice bad">{check.errors?.length || 0} problem(s) to fix.</div>}
             {(check.errors || []).length > 0 && <ul className="ex-list">{check.errors.map((e, i) => <li key={i}>{e.message}</li>)}</ul>}
             {(check.warnings || []).length > 0 && <ul className="ex-list">{check.warnings.map((e, i) => <li key={i} className="ex-muted">{e.message}</li>)}</ul>}
+            {(check.shortageMessages || []).length > 0 && <div className="ex-notice bad" role="alert"><strong>Why:</strong><ul className="ex-list">{check.shortageMessages.map((m, i) => <li key={i}>{m}</li>)}</ul></div>}
             {(check.shortages || []).length > 0 && (
-              <div className="ex-notice warn"><strong>Not enough valid questions yet:</strong><ul className="ex-list">{check.shortages.map((s, i) => <li key={i}>{s.message || `${s.section}: need ${s.needed}, have ${s.available}${s.label ? ` (${s.label})` : ""}`}</li>)}</ul>Add questions to the bank, then check again. Nothing is invented to fill the gap.</div>
+            <div className="ex-notice warn"><strong>Not enough valid questions yet:</strong><ul className="ex-list">{check.shortages.map((s, i) => <li key={i}>{s.message || `${s.section}: need ${s.needed}, have ${s.available}${s.label ? ` (${s.label})` : ""}`}</li>)}</ul>Add questions to the bank, then check again. Nothing is invented to fill the gap.</div>
             )}
             {check.invalidQuestionsExcluded > 0 && <p className="ex-sub">{check.invalidQuestionsExcluded} question(s) have no valid answer key and are never used.</p>}
           </div>

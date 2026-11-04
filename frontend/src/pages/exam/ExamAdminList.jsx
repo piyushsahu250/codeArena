@@ -38,7 +38,16 @@ export default function ExamAdminList() {
               <thead><tr><th>Title</th><th>Status</th><th>Window</th><th>Marks</th><th>Attempts</th><th /></tr></thead>
               <tbody>{data.exams.map((e) => (
                 <tr key={e.id}>
-                  <td><Link to={`/exam-admin/${e.id}/edit`}>{e.title}</Link></td>
+                  <td>
+                    <Link to={`/exam-admin/${e.id}/edit`}>{e.title}</Link>
+                    {e.readiness && !e.readiness.ok && (
+                      <div className="ex-notice warn" role="status" style={{ marginTop: 6, fontSize: 13 }}>
+                        <strong>Students cannot start this examination.</strong>
+                        {e.readiness.messages.length > 0 && <ul className="ex-list">{e.readiness.messages.map((m, i) => <li key={i}>{m}</li>)}</ul>}
+                        <Link to={`/exam-admin/${e.id}/edit`}>Open it to fix this</Link>
+                      </div>
+                    )}
+                  </td>
                   <td><span className={`ex-chip ${tone[e.status] || ""}`}>{e.status}{e.version ? ` v${e.version}` : ""}</span></td>
                   <td>{e.startAt ? `${new Date(e.startAt).toLocaleString()} → ${new Date(e.endAt).toLocaleString()}` : "—"}</td>
                   <td>{e.totalMarks ?? "—"}</td>

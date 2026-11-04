@@ -54,12 +54,15 @@ export default function ExamHub() {
             const formal = e.formalAttempt;
             const proctored = e.mode === "PROCTORED";
             const formalDone = formal && !["READINESS_CHECK", "IN_PROGRESS"].includes(formal.status);
+            // An attempt already begun keeps its paper; only a NEW start needs the question set to be complete for this institute.
+            const cannotStart = e.ready === false;
             return (
               <div key={e.id} className="ex-card">
                 <div className="ex-row between">
                   <h3>{e.title}</h3>
                   {proctored ? <span className="ex-chip">Official</span> : <span className="ex-chip">Practice</span>}
                 </div>
+                {cannotStart && <div className="ex-notice warn" role="status"><strong>Not available yet.</strong> {e.notReadyMessage || "This examination cannot be started yet. Please ask your administrator to finish setting it up."}</div>}
                 {e.description && <p className="ex-sub">{e.description}</p>}
                 <p className="ex-sub">{e.durationMin} minutes · {e.totalMarks} marks</p>
                 {proctored && <p className="ex-sub">Opens {fmt(e.startAt)} · closes {fmt(e.endAt)}</p>}
@@ -75,10 +78,10 @@ export default function ExamHub() {
                     <Link className="btn btn-ghost" to={`/exams/attempt/${formal.id}/report`}>View result</Link>
                   )}
                   {proctored && !formal && (
-                    <button className="btn btn-primary" disabled={!e.windowOpen || busy === `${e.id}:PROCTORED`} onClick={() => start(e, "PROCTORED")}>{e.windowOpen ? "Start examination" : "Not open"}</button>
+                    <button className="btn btn-primary" disabled={cannotStart || !e.windowOpen || busy === `${e.id}:PROCTORED`} onClick={() => start(e, "PROCTORED")}>{cannotStart ? "Not available yet" : e.windowOpen ? "Start examination" : "Not open"}</button>
                   )}
                   {e.practiceEnabled && (
-                    <button className="btn btn-ghost" disabled={busy === `${e.id}:PRACTICE`} onClick={() => start(e, "PRACTICE")}>Practice</button>
+                    <button className="btn btn-ghost" disabled={cannotStart || busy === `${e.id}:PRACTICE`} onClick={() => start(e, "PRACTICE")}>Practice</button>
                   )}
                 </div>
                 {proctored && !formal && <p className="ex-sub" style={{ marginTop: 8 }}>You have one official attempt. It needs camera, microphone and fullscreen, and cannot be restarted.</p>}

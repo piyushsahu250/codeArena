@@ -86,7 +86,7 @@ async function publishExam(req, exam) {
   const gate = B.canPublish(full.normalized);
   if (!gate.ok || !full.valid) return fail(422, "INVALID_CONFIGURATION", "Fix the configuration errors before publishing.", { errors: full.errors, warnings: full.warnings });
   const avail = await core.availability(full.normalized, exam.instituteId || core.GLOBAL_ONLY);
-  if (avail.shortages.length) return fail(422, "NOT_ENOUGH_QUESTIONS", "The question banks do not hold enough valid questions for this examination.", { shortages: avail.shortages, invalidCount: avail.invalidCount });
+  if (avail.shortages.length) return fail(422, "NOT_ENOUGH_QUESTIONS", "The question banks do not hold enough valid questions for this examination.", { shortages: avail.shortages, messages: await core.explainShortages(full.normalized, exam.instituteId || core.GLOBAL_ONLY, avail.shortages), invalidCount: avail.invalidCount });
   const version = exam.version + 1;
   await prisma.$transaction(async (tx) => {
     await tx.examVersion.create({ data: { examId: exam.id, version, blueprint: full.normalized, publishedById: req.user.id } });
@@ -101,10 +101,19 @@ async function listExams(req, query) {
   const { take, skip, page, pageSize } = paging(query);
   const where = { ...scopeWhere(req), ...(query.status ? { status: String(query.status) } : {}) };
   const [rows, total] = await Promise.all([
-    prisma.examDefinition.findMany({ where, orderBy: { updatedAt: "desc" }, take, skip, select: { id: true, title: true, status: true, version: true, instituteId: true, createdById: true, updatedAt: true, blueprint: true, _count: { select: { attempts: true } } } }),
+    prisma.examDefinition.findMany({ where, orderBy: { updatedAt: "desc" }, take, skip, select: { id: true, title: true, status: true, version: true, instituteId: true, createdById: true, updatedAt: true, blueprint: true, versions: { orderBy: { version: "desc" }, take: 1, select: { blueprint: true } }, _count: { select: { attempts: true } } } }),
     prisma.examDefinition.count({ where }),
   ]);
-  return { page, pageSize, total, exams: rows.map((r) => ({ id: r.id, title: r.title, status: r.status, version: r.version, instituteId: r.instituteId, updatedAt: r.updatedAt, mode: r.blueprint?.mode, startAt: r.blueprint?.startAt, endAt: r.blueprint?.endAt, totalMarks: r.blueprint?.totalMarks, attempts: r._count.attempts })) };
+  // A published examination is checked the way a student's attempt will check it, so one that can no longer be built is flagged here instead of being found by a student.
+  const readinessOf = async (r) => {
+    if (r.status !== "PUBLISHED") return null;
+    const audience = r.instituteId || core.GLOBAL_ONLY;
+    const state = await core.readiness(Src.normalizeBlueprint(r.versions[0]?.blueprint || r.blueprint), audience, `${r.id}:v${r.version}`).catch(() => null);
+    if (!state) return null;
+    return { ok: state.ok, messages: state.ok ? [] : await core.explainShortages(Src.normalizeBlueprint(r.versions[0]?.blueprint || r.blueprint), audience, state.shortages) };
+  };
+  const readiness = await Promise.all(rows.map(readinessOf));
+  return { page, pageSize, total, exams: rows.map((r, i) => ({ readiness: readiness[i], id: r.id, title: r.title, status: r.status, version: r.version, instituteId: r.instituteId, updatedAt: r.updatedAt, mode: r.blueprint?.mode, startAt: r.blueprint?.startAt, endAt: r.blueprint?.endAt, totalMarks: r.blueprint?.totalMarks, attempts: r._count.attempts })) };
 }
 
 async function getExam(req, exam) {
@@ -256,9 +265,12 @@ async function sources(req, query) {
   const [subjects, aptitude, coding] = await Promise.all([
     prisma.subject.findMany({ where: instituteId ? { OR: [{ instituteId }, { instituteId: null }] } : {}, select: { id: true, name: true }, orderBy: { name: "asc" }, take: 500 }),
     prisma.interviewQuestion.groupBy({ by: ["aptitudeCategory"], where: { category: "APTITUDE", isActive: true, generatedForStudentId: null, ...instituteWhere(instituteId) }, _count: { _all: true } }),
-    prisma.question.findMany({ where: { questionType: { in: ["CODING", "SQL"] }, questionStatus: "PUBLISHED", ...(query.search ? { OR: [{ title: { contains: String(query.search), mode: "insensitive" } }, { description: { contains: String(query.search), mode: "insensitive" } }] } : {}), ...instituteWhere(instituteId) }, select: { id: true, title: true, questionNumber: true, difficulty: true, questionType: true }, orderBy: { questionNumber: "desc" }, take: 50 }),
+    prisma.question.findMany({ where: { questionType: { in: ["CODING", "SQL"] }, questionStatus: "PUBLISHED", ...(query.search ? { OR: [{ title: { contains: String(query.search), mode: "insensitive" } }, { description: { contains: String(query.search), mode: "insensitive" } }] } : {}), ...instituteWhere(instituteId) }, select: { id: true, title: true, questionNumber: true, difficulty: true, questionType: true, instituteId: true }, orderBy: { questionNumber: "desc" }, take: 50 }),
   ]);
-  return { subjects, aptitudeCounts: aptitude.map((r) => ({ category: r.aptitudeCategory, count: r._count._all })), codingQuestions: coding };
+  // Who owns each problem, so the editor can say "Sanjivani University only" next to one that other institutes cannot use.
+  const owners = [...new Set(coding.map((q) => q.instituteId).filter(Boolean))];
+  const ownerNames = new Map((owners.length ? await prisma.institute.findMany({ where: { id: { in: owners } }, select: { id: true, name: true } }) : []).map((i) => [i.id, i.name]));
+  return { subjects, aptitudeCounts: aptitude.map((r) => ({ category: r.aptitudeCategory, count: r._count._all })), codingQuestions: coding.map((q) => ({ ...q, sharedWithAll: !q.instituteId, ownerName: q.instituteId ? ownerNames.get(q.instituteId) || "one institute" : null })) };
 }
 
 module.exports = { canManage, scopeWhere, createExam, updateExam, publishExam, listExams, getExam, listAttempts, analytics, csvRows, invalidateAttempt, reviewEvent, publishResult, publishAllResults, retryEvaluation, sources };

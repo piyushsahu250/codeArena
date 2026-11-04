@@ -61,7 +61,7 @@ export function examErrorMessage(err, fallback = "Something went wrong. Your sav
     SECTIONS_INCOMPLETE: "Finish every section before submitting the examination.",
     NOT_STARTED: "This examination has not opened yet.",
     CLOSED: "This examination is closed.",
-    EXAM_NOT_READY: "This examination is not ready yet. Please contact your administrator.",
+    EXAM_NOT_READY: "This examination cannot be started yet: its question set is not complete for your institute. Please ask your administrator to finish setting it up.",
   };
   return map[code] || err?.response?.data?.error || fallback;
 }

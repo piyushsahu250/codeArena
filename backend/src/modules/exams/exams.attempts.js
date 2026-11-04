@@ -49,11 +49,15 @@ async function listAvailable(student) {
   });
   const visible = exams.filter((e) => studentCanSee(student, e));
   const attempts = await prisma.examAttempt.findMany({ where: { studentId: student.id, examId: { in: visible.map((e) => e.id) } }, select: { id: true, examId: true, mode: true, status: true, attemptKey: true, createdAt: true, resultStatus: true }, orderBy: { createdAt: "desc" } });
-  return visible.map((e) => {
+  return Promise.all(visible.map(async (e) => {
     const bp = Src.normalizeBlueprint(e.versions[0]?.blueprint || e.blueprint);
     const mine = attempts.filter((a) => a.examId === e.id);
     const now = Date.now();
+    // Whether THIS student's institute can be given a full paper. Only the yes/no goes to the student: the reasons name other institutes' questions and are for administrators.
+    const ready = await core.readiness(bp, student.instituteId, `${e.id}:v${e.version}`).catch(() => ({ ok: true }));
     return {
+      ready: ready.ok,
+      notReadyMessage: ready.ok ? null : "This examination cannot be started yet: its question set is not complete for your institute. Please ask your administrator to finish setting it up.",
       id: e.id, title: e.title, description: e.description, mode: bp.mode, practiceEnabled: bp.mode === "PRACTICE" || !!bp.practiceEnabled,
       startAt: bp.startAt, endAt: bp.endAt, durationMin: bp.durationMin, totalMarks: bp.totalMarks,
       sections: bp.sections.map((s) => ({ key: s.key, label: SECTION_LABELS[s.key], questionCount: s.questionCount, maxMarks: s.maxMarks, durationMin: s.durationMin ?? null })),
@@ -61,7 +65,7 @@ async function listAvailable(student) {
       formalAttempt: mine.find((a) => a.attemptKey === "FORMAL") || null,
       practiceAttempts: mine.filter((a) => a.mode === "PRACTICE").slice(0, 5),
     };
-  });
+  }));
 }
 
 async function startAttempt({ student, examId, mode }) {

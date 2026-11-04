@@ -8,6 +8,7 @@ const Src = require("../../utils/examSources");
 const Scoring = require("../../utils/examScoring");
 const { SECTION_KEYS } = require("../../utils/examBlueprint");
 const { instituteWhere } = require("../../utils/questionVisibility");
+const { cached } = require("../../utils/cache");
 
 // An examination that belongs to no institute is open to students of every institute, and a student sees only their own institute's questions plus the shared ones (instituteId null).
 // So when such an exam is checked (at publish, or by an administrator who sees everything), only the shared questions can be counted on: GLOBAL_ONLY means exactly that.
@@ -104,6 +105,53 @@ async function availability(blueprint, instituteId) {
   for (const [key, r] of Object.entries(report)) for (const g of r.groups) if (g.available < g.needed) shortages.push({ section: key, group: g.group, needed: g.needed, available: g.available });
   const invalidCount = Object.values(report).reduce((a, r) => a + r.invalid.length, 0);
   return { report, shortages, invalidCount };
+}
+
+// ---- readiness, and why an examination is short ---------------------------------------------------------------------------------------------------------------------
+const SECTION_NAMES = { APTITUDE: "Aptitude", TECHNICAL: "Technical", CODING: "Coding", AI_INTERVIEW: "AI mock interview" };
+const APTITUDE_NAMES = { QUANTITATIVE: "Quantitative", LOGICAL: "Logical", VERBAL: "Verbal", DATA_INTERPRETATION: "Data interpretation" };
+
+// FOR ADMINISTRATORS ONLY: the shortages as sentences, naming the chosen coding problems this audience cannot use and why. They name other institutes, so they are never sent to a student.
+async function explainShortages(blueprint, instituteId, shortages) {
+  const out = [];
+  for (const s of shortages || []) {
+    const head = SECTION_NAMES[s.section] || s.section;
+    if (s.section === "CODING") {
+      const ids = sectionOf(blueprint, "CODING")?.source?.questionIds || [];
+      const rows = ids.length ? await prisma.question.findMany({ where: { id: { in: ids } }, select: { id: true, title: true, questionType: true, questionStatus: true, instituteId: true, testCases: { select: { id: true } } } }) : [];
+      const owners = [...new Set(rows.map((r) => r.instituteId).filter(Boolean))];
+      const names = new Map((owners.length ? await prisma.institute.findMany({ where: { id: { in: owners } }, select: { id: true, name: true } }) : []).map((i) => [i.id, i.name]));
+      const byId = new Map(rows.map((r) => [r.id, r]));
+      const reasons = [];
+      for (const id of ids) {
+        const r = byId.get(id);
+        if (!r) reasons.push("a chosen problem no longer exists");
+        else if (!["CODING", "SQL"].includes(r.questionType)) reasons.push(`"${r.title}" is not a coding problem`);
+        else if (r.questionStatus !== "PUBLISHED") reasons.push(`"${r.title}" is not published`);
+        else if (r.instituteId && r.instituteId !== instituteId) reasons.push(`"${r.title}" belongs to ${names.get(r.instituteId) || "one institute"} only, so other institutes cannot use it`);
+        else if (!r.testCases.length) reasons.push(`"${r.title}" has no test cases`);
+      }
+      out.push(`${head}: needs ${s.needed} problem${s.needed === 1 ? "" : "s"} but only ${s.available} can be used.${reasons.length ? ` ${reasons.join("; ")}.` : ""}`);
+    } else if (s.section === "APTITUDE") {
+      out.push(`${head} (${APTITUDE_NAMES[s.group] || s.group}): needs ${s.needed} question${s.needed === 1 ? "" : "s"} but only ${s.available} can be used.`);
+    } else if (s.section === "TECHNICAL") {
+      const subject = await prisma.subject.findUnique({ where: { id: s.group }, select: { name: true } }).catch(() => null);
+      out.push(`${head} (${subject?.name || "a subject"}): needs ${s.needed} question${s.needed === 1 ? "" : "s"} but only ${s.available} can be used.`);
+    } else {
+      out.push(`${head}: needs ${s.needed} question${s.needed === 1 ? "" : "s"} but only ${s.available} can be used.`);
+    }
+  }
+  return out;
+}
+
+// Can this examination build a paper for this audience right now? The same check an attempt makes when it starts, so the answer matches what a student would meet, asked ahead of time
+// instead of at the click. Kept for two minutes (the key carries the exam and its published version, so publishing a fix is seen at once); a bank change shows within that time.
+const READINESS_TTL_MS = Number(process.env.EXAM_READINESS_TTL_MS || 120000);
+async function readiness(blueprint, instituteId, cacheKey) {
+  return cached(`exam-ready:${cacheKey}:${instituteId || "-"}`, READINESS_TTL_MS, async () => {
+    const a = await availability(blueprint, instituteId);
+    return { ok: a.shortages.length === 0, shortages: a.shortages };
+  });
 }
 
 // Builds the frozen assignment for an attempt. Deterministic in `attemptId`.
@@ -249,7 +297,7 @@ async function scoreInterview(attempt, blueprint, answers) {
 }
 
 module.exports = {
-  GLOBAL_ONLY,
+  GLOBAL_ONLY, explainShortages, readiness,
   POOL_LIMIT, INTERVIEW_RUBRIC_VERSION, sha, round2, sectionOf, itemsOf, availability, buildManifest, studentItems, loadObjectiveRows, judgeStatusOf, ruleEvaluate,
   scoreObjective, scoreCoding, scoreInterview, answerMap, SECTION_KEYS,
 };

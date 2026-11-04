@@ -544,3 +544,86 @@ test("an examination outside its window cannot be started; a practice-only exami
   assert.equal((await request("POST", `/api/exams/${noPractice}/attempts`, F.tokens.s2, { mode: "PRACTICE" })).body.code, "PRACTICE_DISABLED");
   assert.equal((await request("POST", `/api/exams/${noPractice}/attempts`, F.tokens.s2, { mode: "NONSENSE" })).status, 400);
 });
+
+test("a platform-wide examination that one institute can no longer be served says so up front, to students and administrators, and a republished fix clears it", async (t) => {
+  if (!ready) return t.skip("not ready");
+  // REGRESSION: a platform-wide exam ("Mock") was published while its check still counted every institute's problems. One of its two coding problems belongs to one institute only,
+  // so for every other institute the exam could not build a paper: the student pressed Practice and got "not ready", and nothing told an administrator.
+  const root = await mkUser("SUPER_ADMIN", null, "root");
+  const rootT = tokenFor(root);
+  const shared = { instituteId: null };
+  const subject = await prisma.subject.create({ data: { name: `Shared ${tag}`, ...shared } });
+  try {
+    for (const [cat, n] of [["QUANTITATIVE", 3], ["LOGICAL", 2]]) for (let i = 0; i < n; i++) await prisma.interviewQuestion.create({ data: { category: "APTITUDE", aptitudeCategory: cat, prompt: `${tag} shared ${cat} ${i}`, options: ["wrong A", "right", "wrong B", "wrong C"], correctAnswer: 1, ...shared } });
+    for (let i = 0; i < 4; i++) await prisma.question.create({ data: { description: `${tag} shared technical ${i}`, questionType: "MCQ", questionStatus: "PUBLISHED", options: ["correct", "no", "nope", "never"], correctAnswer: [0], subjectId: subject.id, points: 1, ...shared } });
+    for (let i = 0; i < 3; i++) await prisma.interviewQuestion.create({ data: { category: "HR", prompt: `${tag} shared HR ${i}`, expectedKeywords: ["team", "result"], ...shared } });
+    const problem = (title) => prisma.question.create({ data: { title: `${title} ${tag}`, description: "Print a+b", questionType: "CODING", questionStatus: "PUBLISHED", points: 10, testCases: { create: [{ input: "1 2", expected: "3", isHidden: false }, { input: "20 22", expected: "42", isHidden: true }] }, ...shared } });
+    const probA = await problem("Shared problem"), probB = await problem("Stock problem"), probC = await problem("Replacement problem");
+    const plan = (codingIds) => ({ ...blueprint(), mode: "PRACTICE", title: `Platform exam ${tag}`, totalMarks: 40, passingMarks: 16,
+      sections: [
+        sec("APTITUDE", 1, 10, 5, { source: { distribution: [{ category: "QUANTITATIVE", count: 3 }, { category: "LOGICAL", count: 2 }] } }),
+        sec("TECHNICAL", 2, 10, 4, { source: { subjects: [{ subjectId: subject.id, count: 4 }] } }),
+        sec("CODING", 3, 10, codingIds.length, { source: { questionIds: codingIds }, maxSubmissionsPerProblem: 5 }),
+        sec("AI_INTERVIEW", 4, 10, 3, { interview: { category: "HR", difficulty: "EASY", answerInput: "TYPED_OR_SPEECH", cameraRequired: true, speechToText: true, rubricVersion: "hr-v1", evaluationMode: "RULES" } }),
+      ] });
+
+    // 1. a platform-wide exam over shared problems publishes, and nothing is short while both are shared
+    const created = await request("POST", "/api/exams/admin/exams", rootT, { blueprint: plan([probA.id, probB.id]) });
+    assert.equal(created.status, 201, created.raw);
+    const examId = created.body.exam.id;
+    assert.equal(created.body.exam.instituteId ?? null, null, "created by the platform administrator, it belongs to no institute");
+    assert.equal((await request("POST", `/api/exams/admin/exams/${examId}/publish`, rootT)).status, 200);
+    assert.deepEqual((await request("POST", `/api/exams/admin/exams/${examId}/validate`, rootT)).body.shortages, [], "nothing is short while both problems are shared");
+
+    // 2. one problem becomes private to institute A (what happened to "Mock"); the administrator's own check names it and says whose it is
+    await prisma.question.update({ where: { id: probB.id }, data: { instituteId: F.instA } });
+    const check = await request("POST", `/api/exams/admin/exams/${examId}/validate`, rootT);
+    assert.equal(check.body.shortages.length, 1);
+    assert.equal(check.body.shortages[0].section, "CODING");
+    assert.match(check.body.shortageMessages[0], new RegExp(`Stock problem ${tag}`));
+    assert.match(check.body.shortageMessages[0], /belongs to .*-A only/, "it says whose problem it is");
+    assert.match(check.body.shortageMessages[0], /needs 2 problems but only 1 can be used/);
+
+    // 3. the administrator's list flags it without anyone having to run a check
+    const row = (await request("GET", "/api/exams/admin/exams", rootT)).body.exams.find((e) => e.id === examId);
+    assert.equal(row.readiness.ok, false, "the list flags a published exam that cannot be built");
+    assert.match(row.readiness.messages.join(" "), new RegExp(`Stock problem ${tag}`));
+
+    // 4. a student of the OTHER institute is told up front, with no private detail, and the start is refused the same way
+    const other = (await request("GET", "/api/exams/available", F.tokens.s3)).body.exams.find((e) => e.id === examId);
+    assert.ok(other, "the exam is listed");
+    assert.equal(other.ready, false, "and marked not ready for this institute");
+    assert.match(other.notReadyMessage, /cannot be started yet/);
+    const leak = JSON.stringify(other);
+    assert.ok(!leak.includes(`Stock problem ${tag}`) && !leak.includes(`${tag}-A`), "the student is told nothing about another institute's problem");
+    const refused = await request("POST", `/api/exams/${examId}/attempts`, F.tokens.s3, { mode: "PRACTICE" });
+    assert.equal(refused.status, 409);
+    assert.equal(refused.body.code, "EXAM_NOT_READY");
+    assert.ok(!JSON.stringify(refused.body).includes(`Stock problem ${tag}`), "the refusal does not name it either");
+
+    // 5. a student of the owning institute can still take it (their institute can see the problem)
+    const owner = (await request("GET", "/api/exams/available", F.tokens.s1)).body.exams.find((e) => e.id === examId);
+    assert.equal(owner.ready, true, "institute A can be served");
+    assert.ok([200, 201].includes((await request("POST", `/api/exams/${examId}/attempts`, F.tokens.s1, { mode: "PRACTICE" })).status));
+
+    // 6. publishing the same broken set again is refused, and says which problem
+    assert.equal((await request("PUT", `/api/exams/admin/exams/${examId}`, rootT, { blueprint: plan([probA.id, probB.id]) })).status, 200);
+    const blocked = await request("POST", `/api/exams/admin/exams/${examId}/publish`, rootT);
+    assert.equal(blocked.status, 422);
+    assert.equal(blocked.body.code, "NOT_ENOUGH_QUESTIONS");
+    assert.match(blocked.body.messages.join(" "), new RegExp(`Stock problem ${tag}`), "the refusal says which problem");
+
+    // 7. the fix: swap in a shared problem and republish; the new version is what students are checked against
+    assert.equal((await request("PUT", `/api/exams/admin/exams/${examId}`, rootT, { blueprint: plan([probA.id, probC.id]) })).status, 200);
+    assert.equal((await request("POST", `/api/exams/admin/exams/${examId}/publish`, rootT)).status, 200);
+    const fixed = (await request("GET", "/api/exams/available", F.tokens.s3)).body.exams.find((e) => e.id === examId);
+    assert.equal(fixed.ready, true, "ready for the other institute after the republished fix");
+    assert.ok([200, 201].includes((await request("POST", `/api/exams/${examId}/attempts`, F.tokens.s3, { mode: "PRACTICE" })).status), "and it starts");
+    assert.equal((await request("GET", "/api/exams/admin/exams", rootT)).body.exams.find((e) => e.id === examId).readiness.ok, true, "and the administrator's list is clear again");
+  } finally {
+    await prisma.examDefinition.deleteMany({ where: { createdById: root.id } }).catch(() => {});
+    await prisma.question.deleteMany({ where: { OR: [{ title: { contains: tag } }, { description: { contains: tag } }] } }).catch(() => {});
+    await prisma.interviewQuestion.deleteMany({ where: { prompt: { contains: tag } } }).catch(() => {});
+    await prisma.subject.deleteMany({ where: { name: { contains: tag } } }).catch(() => {});
+  }
+});

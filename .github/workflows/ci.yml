@@ -116,6 +116,8 @@ jobs:
         run: node scripts/caseTextRegression.mjs
       - name: Exam editor structure regression (every setting still there, labelled fields, nothing clipped by the grid)
         run: node scripts/examEditorStructureRegression.mjs
+      - name: Exam readiness regression (a student and an administrator are told why an examination cannot be started, before the click)
+        run: node scripts/examReadinessRegression.mjs
       - name: Browser voice regression (voice picking, speech chunking, transcript merging, recognition errors)
         run: node scripts/browserSpeechRegression.mjs
       - name: AI error wording regression (a daily AI limit tells the student nothing is lost and when to retry)
