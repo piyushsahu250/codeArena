@@ -120,6 +120,8 @@ jobs:
         run: node scripts/examReadinessRegression.mjs
       - name: Section break regression (between sections the student sees progress, the next section rules and one clear button)
         run: node scripts/sectionBreakRegression.mjs
+      - name: Exam coding regression (a language switch keeps or loads code, an empty editor cannot be run, the statement shows its sections once)
+        run: node scripts/examCodingRegression.mjs
       - name: Browser voice regression (voice picking, speech chunking, transcript merging, recognition errors)
         run: node scripts/browserSpeechRegression.mjs
       - name: AI error wording regression (a daily AI limit tells the student nothing is lost and when to retry)

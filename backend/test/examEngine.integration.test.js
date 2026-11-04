@@ -187,6 +187,16 @@ test("a student completes all four sections in one attempt and gets one consolid
   const problem = co.body.current.items[0];
   assert.equal(problem.samples.length, 1, "only the sample case is shown");
   assert.ok(!/20 22|"42"/.test(co.raw), "the hidden test case never reaches the student");
+  // REGRESSION (2026-11-04): running an empty editor reached the judge and came back as a confusing compile error. A blank program is refused up front, for run and for submit, with the reason.
+  for (const [what, body] of [["empty", { language: "python", code: "" }], ["whitespace only", { language: "python", code: "  \n\t\n" }]]) {
+    const r1 = await request("POST", `/api/exams/attempts/${a.attemptId}/items/${problem.id}/run`, F.tokens.s1, body, a.session);
+    assert.equal(r1.status, 400, `run with ${what} code: ${r1.raw}`);
+    assert.equal(r1.body.code, "EMPTY_CODE");
+    assert.match(r1.body.error || r1.body.message || "", /Write your solution/);
+    const r2 = await request("POST", `/api/exams/attempts/${a.attemptId}/items/${problem.id}/submit-code`, F.tokens.s1, body, a.session);
+    assert.equal(r2.status, 400, `submit with ${what} code: ${r2.raw}`);
+    assert.equal(r2.body.code, "EMPTY_CODE");
+  }
   const sub = await request("POST", `/api/exams/attempts/${a.attemptId}/items/${problem.id}/submit-code`, F.tokens.s1, { language: "python", code: "a,b=map(int,input().split())\nprint(a+b)\n" }, a.session);
   assert.equal(sub.status, 200, sub.raw);
   assert.ok(["DONE", "PENDING"].includes(sub.body.submission.status));

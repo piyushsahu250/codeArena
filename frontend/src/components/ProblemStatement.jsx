@@ -1,6 +1,7 @@
 import { useState } from "react";
 import MathText from "./MathText";
 import { inputText, outputText, fullProgramLabel, NO_INPUT, NO_OUTPUT } from "../utils/caseText";
+import { splitStatement } from "../utils/problemText";
 
 // Shared student-facing problem-statement renderer — the read-side counterpart to
 // ProblemStatementFields.jsx. Used by every coding surface (formal Tests, Module Coding Tests,
@@ -22,8 +23,11 @@ import { inputText, outputText, fullProgramLabel, NO_INPUT, NO_OUTPUT } from "..
 const DIM = { color: "var(--ink-dim)", fontStyle: "italic" };
 
 export default function ProblemStatement({ question }) {
-  const q = question || {};
-  const description = q.description ?? q.prompt ?? "";
+  const raw = question || {};
+  // Format sections typed into the description ("Constraints:", "Input Format:", "Output Format:") are shown once, in the sections made for them, not as stray paragraphs; separate fields win when both exist.
+  const parts = splitStatement(raw.description ?? raw.prompt ?? "");
+  const q = { ...raw, description: parts.text, inputFormat: raw.inputFormat || parts.inputFormat, outputFormat: raw.outputFormat || parts.outputFormat, constraints: raw.constraints || parts.constraints };
+  const description = q.description;
   const testCases = Array.isArray(q.testCases) ? q.testCases : [];
   const hints = Array.isArray(q.hints) ? q.hints.filter(Boolean) : [];
   const similarQuestions = Array.isArray(q.similarQuestions) ? q.similarQuestions.filter(Boolean) : [];

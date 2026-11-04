@@ -318,6 +318,7 @@ async function runCode(attempt, itemRef, { language, code }) {
   if (!ctx.ok) return ctx;
   const norm = Q.normalizeAnswerPayload("CODING", { code, language }, { allowedLanguages: ctx.section.source?.allowedLanguages });
   if (!norm.ok) return fail(400, norm.code, norm.message);
+  if (!String(norm.value.code || "").trim()) return fail(400, "EMPTY_CODE", "Write your solution in the editor first, then run it.");
   const samples = ctx.question.testCases.filter((c) => !c.isHidden);
   if (!samples.length) return fail(409, "NO_SAMPLES", "This problem has no sample cases to run against. Use Submit.");
   try {
@@ -359,6 +360,7 @@ async function submitCode(attempt, itemRef, { language, code }) {
   if (!ctx.ok) return ctx;
   const norm = Q.normalizeAnswerPayload("CODING", { code, language }, { allowedLanguages: ctx.section.source?.allowedLanguages });
   if (!norm.ok) return fail(400, norm.code, norm.message);
+  if (!String(norm.value.code || "").trim()) return fail(400, "EMPTY_CODE", "Write your solution in the editor first, then submit it.");
   const limit = ctx.section.maxSubmissionsPerProblem;
   const prior = await prisma.examAnswer.findUnique({ where: { attemptId_itemRef: { attemptId: attempt.id, itemRef } }, select: { evaluation: true } });
   if (limit && (prior?.evaluation?.submissions || 0) >= limit) return fail(409, "SUBMISSION_LIMIT", `You have used all ${limit} submissions for this problem.`);

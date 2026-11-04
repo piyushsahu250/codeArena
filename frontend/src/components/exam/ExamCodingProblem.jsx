@@ -3,7 +3,8 @@ import Editor from "@monaco-editor/react";
 import api from "../../api";
 import ProblemStatement from "../ProblemStatement";
 import CodeResultBlock from "../CodeResultBlock";
-import { CODE_LANGUAGES, defaultStarter, supportedLanguages } from "../../utils/codeEditorDefaults";
+import { CODE_LANGUAGES, supportedLanguages } from "../../utils/codeEditorDefaults";
+import { starterFor, codeAfterLanguageChange } from "../../utils/examStarter";
 import { examErrorMessage } from "../../utils/examProgress";
 import { useTheme } from "../../context/ThemeContext";
 
@@ -18,19 +19,31 @@ export default function ExamCodingProblem({ attemptId, item, number, total, payl
     return list.length ? list : CODE_LANGUAGES;
   }, [item, allowedLanguages]);
   const language = payload?.language && languages.some((l) => l.id === payload.language) ? payload.language : languages[0].id;
-  const starter = item.starterCodeByLanguage?.[language] || (language === languages[0].id ? item.starterCode : null) || defaultStarter(language);
+  const starter = starterFor(item, language, languages[0].id);
   const code = typeof payload?.code === "string" ? payload.code : starter;
   const [run, setRun] = useState(null);
   const [sub, setSub] = useState(evaluation && evaluation.status ? { status: evaluation.status, verdict: evaluation.verdict, passedCases: evaluation.passedCases, totalCases: evaluation.totalCases, errorSummary: evaluation.errorSummary, submissions: evaluation.submissions, pending: evaluation.pending } : null);
   const [busy, setBusy] = useState(null);
+  const [kept, setKept] = useState(false); // the student switched language but already had code, which was kept
   const [error, setError] = useState(null);
 
   const used = sub?.submissions || 0;
   const exhausted = !!maxSubmissions && used >= maxSubmissions;
   const base = `/exams/attempts/${attemptId}/items/${item.id}`;
 
+  // Switching language gives an untouched editor the new language's starter instead of emptying it; code the student has written is never thrown away.
+  function changeLanguage(next) {
+    const r = codeAfterLanguageChange({ code, from: language, to: next, item, firstLanguage: languages[0].id });
+    setKept(r.kept);
+    onChange({ code: r.code, language: next });
+  }
+  function resetToStarter() { setKept(false); onChange({ code: starter, language }); }
+
+  const blank = !code.trim();
+
   async function call(kind) {
     if (busy || disabled) return;
+    if (blank) { setError("Write your solution in the editor first, then run it."); return; }
     setBusy(kind); setError(null);
     try {
       await flushAnswer?.(item.id); // the judge works on what the server holds; make sure that is what is on screen
@@ -48,18 +61,23 @@ export default function ExamCodingProblem({ attemptId, item, number, total, payl
         </div>
         <div>
           <div className="ex-row between" style={{ marginBottom: 8 }}>
-            <select aria-label="Programming language" value={language} disabled={disabled} onChange={(e) => onChange({ code: payload?.code ?? "", language: e.target.value })} style={{ padding: "6px 10px", borderRadius: 8 }}>
+            <select aria-label="Programming language" value={language} disabled={disabled} onChange={(e) => changeLanguage(e.target.value)} style={{ padding: "6px 10px", borderRadius: 8 }}>
               {languages.map((l) => <option key={l.id} value={l.id}>{l.label}</option>)}
             </select>
-            <span className="ex-muted" style={{ fontSize: 12 }}>Your code is saved as you type.</span>
+            <span className="ex-row" style={{ gap: 10 }}>
+              <span className="ex-muted" style={{ fontSize: 12 }}>Your code is saved as you type.</span>
+              <button type="button" className="btn btn-ghost" style={{ padding: "4px 10px", fontSize: 12 }} disabled={disabled || code === starter} onClick={resetToStarter} title={`Replace the editor with the starter code for ${languages.find((l) => l.id === language)?.label || language}`}>Reset to starter</button>
+            </span>
           </div>
           <div className="ex-code-wrap">
-            <Editor height="46vh" language={languages.find((l) => l.id === language)?.monaco || language} theme={theme === "dark" ? "vs-dark" : "light"} value={code} options={{ minimap: { enabled: false }, fontSize: 14, readOnly: disabled, scrollBeyondLastLine: false, automaticLayout: true, contextmenu: false, quickSuggestions: false }} onChange={(v) => onChange({ code: v ?? "", language })} />
+            <Editor height="46vh" language={languages.find((l) => l.id === language)?.monaco || language} theme={theme === "dark" ? "vs-dark" : "light"} value={code} options={{ minimap: { enabled: false }, fontSize: 14, readOnly: disabled, scrollBeyondLastLine: false, automaticLayout: true, contextmenu: false, quickSuggestions: false, wordWrap: "on" }} onChange={(v) => onChange({ code: v ?? "", language })} />
           </div>
           <div className="ex-row" style={{ marginTop: 10 }}>
-            <button type="button" className="btn btn-ghost" disabled={!!busy || disabled || !item.samples?.length} onClick={() => call("run")}>{busy === "run" ? "Running…" : "Run on samples"}</button>
+            <button type="button" className="btn btn-ghost" disabled={!!busy || disabled || !item.samples?.length || blank} onClick={() => call("run")}>{busy === "run" ? "Running…" : "Run on samples"}</button>
             <button type="button" className="btn btn-primary" disabled={!!busy || disabled || exhausted || !code.trim()} onClick={() => call("submit")}>{busy === "submit" ? "Submitting…" : "Submit this solution"}</button>
           </div>
+          {blank && !disabled && <p className="ex-hint" role="status">The editor is empty. Write your solution, or use "Reset to starter", then run it on the samples.</p>}
+          {kept && <p className="ex-hint" role="status">You already had code here, so it was kept. Use "Reset to starter" for the {languages.find((l) => l.id === language)?.label || language} starter instead.</p>}
           {error && <div className="ex-notice bad" role="alert">{error}</div>}
           {run && <div className="ex-result"><CodeResultBlock title="Sample run" result={run} /></div>}
           {sub && (

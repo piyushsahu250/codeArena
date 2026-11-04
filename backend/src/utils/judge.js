@@ -608,8 +608,9 @@ async function prepare(language, code) {
       cleanupTmpDir(tmpDir);
       return {
         ok: false,
-        error: "No 'public class Main' with 'public static void main' was found. If you wrote a LeetCode-style " +
-          "'class Solution' only, ask an admin to enable Function-based mode for this question.",
+        error: "No 'public class Main' with 'public static void main' was found. This problem needs a complete program: " +
+          "declare 'public class Main' with a main method that reads the input and prints the answer. " +
+          "A 'class Solution' on its own cannot be run here.",
       };
     }
   }

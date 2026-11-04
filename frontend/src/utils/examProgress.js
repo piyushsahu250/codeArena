@@ -54,6 +54,7 @@ export function examErrorMessage(err, fallback = "Something went wrong. Your sav
     ATTEMPT_CLOSED: "This examination is no longer accepting answers.",
     ANSWER_LOCKED: "This answer can no longer be changed.",
     NAVIGATION_FORWARD_ONLY: "In this section you cannot go back to an earlier question.",
+    EMPTY_CODE: "Write your solution in the editor first, then run it.",
     SUBMISSION_LIMIT: "You have used all submissions for this problem.",
     JUDGE_BUSY: "The code runner is busy. Your code is saved; try again in a moment.",
     JUDGE_UNAVAILABLE: "The code runner is unavailable. Your code is saved; try again in a moment.",
