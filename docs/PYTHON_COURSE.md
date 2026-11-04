@@ -153,6 +153,8 @@ Checked against python.org and docs.python.org on **2 November 2026**: latest st
 
 **Rolling it out on a course that is already seeded.** The seed creates the new lessons as Draft, like everything else it creates. After deploying: run `node scripts/seedPythonCourse.js` (creates the 23 tests and their questions; nothing existing changes), then publish the tests with `node scripts/publishPythonModuleTests.js` (`--plan` first).
 
+**Assessments and mocks.** The 23 module assessments and 4 mock tests are Levels created as Draft. Publish them with `node scripts/publishPythonAssessments.js` (`--plan` first); it refuses to run unless all 27 exist with questions. They were published on the live system on 2026-11-04. They do not gate module unlocking or the learning certificate: the certificate is issued only when every live lesson (module practice tests included) is completed and every module is satisfied (`checkCourseCompletion` in `routes/learning.js`).
+
 **Known limit.** The projects module (21 lessons) is still completed lesson by lesson with "Mark as Complete"; its project tasks are not yet a condition of the certificate. Requiring approved major projects needs a product decision about who approves them.
 
 **Tests.** `test/moduleTest.test.js` (the properties above), the end-to-end test in `test/pythonCourse.integration.test.js` (a student is walked through all 220 lessons through the real API: a failed attempt keeps the next module locked, a test cannot be clicked complete, no certificate before the end, one certificate exactly at the end), and `scripts/validatePythonContent.js`.
