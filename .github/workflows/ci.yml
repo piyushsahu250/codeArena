@@ -122,6 +122,8 @@ jobs:
         run: node scripts/sectionBreakRegression.mjs
       - name: Exam coding regression (a language switch keeps or loads code, an empty editor cannot be run, the statement shows its sections once)
         run: node scripts/examCodingRegression.mjs
+      - name: Drag resize regression (panel dividers inside a test follow the pointer, end on release, work by touch and keyboard)
+        run: node scripts/dragResizeRegression.mjs
       - name: Browser voice regression (voice picking, speech chunking, transcript merging, recognition errors)
         run: node scripts/browserSpeechRegression.mjs
       - name: AI error wording regression (a daily AI limit tells the student nothing is lost and when to retry)

@@ -211,6 +211,11 @@ input::placeholder, textarea::placeholder { color: var(--ink-dim); }
    the draggable divider reads as interactive before the user commits to a mousedown. */
 .ca-resize-handle { transition: background 0.1s ease; }
 .ca-resize-handle:hover, .ca-resize-handle:active { background: var(--amber) !important; }
+/* The drawn bar is thin; the part you can grab is 10px wider on each side, so a panel divider is easy to catch with a mouse and a finger. */
+.ca-resize-handle { position: relative; touch-action: none; }
+.ca-resize-col::after { content: ""; position: absolute; top: 0; bottom: 0; left: -5px; right: -5px; }
+.ca-resize-row::after { content: ""; position: absolute; left: 0; right: 0; top: -5px; bottom: -5px; }
+.ca-resize-handle:focus-visible { outline: 2px solid var(--amber); outline-offset: 1px; }
 
 .btn-dark {
   background: var(--slate-900);

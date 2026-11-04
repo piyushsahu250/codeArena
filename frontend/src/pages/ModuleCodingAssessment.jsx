@@ -15,10 +15,14 @@ import RunSubmitButtons from "../components/RunSubmitButtons";
 import ProblemStatement from "../components/ProblemStatement";
 import ReadinessChecklist from "../components/ReadinessChecklist";
 import { CODE_LANGUAGES as ALL_LANGUAGES, defaultStarter } from "../utils/codeEditorDefaults";
+import { beginDrag, clampSize, sizeAfterKey } from "../utils/dragResize";
 import { applyPlainTextInputHints, watchForNonAsciiInput } from "../utils/monacoSetup";
 import { createEventReporter, watchCodeInsertion } from "../utils/examSecurityClient";
 
 const AUTOSAVE_INTERVAL_MS = 10000; // spec: auto-save every 10 seconds
+// The results panel under the editor: never smaller than this, and never so tall that the editor above it (200px at least) is squeezed out of the window.
+const RESULTS_MIN = 140;
+const resultsMax = () => Math.max(RESULTS_MIN, Math.min(window.innerHeight - 320, 900));
 
 const VIOLATION_LABEL = {
   TAB_SWITCH: "switching tabs",
@@ -94,7 +98,7 @@ export default function ModuleCodingAssessment() {
   const [submitResultMsg, setSubmitResultMsg] = useState(null); // { ok, text } — no alert(), which forces fullscreen exit
   // Height of the results panel under the editor. The editor itself flexes to fill what is left, so the results are
   // always on screen instead of being pushed below the fold by a fixed-height editor.
-  const [resultsHeight, setResultsHeight] = useState(() => Number(localStorage.getItem("moduleCodingResultsHeight")) || 260);
+  const [resultsHeight, setResultsHeight] = useState(() => clampSize(Number(localStorage.getItem("moduleCodingResultsHeight")) || 260, RESULTS_MIN, 900));
   // Personal layout preferences, remembered on this device: panel widths, editor font and theme, collapsed sidebar.
   const readPref = (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } };
   const savePref = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* storage blocked */ } };
@@ -104,7 +108,6 @@ export default function ModuleCodingAssessment() {
   const [editorTheme, setEditorTheme] = useState(() => readPref("mcEditorTheme", "vs-dark"));
   const runRef = useRef(null);
   const submitRef = useRef(null);
-  const resizingRef = useRef(false);
 
   const monacoEditorRef = useRef(null); // set on mount — lets the mobile Indent/Outdent buttons below drive the editor directly, since a touch keyboard has no physical Tab key at all
   // Whatever compiler language the student is already using on this assessment — set the first
@@ -497,32 +500,22 @@ export default function ModuleCodingAssessment() {
     return () => window.removeEventListener("online", onOnline);
   }, [phase]);
 
-  // Resizable editor — drag the handle between editor and results panel. Height persists across
-  // questions (it's a single piece of state, never reset by activeIdx) and across sessions via
-  // localStorage. Min/max clamp keeps the editor from being dragged unusably small or off-screen.
+  // Resizable editor: drag the handle between the editor and the results panel (pointer events with capture, see utils/dragResize.js; touch works too). The height persists across questions
+  // (one piece of state) and across sessions in localStorage, clamped so the editor can never be dragged unusably small or the results off the screen.
   function startResize(e) {
-    resizingRef.current = true;
-    document.body.style.cursor = "row-resize";
-    e.preventDefault();
+    beginDrag(e, {
+      axis: "y", start: resultsHeight, invert: true, min: RESULTS_MIN, max: resultsMax,
+      onChange: setResultsHeight,
+      onEnd: (h) => { try { localStorage.setItem("moduleCodingResultsHeight", String(h)); } catch { /* private-browsing storage denial, non-fatal */ } },
+    });
   }
-  useEffect(() => {
-    function onMove(e) {
-      if (!resizingRef.current) return;
-      setResultsHeight((h) => Math.min(520, Math.max(140, h - e.movementY)));
-    }
-    function onUp() {
-      if (!resizingRef.current) return;
-      resizingRef.current = false;
-      document.body.style.cursor = "";
-      setResultsHeight((h) => { localStorage.setItem("moduleCodingResultsHeight", String(h)); return h; });
-    }
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
-    return () => {
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup", onUp);
-    };
-  }, []);
+  function nudgeResults(e) {
+    const next = sizeAfterKey(e.key, { size: resultsHeight, min: RESULTS_MIN, max: resultsMax(), grow: "ArrowUp", shrink: "ArrowDown" });
+    if (next === null) return;
+    e.preventDefault();
+    setResultsHeight(next);
+    try { localStorage.setItem("moduleCodingResultsHeight", String(next)); } catch { /* non-fatal */ }
+  }
 
   const current = questions[activeIdx];
   const answer = current ? answers[current.id] : null;
@@ -1117,20 +1110,14 @@ export default function ModuleCodingAssessment() {
         {!isMobile && (
           <div
             role="separator" aria-orientation="vertical" aria-label="Resize the problem panel" tabIndex={0} title="Drag to resize the problem panel (arrow keys also work)"
-            onMouseDown={(e) => {
-              e.preventDefault();
-              const startX = e.clientX, startW = problemWidth;
-              const move = (ev) => setProblemWidth(Math.min(760, Math.max(260, startW + ev.clientX - startX)));
-              const up = () => { window.removeEventListener("mousemove", move); window.removeEventListener("mouseup", up); setProblemWidth((w) => { savePref("mcProblemWidth", w); return w; }); };
-              window.addEventListener("mousemove", move); window.addEventListener("mouseup", up);
-            }}
+            onPointerDown={(e) => beginDrag(e, { axis: "x", start: problemWidth, min: 260, max: 760, onChange: setProblemWidth, onEnd: (w) => savePref("mcProblemWidth", w) })}
             onKeyDown={(e) => {
               if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
                 e.preventDefault();
                 setProblemWidth((w) => { const nw = Math.min(760, Math.max(260, w + (e.key === "ArrowRight" ? 24 : -24))); savePref("mcProblemWidth", nw); return nw; });
               }
             }}
-            style={{ width: 7, cursor: "col-resize", background: "var(--line)", flexShrink: 0 }}
+            className="ca-resize-handle ca-resize-col" style={{ width: 7, cursor: "col-resize", background: "var(--line)", flexShrink: 0, touchAction: "none" }}
           />
         )}
 
@@ -1212,9 +1199,11 @@ export default function ModuleCodingAssessment() {
             />
           </div>
           <div
-            onMouseDown={isMobile ? undefined : startResize}
-            title="Drag to resize the results panel"
-            style={{ height: 9, cursor: "row-resize", background: "var(--line)", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}
+            role="separator" aria-orientation="horizontal" aria-label="Resize the results panel" tabIndex={isMobile ? -1 : 0}
+            onPointerDown={isMobile ? undefined : startResize}
+            onKeyDown={isMobile ? undefined : nudgeResults}
+            title="Drag to resize the results panel (arrow keys also work)"
+            className="ca-resize-handle ca-resize-row" style={{ height: 9, cursor: "row-resize", background: "var(--line)", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", touchAction: "none" }}
           >
             <div style={{ width: 40, height: 3, borderRadius: 2, background: "var(--ink-dim)" }} />
           </div>

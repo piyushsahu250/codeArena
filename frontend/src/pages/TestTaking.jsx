@@ -16,6 +16,7 @@ import RunSubmitButtons from "../components/RunSubmitButtons";
 import ProblemStatement from "../components/ProblemStatement";
 import MathText from "../components/MathText";
 import { CODE_LANGUAGES as LANGUAGES, defaultStarter, supportedLanguages } from "../utils/codeEditorDefaults";
+import { beginDrag, sizeAfterKey } from "../utils/dragResize";
 import { getFullscreenElement, onFullscreenChange } from "../utils/fullscreenCompat";
 import { enterFullscreen, releaseFullscreen, isReleasingFullscreen } from "../utils/fullscreenSession";
 
@@ -156,7 +157,6 @@ export default function TestTaking() {
   const initialLayout = useState(loadLayout)[0];
   const [questionPanelWidth, setQuestionPanelWidth] = useState(initialLayout.questionPanelWidth);
   const [resultsPanelHeight, setResultsPanelHeight] = useState(initialLayout.resultsPanelHeight);
-  const resizingRef = useRef(null); // "question" | "results" | null
   const [autoSubmitted, setAutoSubmitted] = useState(false);
   const [timeExpired, setTimeExpired] = useState(false);
   const [finalizing, setFinalizing] = useState(false);
@@ -535,36 +535,12 @@ export default function TestTaking() {
     };
   }, []);
 
-  // Drag-to-resize for the question-description panel (width) and the results panel
-  // (height). A single window-level listener pair handles both, gated by resizingRef so it's
-  // a no-op the rest of the time.
+  // Drag-to-resize for the question-description panel (width) and the results panel (height): pointer events with capture (utils/dragResize.js), so the drag follows the pointer over the editor
+  // and outside the window, ends on release, and works by touch. The size is where the drag started plus how far the pointer has moved.
   const layoutRef = useRef({ questionPanelWidth: initialLayout.questionPanelWidth, resultsPanelHeight: initialLayout.resultsPanelHeight });
-  useEffect(() => {
-    function onMove(e) {
-      if (resizingRef.current === "question") {
-        const w = Math.max(260, Math.min(760, e.clientX - 220));
-        layoutRef.current.questionPanelWidth = w;
-        setQuestionPanelWidth(w);
-      } else if (resizingRef.current === "results") {
-        const h = Math.max(100, Math.min(560, window.innerHeight - e.clientY));
-        layoutRef.current.resultsPanelHeight = h;
-        setResultsPanelHeight(h);
-      }
-    }
-    function onUp() {
-      if (resizingRef.current) {
-        try { localStorage.setItem(LAYOUT_KEY, JSON.stringify(layoutRef.current)); } catch { /* private-browsing storage denial, non-fatal */ }
-      }
-      resizingRef.current = null;
-      document.body.style.cursor = "";
-    }
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
-    return () => {
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup", onUp);
-    };
-  }, []);
+  function persistLayout() {
+    try { localStorage.setItem(LAYOUT_KEY, JSON.stringify(layoutRef.current)); } catch { /* private-browsing storage denial, non-fatal */ }
+  }
 
   function resetLayout() {
     setQuestionPanelWidth(DEFAULT_LAYOUT.questionPanelWidth);
@@ -573,11 +549,26 @@ export default function TestTaking() {
     try { localStorage.removeItem(LAYOUT_KEY); } catch { /* non-fatal */ }
   }
 
+  // The results panel is drawn no taller than the window leaves room for (see cappedResultsPanelHeight). A drag is limited to that same bound and starts from the height on screen, so the handle
+  // always moves the panel: it used to keep counting past the drawn limit, so the panel looked stuck and then ignored the pointer on the way back.
+  const resultsLimit = () => Math.max(60, (typeof window !== "undefined" ? window.innerHeight : 900) - 460);
+  function applyQuestionWidth(w) { layoutRef.current.questionPanelWidth = w; setQuestionPanelWidth(w); }
+  function applyResultsHeight(h) { layoutRef.current.resultsPanelHeight = h; setResultsPanelHeight(h); }
   function startResize(kind) {
     return (e) => {
+      if (kind === "question") beginDrag(e, { axis: "x", start: questionPanelWidth, min: 260, max: 760, onChange: applyQuestionWidth, onEnd: persistLayout });
+      else beginDrag(e, { axis: "y", start: cappedResultsPanelHeight, invert: true, min: 100, max: resultsLimit, onChange: applyResultsHeight, onEnd: persistLayout });
+    };
+  }
+  function nudgeResize(kind) {
+    return (e) => {
+      const next = kind === "question"
+        ? sizeAfterKey(e.key, { size: questionPanelWidth, min: 260, max: 760, grow: "ArrowRight", shrink: "ArrowLeft" })
+        : sizeAfterKey(e.key, { size: cappedResultsPanelHeight, min: 100, max: resultsLimit(), grow: "ArrowUp", shrink: "ArrowDown" });
+      if (next === null) return;
       e.preventDefault();
-      resizingRef.current = kind;
-      document.body.style.cursor = kind === "question" ? "col-resize" : "row-resize";
+      if (kind === "question") applyQuestionWidth(next); else applyResultsHeight(next);
+      persistLayout();
     };
   }
 
@@ -2330,10 +2321,12 @@ export default function TestTaking() {
         </div>
         {!isMobile && (
           <div
-            onMouseDown={startResize("question")}
-            className="ca-resize-handle"
-            style={{ width: 6, cursor: "col-resize", background: "var(--line)", flexShrink: 0 }}
-            title="Drag to resize"
+            role="separator" aria-orientation="vertical" aria-label="Resize the question panel" tabIndex={0}
+            onPointerDown={startResize("question")}
+            onKeyDown={nudgeResize("question")}
+            className="ca-resize-handle ca-resize-col"
+            style={{ width: 6, cursor: "col-resize", background: "var(--line)", flexShrink: 0, touchAction: "none" }}
+            title="Drag to resize (arrow keys also work)"
           />
         )}
         </>
@@ -2564,7 +2557,7 @@ export default function TestTaking() {
           {showResultsPanel && (
           <>
           {!isMobile && (
-            <div onMouseDown={startResize("results")} className="ca-resize-handle" style={{ height: 6, cursor: "row-resize", background: "var(--line)", flexShrink: 0 }} title="Drag to resize" />
+            <div role="separator" aria-orientation="horizontal" aria-label="Resize the results panel" tabIndex={0} onPointerDown={startResize("results")} onKeyDown={nudgeResize("results")} className="ca-resize-handle ca-resize-row" style={{ height: 6, cursor: "row-resize", background: "var(--line)", flexShrink: 0, touchAction: "none" }} title="Drag to resize (arrow keys also work)" />
           )}
           <div style={{ height: isMobile ? Math.min(resultsPanelHeight, 220) : cappedResultsPanelHeight, overflowY: "auto", padding: 16, background: "var(--paper)", flexShrink: 0 }}>
             {submitResultMsg && !running && (
