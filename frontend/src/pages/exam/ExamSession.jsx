@@ -6,6 +6,7 @@ import ReadinessChecklist from "../../components/ReadinessChecklist";
 import ExamMcqQuestion from "../../components/exam/ExamMcqQuestion";
 import ExamCodingProblem from "../../components/exam/ExamCodingProblem";
 import ExamInterviewQuestion from "../../components/exam/ExamInterviewQuestion";
+import ExamSectionBreak from "../../components/exam/ExamSectionBreak";
 import { useProctoring } from "../../hooks/useProctoring";
 import { useAnswerDictation } from "../../hooks/useAnswerDictation";
 import { useExamNavigationGuard } from "../../hooks/useExamNavigationGuard";
@@ -338,7 +339,8 @@ export default function ExamSession() {
         <div className="ex-steps" aria-label="Sections">
           {view.sections.map((s, i) => {
             const st = sectionState(s);
-            return <div key={s.key} className={`ex-step ${st}`} aria-current={st === "open" ? "step" : undefined}><b>{"ABCD"[i]}</b>{s.label}{st === "done" && " ✓"}{st === "open" && ` · ${s.answered}/${s.questionCount}`}</div>;
+            const upNext = st === "locked" && nextSection && nextSection.key === s.key;
+            return <div key={s.key} className={`ex-step ${st}${upNext ? " next" : ""}`} aria-label={`${s.label}${st === "done" ? ", done" : upNext ? ", up next" : st === "open" ? ", open" : ""}`} aria-current={st === "open" || upNext ? "step" : undefined}><b>{st === "done" ? "✓" : "ABCD"[i]}</b><span>{s.label}</span>{st === "open" && <em>{s.answered}/{s.questionCount}</em>}{upNext && <em>Up next</em>}</div>;
           })}
         </div>
 
@@ -377,21 +379,9 @@ export default function ExamSession() {
               </div>
             </aside>
           </div>
-        ) : done ? (
-          <div className="ex-card">
-            <h2>All sections are complete</h2>
-            <p>Submit the examination to finish. After this you cannot change anything.</p>
-            <button className="btn btn-primary" onClick={() => setDialog({ type: "submit" })}>Submit examination</button>
-          </div>
-        ) : nextSection ? (
-          <div className="ex-card">
-            <h2>{view.sections.some((s) => s.status === "COMPLETED") ? "Section complete" : "Ready to begin"}</h2>
-            <p>Next: <strong>{nextSection.label}</strong> — {nextSection.questionCount} {nextSection.key === "CODING" ? "problem(s)" : "question(s)"}, {nextSection.maxMarks} marks{nextSection.durationMin ? `, ${nextSection.durationMin} minutes (its own timer starts when you open it)` : ""}.</p>
-            {nextSection.instructions && <p className="ex-sub" style={{ whiteSpace: "pre-wrap" }}>{nextSection.instructions}</p>}
-            {nextSection.key === "AI_INTERVIEW" && <p className="ex-sub">Answer each question in your own words. You may type, or speak and let the browser transcribe, then edit the text.</p>}
-            <button className="btn btn-primary" disabled={busy} onClick={() => openNext(nextSection.key)}>{busy ? "Opening…" : `Open ${nextSection.label}`}</button>
-          </div>
-        ) : <div className="ex-card ex-muted">Updating…</div>}
+        ) : (
+          <ExamSectionBreak sections={view.sections} next={done ? null : nextSection} busy={busy} overallLeft={overallLeft} onOpen={openNext} onSubmit={() => setDialog({ type: "submit" })} />
+        )}
       </div>
 
       {dialog?.type === "complete" && review && (
