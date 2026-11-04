@@ -11,6 +11,7 @@ const { spawnSync } = require("child_process");
 const path = require("path");
 const { modules } = require("../content/python");
 const { renderLesson } = require("../content/python/render");
+const { starterFor } = require("../content/python/starter");
 
 const SLUG = "python-zero-to-hero";
 const COURSE = {
@@ -141,7 +142,7 @@ async function seedPythonCourse(prisma, { sync = false, plan = false, log = cons
         const found = plan ? null : await prisma.question.findFirst({ where: { moduleCodingTestId: level.id, title: q.title } });
         await take(found, () => prisma.question.create({ data: {
           title: q.title, description: q.statement, difficulty: q.difficulty || "EASY", questionType: "CODING", timeLimitMs: 2000, moduleCodingTestId: level.id, questionStatus: "PUBLISHED",
-          starterCodeByLanguage: q.starter ? { python: q.starter } : undefined,
+          starterCodeByLanguage: { python: starterFor(q) },
           testCases: { create: q.testCases.map((c) => ({ input: c.input, expected: c.expected, isHidden: c.isHidden })) },
         } }), `assessment question ${q.title}`);
       }

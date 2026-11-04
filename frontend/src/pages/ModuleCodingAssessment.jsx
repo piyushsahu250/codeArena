@@ -49,6 +49,14 @@ export default function ModuleCodingAssessment() {
   const shortLandscape = useShortLandscape();
 
   const [status, setStatus] = useState(null); // GET /module-coding/module/:moduleId response
+  // The browser tab names the assessment (it kept the previous page's name, "Dashboard", all through the test) and gives the old title back on leaving.
+  const assessmentTitle = status?.test?.title;
+  useEffect(() => {
+    if (!assessmentTitle) return undefined;
+    const before = document.title;
+    document.title = `${assessmentTitle} · CodeArena`;
+    return () => { document.title = before; };
+  }, [assessmentTitle]);
   const [error, setError] = useState("");
   const [phase, setPhase] = useState("loading"); // loading | preflight | starting | active | result | finalize-failed
   const [readinessReady, setReadinessReady] = useState(false);
