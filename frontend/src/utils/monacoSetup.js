@@ -6,7 +6,8 @@
 // Challenges) hangs on "Loading..." forever. Pointing the loader at the locally bundled
 // monaco-editor instance instead removes that network dependency entirely.
 //
-// Imported once, as a side effect, from main.jsx before the app renders.
+// Imported as a side effect by components/StableCodeEditor.jsx and by every page that uses <Editor> directly (scripts/monacoLoaderRegression.mjs fails CI if an editor skips it). It is NOT imported
+// from main.jsx: the editor code is loaded on demand, only on the pages that show an editor.
 import { loader } from "@monaco-editor/react";
 import * as monaco from "monaco-editor";
 

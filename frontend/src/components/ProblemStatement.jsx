@@ -96,7 +96,7 @@ export default function ProblemStatement({ question }) {
       {(q.inputFormat || q.outputFormat) && (
         <details open style={{ marginTop: 16 }}>
           <summary style={{ cursor: "pointer", fontSize: 12, fontWeight: 700, color: "var(--ink-dim)" }}>INPUT / OUTPUT FORMAT</summary>
-          <div style={{ display: "grid", gridTemplateColumns: q.inputFormat && q.outputFormat ? "1fr 1fr" : "1fr", gap: 12, marginTop: 8 }}>
+          <div style={{ display: "grid", gridTemplateColumns: q.inputFormat && q.outputFormat ? "repeat(auto-fit, minmax(240px, 1fr))" : "1fr", gap: 12, marginTop: 8 }}>
             {q.inputFormat && (
               <div>
                 <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-dim)" }}>INPUT</div>

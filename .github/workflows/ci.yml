@@ -126,6 +126,8 @@ jobs:
         run: node scripts/dragResizeRegression.mjs
       - name: Question palette regression (answered is green, visited and left unanswered is yellow, in every test screen)
         run: node scripts/questionPaletteRegression.mjs
+      - name: Monaco loader regression (every code editor uses the bundled Monaco, so none waits on a CDN)
+        run: node scripts/monacoLoaderRegression.mjs
       - name: Browser voice regression (voice picking, speech chunking, transcript merging, recognition errors)
         run: node scripts/browserSpeechRegression.mjs
       - name: AI error wording regression (a daily AI limit tells the student nothing is lost and when to retry)

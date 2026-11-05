@@ -1,5 +1,6 @@
 import { useRef } from "react";
 import Editor from "@monaco-editor/react";
+import "../utils/monacoSetup"; // points the editor at the bundled Monaco; without it the editor fetches Monaco from a CDN and can sit on "Loading..." forever (see monacoSetup.js)
 
 // A Monaco editor that never overwrites what the student has just typed.
 //

@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import Editor from "@monaco-editor/react";
+import StableCodeEditor from "../StableCodeEditor";
+import { applyPlainTextInputHints } from "../../utils/monacoSetup";
 import api from "../../api";
 import ProblemStatement from "../ProblemStatement";
 import CodeResultBlock from "../CodeResultBlock";
@@ -70,7 +71,7 @@ export default function ExamCodingProblem({ attemptId, item, number, total, payl
             </span>
           </div>
           <div className="ex-code-wrap">
-            <Editor height="46vh" language={languages.find((l) => l.id === language)?.monaco || language} theme={theme === "dark" ? "vs-dark" : "light"} value={code} options={{ minimap: { enabled: false }, fontSize: 14, readOnly: disabled, scrollBeyondLastLine: false, automaticLayout: true, contextmenu: false, quickSuggestions: false, wordWrap: "on" }} onChange={(v) => onChange({ code: v ?? "", language })} />
+            <StableCodeEditor contextKey={`${item.id}|${language}`} onMount={applyPlainTextInputHints} height="46vh" language={languages.find((l) => l.id === language)?.monaco || language} theme={theme === "dark" ? "vs-dark" : "light"} value={code} options={{ minimap: { enabled: false }, fontSize: 14, readOnly: disabled, scrollBeyondLastLine: false, automaticLayout: true, contextmenu: false, quickSuggestions: false, wordWrap: "on" }} onChange={(v) => onChange({ code: v ?? "", language })} />
           </div>
           <div className="ex-row" style={{ marginTop: 10 }}>
             <button type="button" className="btn btn-ghost" disabled={!!busy || disabled || !item.samples?.length || blank} onClick={() => call("run")}>{busy === "run" ? "Running…" : "Run on samples"}</button>
