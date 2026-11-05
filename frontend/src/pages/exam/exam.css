@@ -52,8 +52,15 @@
 .ex-opt input { margin-top: 3px; }
 .ex-palette { display: grid; grid-template-columns: repeat(auto-fill, minmax(38px, 1fr)); gap: 6px; }
 .ex-pal { height: 38px; border-radius: 8px; border: 1px solid var(--line, #e5e7eb); background: transparent; cursor: pointer; font-weight: 600; color: inherit; }
-.ex-pal.answered { background: color-mix(in srgb, var(--success-text, #15803d) 18%, transparent); }
-.ex-pal.current { outline: 2px solid var(--accent, #2563eb); }
+/* green = answered, yellow = visited and left without an answer (skipped), plain = not visited yet; the open question is ringed */
+.ex-pal.answered { background: color-mix(in srgb, var(--success-text, #15803d) 22%, transparent); border-color: var(--success-text, #15803d); color: var(--success-text, #15803d); }
+.ex-pal.skipped { background: color-mix(in srgb, #eab308 46%, transparent); border-color: #ca8a04; }
+.ex-pal.current { outline: 2px solid var(--accent, #2563eb); outline-offset: 1px; }
+.ex-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; list-style: none; margin: 12px 0 0; padding: 0; font-size: 12px; color: var(--text-muted, #6b7280); }
+.ex-legend li { display: inline-flex; align-items: center; gap: 6px; }
+.ex-dot { display: inline-block; width: 12px; height: 12px; border-radius: 4px; border: 1px solid var(--line, #e5e7eb); }
+.ex-dot.answered { background: color-mix(in srgb, var(--success-text, #15803d) 40%, transparent); border-color: var(--success-text, #15803d); }
+.ex-dot.skipped { background: color-mix(in srgb, #eab308 55%, transparent); border-color: #ca8a04; }
 .ex-pal:disabled { opacity: .45; cursor: not-allowed; }
 .ex-textarea { width: 100%; min-height: 200px; resize: vertical; padding: 12px; border-radius: 10px; border: 1px solid var(--line, #e5e7eb); background: transparent; color: inherit; font: inherit; line-height: 1.5; }
 .ex-code-wrap { border: 1px solid var(--line, #e5e7eb); border-radius: 10px; overflow: hidden; }

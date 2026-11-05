@@ -17,6 +17,7 @@ import ProblemStatement from "../components/ProblemStatement";
 import MathText from "../components/MathText";
 import { CODE_LANGUAGES as LANGUAGES, defaultStarter, supportedLanguages } from "../utils/codeEditorDefaults";
 import { beginDrag, sizeAfterKey } from "../utils/dragResize";
+import { paletteStatus, paletteLabel } from "../utils/questionPalette";
 import { getFullscreenElement, onFullscreenChange } from "../utils/fullscreenCompat";
 import { enterFullscreen, releaseFullscreen, isReleasingFullscreen } from "../utils/fullscreenSession";
 
@@ -2018,7 +2019,8 @@ export default function TestTaking() {
       <>
         <div className="exam-palette-legend" style={{ marginBottom: 14 }}>
           <span><span className="exam-palette-legend-dot" style={{ background: "var(--mint)" }} />Answered</span>
-          <span><span className="exam-palette-legend-dot" style={{ background: "var(--ink-dim)" }} />Not answered</span>
+          <span><span className="exam-palette-legend-dot" style={{ background: "#eab308" }} />Skipped</span>
+          <span><span className="exam-palette-legend-dot" style={{ background: "var(--ink-dim)" }} />Not visited</span>
           <span><span className="exam-palette-legend-dot" style={{ background: "var(--review-purple)" }} />Marked for review</span>
           <span><span className="exam-palette-legend-dot" style={{ background: "var(--rust)" }} />Failed (coding)</span>
         </div>
@@ -2034,11 +2036,15 @@ export default function TestTaking() {
             const { answered, marked } = questionStatus(q);
             const verdict = isCoding ? codeVerdicts[q.id] : null;
             const wrong = verdict && verdict.verdict !== "ACCEPTED";
+            // Green = answered, yellow = visited and left without an answer, plain = not visited (utils/questionPalette.js). A coding problem counts as answered for the colour once it has a verdict
+            // or the student has changed the starter code: merely opening it (which the counts above treat as answered) is not an answer.
+            const a = answers[q.id];
+            const starter = a ? (q.starterCodeByLanguage?.[a.language] || defaultStarter(a.language)) : "";
+            const written = isCoding && !!a?.code && a.code.trim() !== "" && a.code.trim() !== String(starter).trim();
+            const status = paletteStatus({ answered: isCoding ? (!!verdict || written) : answered, visited: !!visited[q.id], current: idx === activeIdx, marked, wrong: !!wrong });
             const classes = ["exam-palette-cell"];
+            if (status !== "unseen") classes.push(status);
             if (idx === activeIdx) classes.push("current");
-            else if (marked) classes.push("review");
-            else if (wrong) classes.push("wrong");
-            else if (answered) classes.push("answered");
             return (
               <button
                 key={tq.id}
@@ -2047,7 +2053,7 @@ export default function TestTaking() {
                   setActiveIdx(idx);
                   if (closeOnSelect) setShowMobilePalette(false);
                 }}
-                aria-label={`Question ${idx + 1}, ${answered ? "answered" : "not answered"}${marked ? ", marked for review" : ""}${idx === activeIdx ? ", current question" : ""}`}
+                aria-label={paletteLabel(idx, status, { current: idx === activeIdx })}
                 aria-current={idx === activeIdx ? "true" : undefined}
               >
                 {idx + 1}

@@ -16,6 +16,7 @@ import { mergeTranscript, SPEECH_LANG } from "../../utils/browserSpeech";
 import { createExamAnswerSaver } from "../../utils/examAnswerSaver";
 import { clockOffset, secondsUntil, formatClock, timerTone } from "../../utils/examClock";
 import { countAnswered, reviewSummary, sectionState, nextOpenable, allSectionsDone, examErrorMessage } from "../../utils/examProgress";
+import { paletteStatus, paletteLabel, loadVisited, saveVisited } from "../../utils/questionPalette";
 import "./exam.css";
 
 const LABEL = { TAB_SWITCH: "You left the examination tab", FULLSCREEN_EXIT: "You left fullscreen", COPY_ATTEMPT: "Copying is not allowed", PASTE_ATTEMPT: "Pasting is not allowed", NAVIGATION_ATTEMPT: "Leaving the page is not allowed" };
@@ -54,6 +55,15 @@ export default function ExamSession() {
   const current = view?.current || null;
   const openSection = view?.sections?.find((s) => s.status === "IN_PROGRESS") || null;
   const proctoredActive = proctored && phase === "active";
+
+  // The questions the student has been to, so one they moved past without answering shows as skipped (yellow) in the palette. Kept for the attempt, so a reload does not forget it.
+  const seenKey = `exam-seen:${attemptId}`;
+  const [seen, setSeen] = useState(() => loadVisited(seenKey));
+  const openItemId = current?.items?.[index]?.id;
+  useEffect(() => {
+    if (!openItemId) return;
+    setSeen((s) => { if (s[openItemId]) return s; const next = { ...s, [openItemId]: true }; saveVisited(seenKey, next); return next; });
+  }, [openItemId, seenKey]);
 
   // ---- answer saver -----------------------------------------------------------------------------------------------------------------------------------------------------------
   const saver = useMemo(() => createExamAnswerSaver({
@@ -371,10 +381,16 @@ export default function ExamSession() {
                 <strong>{openSection?.label}</strong>
                 <p className="ex-sub">{review.answered} of {review.total} answered</p>
                 <div className="ex-palette">
-                  {current.items.map((it, i) => (
-                    <button key={it.id} type="button" className={`ex-pal ${countAnswered(current.key, [it], drafts) ? "answered" : ""} ${i === index ? "current" : ""}`} disabled={openSection?.navigation === "FORWARD_ONLY" && i < index} onClick={() => goTo(i)} aria-label={`Question ${i + 1}${countAnswered(current.key, [it], drafts) ? ", answered" : ", not answered"}`}>{i + 1}</button>
-                  ))}
+                  {current.items.map((it, i) => {
+                    const st = paletteStatus({ answered: !!countAnswered(current.key, [it], drafts), visited: !!seen[it.id], current: i === index });
+                    return <button key={it.id} type="button" className={`ex-pal ${st} ${i === index ? "current" : ""}`} disabled={openSection?.navigation === "FORWARD_ONLY" && i < index} onClick={() => goTo(i)} aria-label={paletteLabel(i, st, { current: i === index })} aria-current={i === index ? "true" : undefined}>{i + 1}</button>;
+                  })}
                 </div>
+                <ul className="ex-legend" aria-label="What the colours mean">
+                  <li><i className="ex-dot answered" aria-hidden="true" />Answered</li>
+                  <li><i className="ex-dot skipped" aria-hidden="true" />Skipped</li>
+                  <li><i className="ex-dot unseen" aria-hidden="true" />Not visited</li>
+                </ul>
                 <button className="btn btn-primary" style={{ width: "100%", marginTop: 12 }} onClick={() => setDialog({ type: "complete" })}>Submit section</button>
               </div>
             </aside>

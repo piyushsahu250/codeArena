@@ -124,6 +124,8 @@ jobs:
         run: node scripts/examCodingRegression.mjs
       - name: Drag resize regression (panel dividers inside a test follow the pointer, end on release, work by touch and keyboard)
         run: node scripts/dragResizeRegression.mjs
+      - name: Question palette regression (answered is green, visited and left unanswered is yellow, in every test screen)
+        run: node scripts/questionPaletteRegression.mjs
       - name: Browser voice regression (voice picking, speech chunking, transcript merging, recognition errors)
         run: node scripts/browserSpeechRegression.mjs
       - name: AI error wording regression (a daily AI limit tells the student nothing is lost and when to retry)

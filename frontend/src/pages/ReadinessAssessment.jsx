@@ -15,6 +15,7 @@ import { applyPlainTextInputHints, watchForNonAsciiInput } from "../utils/monaco
 import useIsMobile from "../hooks/useIsMobile";
 import useShortLandscape from "../hooks/useShortLandscape";
 import { editorHeightFor } from "../utils/editorHeight";
+import { paletteStatus, paletteLabel } from "../utils/questionPalette";
 import api, { API_BASE_URL } from "../api";
 
 const QUIZ_TYPES = ["MCQ", "TRUE_FALSE", "MULTISELECT"];
@@ -205,6 +206,12 @@ export default function ReadinessAssessment() {
   }, [assessmentId]);
 
   const current = questions[activeIdx];
+  // The questions the student has been to: one they left without answering shows as skipped (yellow) in the number row.
+  const [visitedIds, setVisitedIds] = useState({});
+  useEffect(() => {
+    const id = questions[activeIdx]?.id;
+    if (id) setVisitedIds((v) => (v[id] ? v : { ...v, [id]: true }));
+  }, [activeIdx, questions]);
   const isQuiz = current && QUIZ_TYPES.includes(current.questionType);
   const isMulti = current?.questionType === "MULTISELECT";
 
@@ -612,16 +619,23 @@ export default function ReadinessAssessment() {
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 16 }}>
           {questions.map((q, i) => {
             const a = answers[q.id] || {};
-            const bg = i === activeIdx ? "var(--mint)" : a.skipped === false ? "#22c55e" : "var(--card-bg, #F7F7F5)";
-            const color = i === activeIdx || a.skipped === false ? "#fff" : "var(--ink)";
+            // green = answered, yellow = visited and left without an answer, plain = not visited; the open question is ringed (utils/questionPalette.js)
+            const st = paletteStatus({ answered: a.skipped === false, visited: !!visitedIds[q.id], current: i === activeIdx });
+            const bg = st === "answered" ? "#22c55e" : st === "skipped" ? "#FACC15" : "var(--card-bg, #F7F7F5)";
+            const color = st === "answered" ? "#fff" : st === "skipped" ? "#422006" : "var(--ink)";
             const size = isMobile ? 28 : 32;
             return (
-              <button key={q.id} type="button" onClick={() => setActiveIdx(i)}
-                style={{ width: size, height: size, borderRadius: 6, border: "1px solid var(--line)", background: bg, color, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+              <button key={q.id} type="button" onClick={() => setActiveIdx(i)} aria-label={paletteLabel(i, st, { current: i === activeIdx })} aria-current={i === activeIdx ? "true" : undefined}
+                style={{ width: size, height: size, borderRadius: 6, border: st === "skipped" ? "1px solid #CA8A04" : "1px solid var(--line)", background: bg, color, fontSize: 12, fontWeight: 700, cursor: "pointer", outline: i === activeIdx ? "2px solid var(--ink)" : "none", outlineOffset: 1 }}>
                 {i + 1}
               </button>
             );
           })}
+        </div>
+        <div className="mono" style={{ display: "flex", gap: 14, flexWrap: "wrap", fontSize: 11, color: "var(--ink-dim)", marginTop: 8 }} aria-label="What the colours mean">
+          <span><span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 3, background: "#22c55e", marginRight: 5 }} />Answered</span>
+          <span><span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 3, background: "#FACC15", border: "1px solid #CA8A04", marginRight: 5 }} />Skipped</span>
+          <span><span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 3, background: "var(--card-bg, #F7F7F5)", border: "1px solid var(--line)", marginRight: 5 }} />Not visited</span>
         </div>
 
         <div className="card" style={{ marginTop: 16, padding: isMobile ? 14 : 24 }}>

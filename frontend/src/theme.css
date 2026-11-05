@@ -729,10 +729,11 @@ input::placeholder, textarea::placeholder { color: var(--ink-dim); }
   transition: transform 0.08s ease, border-color 0.12s ease;
 }
 .exam-palette-cell:hover { transform: translateY(-1px); }
-.exam-palette-cell.current { border-color: var(--ink); box-shadow: 0 0 0 2px var(--ink) inset; }
 .exam-palette-cell.answered { background: var(--success-bg); border-color: var(--mint); color: var(--mint); }
+.exam-palette-cell.skipped { background: #FEF3C7; border-color: #CA8A04; color: #854D0E; } /* visited and left without an answer */
 .exam-palette-cell.review { background: var(--review-bg); border-color: var(--review-purple); color: var(--review-purple); }
 .exam-palette-cell.wrong { background: var(--danger-bg); border-color: var(--rust); color: var(--rust); }
+.exam-palette-cell.current { border-color: var(--ink); box-shadow: 0 0 0 2px var(--ink) inset; }
 .exam-palette-cell-flag {
   position: absolute; top: -4px; right: -4px; width: 13px; height: 13px; border-radius: 50%;
   background: var(--review-purple); color: #fff; font-size: 8px; display: flex; align-items: center; justify-content: center;
