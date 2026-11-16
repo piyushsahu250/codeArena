@@ -134,6 +134,8 @@ test("function-mode starter code and language availability follow the C conventi
 });
 
 test("regression: the other languages still run through the same judge", async (t) => {
+  // The judge runs every program under GNU time (/usr/bin/time), which exists on Linux (CI, the production image) but not on Windows or macOS. Skipped there, never faked.
+  if (!require("node:fs").existsSync("/usr/bin/time")) return t.skip("GNU /usr/bin/time is not installed on this machine (the judge is Linux-only)");
   if (has("python3")) accepted(await judgeSubmission({ language: "python", code: "print(int(input())+1)", testCases: [tc("4", "5")], timeLimitMs: 4000 }), "python");
   else t.diagnostic("python3 not installed: skipped");
   if (has("node")) accepted(await judgeSubmission({ language: "javascript", code: "console.log(Number(require('fs').readFileSync(0,'utf8'))+1)", testCases: [tc("4", "5")], timeLimitMs: 4000 }), "javascript");
