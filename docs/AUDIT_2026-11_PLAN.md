@@ -40,7 +40,7 @@ Not changed on purpose: the `Dockerfile` still runs `npm install` (it honors the
 
 ## 4. Order of work and stop points
 
-1. Finish the pipeline on \`ci/audit-2026-11\` (all four jobs, now with \`npm ci\`).
+1. Finish the pipeline on `ci/audit-2026-11` (all four jobs, now with `npm ci`).
 2. N1 (extended verification run) first: it turns "unverified" into evidence for the most modules at the lowest risk.
 3. N3, N2, N4 in that order, one commit and one CI run each.
 4. N5, N6 alongside.
