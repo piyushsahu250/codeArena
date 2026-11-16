@@ -637,3 +637,88 @@ test("a platform-wide examination that one institute can no longer be served say
     await prisma.subject.deleteMany({ where: { name: { contains: tag } } }).catch(() => {});
   }
 });
+
+test("coding in Java, C, C++ and JavaScript through the exam API: Run shows only the samples, Submit grades the hidden cases without revealing them, the answer persists, a compile error is explained", async (t) => {
+  if (!ready) return t.skip("not ready");
+  // Audit 2026-11 (A2-04/N3): until now only Python was driven through the HTTP API. The judge is in this process, so it needs Linux with GNU time and the toolchain of each language.
+  const { spawnSync } = require("node:child_process");
+  const has = (cmd, arg = "--version") => { try { return spawnSync(cmd, [arg], { encoding: "utf8" }).status === 0; } catch { return false; } };
+  if (process.platform !== "linux" || !require("node:fs").existsSync("/usr/bin/time")) return t.skip("the judge needs Linux with GNU time");
+  const langs = [["java", has("javac", "-version") && has("java", "-version")], ["c", has("gcc")], ["cpp", has("g++")], ["javascript", true]].filter(([, ok]) => ok).map(([l]) => l);
+  if (process.env.REQUIRE_INTEGRATION === "1") assert.equal(langs.length, 4, `the CI runner must have all four toolchains, found ${langs.join(",")}`);
+
+  const SUM = {
+    java: "import java.util.*; public class Main { public static void main(String[] x){ Scanner s=new Scanner(System.in); int a=s.nextInt(), b=s.nextInt(); System.out.println(a+b); } }",
+    c: '#include <stdio.h>\nint main(void){ int a,b; if(scanf("%d %d",&a,&b)!=2) return 1; printf("%d\\n",a+b); return 0; }',
+    cpp: "#include <iostream>\nint main(){ int a,b; std::cin>>a>>b; std::cout<<a+b<<std::endl; return 0; }",
+    javascript: 'const [a,b]=require("fs").readFileSync(0,"utf8").trim().split(/\\s+/).map(Number); console.log(a+b);',
+  };
+  // passes the visible sample (1 2 -> 3) and nothing else: only the hidden case can tell it is wrong
+  const HARDCODED = {
+    java: "public class Main { public static void main(String[] x){ System.out.println(3); } }",
+    c: '#include <stdio.h>\nint main(void){ puts("3"); return 0; }',
+    cpp: '#include <iostream>\nint main(){ std::cout<<3<<std::endl; return 0; }',
+    javascript: "console.log(3);",
+  };
+  const BROKEN = { java: "public class Main { public static void main(String[] a){ int x = ; } }", c: "int main(void){ int x = ; return 0; }", cpp: "int main(){ int x = ; return 0; }" };
+  const revealsHidden = (raw) => /20 22/.test(raw) || /"(expected|actual|input)":\s*"42/.test(raw);
+
+  const sections = blueprint().sections.map((s) => (s.key === "CODING" ? { ...s, maxSubmissionsPerProblem: 10 } : s));
+  const examId = await publishedExam({ sections });
+  const a = await startAndBegin(examId, F.tokens.s1, "PRACTICE");
+  const apt = await doObjective(a, F.tokens.s1, "APTITUDE", F.aptitude);
+  assert.equal((await complete(a, F.tokens.s1, "APTITUDE", apt.answered)).status, 200);
+  const tech = await doObjective(a, F.tokens.s1, "TECHNICAL", F.technical);
+  assert.equal((await complete(a, F.tokens.s1, "TECHNICAL", tech.answered)).status, 200);
+  const co = await open(a, F.tokens.s1, "CODING");
+  assert.equal(co.status, 200, co.raw);
+  const problem = co.body.current.items[0];
+  assert.ok(!revealsHidden(co.raw), "opening the section never reveals the hidden case");
+  const base = `/api/exams/attempts/${a.attemptId}/items/${problem.id}`;
+
+  for (const lang of langs) {
+    // Run: the visible sample only
+    const ran = await request("POST", `${base}/run`, F.tokens.s1, { language: lang, code: SUM[lang] }, a.session);
+    assert.equal(ran.status, 200, `${lang} run: ${ran.raw}`);
+    assert.equal(ran.body.result.verdict, "ACCEPTED", `${lang} run: ${ran.raw}`);
+    assert.equal(ran.body.result.totalCases, 1, `${lang}: Run uses the one visible sample, not the hidden case`);
+    assert.ok(!revealsHidden(ran.raw), `${lang}: Run must not reveal the hidden case`);
+
+    // a program that only knows the sample: Run is happy, Submit finds the hidden case, and says how many passed without showing it
+    const ranHard = await request("POST", `${base}/run`, F.tokens.s1, { language: lang, code: HARDCODED[lang] }, a.session);
+    assert.equal(ranHard.body.result.verdict, "ACCEPTED", `${lang}: the hard-coded program passes the visible sample`);
+    const subHard = await request("POST", `${base}/submit-code`, F.tokens.s1, { language: lang, code: HARDCODED[lang] }, a.session);
+    assert.equal(subHard.status, 200, `${lang} submit: ${subHard.raw}`);
+    assert.ok(["DONE", "PENDING"].includes(subHard.body.submission.status), subHard.raw);
+    if (subHard.body.submission.status === "DONE") {
+      assert.equal(subHard.body.submission.totalCases, 2, `${lang}: Submit grades the visible and the hidden case`);
+      assert.equal(subHard.body.submission.passedCases, 1, `${lang}: the hidden case catches the hard-coded answer`);
+      assert.notEqual(subHard.body.submission.verdict, "ACCEPTED", `${lang}: a program that fails a hidden case is not accepted`);
+    }
+    assert.ok(!revealsHidden(subHard.raw), `${lang}: Submit must not reveal the hidden case`);
+
+    // the real solution: accepted on both, and stored with its code and verdict
+    const sub = await request("POST", `${base}/submit-code`, F.tokens.s1, { language: lang, code: SUM[lang] }, a.session);
+    assert.equal(sub.status, 200, `${lang} submit: ${sub.raw}`);
+    if (sub.body.submission.status === "DONE") {
+      assert.equal(sub.body.submission.verdict, "ACCEPTED", `${lang}: ${sub.raw}`);
+      assert.equal(sub.body.submission.passedCases, 2);
+    }
+    assert.ok(!revealsHidden(sub.raw));
+    const saved = (await view(a, F.tokens.s1));
+    assert.ok(!revealsHidden(saved.raw), `${lang}: reloading the attempt does not reveal the hidden case`);
+    const ans = saved.body.current.answers.find((x) => x.itemRef === problem.id);
+    assert.equal(ans.payload.language, lang, `${lang}: the language is stored`);
+    assert.equal(ans.payload.code, SUM[lang], `${lang}: the submitted code survives a reload`);
+    if (sub.body.submission.status === "DONE") assert.equal(ans.evaluation.verdict, "ACCEPTED", `${lang}: the verdict is stored with the answer`);
+
+    // a compile error is explained (Run), with no server path in it
+    if (BROKEN[lang]) {
+      const bad = await request("POST", `${base}/run`, F.tokens.s1, { language: lang, code: BROKEN[lang] }, a.session);
+      assert.equal(bad.status, 200, bad.raw);
+      assert.equal(bad.body.result.verdict, "COMPILE_ERROR", `${lang}: ${bad.raw}`);
+      assert.ok(bad.body.result.errorSummary && bad.body.result.errorSummary.message, `${lang}: the compile error is explained`);
+      assert.ok(!/\/tmp\/judge-|\/home\/runner|\/app\//.test(bad.raw), `${lang}: no server path in the error`);
+    }
+  }
+});
