@@ -1,6 +1,6 @@
 # Backup & Recovery
 
-**Documentation Version:** 1.0.0 · **Last Updated:** 2026-08-08
+**Documentation Version:** 1.1.0 · **Last Updated:** 2026-11-16
 
 ## Documentation Backup vs. Data Backup — Read This Distinction First
 
@@ -14,31 +14,37 @@ Contains: architecture description, feature inventory, database schema descripti
 
 ## B. Actual Data Backup
 
-Contains: the real PostgreSQL database (student/staff/institute records, attendance, results, question banks, certificates, audit logs — everything in [DATABASE.md](DATABASE.md)) and any externally-linked uploaded documents.
+> **Updated 2026-11-16.** The earlier text of this section (written 2026-08-08 for the previous Render host) said no scheduled backup existed. Production now runs on AWS and the state below was **read from AWS and the host with read-only calls on 2026-11-16** (audit `docs/AUDIT_2026-11_PHASE2.md`, finding A2-01). Nothing here was changed by the audit.
 
-### What Exists
+Contains: the real PostgreSQL database (student/staff/institute records, attendance, results, question banks, certificates, audit logs: everything in [DATABASE.md](DATABASE.md)). Uploaded images (question images) live in S3, not in the database.
 
-**A single on-demand, admin-triggered database dump route**: `GET /api/backup/database` (ADMIN only, +Institute scoping present on the route though a full `pg_dump` is realistically a platform-wide operation — see [KNOWN_ISSUES.md](KNOWN_ISSUES.md)'s note on this). Shells out to `pg_dump` against `DATABASE_URL`, buffers the entire dump in memory, and returns it as a downloadable file. Implementation: `backend/src/routes/backup.js`.
+### What exists (verified)
 
-A separate **Export Center** (`GET /api/export/:entity`, ADMIN/STAFF/CLERK +Institute) provides CSV/Excel/JSON exports of specific entities (students, staff, results, certificates, question banks, etc.) — this is a data-export feature for reporting/portability, **not a restorable database backup**.
+| Layer | What it is | Evidence on 2026-11-16 |
+|---|---|---|
+| **RDS automated backups** | RDS PostgreSQL 18.6 instance `codearena-db` (`db.t4g.micro`, 20 GB gp3, encrypted, private, single-AZ). Daily automated snapshot in the 18:20-18:50 UTC window and **point-in-time recovery for the last 7 days** | `BackupRetentionPeriod` 7; latest restorable time within minutes of the check; automated snapshots listed for each of the previous days |
+| **RDS manual snapshots** | Taken by hand before risky changes | `pre-publish-hierarchy-20261007-0356` (2026-10-06), `codearena-db-manual-2026-10-28`. Manual snapshots do not expire |
+| **Nightly logical dump to S3** | `/root/backup-db.sh` on the application host, run by cron at **20:00 UTC daily**: reads the connection string from SSM Parameter Store, `pg_dump --format=custom` (in a `postgres:18` container), refuses a dump under 1,000 bytes, uploads to `s3://codearena-backups-640538431170/`, confirms the object exists, and runs `pg_restore --list` as a structural check (1,062 entries) | Log shows a clean run on 2026-11-15; 32 objects in the bucket (about 34 MB each); a copy of the script is kept in this repository at `scripts/aws/backup-db.sh` |
+| **S3 bucket protection** | Default encryption AES256; all public access blocked; lifecycle rule `expire-old-backups` deletes objects after **30 days**; **versioning is not enabled** | read with `s3api` |
+| **Admin download** | `GET /api/backup/database` still exists (ADMIN, on demand) | route list |
+| **Export Center** | `GET /api/export/:entity`: CSV/Excel/JSON of specific entities | route list |
 
-### What Does NOT Exist
+### What is NOT proven or not in place
 
-- **No automated/scheduled database backup.** Nothing runs `pg_dump` on a timer. A backup only happens when an Admin manually visits the Backups page and triggers one.
-- **No verified restore procedure documented in this codebase.** The `pg_dump` route produces a dump file; there is no corresponding "restore from dump" route or documented `psql`/`pg_restore` runbook found in this repository.
-- **No off-site/redundant storage of backups.** A triggered dump is downloaded to whoever's browser requested it — it is not automatically stored anywhere else (S3, another region, etc.), as far as this codebase shows.
-- **No file-storage backup mechanism** for uploaded documents (though most documents are stored as external links per this session's earlier audit — the "storage" being backed up would be whatever external service hosts those links, which this platform does not control).
+- **A restore has never been tested.** The nightly job proves a dump is structurally readable (`pg_restore --list`); nothing shows a dump or snapshot restored into a scratch database and checked. Until one is, treat recovery time and completeness as unproven. The script even keeps the latest dumps on the host "for restore test", and none has been done.
+- **Everything is in one AWS region and one account.** No cross-region copy of the S3 dumps or the RDS snapshots.
+- **The RDS instance is single-AZ with deletion protection off.** An instance failure is an outage until restore; deleting the instance by mistake would also delete its automated backups (manual snapshots survive).
+- **The host copy of the script is the only deployed copy.** It lives at `/root/backup-db.sh` (last modified 2026-09-29; its comments still mention Neon). The repository copy is for review and version control; changing the host copy needs an approved change.
+- **Dumps accumulate on the host.** Ten daily dumps (about 34 MB each) sat in `/root` and are never pruned. S3 is pruned (30 days); the host is not.
+- No file-storage backup for question images beyond S3's own durability (no versioning).
 
-### What This Means Practically
+### Recommended next steps (none are done; each changes infrastructure and needs approval)
 
-**If the production database were lost or corrupted right now, recovery would depend entirely on whatever backup Render's own managed-Postgres offering provides at the infrastructure level** — this codebase's own backup capability is manual-trigger-only and has no automated cadence. **This is a real, standing operational gap**, not a hypothetical one. See [KNOWN_ISSUES.md](KNOWN_ISSUES.md) KI-006.
-
-## Recommendations (not implemented — flag to the user, do not silently build)
-
-- A scheduled job (or a Render Cron Job, if available on the current plan) that triggers `pg_dump` on a regular cadence and uploads the result somewhere durable and separate from the primary database.
-- A documented, tested restore procedure.
-- Verification that Render's managed PostgreSQL plan includes its own point-in-time-recovery or automated snapshots — if so, that may already substantially cover this gap, but it was **not verified during this documentation pass** since it's outside this repository's code.
+1. One documented **restore drill** into a temporary RDS instance from the latest snapshot and from the latest S3 dump; record the time taken and the row counts compared with production; delete the temporary instance.
+2. Enable **deletion protection** on `codearena-db`; decide on Multi-AZ and on a larger instance class (see audit finding A2-17).
+3. Enable **S3 versioning** (with a lifecycle for noncurrent versions) and consider cross-region replication of the bucket.
+4. Prune host dumps in the script, and move it to a managed place (SSM document or a scheduled job) so it is not a single file on one server.
 
 ## Before Any Schema or Data-Touching Change
 
-Given the backup gap above, treat every non-additive schema change (see [DATABASE.md](DATABASE.md) §1) and every bulk data-correction task as higher-risk than it would be on a platform with automated backups. Prefer additive/reversible changes; when a destructive change is genuinely necessary, ask the user to trigger a manual backup via the existing Admin Backups page first.
+Backups exist (section B), but a restore is untested, so treat every non-additive schema change (see [DATABASE.md](DATABASE.md) §1) and every bulk data-correction task as higher-risk than it would be on a platform with automated backups. Prefer additive/reversible changes; when a destructive change is genuinely necessary, ask the user to trigger a manual backup via the existing Admin Backups page first.

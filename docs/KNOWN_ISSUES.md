@@ -43,6 +43,7 @@ Historical entries are never deleted from this file — if an issue is later fix
 - **Module:** Infrastructure / Backups
 - **Problem:** The only database backup mechanism is an on-demand, admin-triggered `pg_dump` route (`GET /api/backup/database`). There is no scheduled/automatic backup job. See [BACKUP_AND_RECOVERY.md](BACKUP_AND_RECOVERY.md).
 - **Status:** Confirmed absent, not a bug — a standing infrastructure gap the user has been made aware of, not something silently assumed to exist.
+- **Update 2026-11-16:** superseded for the AWS production host. Backups now exist in two layers (RDS 7-day point-in-time recovery plus daily snapshots, and a nightly `pg_dump` to S3), verified read-only. **What remains open:** no restore has ever been tested, no cross-region copy, single-AZ database without deletion protection. See [BACKUP_AND_RECOVERY.md](BACKUP_AND_RECOVERY.md) and audit findings A2-01, A2-17, A2-18 in [AUDIT_2026-11_PHASE2.md](AUDIT_2026-11_PHASE2.md).
 
 ### KI-007 — Documentation itself has known coverage gaps
 - **Date identified:** 2026-08-08 (this documentation pass)
