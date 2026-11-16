@@ -49,13 +49,10 @@ jobs:
       # it's a missing-system-library build failure, not an actual npm dependency conflict. The
       # production Docker build never hits this because its Dockerfile already has this step.
       - run: sudo apt-get update -o Acquire::Retries=3 && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev libpixman-1-dev
-      # npm ci (not npm install) requires package-lock.json to exactly match package.json, and
-      # this repo's lockfiles have drifted out of sync with their package.json (dependencies added
-      # over time without a local `npm install` to regenerate the lock — this environment has no
-      # local Node/npm). Render's own Dockerfile already uses `npm install` for the same reason,
-      # so this matches production rather than failing on a pre-existing packaging mismatch that
-      # has no actual effect on what ships.
-      - run: npm install
+      # npm ci installs exactly what package-lock.json says and FAILS if the lock and package.json disagree. The lockfiles had drifted (the backend lock listed 124 packages and lacked about
+      # twenty direct dependencies), so this step used `npm install`, which silently resolves whatever is newest. They were regenerated in the 2026-11 audit; from now on a dependency added to
+      # package.json without regenerating the lock (`npm install --package-lock-only`) fails here instead of shipping unlocked.
+      - run: npm ci
       - name: Validate Prisma schema
         run: npx prisma validate
       - run: npx prisma generate
@@ -88,13 +85,10 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: frontend/package-lock.json
-      # npm ci (not npm install) requires package-lock.json to exactly match package.json, and
-      # this repo's lockfiles have drifted out of sync with their package.json (dependencies added
-      # over time without a local `npm install` to regenerate the lock — this environment has no
-      # local Node/npm). Render's own Dockerfile already uses `npm install` for the same reason,
-      # so this matches production rather than failing on a pre-existing packaging mismatch that
-      # has no actual effect on what ships.
-      - run: npm install
+      # npm ci installs exactly what package-lock.json says and FAILS if the lock and package.json disagree. The lockfiles had drifted (the backend lock listed 124 packages and lacked about
+      # twenty direct dependencies), so this step used `npm install`, which silently resolves whatever is newest. They were regenerated in the 2026-11 audit; from now on a dependency added to
+      # package.json without regenerating the lock (`npm install --package-lock-only`) fails here instead of shipping unlocked.
+      - run: npm ci
       - run: npm run build
       - name: Keyboard regression (typing keys are never intercepted)
         run: node scripts/keyboardRegression.mjs
@@ -218,7 +212,7 @@ jobs:
       - name: Backend install, schema, seed
         working-directory: backend
         run: |
-          npm install
+          npm ci
           npx prisma generate
           npx prisma db push --accept-data-loss --skip-generate
           npm run seed
@@ -334,7 +328,7 @@ jobs:
       - name: Build the SPA and serve it
         working-directory: frontend
         run: |
-          npm install
+          npm ci
           npm run build
           nohup npx vite preview --port 5173 --strictPort --host 127.0.0.1 > ../preview.log 2>&1 &
           for i in $(seq 1 30); do curl -fs http://127.0.0.1:5173/ >/dev/null && break; sleep 1; done
