@@ -98,10 +98,15 @@ jobs:
           code=0
           node --test test/judgeLanguages.test.js test/judgeC.test.js test/pythonJudge.test.js test/judgeErrors.test.js test/judgeEnv.test.js > /tmp/judge.out 2>&1 || code=$?
           tail -n 30 /tmp/judge.out
+          # the counts are published as an annotation (job logs need a GitHub sign-in, annotations do not), with the toolchain that ran them
+          counts=$(grep -E "^ℹ (tests|suites|pass|fail|cancelled|skipped|todo) " /tmp/judge.out | tr -s "[:space:]" " " | sed "s/ℹ //g")
+          echo "::notice title=judge tests on gcc $(gcc -dumpversion), $(java -version 2>&1 | head -1 | cut -d'"' -f2), $(python3 --version)::$counts"
           if [ "$code" != 0 ]; then
             msg=$(grep -E -A7 "^ *not ok|^ *error: " /tmp/judge.out | grep -v "^--$" | head -40 | tr -s "[:space:]" " " | cut -c1-3000)
             echo "::error title=judge tests failed on the production toolchain::$msg"
           fi
+          # every toolchain is installed in this job, so a skipped test is a test that did not run; named in the annotation above and warned about here (a few tests skip by design: they need the production container)
+          if grep -qE "^ℹ skipped [1-9]" /tmp/judge.out; then echo "::warning::some judge tests were skipped on the production toolchain"; fi
           exit $code
 
   frontend:
@@ -202,6 +207,11 @@ jobs:
         run: npx --yes oxlint@1.88.0 -c frontend/.oxlintrc.json frontend/src
       - name: Backend undefined variables
         run: npx --yes oxlint@1.88.0 -c backend/.oxlintrc.json backend/src backend/scripts
+      # A workflow file that is not valid YAML does not fail anywhere visible: GitHub records a run with no jobs. extended-verification.yml was in that state (an unquoted ": " in a step name) and
+      # silently ran nothing until the 2026-11 audit noticed the empty runs. Parsing every workflow here makes that a red check.
+      - name: Workflow files are valid YAML
+        run: |
+          for f in .github/workflows/*.yml; do npx --yes js-yaml@4.1.0 "$f" > /dev/null || { echo "::error file=$f::not valid YAML"; exit 1; }; done
 
   # The real thing: a throwaway Postgres, the real API and the built SPA, then the browser suite (login, role access, every page on phone and laptop,
   # dashboards, exam journeys, fullscreen, accessibility, dark-mode contrast, every lesson) and the database-backed verification scripts.

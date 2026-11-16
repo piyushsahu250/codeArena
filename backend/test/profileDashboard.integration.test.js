@@ -28,7 +28,8 @@ function request(method, path, token, body) {
     req.end();
   });
 }
-const tokenFor = (u) => jwt.sign({ id: u.id, role: u.role, email: u.email }, process.env.JWT_SECRET, { expiresIn: "30m" });
+// real tokens carry the name too (utils/sessions.js); the CGPA route records req.user.name
+const tokenFor = (u) => jwt.sign({ id: u.id, role: u.role, email: u.email, name: u.name }, process.env.JWT_SECRET, { expiresIn: "30m" });
 const eq = (actual, expected, message) => assert.equal(actual, expected, `${message || ""} | last call: ${lastCall}`);
 
 let ready = false;

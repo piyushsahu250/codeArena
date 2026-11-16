@@ -130,3 +130,43 @@ Everything below was read with read-only calls (SSM command that prints no secre
 | Logs | 0 uncaught-exception or unhandled-rejection lines and 0 database connection errors in the last 400 backend log lines |
 
 What this changes: the October-era claim of no backups is superseded (A2-01); the dependency alarm from `npm audit` is a lockfile artefact for the backend (A2-02); capacity is limited more by the 1 GiB database and the 2-vCPU shared host than by code (A2-05, A2-17); the real remaining backup risk is that no restore was ever tested (A2-18).
+
+## 8. Follow-up findings (2026-11-16, second pass)
+
+### 8.1 Core dumps on the host (A2-21, VERIFIED read-only; nothing deleted)
+
+| Observation | Evidence |
+|---|---|
+| Where | `systemd-coredump` store `/var/lib/systemd/coredump` (owner root:root, mode 755); the kernel pipes cores to `systemd-coredump` (`core_pattern`), so the judge container's crashes land on the **host**, outside Docker; not in a container volume and not in the backup job |
+| Files present now | 11 files, 2.3 MB in total (13 KB to 712 KB), every file `root:root 640`; only root can read them. The store is aged out by systemd-tmpfiles after **3 days** (`d /var/lib/systemd/coredump 0755 root root 3d`) |
+| What they are | All 11 were written between 09:30 and 09:41 UTC on 2026-11-16, i.e. by this audit's own judge test runs (synthetic crash programs run as the sandbox uid 10001, and Node memory tests) before `ulimit -c 0` was in the candidate code. They hold synthetic test programs only; no student submission is among the files still on disk |
+| Older dumps | The journal lists 83 crash records since 2026-09-30 (11 with a file, 10 with `none`, 62 older ones). For all 62 older ones the core file is already gone (aged out by the 3-day rule); only the metadata remains (time, signal, the program path `/tmp/judge-<random>/sol_bin`). The metadata contains no input or output. Real student crashes before 2026-10-26 therefore left no file today |
+| Exposure | While a file existed (up to 3 days) it held the crashed program's memory, which can include its test input. Readable by root only. Not a remote exposure; relevant if the host disk or a snapshot is shared, because the root volume is not encrypted (A2-19) |
+| Effect of `ulimit -c 0` | After the candidate wrapper ran, the same kind of crashes (SIGSEGV, SIGABRT, Node abort) are logged with `COREFILE none`: the crash is still recorded as metadata but no memory image is stored (10 records on 2026-11-16 09:43 to 09:44, against 11 `present` records minutes earlier). The wrapper runs `ulimit -c 0` before the program and the new test `a submission runs with core dumps disabled` has the program read its own `RLIMIT_CORE` (soft and hard both 0) |
+| Not done | Nothing was deleted. The 11 files expire by themselves within 3 days; a manual `coredumpctl`/`rm` cleanup is not needed and was not run. Production still needs the judge fix deployed for real student crashes to stop being stored |
+
+### 8.2 Secret and personal-data scan of the public repository and its full history (A2-23, VERIFIED)
+
+Method: every line added in any commit of any ref (1,437 commits, 1,307 tracked files at HEAD) was matched against 17 patterns (AWS access keys and secret keys, private key blocks, Google, GitHub, Slack, Stripe, Razorpay, SendGrid and Resend keys, JWTs, database URLs with passwords, named secret assignments, AWS account ids, e-mail addresses, mobile numbers, password literals). Findings are reported by class, file and a 6-character hash of the value; **no value was printed or copied**.
+
+| Class | Result | Judgement |
+|---|---|---|
+| AWS access key ids, AWS secret keys, private key blocks, GitHub, Slack, Stripe, Razorpay, SendGrid and Resend tokens, Google API keys | **0 found** in the whole history | No credential rotation is indicated by this scan |
+| `.env`, `.pem`, `.key`, keystore, `google-services` files ever tracked | none at HEAD (file-name check) | Good |
+| Database URLs with a password | 2 (both in `README.md`, host `localhost`, 16-character passwords) | Local development passwords in documentation. Low risk; rotate if either was ever reused anywhere |
+| Hard-coded passwords in 8 maintenance scripts (`mkTemp*Check.js`, `createTempVisualCheckUser.js`; 15 to 18 characters; the same 18-character value appears in 7 of them) that create STAFF, STUDENT or INSTITUTE_ADMIN users with `@example.invalid` e-mail addresses and **no clean-up in the script** | present at HEAD and in history | **Medium.** If any of these scripts was ever run against production and the user was not deleted afterwards, a known credential exists. This audit could not check production data (no database query was run). Recommended read-only check: count users whose e-mail ends in `@example.invalid` in production; delete the scripts or read the password from the environment |
+| Secret-looking assignments | 7, all test fixtures (`judgeEnv`, `judgeC`, `judgeLanguages`, `pythonJudge` tests that plant a fake secret to prove the judge hides it) and 2 in `docs/CLOUD_RUN_MIGRATION.md` (placeholders) | Expected |
+| JWT-shaped strings | 3, all in `backend/content/python/m17.js` (a course example about tokens) | Example data, not a live token |
+| AWS account id | 27 occurrences (9 distinct ARN strings) in docs and policy files under `docs/` and `docs/aws/`, plus `scripts/aws/backup-db.sh` and the backup bucket name | Identifier, not a secret, but it narrows an attacker's work. See the private-repository recommendation |
+| E-mail addresses | gmail addresses of the maintainers in 10 tracked files (schema comment, `migrateSuperAdmin.js`, three scripts, five docs, `index.html`, `Contact.jsx`); the last two (`index.html`, `Contact.jsx`) look like public contact addresses; not confirmed with the owner. College and `example.*` addresses elsewhere are fixtures | Personal data of the maintainers. The super-admin address in `migrateSuperAdmin.js` and the schema comment names the highest-privilege account |
+| Mobile numbers | 23 distinct values; every one listed by the scan is in tests, course content or fixtures (10-digit sample numbers) | None identified as a real person's number; the values were not individually reviewed |
+
+Recommendation (not applied): make the repository **private**; if it must stay public, remove the AWS account id, instance id and backup bucket name from docs, the maintainer addresses from source, and the temporary-user scripts. Rewriting history is not needed for secrets (none found) and would invalidate every branch and open reference.
+
+### 8.3 CI findings
+
+| Id | Finding | Status |
+|---|---|---|
+| A2-26 | `extended-verification.yml` was **invalid YAML** from commit 68a34ce (an unquoted `: ` in a step name). GitHub records such a workflow as a run with no jobs, so the 67-script job, the role matrix and the attendance and not-found tests silently ran nothing on two pushes | Fixed (name quoted). A new lint step parses every workflow file and fails on bad YAML; proved to fail on the old file |
+| A2-27 | The API-level four-language test failed in the integration job: every Java run ended as a runtime error after 14 ms. Cause: the judge caps processes with `ulimit -u 64`, which counts every process of the OS user; the runner user owns more, so a JVM cannot start its threads. The unit tests already raised the cap; the API process did not | Fixed in CI configuration only (`JUDGE_MAX_PROCESSES=4096` for the CI API process). Production runs submissions as a dedicated user, where 64 is correct. Not a product bug |
+| A2-22 | CI judge tests ran on gcc 15, Java 25, Python 3.14 | Fixed: new job `judge-production-toolchain` runs the judge test files in Debian 12 (the base of the production image) with gcc 12, OpenJDK 17 and Python 3.11, and fails if any version differs. The ubuntu-latest `backend` job stays as the newer-toolchain compatibility check |

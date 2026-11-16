@@ -27,6 +27,8 @@ jobs:
         options: >-
           --health-cmd "pg_isready -U ci" --health-interval 5s --health-timeout 5s --health-retries 10
     env:
+      # the judge's process cap (ulimit -u) counts every process of the runner's user, which stops a JVM from starting (see ci.yml, audit A2-27); scripts that call the judge in-process need it too
+      JUDGE_MAX_PROCESSES: "4096"
       DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
       DIRECT_DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
       JWT_SECRET: ci-only-jwt-secret-not-used-anywhere-else-0123456789
@@ -77,6 +79,8 @@ jobs:
         run: |
           node scripts/ciExtendedFixtures.js
           node scripts/seedReadinessSubjects.js || echo "readiness subjects seed did not complete"
+          # the readiness scripts need a subject with a question pool; these are the repository's own idempotent content scripts (their coding questions are only written if the real judge accepts every reference solution)
+          for s in addDsaFoundationQuestions addDsaApplicationMcqs addDsaFoundationCoding2; do node scripts/$s.js > /tmp/$s.out 2>&1 && echo "$s ok" || { echo "$s did not complete:"; tail -5 /tmp/$s.out | cut -c1-200; }; done
           node scripts/seedJavaPractice.js || echo "java practice seed did not complete"
       - name: Run the scripts and report each one (never fails the job)
         working-directory: backend
@@ -137,9 +141,14 @@ jobs:
           code=0; node --test --test-timeout=240000 test/attendance.integration.test.js test/notFound.integration.test.js test/profileDashboard.integration.test.js > /tmp/att.out 2>&1 || code=$?
           tail -n 40 /tmp/att.out | cut -c1-220
           enc() { sed -e 's/%/%25/g' | awk 'BEGIN{ORS="%0A"} {gsub(//,"%0D"); print}'; }
-          MSG=$(grep -E '^(not )?ok|^# (pass|fail)|^ℹ (pass|fail)|error:|expected|actual|AssertionError|last call' /tmp/att.out | cut -c1-300 | head -40 | enc)
+          MSG=$( { grep -E '^(not )?ok|^# (pass|fail)|^ℹ (pass|fail)' /tmp/att.out; grep -E -A14 '^not ok' /tmp/att.out | grep -E 'error:|expected|actual|AssertionError|last call|at .*test/|^ +[a-zA-Z].*->' ; } | cut -c1-400 | head -60 | enc)
           echo "::notice title=attendance, not-found and profile/dashboard integration tests (exit $code)::$MSG"
           exit 0
       - name: API log tail
         if: always()
-        run: tail -60 api.log | cut -c1-250
+        run: |
+          tail -60 api.log | cut -c1-250
+          # every server-side Prisma error with the lines that name the route and the argument, published as an annotation (job logs need a sign-in)
+          enc() { sed -e 's/%/%25/g' | awk 'BEGIN{ORS="%0A"} {gsub(/\r/,"%0D"); print}'; }
+          PX=$(grep -E -A22 'PrismaClient(Validation|KnownRequest)Error' api.log | grep -E 'PrismaClient|Unknown|Argument|Invalid|Unique|Foreign|code:|backend/(src|scripts)/' | grep -v node_modules | cut -c1-230 | head -70 | enc)
+          echo "::notice title=Prisma errors in the API log::$PX"

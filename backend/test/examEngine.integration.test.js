@@ -593,19 +593,21 @@ test("coding in Java, C, C++ and JavaScript through the exam API: Run shows only
   const problem = co.body.current.items[0];
   assert.ok(!revealsHidden(co.raw), "opening the section never reveals the hidden case");
   const base = `/api/exams/attempts/${a.attemptId}/items/${problem.id}`;
+  // The API allows 20 runs and submits per minute per student (codeLimiter, exams.routes.js). Four languages need about 20, so a 429 is waited out (the limit working as designed), never treated as a failure.
+  const codePost = async (path, body) => { let r; for (let i = 0; i < 6; i++) { r = await request("POST", path, F.tokens.s1, body, a.session); if (r.status !== 429) return r; await new Promise((ok) => setTimeout(ok, 15000)); } return r; };
 
   for (const lang of langs) {
     // Run: the visible sample only
-    const ran = await request("POST", `${base}/run`, F.tokens.s1, { language: lang, code: SUM[lang] }, a.session);
+    const ran = await codePost(`${base}/run`, { language: lang, code: SUM[lang] });
     assert.equal(ran.status, 200, `${lang} run: ${ran.raw}`);
     assert.equal(ran.body.result.verdict, "ACCEPTED", `${lang} run: ${ran.raw}`);
     assert.equal(ran.body.result.totalCases, 1, `${lang}: Run uses the one visible sample, not the hidden case`);
     assert.ok(!revealsHidden(ran.raw), `${lang}: Run must not reveal the hidden case`);
 
     // a program that only knows the sample: Run is happy, Submit finds the hidden case, and says how many passed without showing it
-    const ranHard = await request("POST", `${base}/run`, F.tokens.s1, { language: lang, code: HARDCODED[lang] }, a.session);
+    const ranHard = await codePost(`${base}/run`, { language: lang, code: HARDCODED[lang] });
     assert.equal(ranHard.body.result.verdict, "ACCEPTED", `${lang}: the hard-coded program passes the visible sample`);
-    const subHard = await request("POST", `${base}/submit-code`, F.tokens.s1, { language: lang, code: HARDCODED[lang] }, a.session);
+    const subHard = await codePost(`${base}/submit-code`, { language: lang, code: HARDCODED[lang] });
     assert.equal(subHard.status, 200, `${lang} submit: ${subHard.raw}`);
     assert.ok(["DONE", "PENDING"].includes(subHard.body.submission.status), subHard.raw);
     if (subHard.body.submission.status === "DONE") {
@@ -616,7 +618,7 @@ test("coding in Java, C, C++ and JavaScript through the exam API: Run shows only
     assert.ok(!revealsHidden(subHard.raw), `${lang}: Submit must not reveal the hidden case`);
 
     // the real solution: accepted on both, and stored with its code and verdict
-    const sub = await request("POST", `${base}/submit-code`, F.tokens.s1, { language: lang, code: SUM[lang] }, a.session);
+    const sub = await codePost(`${base}/submit-code`, { language: lang, code: SUM[lang] });
     assert.equal(sub.status, 200, `${lang} submit: ${sub.raw}`);
     if (sub.body.submission.status === "DONE") {
       assert.equal(sub.body.submission.verdict, "ACCEPTED", `${lang}: ${sub.raw}`);
@@ -632,7 +634,7 @@ test("coding in Java, C, C++ and JavaScript through the exam API: Run shows only
 
     // a compile error is explained (Run), with no server path in it
     if (BROKEN[lang]) {
-      const bad = await request("POST", `${base}/run`, F.tokens.s1, { language: lang, code: BROKEN[lang] }, a.session);
+      const bad = await codePost(`${base}/run`, { language: lang, code: BROKEN[lang] });
       assert.equal(bad.status, 200, bad.raw);
       assert.equal(bad.body.result.verdict, "COMPILE_ERROR", `${lang}: ${bad.raw}`);
       assert.ok(bad.body.result.errorSummary && bad.body.result.errorSummary.message, `${lang}: the compile error is explained`);
