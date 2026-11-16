@@ -3,6 +3,7 @@
 // anything that is allowed answers 400 or 404, and nothing real is changed. Report-only by default (exit 0); VERIFY_MATRIX_STRICT=1 makes a violation fail the run.
 //
 //   1. UNAUTHENTICATED: every route that is not on the reviewed public list must answer 401.
+// Roles: SUPER_ADMIN, ADMIN, INSTITUTE_ADMIN (a separate role in the schema), STAFF, CLERK, STUDENT in institute A, plus ADMIN, INSTITUTE_ADMIN and STUDENT in institute B.
 //   2. ROLE GUARD: a persona whose role is NOT in the route's allowed roles must be refused (401/403), never 2xx, 400, 404 or 5xx. That is the direct test that the guard runs before the handler.
 //   3. NO SERVER ERRORS: a 5xx for any persona is listed (an empty body or a random id must never crash a handler).
 //   4. INSTITUTE LEAK SCAN: every parameterless GET is called as institute B's administrator and student; no body may contain institute A's id, name or any of its users' e-mail addresses. Control: the same
@@ -47,7 +48,7 @@ async function pool(items, n, fn) {
 }
 const tokenFor = (u) => jwt.sign({ id: u.id, role: u.role, email: u.email }, process.env.JWT_SECRET, { expiresIn: "40m" });
 const fill = (route) => route.replace(/:(\w+)/g, (_, p) => (/id$/i.test(p) ? "00000000-0000-4000-8000-000000000000" : "x"));
-const allowedRoles = (r) => (r.roles && r.roles.length ? new Set(r.roles.map((x) => (x === "INSTITUTE_ADMIN" ? "ADMIN" : x))) : null);
+const allowedRoles = (r) => (r.roles && r.roles.length ? new Set(r.roles) : null);
 
 (async () => {
   if (!process.env.JWT_SECRET) { console.log("JWT_SECRET is not set"); process.exit(STRICT ? 1 : 0); }
@@ -60,8 +61,9 @@ const allowedRoles = (r) => (r.roles && r.roles.length ? new Set(r.roles.map((x)
     let sup = await prisma.user.findFirst({ where: { role: "SUPER_ADMIN" } });
     if (!sup) sup = await mk("SUPER_ADMIN", null, "super");
     const P = {
-      SUPER_ADMIN: { u: sup }, ADMIN: { u: await mk("ADMIN", A.id, "adminA") }, STAFF: { u: await mk("STAFF", A.id, "staffA") }, CLERK: { u: await mk("CLERK", A.id, "clerkA") }, STUDENT: { u: await mk("STUDENT", A.id, "studentA") },
-      ADMIN_B: { u: await mk("ADMIN", B.id, "adminB") }, STUDENT_B: { u: await mk("STUDENT", B.id, "studentB") },
+      SUPER_ADMIN: { u: sup }, ADMIN: { u: await mk("ADMIN", A.id, "adminA") }, INSTITUTE_ADMIN: { u: await mk("INSTITUTE_ADMIN", A.id, "instadminA") }, STAFF: { u: await mk("STAFF", A.id, "staffA") },
+      CLERK: { u: await mk("CLERK", A.id, "clerkA") }, STUDENT: { u: await mk("STUDENT", A.id, "studentA") },
+      ADMIN_B: { u: await mk("ADMIN", B.id, "adminB") }, INSTITUTE_ADMIN_B: { u: await mk("INSTITUTE_ADMIN", B.id, "instadminB") }, STUDENT_B: { u: await mk("STUDENT", B.id, "studentB") },
     };
     for (const p of Object.values(P)) p.token = tokenFor(p.u);
 
@@ -79,7 +81,7 @@ const allowedRoles = (r) => (r.roles && r.roles.length ? new Set(r.roles.map((x)
     const personas = Object.keys(P);
     const jobs = []; for (const r of routes) for (const k of personas) jobs.push({ r, k });
     const results = await pool(jobs, 8, async ({ r, k }) => ({ r, k, res: await call(r.method, fill(r.route), P[k].token, r.method === "GET" ? undefined : {}) }));
-    const roleOf = (k) => (k === "ADMIN_B" ? "ADMIN" : k === "STUDENT_B" ? "STUDENT" : k);
+    const roleOf = (k) => k.replace(/_B$/, "");
     const v2 = []; const v3 = []; const inconclusive = []; let allowedAnswers = 0; let overRestricted = 0;
     for (const { r, k, res } of results) {
       if (res.status === 429 || res.timeout || res.status === -1) { inconclusive.push(`${k} ${label(r)} -> ${res.timeout ? "timeout" : res.status}`); continue; }
@@ -91,12 +93,12 @@ const allowedRoles = (r) => (r.roles && r.roles.length ? new Set(r.roles.map((x)
 
     // 4. institute leak scan on parameterless GETs
     const lists = routes.filter((r) => r.method === "GET" && !/:/.test(r.route));
-    const markers = [A.id, `${tag}-A`, `${tag}-adminA`, `${tag}-staffA`, `${tag}-clerkA`, `${tag}-studentA`];
+    const markers = [A.id, `${tag}-A`, `${tag}-adminA`, `${tag}-instadminA`, `${tag}-staffA`, `${tag}-clerkA`, `${tag}-studentA`];
     const scan = async (k) => (await pool(lists, 8, async (r) => ({ r, res: await call("GET", r.route, P[k].token) }))).map(({ r, res }) => ({ r, hit: markers.find((m) => res.text.includes(m)) || null, status: res.status }));
     const ctrl = await scan("ADMIN");
     const controlHits = ctrl.filter((x) => x.hit).length;
     const leaks = [];
-    for (const k of ["ADMIN_B", "STUDENT_B"]) for (const x of await scan(k)) if (x.hit) leaks.push(`${k} saw institute A data (${x.hit}) on ${label(x.r)}`);
+    for (const k of ["ADMIN_B", "INSTITUTE_ADMIN_B", "STUDENT_B"]) for (const x of await scan(k)) if (x.hit) leaks.push(`${k} saw institute A data (${x.hit}) on ${label(x.r)}`);
 
     const section = (title, list, max = 25) => { console.log(`\n== ${title}: ${list.length}`); list.slice(0, max).forEach((l) => console.log("   " + l)); if (list.length > max) console.log(`   ... ${list.length - max} more`); };
     section("1 UNAUTHENTICATED requests not answered with 401", v1);

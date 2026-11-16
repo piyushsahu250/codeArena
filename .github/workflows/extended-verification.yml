@@ -61,6 +61,13 @@ jobs:
           nohup node src/index.js > ../api.log 2>&1 &
           for i in $(seq 1 60); do curl -fs http://localhost:4000/api/health >/dev/null && break; sleep 2; done
           curl -fs http://localhost:4000/api/health || { echo "::error::API did not start"; tail -40 ../api.log; exit 1; }
+      # The scripts assume the production database's shape (an institute named Testing Institute, a second institute, academic groups, the Java practice course, the readiness subjects).
+      - name: Fixtures the scripts assume (disposable database only)
+        working-directory: backend
+        run: |
+          node scripts/ciExtendedFixtures.js
+          node scripts/seedReadinessSubjects.js || echo "readiness subjects seed did not complete"
+          node scripts/seedJavaPractice.js || echo "java practice seed did not complete"
       - name: Run the scripts and report each one (never fails the job)
         working-directory: backend
         env:
