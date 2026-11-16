@@ -69,7 +69,9 @@ test("wrong answer, compilation error (line kept, no server path), runtime error
 });
 
 test("excessive memory is not accepted; excessive output is cut off", opts, async () => {
-  const mem = await run('#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\nint main(){size_t n=900u*1024*1024;char*p=malloc(n);if(!p){puts("fail");return 0;}memset(p,1,n);puts("done");return 0;}', [tc("", "done")], { memoryLimitKb: 65536 });
+  // The allocation is written through a volatile pointer, one byte per page. With a plain malloc+memset whose result is never read, a recent gcc at -O2 deletes the whole allocation as dead code, the
+  // program prints "done" without ever holding the memory, and the limit is never exercised (this made the pipeline fail on a runner with a newer gcc, 2026-11-16).
+  const mem = await run('#include <stdio.h>\n#include <stdlib.h>\nint main(){size_t n=900u*1024*1024;volatile char*p=(volatile char*)malloc(n);if(!p){puts("fail");return 0;}for(size_t i=0;i<n;i+=4096)p[i]=1;puts("done");return 0;}', [tc("", "done")], { memoryLimitKb: 65536 });
   assert.notEqual(mem.verdict, "ACCEPTED", "a 900 MB allocation under a 64 MB limit must not be accepted");
   const out = await run('#include <stdio.h>\nint main(){for(;;)puts("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");return 0;}', [tc("", "")], { timeLimitMs: 5000 });
   assert.ok(["OLE", "TLE"].includes(out.verdict), `an output flood ends as OLE or TLE, got ${out.verdict}`);

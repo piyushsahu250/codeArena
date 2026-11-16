@@ -47,6 +47,7 @@ jobs:
         run: |
           for c in node python3 gcc g++ javac java /usr/bin/time setpriv; do printf '%s: ' "$c"; (command -v "$c" || echo MISSING); done
           java -version 2>&1 | head -1; gcc --version | head -1; python3 --version
+          echo "::notice title=runner toolchain::$(lsb_release -ds 2>/dev/null) | $(gcc --version | head -1) | $(g++ --version | head -1) | $(python3 --version) | $(java -version 2>&1 | head -1) | node $(node -v)"
       - name: Backend install, schema, seed
         working-directory: backend
         run: |

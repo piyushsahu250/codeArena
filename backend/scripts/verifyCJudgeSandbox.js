@@ -48,7 +48,8 @@ const probe = async (code, input = "") => {
     report("has a process-count limit applied (read only, no fork bomb)", Number(lim.out) > 0 && Number(lim.out) <= 1024 ? "PASS" : "FAIL", lim.out);
   }
 
-  const mem = await probe('#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\nint main(void){size_t n=2000u*1024*1024;char*p=malloc(n);if(!p){puts("denied");return 0;}memset(p,1,n);puts("allocated");return 0;}');
+  // Written through a volatile pointer, one byte per page: a plain malloc+memset that is never read is deleted by a recent gcc at -O2 and the program would "allocate" nothing.
+  const mem = await probe('#include <stdio.h>\n#include <stdlib.h>\nint main(void){size_t n=2000u*1024*1024;volatile char*p=(volatile char*)malloc(n);if(!p){puts("denied");return 0;}for(size_t i=0;i<n;i+=4096)p[i]=1;puts("allocated");return 0;}');
   report("a 2 GB allocation is denied or killed, never accepted", mem.out !== "allocated" ? "PASS" : "FAIL", `${mem.verdict} ${mem.out}`);
   const tle = await judgeSubmission({ language: "c", code: "int main(void){for(;;){} }", testCases: [{ input: "", expected: "" }], timeLimitMs: 800 });
   report("an infinite loop ends as TLE", tle.verdict === "TLE" ? "PASS" : "FAIL", tle.verdict);
