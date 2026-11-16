@@ -217,8 +217,42 @@ test("javascript: a legitimately memory-hungry solution (3 million numbers, a co
   accepted(await run("javascript", "const a=Array.from({length:3000000},(_,i)=>i); const b=a.map(x=>x); let s=0; for(const x of b) s+=x; console.log(s);", [tc("", "4499998500000")], { timeLimitMs: 10000 }), "3 million numbers");
 });
 
+// The boundary itself: the same program is accepted under one configured limit and rejected under a smaller one, for memory held outside the heap (Buffer) and inside it (arrays). Peak memory of a
+// Node process is its own baseline (about 40 MB) plus what the program holds, and a run is rejected from 97% of the limit (and the heap is capped at the limit), so each pair below sits well
+// clear of the line on both sides; what is being proved is that the CONFIGURED number decides, not a fixed one.
+const bufferProgram = (mb) => `const b=Buffer.alloc(${mb}*1024*1024); b.fill(1); console.log("done");`;
+const heapProgram = (arrays) => `const a=[]; for(let i=0;i<${arrays};i++) a.push(new Array(10000000).fill(1.5)); console.log(a.length);`; // each array is about 80 MB
+for (const [limitMb, okMb, badMb] of [[256, 120, 400], [512, 300, 700], [1024, 700, 1400]]) {
+  test(`javascript: a ${limitMb} MB limit accepts ${okMb} MB held outside the heap and rejects ${badMb} MB`, jsOpts, async () => {
+    const opts = { timeLimitMs: 15000, memoryLimitKb: limitMb * 1024 };
+    accepted(await run("javascript", bufferProgram(okMb), [tc("", "done")], opts), `${okMb} MB under a ${limitMb} MB limit`);
+    const over = await run("javascript", bufferProgram(badMb), [tc("", "done")], opts);
+    assert.equal(over.verdict, "MLE", `${badMb} MB under a ${limitMb} MB limit: got ${over.verdict}: ${why(over)}`);
+  });
+}
+for (const [limitMb, okArrays, badArrays] of [[256, 1, 5], [512, 3, 9]]) {
+  test(`javascript: a ${limitMb} MB limit accepts ${okArrays} arrays of 10 million numbers (about ${okArrays * 80} MB) and rejects ${badArrays}`, jsOpts, async () => {
+    const opts = { timeLimitMs: 20000, memoryLimitKb: limitMb * 1024 };
+    accepted(await run("javascript", heapProgram(okArrays), [tc("", String(okArrays))], opts), `${okArrays} arrays under a ${limitMb} MB limit`);
+    const over = await run("javascript", heapProgram(badArrays), [tc("", String(badArrays))], opts);
+    assert.equal(over.verdict, "MLE", `${badArrays} arrays under a ${limitMb} MB limit: got ${over.verdict}: ${why(over)}`);
+  });
+}
+
 test("javascript: a very small memory limit does not make the language unusable (Node's own baseline is exempt)", jsOpts, async () => {
   accepted(await run("javascript", "console.log(1+1)", [tc("", "2")], { memoryLimitKb: 65536 }), "64 MB limit, trivial program");
+});
+
+// ---------------------------------------------------------------- core dumps (audit finding A2-21)
+// The production host pipes core dumps to systemd-coredump, so every crash of a student program was being stored on the host. The wrapper now runs `ulimit -c 0`; a program can read its own limit.
+// Both the soft and the hard limit must be 0 (a soft limit alone could be raised again by the program).
+test("a submission runs with core dumps disabled (RLIMIT_CORE is 0, soft and hard)", { skip: skipFor("c") }, async () => {
+  const code = '#include <stdio.h>\n#include <sys/resource.h>\nint main(void){ struct rlimit r; getrlimit(RLIMIT_CORE,&r); printf("%ld %ld\\n",(long)r.rlim_cur,(long)r.rlim_max); return 0; }';
+  accepted(await run("c", code, [tc("", "0 0")]), "C reports its own core limit");
+});
+test("a submission runs with core dumps disabled in Python as well (the same wrapper, a different language)", { skip: !LINUX || !has("python3") ? "needs Linux with python3" : false }, async () => {
+  const code = "import resource\nprint(*resource.getrlimit(resource.RLIMIT_CORE))";
+  accepted(await run("python", code, [tc("", "0 0")]), "Python reports its own core limit");
 });
 
 // ---------------------------------------------------------------- concurrency and isolation across languages
