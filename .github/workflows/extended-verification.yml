@@ -86,14 +86,16 @@ jobs:
             secs=$(( $(date +%s) - start ))
             skips=$(grep -ciE '\bskip(ped)?\b' "/tmp/$s.out" || true)
             if [ "$code" -eq 0 ]; then status=PASS; pass=$((pass+1)); elif [ "$code" -eq 124 ]; then status=TIMEOUT; fail=$((fail+1)); else status=FAIL; fail=$((fail+1)); fi
-            printf '%s\t%s\texit=%s\t%ss\tskipLines=%s\n' "$status" "$s" "$code" "$secs" "$skips" >> /tmp/results.tsv
+            reason=""
+            if [ "$status" != PASS ]; then reason=$(grep -m1 -iE 'not found|need |no [a-z ]*exists|cannot read|cannot destructure|FAILED|^FAIL|error:|Error:' "/tmp/$s.out" | cut -c1-120); fi
+            printf '%s\t%s\texit=%s\t%ss\tskip=%s\t%s\n' "$status" "$s" "$code" "$secs" "$skips" "$reason" >> /tmp/results.tsv
             if [ "$status" != PASS ]; then { echo "=== $s ($status, exit $code)"; tail -n 8 "/tmp/$s.out" | cut -c1-300; } >> /tmp/details.txt; fi
             echo "$status $s exit=$code ${secs}s"
           done
           echo "PASS=$pass NOT-PASS=$fail of $(echo $SCRIPTS | wc -w)"
           { echo "### Extended verification: $pass passed, $fail did not pass"; echo '```'; sort /tmp/results.tsv; echo '```'; echo '#### Failures (last lines)'; echo '```'; cat /tmp/details.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
           enc() { sed -e 's/%/%25/g' | awk 'BEGIN{ORS="%0A"} {gsub(/\r/,"%0D"); print}'; }
-          RES=$(sort /tmp/results.tsv | cut -c1-120 | enc)
+          RES=$(sort /tmp/results.tsv | cut -c1-230 | enc)
           echo "::notice title=extended verification results ($pass pass, $fail not pass)::$RES"
           DET=$(head -c 60000 /tmp/details.txt | enc)
           echo "::warning title=extended verification failure details::$DET"
