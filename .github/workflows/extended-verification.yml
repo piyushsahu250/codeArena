@@ -41,6 +41,14 @@ jobs:
           node-version: 20
           cache: npm
           cache-dependency-path: backend/package-lock.json
+      # Production's judge image runs OpenJDK 17 and Python 3.11 (gcc 12). The runner's defaults are newer (Java 25, Python 3.14, gcc 15), which hid and caused differences (audit finding A2-22).
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
       # canvas headers (as in ci.yml), plus the toolchains the judge scripts compile and run with, and GNU time which the judge wraps every program in.
       - run: sudo apt-get update -o Acquire::Retries=3 && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev libpixman-1-dev time gcc g++ python3
       - name: Toolchains present on this runner (printed so a skipped judge script can be explained)
@@ -124,7 +132,7 @@ jobs:
         run: |
           code=0; node --test --test-timeout=240000 test/attendance.integration.test.js > /tmp/att.out 2>&1 || code=$?
           tail -n 40 /tmp/att.out | cut -c1-220
-          enc() { sed -e 's/%/%25/g' | awk 'BEGIN{ORS="%0A"} {gsub(//,"%0D"); print}'; }
+          enc() { sed -e 's/%/%25/g' | awk 'BEGIN{ORS="%0A"} {gsub(//,"%0D"); print}'; }
           MSG=$(grep -E '^(not )?ok|^# (pass|fail)|^ℹ (pass|fail)|error:|expected|actual|AssertionError|last call' /tmp/att.out | cut -c1-300 | head -40 | enc)
           echo "::notice title=attendance integration test (exit $code)::$MSG"
           exit 0
