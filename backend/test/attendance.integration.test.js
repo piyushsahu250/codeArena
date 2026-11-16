@@ -124,7 +124,10 @@ test("attendance: assignment, access, plan rules, saving, student privacy and th
   assert.equal((await mark(p1.body.id, F.t.s1, [{ studentId: F.s1.id, status: "PRESENT" }])).status, 403, "a student cannot mark their own attendance");
   const again = await mark(p1.body.id, F.t.staff1, [{ studentId: F.s1.id, status: "LATE" }, { studentId: F.s2.id, status: "ABSENT" }, { studentId: F.s1.id, status: "NOT-A-STATUS" }]);
   assert.equal(again.status, 200, again.raw);
-  assert.equal(await prisma.attendanceRecord.count({ where: { session: { planId: p1.body.id } } }), 3, "the second save replaced the first rows (a repeated student id is kept as sent, an unknown status becomes PRESENT)");
+  // A student listed twice used to fail the whole save with a 500 (unique on session + student); the last entry now wins, and an unknown status becomes PRESENT.
+  assert.equal(await prisma.attendanceRecord.count({ where: { session: { planId: p1.body.id } } }), 2, "the second save replaced the first rows, one row per student");
+  const s1Row = await prisma.attendanceRecord.findFirst({ where: { session: { planId: p1.body.id }, studentId: F.s1.id } });
+  assert.equal(s1Row.status, "PRESENT", "the last entry for a repeated student wins, and an unknown status becomes PRESENT");
 
   // 5. the student sees only their own record
   const mine = await request("GET", "/api/attendance/my-records", F.t.s1);

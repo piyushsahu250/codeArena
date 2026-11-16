@@ -882,9 +882,13 @@ router.post("/assignments/:assignmentId/plans/:planId/attendance", authenticate,
     // failing the whole save over it.
     const roster = await prisma.user.findMany({ where: rosterWhereForAssignment(assignment), select: { id: true } });
     const rosterIds = new Set(roster.map((s) => s.id));
-    const cleanRecords = records
-      .filter((r) => r && rosterIds.has(r.studentId))
-      .map((r) => ({ studentId: r.studentId, status: ATTENDANCE_STATUSES.includes(r.status) ? r.status : "PRESENT" }));
+    // One record per student (the last one sent wins): AttendanceRecord is unique on (sessionId, studentId), so a payload that lists a student twice (a double-tap, a client retry merging two
+    // lists) used to fail the whole save with a 500 (found by attendance.integration.test.js, 2026-11 audit).
+    const byStudent = new Map();
+    for (const r of records) {
+      if (r && rosterIds.has(r.studentId)) byStudent.set(r.studentId, { studentId: r.studentId, status: ATTENDANCE_STATUSES.includes(r.status) ? r.status : "PRESENT" });
+    }
+    const cleanRecords = [...byStudent.values()];
 
     const session = await prisma.$transaction(async (tx) => {
       const existing = await tx.attendanceSession.findUnique({ where: { planId: plan.id } });
