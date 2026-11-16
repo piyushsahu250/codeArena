@@ -1,0 +1,102 @@
+name: Extended verification
+
+# The 67 database-backed verification scripts that are NOT in the blocking list of ci.yml (audit 2026-11, finding A2-03). They were written for manual runs against a live API; this job runs each of
+# them against a disposable database and API on a clean runner and REPORTS pass, fail or timeout per script. It never blocks anything: the point is a measured pass/fail table, after which each
+# passing script can be promoted into ci.yml and each failing one fixed or retired. Run by hand (Actions > Extended verification) or by pushing to the branch ci/extended-verification.
+# The results are published as check annotations (readable without signing in) and in the job summary.
+on:
+  workflow_dispatch: {}
+  push:
+    branches: ["ci/extended-verification"]
+
+permissions:
+  contents: read
+
+jobs:
+  extended:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: ci
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U ci" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+      DIRECT_DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+      JWT_SECRET: ci-only-jwt-secret-not-used-anywhere-else-0123456789
+      PII_ENCRYPTION_KEY: "0000000000000000000000000000000000000000000000000000000000000000"
+      FRONTEND_URL: http://localhost:5173
+      PORT: "4000"
+      SECURE_BROWSER_SECRET: ci-only-secure-browser-secret-0123456789
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      # canvas headers (as in ci.yml), plus the toolchains the judge scripts compile and run with, and GNU time which the judge wraps every program in.
+      - run: sudo apt-get update -o Acquire::Retries=3 && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev libpixman-1-dev time gcc g++ python3
+      - name: Toolchains present on this runner (printed so a skipped judge script can be explained)
+        run: |
+          for c in node python3 gcc g++ javac java /usr/bin/time setpriv; do printf '%s: ' "$c"; (command -v "$c" || echo MISSING); done
+          java -version 2>&1 | head -1; gcc --version | head -1; python3 --version
+      - name: Backend install, schema, seed
+        working-directory: backend
+        run: |
+          npm ci
+          npx prisma generate
+          npx prisma db push --accept-data-loss --skip-generate
+          npm run seed
+      - name: Start the API
+        working-directory: backend
+        run: |
+          nohup node src/index.js > ../api.log 2>&1 &
+          for i in $(seq 1 60); do curl -fs http://localhost:4000/api/health >/dev/null && break; sleep 2; done
+          curl -fs http://localhost:4000/api/health || { echo "::error::API did not start"; tail -40 ../api.log; exit 1; }
+      - name: Run the scripts and report each one (never fails the job)
+        working-directory: backend
+        env:
+          VERIFY_API_LOG: ${{ github.workspace }}/api.log
+        run: |
+          SCRIPTS="verifyAdminAuditAndInstituteAdmin verifyAdminCommand verifyAdminStatsScoping verifyAiDraftRoute verifyAiGeneration verifyAiInterviewSecurity
+          verifyAttendanceAndCertificateFlows verifyBulkResultImport verifyCJudgeSandbox verifyCertificateBranding verifyCertificateCodes verifyCompanyQuestions
+          verifyCompanyTestAndChallengeFlows verifyDailyChallengeRemove verifyDsaFoundationMix verifyExamSecurity verifyFactCheck
+          verifyFeatureFlagResumeInterview verifyFeatureManagement verifyFormalTestAutosaveFix verifyFourLanguages verifyFullMockInterviewFlow
+          verifyGeminiConnectivity verifyIssueReports verifyJavaPractice verifyJobMatch verifyJudgeEpipe verifyJudgeSandbox verifyJudgeService
+          verifyJudgeUlimits verifyLmsInstituteIsolation verifyModuleCodingAndFormalTestFlows verifyModuleCodingAutosubmit verifyModuleCodingSweep
+          verifyMultiInstituteIsolation verifyOcrFallback verifyPerformancePageAndSecurityFixes verifyPidsLimit verifyPlatformHealthGuard
+          verifyProfilePhotoLinkedin verifyPublishHierarchy verifyReadinessAndTalentPoolFlows verifyReadinessCompilers verifyReadinessInterviewSecurity
+          verifyReadinessStrictProctoring verifyResultManagementV2 verifyResultsExport verifyResumeAiRoutes verifyResumeAndCompanyInterviewFlows
+          verifyResumeAtsAccuracy verifyResumeRoundTrip verifyReviewOwnership verifyRoleIsolation verifyRolefixRoutes verifyRollNumberIntegrity verifySecureExam
+          verifyStudentDashboard verifyStudentProfileEditPermissions verifyTalentPoolOverhaul verifyTcsCodevita9EndToEnd verifyTcsCompanyRoundFix
+          verifyTcsMediumHardFix verifyTenantIsolation verifyTestCreationOverhaul verifyTestSecurity verifyTestVisibilityFix verifyWeeklyChallengeRemove"
+          : > /tmp/results.tsv; : > /tmp/details.txt
+          pass=0; fail=0; slow=0
+          for s in $SCRIPTS; do
+            start=$(date +%s)
+            code=0; timeout 240 node scripts/$s.js > "/tmp/$s.out" 2>&1 || code=$?
+            secs=$(( $(date +%s) - start ))
+            skips=$(grep -ciE '\bskip(ped)?\b' "/tmp/$s.out" || true)
+            if [ "$code" -eq 0 ]; then status=PASS; pass=$((pass+1)); elif [ "$code" -eq 124 ]; then status=TIMEOUT; fail=$((fail+1)); else status=FAIL; fail=$((fail+1)); fi
+            printf '%s\t%s\texit=%s\t%ss\tskipLines=%s\n' "$status" "$s" "$code" "$secs" "$skips" >> /tmp/results.tsv
+            if [ "$status" != PASS ]; then { echo "=== $s ($status, exit $code)"; tail -n 8 "/tmp/$s.out" | cut -c1-300; } >> /tmp/details.txt; fi
+            echo "$status $s exit=$code ${secs}s"
+          done
+          echo "PASS=$pass NOT-PASS=$fail of $(echo $SCRIPTS | wc -w)"
+          { echo "### Extended verification: $pass passed, $fail did not pass"; echo '```'; sort /tmp/results.tsv; echo '```'; echo '#### Failures (last lines)'; echo '```'; cat /tmp/details.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          enc() { sed -e 's/%/%25/g' | awk 'BEGIN{ORS="%0A"} {gsub(/\r/,"%0D"); print}'; }
+          RES=$(sort /tmp/results.tsv | cut -c1-120 | enc)
+          echo "::notice title=extended verification results ($pass pass, $fail not pass)::$RES"
+          DET=$(head -c 60000 /tmp/details.txt | enc)
+          echo "::warning title=extended verification failure details::$DET"
+          exit 0
+      - name: API log tail
+        if: always()
+        run: tail -60 api.log | cut -c1-250
