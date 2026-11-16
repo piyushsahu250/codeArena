@@ -1,6 +1,8 @@
 # API Documentation
 
 **Documentation Version:** 1.0.0 · **Last Updated:** 2026-08-08
+> **Update 2026-11-16:** this document describes 394 endpoints in 31 route files and predates the move of several routers into `backend/src/modules/`. The current inventory is **[ROUTE_INVENTORY.md](ROUTE_INVENTORY.md)** (678 route registrations in 52 files, with the guard in front of each), generated from source by `node backend/scripts/routeInventory.js --markdown`. Prefer that file for the list of endpoints; the prose below is kept for its per-module explanations.
+
 **Source:** mechanically extracted from every `router.get/post/patch/put/delete(...)` declaration across all 31 files in `backend/src/routes/`, cross-checked against `backend/src/index.js`'s mount table, as of commit `d67d7ef`. **394 endpoints total.**
 
 Every endpoint is mounted under its route file's prefix (see the mount table below). All endpoints require `authenticate` (valid JWT) unless marked **PUBLIC**. Role column lists the `requireRole(...)` allowlist; blank = any authenticated role. `+Institute` means the route also runs `attachRequesterInstitute` (institute-scoped for scoped Admin/Staff/Clerk accounts, unrestricted for unscoped/Super accounts).

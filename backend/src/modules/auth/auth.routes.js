@@ -49,6 +49,14 @@ const resetPasswordLimiter = dbRateLimit({
   message: { error: "Too many password reset attempts. Please try again later." },
 });
 
+// Registration is disabled (it always answers 403), but a public POST that does any work at all should not be free to hammer: same shape as the other public auth routes.
+const registerLimiter = dbRateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  keyGenerator: (req) => `register:${getClientIp(req)}`,
+  message: { error: "Too many requests. Please try again later." },
+});
+
 const verifyEmailLimiter = dbRateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
@@ -56,7 +64,7 @@ const verifyEmailLimiter = dbRateLimit({
   message: { error: "Too many verification attempts. Please try again later." },
 });
 
-router.post("/register", c.register);
+router.post("/register", registerLimiter, c.register);
 router.post("/login", loginLimiter, c.login);
 router.post("/change-temporary-password", changeTemporaryPasswordLimiter, c.changeTemporaryPassword);
 router.get("/permissions", authenticate, c.permissions);
