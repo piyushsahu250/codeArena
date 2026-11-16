@@ -65,6 +65,8 @@ jobs:
           npm run seed
       - name: Start the API
         working-directory: backend
+        env:
+          JUDGE_MAX_PROCESSES: "4096" # see ci.yml: the process cap counts every process of the runner's user, which stops a JVM from starting
         run: |
           nohup node src/index.js > ../api.log 2>&1 &
           for i in $(seq 1 60); do curl -fs http://localhost:4000/api/health >/dev/null && break; sleep 2; done
@@ -127,7 +129,7 @@ jobs:
           LOGX=$(grep -n -i -E 'resume|error' ../api.log | grep -v -E 'Image storage|Failed to delete institute|XP rule|badge' | tail -n 25 | cut -c1-240 | enc)
           echo "::notice title=API log lines with errors after the matrix::$LOGX"
           exit 0
-      - name: New integration tests, first run (report only): attendance and not-found
+      - name: "New integration tests, first run (report only) - attendance and not-found"
         working-directory: backend
         env:
           REQUIRE_INTEGRATION: "1"

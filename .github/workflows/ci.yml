@@ -72,6 +72,38 @@ jobs:
         continue-on-error: true
         run: npm audit --omit=dev --json | node scripts/auditSummary.js backend
 
+  # The judge as production runs it: Debian 12 (the base of backend/Dockerfile's node:20-slim) with its own gcc 12, OpenJDK 17 and Python 3.11. The `backend` job above runs on ubuntu-latest, which
+  # moves on (gcc 15, Java 25, Python 3.14 in 2026-11); that job is now the newer-toolchain compatibility check, and THIS job is what a green judge means for production (audit A2-22). The versions
+  # are asserted, so the job fails loudly instead of quietly drifting away from production.
+  judge-production-toolchain:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    container: node:20-bookworm
+    steps:
+      - uses: actions/checkout@v4
+      - name: Toolchain as in backend/Dockerfile (same package names)
+        run: |
+          apt-get update -o Acquire::Retries=3
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends build-essential default-jdk-headless python3 time util-linux libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev libpixman-1-dev
+          gcc --version | head -1; g++ --version | head -1; java -version 2>&1 | head -1; python3 --version; node --version
+          gcc -dumpversion | grep -q '^12' || { echo "::error::expected gcc 12 (production), got $(gcc -dumpversion)"; exit 1; }
+          java -version 2>&1 | grep -q '"17\.' || { echo "::error::expected Java 17 (production)"; exit 1; }
+          python3 --version | grep -q '^Python 3\.11' || { echo "::error::expected Python 3.11 (production)"; exit 1; }
+      - name: Install
+        working-directory: backend
+        run: npm ci
+      - name: Judge tests on the production toolchain (Java, C, C++, JavaScript, Python, error text, environment isolation)
+        working-directory: backend
+        run: |
+          code=0
+          node --test test/judgeLanguages.test.js test/judgeC.test.js test/pythonJudge.test.js test/judgeErrors.test.js test/judgeEnv.test.js > /tmp/judge.out 2>&1 || code=$?
+          tail -n 30 /tmp/judge.out
+          if [ "$code" != 0 ]; then
+            msg=$(grep -E -A7 "^ *not ok|^ *error: " /tmp/judge.out | grep -v "^--$" | head -40 | tr -s "[:space:]" " " | cut -c1-3000)
+            echo "::error title=judge tests failed on the production toolchain::$msg"
+          fi
+          exit $code
+
   frontend:
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -220,6 +252,9 @@ jobs:
         working-directory: backend
         env:
           SECURE_BROWSER_SECRET: ci-only-secure-browser-secret-0123456789
+          # The judge's process cap (ulimit -u) counts every process of the OS user. Production runs submissions as a dedicated user, so 64 is plenty there; this runner's user already owns more, and a JVM
+          # then cannot start its threads (Java runs ended as RUNTIME_ERROR after 14 ms). The fork-bomb limit is exercised in production's own container, not here.
+          JUDGE_MAX_PROCESSES: "4096"
         run: |
           nohup node src/index.js > ../api.log 2>&1 &
           for i in $(seq 1 60); do curl -fs http://localhost:4000/api/health >/dev/null && break; sleep 2; done
