@@ -158,7 +158,15 @@ function checkNetworkDenialAvailable() {
 // Text patterns that show up in stderr when a program actually ran out of the memory budget
 // `ulimit -v` gave it, as opposed to some unrelated crash — used to report a distinct "Memory
 // Limit Exceeded" verdict instead of a generic Runtime Error.
-const OOM_PATTERNS = /cannot allocate memory|bad_alloc|outofmemoryerror|memoryerror|std::length_error|java\.lang\.outofmemory/i;
+const OOM_PATTERNS = /cannot allocate memory|bad_alloc|outofmemoryerror|memoryerror|std::length_error|java\.lang\.outofmemory|javascript heap out of memory|allocation failed - javascript heap/i;
+
+// JavaScript has no OS-level memory cap (Node cannot even start under `ulimit -v` at this budget, see execute() below), so it gets two other guards. (1) V8's heap is capped at the memory limit
+// (--max-old-space-size), which stops the common runaway (an array or object that keeps growing) at once, with V8's "heap out of memory" abort that OOM_PATTERNS turns into a Memory Limit Exceeded.
+// (2) The peak resident memory measured by /usr/bin/time is compared with the limit after a run that exits normally: it used to be compared only after a FAILED run, so a program that allocated
+// 2 GB, printed the right answer and exited was ACCEPTED at a 256 MB limit (measured on the production judge 2026-11-16: 100 MB to 2,000 MB all accepted, peak 2,085,996 KB). Node's own baseline is
+// about 45 MB, so the ceiling is never below JS_MIN_CEILING_KB, otherwise a problem with a very small limit could never be solved in JavaScript.
+const JS_MIN_CEILING_KB = 196608; // 192 MB
+const jsCeilingKb = (memoryLimitKb) => Math.max(Number(memoryLimitKb) || 0, JS_MIN_CEILING_KB);
 
 // Compiled languages need the source filename to match what the compiler expects
 // (Java in particular requires the file to be named after its public class, so
@@ -166,7 +174,7 @@ const OOM_PATTERNS = /cannot allocate memory|bad_alloc|outofmemoryerror|memoryer
 const RUNNERS = {
   javascript: {
     srcName: "sol.js",
-    run: (file) => ({ cmd: "node", args: [file] }),
+    run: (file, _dir, memoryLimitKb) => ({ cmd: "node", args: [`--max-old-space-size=${Math.floor(jsCeilingKb(memoryLimitKb) / 1024)}`, file] }),
   },
   python: {
     srcName: "sol.py",
@@ -357,7 +365,7 @@ function withSignalText(stderr, signal) {
   return `${stderr ? stderr + "\n" : ""}${text} (signal ${signal})`;
 }
 
-async function spawnWithTimeout(cmd, args, options, input, timeLimitMs, { enforceLimits = true, enforceMemory = true, memoryLimitKb = MEMORY_LIMIT_KB } = {}) {
+async function spawnWithTimeout(cmd, args, options, input, timeLimitMs, { enforceLimits = true, enforceMemory = true, memoryLimitKb = MEMORY_LIMIT_KB, checkPeakAfterRun = false } = {}) {
   const networkDenied = enforceLimits && await checkNetworkDenialAvailable(); // only for actual execution, not compilation
   return new Promise((resolve) => {
     const statsFile = path.join(os.tmpdir(), `judge-time-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}.txt`);
@@ -384,8 +392,11 @@ async function spawnWithTimeout(cmd, args, options, input, timeLimitMs, { enforc
     // below — a Java fork bomb or CPU-bound infinite loop is exactly as real as in any other
     // language, and skipping those too (as a side effect of the old single `enforceMemory` flag
     // gating all three) was never actually justified by the memory-headroom problem it was added for.
+    // `ulimit -c 0`: a submission never produces a core dump. The production host pipes cores to systemd-coredump, so every segfault or abort of a student program (and every memory-limit abort) was
+    // being captured, compressed and stored on the HOST (73 dumps since 2026-09-30, found in the 2026-11 audit), which made an aborting program look slow (the compression happened before the exit was seen,
+    // so a JavaScript memory hog ended as TLE) and left copies of the program's memory, including its test input, on disk. Lowering a limit is always allowed, so this works for the sandbox user.
     const innerCmd = enforceLimits
-      ? `${enforceMemory ? `ulimit -v ${memoryLimitKb}; ` : ""}ulimit -u ${MAX_PROCESSES}; ulimit -t ${cpuSeconds}; ${execTail}`
+      ? `ulimit -c 0; ${enforceMemory ? `ulimit -v ${memoryLimitKb}; ` : ""}ulimit -u ${MAX_PROCESSES}; ulimit -t ${cpuSeconds}; ${execTail}`
       : execTail;
     // "bash", not "sh" -- /bin/sh on this (Debian) image resolves to dash, whose ulimit builtin
     // does not implement -u (process count / RLIMIT_NPROC; POSIX doesn't standardize it, dash
@@ -496,6 +507,10 @@ async function spawnWithTimeout(cmd, args, options, input, timeLimitMs, { enforc
         const memoryExceeded = memoryKb != null && memoryKb >= memoryLimitKb * 0.97;
         const oom = memoryExceeded || OOM_PATTERNS.test(stderr);
         return resolve({ ok: false, error: withSignalText(stderr, exitSignal || (codeExit > 128 && codeExit < 160 ? codeExit - 128 : null)) || "Runtime error", oom, timeMs, memoryKb });
+      }
+      // A run that exited normally can still have used more than it was allowed when nothing capped it while it ran (JavaScript): measured peak memory decides.
+      if (checkPeakAfterRun && memoryKb != null && memoryKb >= memoryLimitKb * 0.97) {
+        return resolve({ ok: false, error: "Memory limit exceeded", oom: true, timeMs, memoryKb });
       }
       resolve({ ok: true, stdout, timeMs, memoryKb });
     });
@@ -630,7 +645,7 @@ async function prepare(language, code) {
       // memory it goes on to use is tiny. Real enforcement for both now comes from the same place:
       // the peak-RSS measurement spawnWithTimeout already takes via `/usr/bin/time -v`
       // (memoryKb below), which is what MLE classification is actually based on.
-      const result = await spawnWithTimeout(cmd, args, { cwd: tmpDir, timeout: timeLimitMs }, input, timeLimitMs, { enforceLimits: true, enforceMemory: !["java", "javascript"].includes(language), memoryLimitKb });
+      const result = await spawnWithTimeout(cmd, args, { cwd: tmpDir, timeout: timeLimitMs }, input, timeLimitMs, { enforceLimits: true, enforceMemory: !["java", "javascript"].includes(language), memoryLimitKb: language === "javascript" ? jsCeilingKb(memoryLimitKb) : memoryLimitKb, checkPeakAfterRun: language === "javascript" });
       if (!result.ok) return result;
       return { ok: true, stdout: result.stdout.trim(), timeMs: result.timeMs, memoryKb: result.memoryKb };
     },

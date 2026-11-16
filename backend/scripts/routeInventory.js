@@ -32,6 +32,26 @@ function mounts() {
   return out;
 }
 
+// Which roles a guard text lets through: the intersection of every requireRole(...) and requirePermission("key") in it, or null when it names none (any signed-in role) or cannot be resolved.
+let REGISTRY = null;
+function registry() {
+  if (REGISTRY) return REGISTRY;
+  REGISTRY = {};
+  const text = read(path.join(SRC, "utils", "permissions.js"));
+  for (const m of text.matchAll(/"([\w.]+)":\s*\{[^}]*?roles:\s*\[([^\]]*)\]/g)) REGISTRY[m[1]] = [...m[2].matchAll(/R\.(\w+)/g)].map((x) => x[1]);
+  return REGISTRY;
+}
+function rolesOf(guards) {
+  const sets = [];
+  for (const m of guards.matchAll(/requireRole\(([^)]*)\)/g)) {
+    const names = [...m[1].matchAll(/["'](\w+)["']/g)].map((x) => x[1]);
+    if (names.length) sets.push(names);
+  }
+  for (const m of guards.matchAll(/requirePermission\(\s*["']([\w.]+)["']\s*\)/g)) if (registry()[m[1]]) sets.push(registry()[m[1]]);
+  if (!sets.length) return null;
+  return [...new Set(sets.reduce((a, b) => a.filter((r) => b.includes(r))))];
+}
+
 function scanFile(file, mount) {
   const src = read(file);
   const defs = {};
@@ -60,6 +80,9 @@ function scanFile(file, mount) {
       file: path.relative(SRC, file).split(path.sep).join("/"),
       auth: /authenticate|requireStudent|requireAuth/.test(guards),
       role: /requireRole|requirePermission|requireAdmin|requireStaff|requireSuperAdmin/.test(guards),
+      roles: rolesOf(guards),
+      feature: (guards.match(/requireFeature\(\s*["']([\w.-]+)["']/) || [])[1] || null,
+      pathParams: (sub.match(/:\w+/g) || []).length,
       institute: /attachRequesterInstitute|requireInstitute/.test(guards),
       limiter: /[Ll]imiter/.test(guards),
     });

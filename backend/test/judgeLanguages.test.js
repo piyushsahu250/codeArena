@@ -187,6 +187,37 @@ for (const lang of ["java", "c", "cpp", "javascript"]) {
   });
 }
 
+// ---------------------------------------------------------------- JavaScript memory: no OS cap exists for Node, so two other guards must hold (audit finding A2-20)
+// Measured on the production judge on 2026-11-16: a JavaScript program that allocated and touched 100 MB up to 2,000 MB was ACCEPTED at the default 256 MB limit (peak 2,085,996 KB), because the peak
+// memory was only compared with the limit after a FAILED run. The heap is now capped (--max-old-space-size) and the peak is compared after a normal exit too.
+const jsOpts = { skip: skipFor("javascript") };
+test("javascript: one huge heap allocation is Memory Limit Exceeded", jsOpts, async () => {
+  const r = await run("javascript", "const a=[]; for(let i=0;i<40;i++) a.push(new Array(10000000).fill(1.5)); console.log(a.length);", [tc("", "40")], { timeLimitMs: 10000 });
+  assert.equal(r.verdict, "MLE", `got ${r.verdict}: ${why(r)}`);
+  assert.equal(r.errorSummary && r.errorSummary.type, "Memory Limit Exceeded");
+});
+
+test("javascript: a heap that grows without end is stopped (as MLE, or TLE if the engine thrashes first), never accepted and never left running", jsOpts, async () => {
+  const t0 = Date.now();
+  const r = await run("javascript", "const a=[]; for(;;) a.push(new Array(100000).fill(1.5));", [tc("", "")], { timeLimitMs: 6000 });
+  assert.ok(["MLE", "TLE"].includes(r.verdict), `got ${r.verdict}: ${why(r)}`);
+  assert.ok(Date.now() - t0 < 30000, "stopped promptly");
+});
+
+test("javascript: a large allocation outside the heap (Buffer) that exits normally is Memory Limit Exceeded, not accepted", jsOpts, async () => {
+  const r = await run("javascript", 'const b=Buffer.alloc(1500*1024*1024); b.fill(1); console.log("done");', [tc("", "done")], { timeLimitMs: 10000 });
+  assert.notEqual(r.verdict, "ACCEPTED", "1.5 GB allocated and accepted at a 256 MB limit");
+  assert.equal(r.verdict, "MLE", `got ${r.verdict}: ${why(r)}`);
+});
+
+test("javascript: a legitimately memory-hungry solution (3 million numbers, a copy of them, a sum) is still accepted", jsOpts, async () => {
+  accepted(await run("javascript", "const a=Array.from({length:3000000},(_,i)=>i); const b=a.map(x=>x); let s=0; for(const x of b) s+=x; console.log(s);", [tc("", "4499998500000")], { timeLimitMs: 10000 }), "3 million numbers");
+});
+
+test("javascript: a very small memory limit does not make the language unusable (Node's own baseline is exempt)", jsOpts, async () => {
+  accepted(await run("javascript", "console.log(1+1)", [tc("", "2")], { memoryLimitKb: 65536 }), "64 MB limit, trivial program");
+});
+
 // ---------------------------------------------------------------- concurrency and isolation across languages
 
 test("concurrent submissions in all four languages each get their own result, and leave no temp directories behind", { skip: !LINUX ? "needs Linux with /usr/bin/time" : false }, async () => {

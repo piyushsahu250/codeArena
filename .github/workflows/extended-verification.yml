@@ -100,6 +100,16 @@ jobs:
           DET=$(head -c 60000 /tmp/details.txt | enc)
           echo "::warning title=extended verification failure details::$DET"
           exit 0
+      - name: Per-role request matrix over every route (report only)
+        working-directory: backend
+        run: |
+          code=0; timeout 900 node scripts/verifyRoleMatrix.js > /tmp/matrix.out 2>&1 || code=$?
+          echo "matrix exit code $code"; tail -n 80 /tmp/matrix.out | cut -c1-220
+          { echo '### Per-role request matrix'; echo '```'; head -c 60000 /tmp/matrix.out; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          enc() { sed -e 's/%/%25/g' | awk 'BEGIN{ORS="%0A"} {gsub(/\r/,"%0D"); print}'; }
+          MSG=$(head -c 58000 /tmp/matrix.out | cut -c1-260 | enc)
+          echo "::notice title=role matrix (exit $code)::$MSG"
+          exit 0
       - name: API log tail
         if: always()
         run: tail -60 api.log | cut -c1-250
