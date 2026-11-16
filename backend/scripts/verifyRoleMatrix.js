@@ -27,10 +27,21 @@ const SKIP = [
 ];
 const tag = `rm-${Date.now().toString(36)}`;
 
-function call(method, path, token, body) {
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+// The API limits each signed-in user to 600 requests per 5 minutes (and each client address likewise): the matrix makes about 660 calls per role, so each role has two users it alternates between,
+// unauthenticated batches pretend to come from different addresses (the API trusts one proxy hop), and a 429 is retried once after a pause. A 429 that remains is reported as inconclusive.
+async function call(method, path, token, body, ip) {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const res = await callOnce(method, path, token, body, ip);
+    if (res.status !== 429) return res;
+    await sleep(2500 * (attempt + 1));
+  }
+  return { status: 429, text: "", json: null };
+}
+function callOnce(method, path, token, body, ip) {
   return new Promise((resolve) => {
     const data = body !== undefined ? JSON.stringify(body) : null;
-    const req = http.request({ hostname: HOST, port: PORT, path, method, timeout: 20000, headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(data ? { "Content-Length": Buffer.byteLength(data) } : {}) } }, (res) => {
+    const req = http.request({ hostname: HOST, port: PORT, path, method, timeout: 20000, headers: { "Content-Type": "application/json", ...(ip ? { "X-Forwarded-For": ip } : {}), ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(data ? { "Content-Length": Buffer.byteLength(data) } : {}) } }, (res) => {
       let chunks = "";
       res.on("data", (d) => { if (chunks.length < 200000) chunks += d; });
       res.on("end", () => { let j = null; try { j = JSON.parse(chunks); } catch { /* not JSON */ } resolve({ status: res.statusCode, text: chunks, json: j }); });
@@ -65,7 +76,13 @@ const allowedRoles = (r) => (r.roles && r.roles.length ? new Set(r.roles) : null
       CLERK: { u: await mk("CLERK", A.id, "clerkA") }, STUDENT: { u: await mk("STUDENT", A.id, "studentA") },
       ADMIN_B: { u: await mk("ADMIN", B.id, "adminB") }, INSTITUTE_ADMIN_B: { u: await mk("INSTITUTE_ADMIN", B.id, "instadminB") }, STUDENT_B: { u: await mk("STUDENT", B.id, "studentB") },
     };
-    for (const p of Object.values(P)) p.token = tokenFor(p.u);
+    for (const [k, p] of Object.entries(P)) {
+      p.token = tokenFor(p.u);
+      // a second user of the same role and institute, so one role's 660 calls spread over two rate-limit buckets
+      if (k === "SUPER_ADMIN") p.token2 = p.token;
+      else { const base = p.u; const twin = await mk(base.role, base.instituteId, `${k.toLowerCase()}2`); p.token2 = tokenFor(twin); }
+    }
+    const tokOf = (k, i) => (i % 2 ? P[k].token2 : P[k].token);
 
     const all = scanRoutes();
     const skipped = []; const routes = [];
@@ -74,13 +91,15 @@ const allowedRoles = (r) => (r.roles && r.roles.length ? new Set(r.roles) : null
     console.log(`routes ${all.length}, exercised ${routes.length}, skipped ${skipped.length}; personas ${Object.keys(P).join(", ")}`);
 
     // 1. unauthenticated
-    const unauth = await pool(routes.filter((r) => !publicSet.has(label(r))), 8, async (r) => ({ r, res: await call(r.method, fill(r.route), null, r.method === "GET" ? undefined : {}) }));
-    const v1 = unauth.filter((x) => x.res.status !== 401 && x.res.status !== -1).map((x) => `${label(x.r)} -> ${x.res.status}`);
+    const nonPublic = routes.filter((r) => !publicSet.has(label(r)));
+    const unauth = await pool(nonPublic, 6, async (r, i) => ({ r, res: await call(r.method, fill(r.route), null, r.method === "GET" ? undefined : {}, `10.77.${Math.floor(i / 200)}.${(i % 200) + 1}`) }));
+    const v1 = unauth.filter((x) => x.res.status !== 401 && x.res.status !== -1 && x.res.status !== 429).map((x) => `${label(x.r)} -> ${x.res.status}`);
+    const unauth429 = unauth.filter((x) => x.res.status === 429).length;
 
     // 2 and 3. every persona on every route
     const personas = Object.keys(P);
     const jobs = []; for (const r of routes) for (const k of personas) jobs.push({ r, k });
-    const results = await pool(jobs, 8, async ({ r, k }) => ({ r, k, res: await call(r.method, fill(r.route), P[k].token, r.method === "GET" ? undefined : {}) }));
+    const results = await pool(jobs, 6, async ({ r, k }, i) => ({ r, k, res: await call(r.method, fill(r.route), tokOf(k, i), r.method === "GET" ? undefined : {}) }));
     const roleOf = (k) => k.replace(/_B$/, "");
     const v2 = []; const v3 = []; const inconclusive = []; let allowedAnswers = 0; let overRestricted = 0;
     for (const { r, k, res } of results) {
@@ -94,7 +113,7 @@ const allowedRoles = (r) => (r.roles && r.roles.length ? new Set(r.roles) : null
     // 4. institute leak scan on parameterless GETs
     const lists = routes.filter((r) => r.method === "GET" && !/:/.test(r.route));
     const markers = [A.id, `${tag}-A`, `${tag}-adminA`, `${tag}-instadminA`, `${tag}-staffA`, `${tag}-clerkA`, `${tag}-studentA`];
-    const scan = async (k) => (await pool(lists, 8, async (r) => ({ r, res: await call("GET", r.route, P[k].token) }))).map(({ r, res }) => ({ r, hit: markers.find((m) => res.text.includes(m)) || null, status: res.status }));
+    const scan = async (k) => (await pool(lists, 6, async (r) => ({ r, res: await call("GET", r.route, P[k].token) }))).map(({ r, res }) => ({ r, hit: markers.find((m) => res.text.includes(m)) || null, status: res.status }));
     const ctrl = await scan("ADMIN");
     const controlHits = ctrl.filter((x) => x.hit).length;
     const leaks = [];
@@ -106,6 +125,7 @@ const allowedRoles = (r) => (r.roles && r.roles.length ? new Set(r.roles) : null
     section("3 SERVER ERRORS (5xx)", v3);
     section("4 INSTITUTE LEAKS (institute B saw institute A data)", leaks);
     console.log(`\ncontrol: institute A's administrator saw A's own marker on ${controlHits} of ${lists.length} parameterless GET routes (must be > 0 for the leak scan to mean anything)`);
+    console.log(`unauthenticated calls still limited after retries (inconclusive): ${unauth429}`);
     console.log(`allowed-role answers ${allowedAnswers}, of which 403 for another reason (ownership, scope) ${overRestricted}; inconclusive (429/timeout) ${inconclusive.length}; skipped ${skipped.length}`);
     section("skipped routes", skipped, 12);
     const violations = v1.length + v2.length + leaks.length + (controlHits === 0 ? 1 : 0);

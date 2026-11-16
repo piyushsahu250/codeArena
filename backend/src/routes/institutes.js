@@ -154,6 +154,7 @@ router.delete("/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), attachR
     invalidate("institutes:");
     res.json({ success: true });
   } catch (err) {
+    if (err.code === "P2025") return res.status(404).json({ error: "Institute not found" });
     console.error(err);
     res.status(500).json({ error: "Failed to delete institute" });
   }

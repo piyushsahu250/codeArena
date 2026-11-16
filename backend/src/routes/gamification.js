@@ -223,6 +223,7 @@ router.patch("/xp-rules/:activity", authenticate, requireRole("ADMIN", "SUPER_AD
     });
     res.json(rule);
   } catch (err) {
+    if (err.code === "P2025") return res.status(404).json({ error: "XP rule not found" });
     console.error(err);
     res.status(500).json({ error: "Failed to update XP rule" });
   }
@@ -255,6 +256,7 @@ router.patch("/badges/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), a
     });
     res.json(badge);
   } catch (err) {
+    if (err.code === "P2025") return res.status(404).json({ error: "Badge not found" });
     console.error(err);
     res.status(500).json({ error: "Failed to update badge" });
   }
@@ -273,6 +275,7 @@ router.delete("/badges/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), 
     await prisma.badge.delete({ where: { id: req.params.id } });
     res.json({ success: true });
   } catch (err) {
+    if (err.code === "P2025") return res.status(404).json({ error: "Badge not found" });
     if (err.code === "P2003" || err.code === "P2014") {
       return res.status(409).json({ error: "This badge has already been earned by students and can't be deleted." });
     }

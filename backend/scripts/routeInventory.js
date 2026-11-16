@@ -45,6 +45,9 @@ function rolesOf(guards) {
   const sets = [];
   for (const m of guards.matchAll(/requireRole\(([^)]*)\)/g)) {
     const names = [...m[1].matchAll(/["'](\w+)["']/g)].map((x) => x[1]);
+    // anything left once the quoted names, commas and spaces are removed is a name this scan could not expand (e.g. `...STAFF_RECIPIENT_ROLES` imported from another file): the list is unknown
+    const unresolved = m[1].replace(/["']\w+["']/g, "").replace(/[\s,]/g, "") !== "";
+    if (unresolved) return null;
     if (names.length) sets.push(names);
   }
   for (const m of guards.matchAll(/requirePermission\(\s*["']([\w.]+)["']\s*\)/g)) if (registry()[m[1]]) sets.push(registry()[m[1]]);

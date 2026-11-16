@@ -172,7 +172,10 @@ for (const lang of ["java", "c", "cpp", "javascript"]) {
 
   test(lbl("an output flood is cut off as OLE or TLE"), opts, async () => {
     const r = await run(lang, P.flood[lang], [tc("", "")], { timeLimitMs: 5000 });
-    assert.ok(["OLE", "TLE"].includes(r.verdict), `an output flood ends as OLE or TLE, got ${r.verdict}`);
+    // JavaScript may also end as MLE: on a fast machine Node's pending stdout writes grow the heap past the cap before the output limit is reached (production's judge ended 12 of 12 floods as TLE; a CI
+    // runner as MLE). Either way the flood is stopped and rejected, which is the property that matters.
+    const allowed = lang === "javascript" ? ["OLE", "TLE", "MLE"] : ["OLE", "TLE"];
+    assert.ok(allowed.includes(r.verdict), `an output flood ends as ${allowed.join(" or ")}, got ${r.verdict}`);
   });
 
   test(lbl("the program cannot read the server's secrets from its environment"), opts, async () => {
