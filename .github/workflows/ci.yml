@@ -99,14 +99,14 @@ jobs:
           node --test test/judgeLanguages.test.js test/judgeC.test.js test/pythonJudge.test.js test/judgeErrors.test.js test/judgeEnv.test.js > /tmp/judge.out 2>&1 || code=$?
           tail -n 30 /tmp/judge.out
           # the counts are published as an annotation (job logs need a GitHub sign-in, annotations do not), with the toolchain that ran them
-          counts=$(grep -E "^ℹ (tests|suites|pass|fail|cancelled|skipped|todo) " /tmp/judge.out | tr -s "[:space:]" " " | sed "s/ℹ //g")
+          counts=$(grep -E "^(ℹ|#) (tests|suites|pass|fail|cancelled|skipped|todo) " /tmp/judge.out | tr -s "[:space:]" " " | sed -e "s/ℹ //g" -e "s/# //g")
           echo "::notice title=judge tests on the production toolchain::gcc $(gcc -dumpversion) / Java $(java -version 2>&1 | head -1 | cut -d'"'  -f2) / $(python3 --version) / node $(node --version) -- $counts"
           if [ "$code" != 0 ]; then
             msg=$(grep -E -A7 "^ *not ok|^ *error: " /tmp/judge.out | grep -v "^--$" | head -40 | tr -s "[:space:]" " " | cut -c1-3000)
             echo "::error title=judge tests failed on the production toolchain::$msg"
           fi
           # every toolchain is installed in this job, so a skipped test is a test that did not run; named in the annotation above and warned about here (a few tests skip by design: they need the production container)
-          if grep -qE "^ℹ skipped [1-9]" /tmp/judge.out; then echo "::warning::some judge tests were skipped on the production toolchain"; fi
+          if grep -qE "^(ℹ|#) skipped [1-9]" /tmp/judge.out; then echo "::warning::some judge tests were skipped on the production toolchain"; fi
           exit $code
 
   frontend:

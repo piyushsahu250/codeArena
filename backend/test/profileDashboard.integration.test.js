@@ -67,7 +67,7 @@ test.after(async () => {
   try {
     await prisma.studentProfile.deleteMany({ where: { studentId: { in: F.users } } }).catch(() => {});
     await prisma.auditLog.deleteMany({ where: { OR: [{ adminId: { in: F.users } }, { studentId: { in: F.users } }] } }).catch(() => {});
-    await prisma.notification.deleteMany({ where: { userId: { in: F.users } } }).catch(() => {});
+    await prisma.notification.deleteMany({ where: { recipientId: { in: F.users } } }).catch(() => {});
     await prisma.user.deleteMany({ where: { id: { in: F.users } } }).catch(() => {});
     await prisma.institute.deleteMany({ where: { id: { in: F.institutes } } }).catch(() => {});
   } finally { await prisma.$disconnect(); }

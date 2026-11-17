@@ -821,12 +821,12 @@ async function checkConsecutiveAbsenceAlerts(studentIds, subject) {
     const allRecent = await prisma.attendanceRecord.findMany({
       where: { studentId: { in: studentIds }, session: { plan: { subject } } },
       orderBy: { session: { plan: { scheduleDate: "desc" } } },
-      select: { studentId: true, status: true },
+      select: { studentId: true, status: true, session: { select: { createdAt: true } } },
     });
     const recentByStudent = new Map();
     for (const r of allRecent) {
       const list = recentByStudent.get(r.studentId) || [];
-      if (list.length < CONSECUTIVE_ABSENCE_ALERT_THRESHOLD + 1) list.push({ status: r.status });
+      if (list.length < CONSECUTIVE_ABSENCE_ALERT_THRESHOLD + 1) list.push({ status: r.status, at: r.session.createdAt });
       recentByStudent.set(r.studentId, list);
     }
     for (const studentId of studentIds) {
@@ -836,6 +836,11 @@ async function checkConsecutiveAbsenceAlerts(studentIds, subject) {
       const justBefore = recent[CONSECUTIVE_ABSENCE_ALERT_THRESHOLD]; // undefined if streak is the student's entire history
       const streakJustReachedThreshold = streak.every((r) => r.status === "ABSENT") && justBefore?.status !== "ABSENT";
       if (streakJustReachedThreshold) {
+        // Saving a sheet again (a correction to another student's row) re-runs this check for every absent student, and the streak is still "just reached" for as long as nothing newer exists. One alert
+        // per streak: skip when this student was already alerted for this subject since the streak's first session was created (found by attendance.integration.test.js, 2026-11 audit).
+        const streakStart = new Date(Math.min(...streak.map((x) => new Date(x.at).getTime())));
+        const already = await prisma.notification.findFirst({ where: { recipientId: studentId, type: "ATTENDANCE_ABSENCE_ALERT", message: { contains: `in a row in ${subject}` }, createdAt: { gte: streakStart } }, select: { id: true } });
+        if (already) continue;
         await notifyMany(prisma, [studentId], {
           type: "ATTENDANCE_ABSENCE_ALERT",
           message: `You've been marked absent for ${CONSECUTIVE_ABSENCE_ALERT_THRESHOLD} classes in a row in ${subject}. Please contact your faculty if there's an issue.`,

@@ -69,7 +69,7 @@ test.before(async () => {
 
 test.after(async () => {
   try {
-    await prisma.notification.deleteMany({ where: { userId: { in: F.users } } }).catch(() => {});
+    await prisma.notification.deleteMany({ where: { recipientId: { in: F.users } } }).catch(() => {});
     await prisma.attendanceRecord.deleteMany({ where: { studentId: { in: F.users } } }).catch(() => {});
     await prisma.staffClassAssignment.deleteMany({ where: { staffId: { in: F.users } } }).catch(() => {});
     await prisma.user.deleteMany({ where: { id: { in: F.users } } }).catch(() => {});
